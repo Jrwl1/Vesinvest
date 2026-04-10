@@ -662,7 +662,7 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
                       defaultValue: 'Financials were imported from {{fileName}}',
                       fileName: normalizeImportedFileName(
                         baselineContext.financials.provenance.fileName,
-                        t('v2Forecast.statementImportFallbackFile', 'bokslut PDF'),
+                        t('v2Forecast.statementImportFallbackFile', 'statement PDF'),
                       ),
                     })}
                     {baselineContext.financials.provenance.pageNumber

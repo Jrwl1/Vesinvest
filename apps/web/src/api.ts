@@ -2649,6 +2649,7 @@ export async function clearImportAndScenariosV2(confirmToken: string): Promise<{
   deletedVeetiSnapshots: number;
   deletedVeetiOverrides?: number;
   deletedVeetiYearPolicies?: number;
+  deletedVesinvestPlanSeries?: number;
   deletedVeetiLinks: number;
   status: V2ImportStatus;
 }> {
@@ -2659,6 +2660,7 @@ export async function clearImportAndScenariosV2(confirmToken: string): Promise<{
     deletedVeetiSnapshots: number;
     deletedVeetiOverrides?: number;
     deletedVeetiYearPolicies?: number;
+    deletedVesinvestPlanSeries?: number;
     deletedVeetiLinks: number;
     status: V2ImportStatus;
   }>('/v2/import/clear', {

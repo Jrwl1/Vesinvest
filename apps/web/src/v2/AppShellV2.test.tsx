@@ -65,7 +65,6 @@ vi.mock('./OverviewPageV2', () => ({
     onGoToForecast: (scenarioId?: string | null) => void;
     onGoToReports: () => void;
     setupBackSignal?: number;
-    onChangeCompanyReset?: (confirmToken: string) => Promise<void>;
     onSetupWizardStateChange?: (state: {
       totalSteps: 6;
       currentStep: 1 | 2 | 3 | 4 | 5 | 6;
@@ -92,12 +91,6 @@ vi.mock('./OverviewPageV2', () => ({
     <div>
       <button type="button" onClick={() => props.onGoToForecast()}>
         overview-content
-      </button>
-      <button
-        type="button"
-        onClick={() => void props.onChangeCompanyReset?.('c9032cde')}
-      >
-        overview-change-company
       </button>
       <button
         type="button"
@@ -390,6 +383,7 @@ describe('AppShellV2', () => {
       deletedVeetiSnapshots: 1,
       deletedVeetiOverrides: 1,
       deletedVeetiYearPolicies: 1,
+      deletedVesinvestPlanSeries: 1,
       deletedVeetiLinks: 1,
       status: { connected: false, link: null, years: [] },
     });
@@ -826,6 +820,76 @@ describe('AppShellV2', () => {
     });
   });
 
+  it('keeps direct /forecast entry on forecast when the saved active Vesinvest plan already carries utility identity', async () => {
+    window.history.replaceState({}, '', '/forecast');
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: false,
+      link: null,
+      years: [],
+      availableYears: [],
+      workspaceYears: [],
+      excludedYears: [],
+      planningBaselineYears: [],
+    });
+    getPlanningContextV2Mock.mockResolvedValueOnce(
+      buildPlanningContext({
+        canCreateScenario: true,
+        activePlan: {
+          utilityName: 'Kronoby vatten och avlopp ab',
+          businessId: '0180030-9',
+          veetiId: 1535,
+          identitySource: 'veeti',
+          baselineStatus: 'verified',
+          pricingStatus: 'provisional',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+        },
+        baselineYears: [
+          {
+            year: 2024,
+            quality: 'complete',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: { veetiDataTypes: [], manualDataTypes: [] },
+            financials: { dataType: 'tilinpaatos', source: 'veeti' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: { dataType: 'volume_vesi', source: 'veeti' },
+            investmentAmount: 0,
+            soldWaterVolume: 0,
+            soldWastewaterVolume: 0,
+            combinedSoldVolume: 0,
+            processElectricity: 0,
+            pumpedWaterVolume: 0,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 0,
+            netWaterTradeVolume: 0,
+          },
+        ],
+      }),
+    );
+    getForecastScenarioV2Mock.mockResolvedValueOnce(buildReadyScenario());
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
+    expect(screen.queryByText('Step 1 / 6')).toBeNull();
+    expect(screen.queryByText('No utility selected')).toBeNull();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/forecast');
+    });
+  });
+
   it('keeps direct /forecast entry on forecast when a saved Vesinvest plan has a verified baseline and linked scenario', async () => {
     window.history.replaceState({}, '', '/forecast');
     getImportStatusV2Mock.mockResolvedValueOnce({
@@ -1231,28 +1295,6 @@ describe('AppShellV2', () => {
       expect(clearImportAndScenariosV2Mock).toHaveBeenCalledTimes(1);
     });
     expect(clearImportAndScenariosV2Mock).toHaveBeenCalledWith('c9032cde');
-  });
-
-  it('reuses the destructive reset path when Overview requests a company change', async () => {
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'overview-change-company' }));
-
-    await waitFor(() => {
-      expect(clearImportAndScenariosV2Mock).toHaveBeenCalledWith('c9032cde');
-    });
   });
 
   it('returns clear/reset to locked overview truth and drops stale forecast context', async () => {

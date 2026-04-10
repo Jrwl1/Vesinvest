@@ -170,7 +170,7 @@ export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
                   <span className="v2-result-selected">
                     {isActive
                       ? t('v2Overview.resultSelected', 'Selected')
-                      : t('v2Overview.connectButton', 'Yhdistä organisaatio')}
+                      : t('v2Overview.connectButton', 'Connect selected utility')}
                   </span>
                 </div>
               </button>

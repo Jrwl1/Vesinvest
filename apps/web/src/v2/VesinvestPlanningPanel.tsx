@@ -34,6 +34,7 @@ import {
   getImportedFileNameByKind,
   normalizeImportedFileName,
 } from './provenanceDisplay';
+import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 
 type Props = {
   t: TFunction;
@@ -134,6 +135,15 @@ const REPORT_GROUP_OPTIONS = [
 const buildHorizonYears = (startYear: number, horizonYears: number) =>
   Array.from({ length: horizonYears }, (_, index) => startYear + index);
 
+const resolveProjectGroup = (
+  groups: V2VesinvestGroupDefinition[],
+  preferredKey?: string | null,
+) =>
+  groups.find((item) => item.key === preferredKey) ??
+  groups.find((item) => item.key === FALLBACK_GROUP_KEY) ??
+  groups[0] ??
+  null;
+
 const buildDraftFromPlan = (
   plan: V2VesinvestPlan | null,
   linkedOrg: Props['linkedOrg'],
@@ -227,15 +237,18 @@ const createProject = (
   years: number[],
   groups: V2VesinvestGroupDefinition[],
   index: number,
+  seed: {
+    name: string;
+    groupKey: string;
+  },
 ): V2VesinvestProject => {
-  const group =
-    groups.find((item) => item.key === FALLBACK_GROUP_KEY) ?? groups[0] ?? null;
+  const group = resolveProjectGroup(groups, seed.groupKey);
   return {
     code: `P-${String(index + 1).padStart(3, '0')}`,
-    name: '',
+    name: seed.name.trim(),
     investmentType: 'sanering',
-    groupKey: group?.key ?? FALLBACK_GROUP_KEY,
-    groupLabel: group?.label ?? 'Sanering / vattennatverk',
+    groupKey: group?.key ?? seed.groupKey ?? FALLBACK_GROUP_KEY,
+    groupLabel: group?.label ?? seed.groupKey ?? FALLBACK_GROUP_KEY,
     depreciationClassKey: group?.defaultDepreciationClassKey ?? null,
     defaultAccountKey: group?.defaultAccountKey ?? null,
     reportGroupKey: group?.reportGroupKey ?? null,
@@ -255,10 +268,20 @@ const createProject = (
 
 const typeLabel = (t: TFunction, value: V2VesinvestProject['investmentType']) =>
   value === 'nyanlaggning'
-    ? t('v2Vesinvest.typeNewBuild', 'Nyanlaggning')
+    ? t('v2Vesinvest.typeNewBuild', 'New build')
     : value === 'reparation'
     ? t('v2Vesinvest.typeRepair', 'Reparation')
-    : t('v2Vesinvest.typeSanering', 'Sanering');
+    : t('v2Vesinvest.typeSanering', 'Rehabilitation');
+
+const allocationFieldLabel = (
+  t: TFunction,
+  fieldKey: 'totalAmount' | 'waterAmount' | 'wastewaterAmount',
+) =>
+  fieldKey === 'totalAmount'
+    ? t('v2Vesinvest.projectTotal', 'Total')
+    : fieldKey === 'waterAmount'
+    ? t('v2Vesinvest.projectWaterTotal', 'Water total')
+    : t('v2Vesinvest.projectWastewaterTotal', 'Wastewater total');
 
 const toneClass = (status: 'draft' | 'incomplete' | 'verified' | 'blocked' | 'provisional') =>
   status === 'verified'
@@ -365,7 +388,7 @@ const datasetSourceLabel = (
         getImportedFileNameByKind(
           dataset.provenance,
           'statement_import',
-          t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+          t('v2Reports.statementImportFallbackFile', 'statement PDF'),
         ),
       ],
     );
@@ -383,7 +406,7 @@ const datasetSourceLabel = (
       defaultValue: 'Statement import ({{fileName}})',
       fileName: normalizeImportedFileName(
         dataset.provenance.fileName,
-        t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+        t('v2Reports.statementImportFallbackFile', 'statement PDF'),
       ),
     });
   }
@@ -461,7 +484,7 @@ const datasetSourceNote = (
         getImportedFileNameByKind(
           dataset.provenance,
           'statement_import',
-          t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+          t('v2Reports.statementImportFallbackFile', 'statement PDF'),
         ),
       ],
     );
@@ -483,7 +506,7 @@ const datasetSourceNote = (
       defaultValue: 'Financials came from {{fileName}}',
       fileName: normalizeImportedFileName(
         dataset.provenance.fileName,
-        t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+        t('v2Reports.statementImportFallbackFile', 'statement PDF'),
       ),
     });
   }
@@ -575,6 +598,111 @@ const buildBaselineSourceSnapshot = (
   };
 };
 
+const VesinvestRevisionSurface: React.FC<{
+  children: React.ReactNode;
+}> = ({ children }) => <>{children}</>;
+
+const VesinvestIdentitySurface: React.FC<{
+  t: TFunction;
+  badge: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ t, badge, children }) => (
+  <section className="v2-vesinvest-section">
+    <div className="v2-section-header">
+      <div>
+        <p className="v2-overview-eyebrow">
+          {t('v2Vesinvest.identityLock', 'Identity guardrail')}
+        </p>
+        <h3>{t('v2Vesinvest.utilityName', 'Utility name')}</h3>
+      </div>
+      {badge}
+    </div>
+    {children}
+  </section>
+);
+
+const VesinvestGroupDefaultsSurface: React.FC<{
+  t: TFunction;
+  children: React.ReactNode;
+}> = ({ t, children }) => (
+  <section className="v2-vesinvest-section">
+    <div className="v2-section-header">
+      <div>
+        <p className="v2-overview-eyebrow">
+          {t('v2Vesinvest.investmentPlan', 'Investment plan')}
+        </p>
+        <h3>{t('v2Vesinvest.projectGroup', 'Group')}</h3>
+      </div>
+    </div>
+    {children}
+  </section>
+);
+
+const VesinvestBaselineReviewSurface: React.FC<{
+  t: TFunction;
+  badge: React.ReactNode;
+  statusStrip?: React.ReactNode;
+  feePath: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ t, badge, statusStrip, feePath, children }) => (
+  <>
+    {statusStrip ?? null}
+    <section className="v2-vesinvest-section">
+      <div className="v2-section-header">
+        <div>
+          <p className="v2-overview-eyebrow">
+            {t('v2Vesinvest.evidenceEyebrow', 'Baseline & evidence')}
+          </p>
+          <h3>{t('v2Vesinvest.evidenceTitle', 'Accepted baseline years')}</h3>
+        </div>
+        {badge}
+      </div>
+      {children}
+    </section>
+    {feePath}
+  </>
+);
+
+const VesinvestMatrixSurface: React.FC<{
+  t: TFunction;
+  children: React.ReactNode;
+}> = ({ t, children }) => (
+  <section className="v2-vesinvest-section">
+    <div className="v2-section-header">
+      <div>
+        <p className="v2-overview-eyebrow">
+          {t('v2Vesinvest.investmentPlan', 'Investment plan')}
+        </p>
+        <h3>{t('v2Vesinvest.groupedLayout', 'Grouped horizon layout')}</h3>
+      </div>
+    </div>
+    {children}
+  </section>
+);
+
+const VesinvestRegisterSurface: React.FC<{
+  t: TFunction;
+  children: React.ReactNode;
+}> = ({ t, children }) => (
+  <section className="v2-vesinvest-section">
+    <div className="v2-section-header">
+      <div>
+        <p className="v2-overview-eyebrow">
+          {t('v2Vesinvest.projectRegister', 'Project register')}
+        </p>
+        <h3>{t('v2Vesinvest.editableProjects', 'Editable project rows')}</h3>
+      </div>
+    </div>
+    {children}
+  </section>
+);
+
+const VesinvestProjectDetailsSurface: React.FC<{
+  children: React.ReactNode;
+}> = ({ children }) => (
+  <div className="v2-vesinvest-project-details">{children}</div>
+);
+
 export const VesinvestPlanningPanel: React.FC<Props> = ({
   t,
   isAdmin = false,
@@ -617,6 +745,15 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     React.useState<V2ForecastScenario | null>(null);
   const [loadingLinkedScenario, setLoadingLinkedScenario] =
     React.useState(false);
+  const [projectComposer, setProjectComposer] = React.useState<{
+    open: boolean;
+    groupKey: string;
+    name: string;
+  }>({
+    open: false,
+    groupKey: FALLBACK_GROUP_KEY,
+    name: '',
+  });
   const useSimplifiedSetup = simplifiedSetup && isAdmin;
 
   const refreshSummaries = React.useCallback(async (preferredId?: string | null) => {
@@ -750,7 +887,12 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
   );
   const groupedPlanMatrix = React.useMemo<VesinvestGroupedMatrixSection[]>(() => {
     const groupOrder = new Map(groups.map((group, index) => [group.key, index]));
-    const groupLabelByKey = new Map(groups.map((group) => [group.key, group.label]));
+    const groupLabelByKey = new Map(
+      groups.map((group) => [
+        group.key,
+        resolveVesinvestGroupLabel(t, group.key, group.label),
+      ]),
+    );
     const sections = new Map<
       string,
       {
@@ -763,7 +905,8 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     for (const project of draft.projects) {
       const groupKey = project.groupKey || FALLBACK_GROUP_KEY;
       const groupLabel =
-        project.groupLabel ?? groupLabelByKey.get(groupKey) ?? groupKey;
+        groupLabelByKey.get(groupKey) ??
+        resolveVesinvestGroupLabel(t, groupKey, project.groupLabel ?? groupKey);
       const yearlyTotals = draft.horizonYearsRange.map((year) => ({
         year,
         totalAmount: round2(
@@ -1372,21 +1515,59 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     [],
   );
 
+  const projectComposerGroupKey =
+    resolveProjectGroup(groups, projectComposer.groupKey)?.key ?? FALLBACK_GROUP_KEY;
+
+  const openProjectComposer = React.useCallback(() => {
+    if (loading || loadingPlan || groups.length === 0) {
+      return;
+    }
+    const defaultGroupKey = resolveProjectGroup(groups, null)?.key ?? FALLBACK_GROUP_KEY;
+    setProjectComposer({
+      open: true,
+      groupKey: defaultGroupKey,
+      name: '',
+    });
+  }, [groups, loading, loadingPlan]);
+
+  const closeProjectComposer = React.useCallback(() => {
+    setProjectComposer((current) => ({
+      ...current,
+      open: false,
+      name: '',
+    }));
+  }, []);
+
+  const handleCreateProjectDraft = React.useCallback(() => {
+    const projectName = projectComposer.name.trim();
+    const resolvedGroup = resolveProjectGroup(groups, projectComposerGroupKey);
+    if (!projectName || resolvedGroup == null) {
+      return;
+    }
+    setDraft((current) => ({
+      ...current,
+      projects: [
+        ...current.projects,
+        createProject(current.horizonYearsRange, groups, current.projects.length, {
+          name: projectName,
+          groupKey: resolvedGroup.key,
+        }),
+      ],
+    }));
+    setProjectComposer({
+      open: false,
+      groupKey: resolvedGroup.key,
+      name: '',
+    });
+  }, [groups, projectComposer.name, projectComposerGroupKey]);
+
   const actionRow = (
     <div className="v2-actions-row">
       <button
         type="button"
         className="v2-btn"
-        onClick={() =>
-          setDraft((current) => ({
-            ...current,
-            projects: [
-              ...current.projects,
-              createProject(current.horizonYearsRange, groups, current.projects.length),
-            ],
-          }))
-        }
-        disabled={busy}
+        onClick={openProjectComposer}
+        disabled={busy || loading || loadingPlan || groups.length === 0}
       >
         {t('v2Vesinvest.addProject', 'Add project')}
       </button>
@@ -1428,14 +1609,9 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
   );
 
   const utilityBindingSection = (
-    <section className="v2-vesinvest-section">
-      <div className="v2-section-header">
-        <div>
-          <p className="v2-overview-eyebrow">
-            {t('v2Vesinvest.identityLock', 'Identity guardrail')}
-          </p>
-          <h3>{t('v2Vesinvest.utilityName', 'Utility name')}</h3>
-        </div>
+    <VesinvestIdentitySurface
+      t={t}
+      badge={
         <span
           className={`v2-badge ${toneClass(
             utilityBindingMissing
@@ -1451,7 +1627,8 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             ? t('v2Vesinvest.pricingBlocked', 'Blocked')
             : t('v2Vesinvest.baselineVerified', 'Baseline verified')}
         </span>
-      </div>
+      }
+    >
       {utilityBindingMissing ? (
         <>
           <div className="v2-inline-form">
@@ -1515,21 +1692,13 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             <span>{t('v2Vesinvest.identitySource', 'Identity source')}</span>
             <strong>{t('v2Vesinvest.identityVeeti', 'VEETI')}</strong>
           </div>
-        </div>
-      )}
-    </section>
+          </div>
+        )}
+    </VesinvestIdentitySurface>
   );
 
   const groupDefinitionsSection = isAdmin ? (
-    <section className="v2-vesinvest-section">
-      <div className="v2-section-header">
-        <div>
-          <p className="v2-overview-eyebrow">
-            {t('v2Vesinvest.investmentPlan', 'Investment plan')}
-          </p>
-          <h3>{t('v2Vesinvest.projectGroup', 'Group')}</h3>
-        </div>
-      </div>
+    <VesinvestGroupDefaultsSurface t={t}>
       <div className="v2-vesinvest-table-wrap">
         <table className="v2-vesinvest-table">
           <thead>
@@ -1650,7 +1819,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
           </tbody>
         </table>
       </div>
-    </section>
+    </VesinvestGroupDefaultsSurface>
   ) : null;
 
   const feePathSection = feeRecommendation ? (
@@ -1855,6 +2024,91 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
       {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
 
+      {projectComposer.open ? (
+        <div className="v2-modal-backdrop" onClick={closeProjectComposer}>
+          <div
+            className="v2-modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="vesinvest-project-composer-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="v2-section-header">
+              <div>
+                <p className="v2-overview-eyebrow">
+                  {t('v2Vesinvest.investmentPlan', 'Investment plan')}
+                </p>
+                <h3 id="vesinvest-project-composer-title">
+                  {t('v2Vesinvest.addProject', 'Add project')}
+                </h3>
+              </div>
+            </div>
+            <div className="v2-inline-form">
+              <label className="v2-field">
+                <span>{t('v2Vesinvest.projectGroup', 'Group')}</span>
+                <select
+                  id="vesinvest-project-composer-group"
+                  name="vesinvest-project-composer-group"
+                  className="v2-input"
+                  value={projectComposerGroupKey}
+                  onChange={(event) =>
+                    setProjectComposer((current) => ({
+                      ...current,
+                      groupKey: event.target.value,
+                    }))
+                  }
+                >
+                  {groups.map((group) => (
+                    <option key={group.key} value={group.key}>
+                      {resolveVesinvestGroupLabel(t, group.key, group.label)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="v2-field v2-field-wide">
+                <span>{t('v2Vesinvest.projectName', 'Project')}</span>
+                <input
+                  id="vesinvest-project-composer-name"
+                  name="vesinvest-project-composer-name"
+                  className="v2-input"
+                  value={projectComposer.name}
+                  onChange={(event) =>
+                    setProjectComposer((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+            </div>
+            <div className="v2-modal-actions">
+              <button
+                type="button"
+                className="v2-btn"
+                onClick={closeProjectComposer}
+                disabled={busy}
+              >
+                {t('common.cancel', 'Cancel')}
+              </button>
+              <button
+                type="button"
+                className="v2-btn v2-btn-primary"
+                onClick={handleCreateProjectDraft}
+                disabled={
+                  busy ||
+                  loading ||
+                  loadingPlan ||
+                  groups.length === 0 ||
+                  projectComposer.name.trim().length === 0
+                }
+              >
+                {t('v2Vesinvest.addProject', 'Add project')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {utilityBindingSection}
 
       {groupDefinitionsSection}
@@ -1865,70 +2119,77 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
 
       {useSimplifiedSetup ? null : (
         <>
+          <VesinvestRevisionSurface>
+            {actionRow}
 
-      {actionRow}
+            <div className="v2-overview-year-summary-grid">
+              <div>
+                <span>{t('v2Vesinvest.totalInvestments', 'Horizon total')}</span>
+                <strong>{formatEur(totalInvestments)}</strong>
+              </div>
+              <div>
+                <span>{t('v2Vesinvest.projectCount', 'Projects')}</span>
+                <strong>{draft.projects.length}</strong>
+              </div>
+              <div>
+                <span>{t('v2Vesinvest.reviewDue', 'Next review due')}</span>
+                <strong>
+                  {formatDateTime(selectedSummary?.reviewDueAt ?? draft.reviewDueAt ?? null)}
+                </strong>
+              </div>
+            </div>
 
-      <div className="v2-overview-year-summary-grid">
-        <div>
-          <span>{t('v2Vesinvest.totalInvestments', 'Horizon total')}</span>
-          <strong>{formatEur(totalInvestments)}</strong>
-        </div>
-        <div>
-          <span>{t('v2Vesinvest.projectCount', 'Projects')}</span>
-          <strong>{draft.projects.length}</strong>
-        </div>
-        <div>
-          <span>{t('v2Vesinvest.reviewDue', 'Next review due')}</span>
-          <strong>{formatDateTime(selectedSummary?.reviewDueAt ?? draft.reviewDueAt ?? null)}</strong>
-        </div>
-      </div>
-
-      <div className="v2-inline-form v2-vesinvest-identity-form">
-        <label className="v2-field">
-          <span>{t('v2Vesinvest.planName', 'Plan name')}</span>
-          <input
-            id="vesinvest-plan-name"
-            name="vesinvest-plan-name"
-            className="v2-input"
-            value={draft.name ?? ''}
-            onChange={(event) => setDraftField('name', event.target.value)}
-          />
-        </label>
-        <label className="v2-field">
-          <span>{t('v2Vesinvest.horizonYears', 'Horizon years')}</span>
-          <input
-            id="vesinvest-horizon-years"
-            name="vesinvest-horizon-years"
-            className="v2-input"
-            type="number"
-            min={20}
-            max={50}
-            value={draft.horizonYears ?? 20}
-            onChange={(event) => {
-              const nextHorizon = Math.min(50, Math.max(20, Number(event.target.value || 20)));
-              const firstYear = draft.horizonYearsRange[0] ?? new Date().getFullYear();
-              const years = buildHorizonYears(firstYear, nextHorizon);
-              setDraft((current) => ({
-                ...current,
-                horizonYears: nextHorizon,
-                horizonYearsRange: years,
-                projects: current.projects.map((project) => ({
-                  ...project,
-                  allocations: years.map(
-                    (year) =>
-                      project.allocations.find((item) => item.year === year) ?? {
-                        year,
-                        totalAmount: 0,
-                        waterAmount: 0,
-                        wastewaterAmount: 0,
-                      },
-                  ),
-                })),
-              }));
-            }}
-          />
-        </label>
-      </div>
+            <div className="v2-inline-form v2-vesinvest-identity-form">
+              <label className="v2-field">
+                <span>{t('v2Vesinvest.planName', 'Plan name')}</span>
+                <input
+                  id="vesinvest-plan-name"
+                  name="vesinvest-plan-name"
+                  className="v2-input"
+                  value={draft.name ?? ''}
+                  onChange={(event) => setDraftField('name', event.target.value)}
+                />
+              </label>
+              <label className="v2-field">
+                <span>{t('v2Vesinvest.horizonYears', 'Horizon years')}</span>
+                <input
+                  id="vesinvest-horizon-years"
+                  name="vesinvest-horizon-years"
+                  className="v2-input"
+                  type="number"
+                  min={20}
+                  max={50}
+                  value={draft.horizonYears ?? 20}
+                  onChange={(event) => {
+                    const nextHorizon = Math.min(
+                      50,
+                      Math.max(20, Number(event.target.value || 20)),
+                    );
+                    const firstYear =
+                      draft.horizonYearsRange[0] ?? new Date().getFullYear();
+                    const years = buildHorizonYears(firstYear, nextHorizon);
+                    setDraft((current) => ({
+                      ...current,
+                      horizonYears: nextHorizon,
+                      horizonYearsRange: years,
+                      projects: current.projects.map((project) => ({
+                        ...project,
+                        allocations: years.map(
+                          (year) =>
+                            project.allocations.find((item) => item.year === year) ?? {
+                              year,
+                              totalAmount: 0,
+                              waterAmount: 0,
+                              wastewaterAmount: 0,
+                            },
+                        ),
+                      })),
+                    }));
+                  }}
+                />
+              </label>
+            </div>
+          </VesinvestRevisionSurface>
 
       {false && veetiSearchResults.length > 0 ? (
         <div className="v2-inline-list">
@@ -2077,18 +2338,19 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         </div>
       ) : null}
 
-      <section className="v2-vesinvest-section">
-        <div className="v2-section-header">
-          <div>
-            <p className="v2-overview-eyebrow">{t('v2Vesinvest.evidenceEyebrow', 'Baseline & evidence')}</p>
-            <h3>{t('v2Vesinvest.evidenceTitle', 'Accepted baseline years')}</h3>
-          </div>
+      <VesinvestBaselineReviewSurface
+        t={t}
+        badge={
           <span className={`v2-badge ${toneClass(baselineVerified ? 'verified' : 'incomplete')}`}>
             {baselineYears.length > 0
-              ? t('v2Vesinvest.baselineYearCount', '{{count}} year(s)', { count: baselineYears.length })
+              ? t('v2Vesinvest.baselineYearCount', '{{count}} year(s)', {
+                  count: baselineYears.length,
+                })
               : t('v2Vesinvest.baselineLinkPending', 'Not yet linked')}
           </span>
-        </div>
+        }
+        feePath={feePathSection}
+      >
         {baselineYears.length === 0 ? (
           <p className="v2-muted">
             {t(
@@ -2134,9 +2396,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             ))}
           </div>
         )}
-      </section>
-
-      {feePathSection}
+      </VesinvestBaselineReviewSurface>
 
       {false ? (
         <section className="v2-vesinvest-section">
@@ -2271,13 +2531,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         </section>
       ) : null}
 
-      <section className="v2-vesinvest-section">
-        <div className="v2-section-header">
-          <div>
-            <p className="v2-overview-eyebrow">{t('v2Vesinvest.investmentPlan', 'Investment plan')}</p>
-            <h3>{t('v2Vesinvest.groupedLayout', 'Grouped horizon layout')}</h3>
-          </div>
-        </div>
+      <VesinvestMatrixSurface t={t}>
         <div className="v2-vesinvest-table-wrap v2-vesinvest-matrix-wrap" data-testid="vesinvest-grouped-plan">
           <table className="v2-vesinvest-table v2-vesinvest-plan-matrix">
             <thead>
@@ -2350,15 +2604,9 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             </tbody>
           </table>
         </div>
-      </section>
+      </VesinvestMatrixSurface>
 
-      <section className="v2-vesinvest-section">
-        <div className="v2-section-header">
-          <div>
-            <p className="v2-overview-eyebrow">{t('v2Vesinvest.projectRegister', 'Project register')}</p>
-            <h3>{t('v2Vesinvest.editableProjects', 'Editable project rows')}</h3>
-          </div>
-        </div>
+      <VesinvestRegisterSurface t={t}>
         <div className="v2-vesinvest-table-wrap">
           <table className="v2-vesinvest-table">
             <thead>
@@ -2456,7 +2704,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                     >
                       {groups.map((group) => (
                         <option key={group.key} value={group.key}>
-                          {group.label}
+                          {resolveVesinvestGroupLabel(t, group.key, group.label)}
                         </option>
                       ))}
                     </select>
@@ -2498,10 +2746,10 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             </tbody>
           </table>
         </div>
-      </section>
+      </VesinvestRegisterSurface>
 
       {draft.projects.length > 0 ? (
-        <div className="v2-vesinvest-project-details">
+        <VesinvestProjectDetailsSurface>
           {draft.projects.map((project, projectIndex) => (
             <section
               key={project.id ?? `draft-project-details-${projectIndex}`}
@@ -2511,7 +2759,13 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                 <div>
                   <p className="v2-overview-eyebrow">{project.code}</p>
                   <h3>{project.name || t('v2Vesinvest.projectUnnamed', 'Unnamed project')}</h3>
-                  <p className="v2-muted">{`${typeLabel(t, project.investmentType)} · ${project.groupLabel ?? project.groupKey}`}</p>
+                  <p className="v2-muted">
+                    {`${typeLabel(t, project.investmentType)} · ${resolveVesinvestGroupLabel(
+                      t,
+                      project.groupKey,
+                      project.groupLabel,
+                    )}`}
+                  </p>
                 </div>
                 <div className="v2-overview-year-summary-grid v2-vesinvest-project-meta">
                   <div>
@@ -2572,11 +2826,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                     {(['totalAmount', 'waterAmount', 'wastewaterAmount'] as const).map((fieldKey) => (
                       <tr key={`${project.code}-${fieldKey}`}>
                         <td>
-                          {fieldKey === 'totalAmount'
-                            ? t('v2Vesinvest.projectTotal', 'Total')
-                            : fieldKey === 'waterAmount'
-                            ? t('v2Vesinvest.projectWaterTotal', 'Water total')
-                            : t('v2Vesinvest.projectWastewaterTotal', 'Wastewater total')}
+                          {allocationFieldLabel(t, fieldKey)}
                         </td>
                         {draft.horizonYearsRange.map((year) => {
                           const allocation =
@@ -2586,7 +2836,10 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                               <input
                                 id={`vesinvest-allocation-${projectIndex}-${fieldKey}-${year}`}
                                 name={`vesinvest-allocation-${projectIndex}-${fieldKey}-${year}`}
-                                aria-label={`${project.code} ${year} ${fieldKey}`}
+                                aria-label={`${project.code} ${year} ${allocationFieldLabel(
+                                  t,
+                                  fieldKey,
+                                )}`}
                                 className="v2-input"
                                 type="number"
                                 min={0}
@@ -2610,7 +2863,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
               </div>
             </section>
           ))}
-        </div>
+        </VesinvestProjectDetailsSurface>
       ) : null}
 
       <div className="v2-kpi-strip v2-kpi-strip-three">

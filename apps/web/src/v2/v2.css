@@ -921,15 +921,6 @@
   padding: 10px 12px;
 }
 
-.v2-overview-progress-card.compact .v2-overview-helper-list {
-  padding-top: 10px;
-  gap: 8px;
-}
-
-.v2-overview-progress-card.compact .v2-overview-helper-card {
-  padding: 10px 12px;
-}
-
 .v2-overview-progress-card.step2-support {
   position: static;
   gap: 8px;
@@ -948,20 +939,6 @@
 .v2-overview-progress-list {
   display: grid;
   gap: 10px;
-}
-
-.v2-overview-helper-list {
-  border-top: 1px solid var(--v2-border);
-  padding-top: 14px;
-  display: grid;
-  gap: 10px;
-}
-
-.v2-overview-helper-list.step2-support {
-  border-top: 0;
-  padding-top: 0;
-  grid-template-columns: 1fr;
-  gap: 8px;
 }
 
 .v2-overview-support-summary-strip {
@@ -990,72 +967,6 @@
 .v2-overview-support-summary-pill strong {
   font-size: 0.95rem;
   line-height: 1.25;
-}
-
-.v2-overview-helper-card {
-  border: 1px solid rgba(183, 192, 203, 0.78);
-  border-radius: 16px;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.96) 0%,
-    rgba(246, 242, 235, 0.92) 100%
-  );
-  padding: 14px;
-  display: grid;
-  gap: 8px;
-}
-
-.v2-overview-helper-card-positive {
-  border-color: rgba(29, 107, 77, 0.22);
-  background: linear-gradient(180deg, #eef8f3 0%, #ffffff 100%);
-}
-
-.v2-overview-helper-card-warning {
-  border-color: rgba(164, 106, 23, 0.22);
-  background: linear-gradient(180deg, #fff7ea 0%, #ffffff 100%);
-}
-
-.v2-overview-helper-head {
-  display: grid;
-  gap: 4px;
-}
-
-.v2-overview-helper-head span {
-  color: var(--v2-muted);
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.v2-overview-helper-head strong {
-  font-size: 0.9rem;
-  line-height: 1.35;
-}
-
-.v2-overview-helper-card p {
-  margin: 0;
-  color: var(--v2-muted);
-  font-size: 0.82rem;
-  line-height: 1.45;
-}
-
-.v2-overview-helper-list.step2-support .v2-overview-helper-card {
-  gap: 6px;
-  padding: 10px 12px;
-}
-
-.v2-overview-helper-list.step2-support .v2-overview-helper-head {
-  gap: 2px;
-}
-
-.v2-overview-helper-list.step2-support .v2-overview-helper-card p {
-  font-size: 0.78rem;
-  line-height: 1.35;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
 }
 
 .v2-overview-progress-item {
@@ -2595,6 +2506,11 @@
 
 .v2-year-gap-summary.parked {
   border-color: #cbd5e1;
+}
+
+.v2-year-triage-meta {
+  display: grid;
+  gap: 8px;
 }
 
 .v2-year-preview-grid {

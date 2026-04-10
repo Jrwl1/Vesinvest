@@ -241,12 +241,14 @@ const buildPlanningContextResponse = (options?: {
   canCreateScenario?: boolean;
   baselineYears?: any[];
   activePlan?: Record<string, unknown> | null;
+  selectedPlan?: Record<string, unknown> | null;
 }) =>
   ({
     canCreateScenario: options?.canCreateScenario ?? false,
     vesinvest: {
-      hasPlan: options?.activePlan != null,
-      planCount: options?.activePlan != null ? 1 : 0,
+      hasPlan: options?.activePlan != null || options?.selectedPlan != null,
+      planCount:
+        options?.activePlan != null || options?.selectedPlan != null ? 1 : 0,
       activePlan:
         options?.activePlan != null
           ? {
@@ -271,6 +273,32 @@ const buildPlanningContextResponse = (options?: {
               updatedAt: '2026-04-09T10:00:00.000Z',
               createdAt: '2026-04-09T10:00:00.000Z',
               ...options.activePlan,
+            }
+          : null,
+      selectedPlan:
+        options?.selectedPlan != null
+          ? {
+              id: 'plan-selected',
+              name: 'Selected Vesinvest plan',
+              utilityName: 'Water Utility',
+              businessId: '1234567-8',
+              veetiId: null,
+              identitySource: 'manual',
+              horizonYears: 20,
+              versionNumber: 1,
+              status: 'draft',
+              baselineStatus: 'draft',
+              pricingStatus: 'blocked',
+              selectedScenarioId: null,
+              projectCount: 1,
+              totalInvestmentAmount: 100000,
+              lastReviewedAt: null,
+              reviewDueAt: null,
+              baselineChangedSinceAcceptedRevision: false,
+              investmentPlanChangedSinceFeeRecommendation: false,
+              updatedAt: '2026-04-09T10:00:00.000Z',
+              createdAt: '2026-04-09T10:00:00.000Z',
+              ...options.selectedPlan,
             }
           : null,
     },
@@ -416,6 +444,7 @@ describe('OverviewPageV2', () => {
       deletedScenarios: 1,
       deletedVeetiBudgets: 2,
       deletedVeetiSnapshots: 3,
+      deletedVesinvestPlanSeries: 1,
       deletedVeetiLinks: 1,
       status: {
         connected: false,
@@ -561,21 +590,11 @@ describe('OverviewPageV2', () => {
             detail: 'Hidden baseline detail',
           },
         ]}
-        wizardContextHelpers={[
-          {
-            key: 'next',
-            label: localeText('v2Overview.wizardContextNext'),
-            title: localeText('v2Overview.wizardContextStep3'),
-            body: localeText('v2Overview.wizardContextImportNextBody'),
-            tone: 'neutral',
-          },
-        ]}
       />,
     );
 
     expect(screen.getByText('Water Utility')).toBeTruthy();
     expect(screen.getAllByText('2024, 2023').length).toBeGreaterThan(0);
-    expect(screen.getByText(localeText('v2Overview.wizardContextStep3'))).toBeTruthy();
     expect(
       screen.getAllByText(localeText('v2Overview.wizardProgress', { step: 2 }))
         .length,
@@ -1095,6 +1114,9 @@ describe('OverviewPageV2', () => {
       '.v2-card.v2-overview-step-card > .v2-actions-row',
     ) as HTMLElement;
     expect(footerActions).toBeTruthy();
+    expect(
+      document.querySelector('details.v2-import-board-lane-blocked[open]'),
+    ).toBeTruthy();
     expect(
       within(footerActions).queryByRole('button', {
         name: localeText('v2Overview.importYearsButton'),
@@ -1916,6 +1938,131 @@ describe('OverviewPageV2', () => {
     expect(
       within(focusBlock).getByText(localeText('v2Vesinvest.workflowPlanFirst')),
     ).toBeTruthy();
+  });
+
+  it('does not fall back to the step-1 connect state when an active Vesinvest plan already carries utility identity', async () => {
+    const disconnectedOverview = buildOverviewResponse({ workspaceYears: [], years: [] });
+    disconnectedOverview.importStatus.connected = false;
+    disconnectedOverview.importStatus.link = null;
+    disconnectedOverview.importStatus.availableYears = [];
+    disconnectedOverview.importStatus.years = [];
+    disconnectedOverview.importStatus.excludedYears = [];
+    getOverviewV2.mockResolvedValueOnce(disconnectedOverview);
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: true,
+        activePlan: {
+          utilityName: 'Kronoby vatten och avlopp ab',
+          businessId: '0180030-9',
+          veetiId: 1535,
+          identitySource: 'veeti',
+          baselineStatus: 'verified',
+          pricingStatus: 'blocked',
+          selectedScenarioId: null,
+          projectCount: 0,
+          totalInvestmentAmount: 0,
+          status: 'active',
+        },
+        baselineYears: [
+          {
+            year: 2024,
+            quality: 'complete',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: { veetiDataTypes: [], manualDataTypes: [] },
+            financials: { dataType: 'tilinpaatos', source: 'veeti' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: { dataType: 'volume_vesi', source: 'veeti' },
+            investmentAmount: 0,
+            soldWaterVolume: 0,
+            soldWastewaterVolume: 0,
+            combinedSoldVolume: 0,
+            processElectricity: 0,
+            pumpedWaterVolume: 0,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 0,
+            netWaterTradeVolume: 0,
+          },
+        ],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(await screen.findByTestId('vesinvest-panel')).toBeTruthy();
+    expect(
+      screen.queryByRole('heading', {
+        name: localeText('v2Vesinvest.workflowIdentifyUtility'),
+      }),
+    ).toBeNull();
+  });
+
+  it('does not fall back to the step-1 connect state when only the selected Vesinvest plan carries utility identity', async () => {
+    const disconnectedOverview = buildOverviewResponse({ workspaceYears: [], years: [] });
+    disconnectedOverview.importStatus.connected = false;
+    disconnectedOverview.importStatus.link = null;
+    disconnectedOverview.importStatus.availableYears = [];
+    disconnectedOverview.importStatus.years = [];
+    disconnectedOverview.importStatus.excludedYears = [];
+    getOverviewV2.mockResolvedValueOnce(disconnectedOverview);
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: true,
+        activePlan: null,
+        selectedPlan: {
+          utilityName: 'Kronoby vatten och avlopp ab',
+          businessId: '0180030-9',
+          veetiId: 1535,
+          identitySource: 'veeti',
+          baselineStatus: 'verified',
+          pricingStatus: 'blocked',
+          selectedScenarioId: null,
+          projectCount: 0,
+          totalInvestmentAmount: 0,
+          status: 'draft',
+        },
+        baselineYears: [
+          {
+            year: 2024,
+            quality: 'complete',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: { veetiDataTypes: [], manualDataTypes: [] },
+            financials: { dataType: 'tilinpaatos', source: 'veeti' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: { dataType: 'volume_vesi', source: 'veeti' },
+            investmentAmount: 0,
+            soldWaterVolume: 0,
+            soldWastewaterVolume: 0,
+            combinedSoldVolume: 0,
+            processElectricity: 0,
+            pumpedWaterVolume: 0,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 0,
+            netWaterTradeVolume: 0,
+          },
+        ],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(await screen.findByTestId('vesinvest-panel')).toBeTruthy();
+    expect(
+      screen.queryByRole('heading', {
+        name: localeText('v2Vesinvest.workflowIdentifyUtility'),
+      }),
+    ).toBeNull();
   });
 
   it('does not label a year plausible when the core cost structure is missing', async () => {
@@ -4543,9 +4690,7 @@ describe('OverviewPageV2', () => {
         expect.objectContaining({ projects: [] }),
       );
     });
-    expect(
-      await screen.findByText(localeText('v2Vesinvest.workflowBuildPlan')),
-    ).toBeTruthy();
+    expect(await screen.findByTestId('vesinvest-panel')).toBeTruthy();
     expect(
       screen.queryByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
     ).toBeNull();
@@ -4820,29 +4965,19 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
   });
 
-  it('prompts for confirmation before resetting the workspace to choose another company', async () => {
-    const onChangeCompanyReset = vi.fn().mockResolvedValue(undefined);
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('C9032CDE');
-
+  it('keeps the normal overview workspace free of inline destructive company-reset actions', async () => {
     render(
       <OverviewPageV2
         onGoToForecast={() => undefined}
         onGoToReports={() => undefined}
         isAdmin={true}
-        onChangeCompanyReset={onChangeCompanyReset}
-        changeCompanyConfirmToken="C9032CDE"
       />,
     );
 
     await screen.findByTestId('vesinvest-panel');
-    fireEvent.click(screen.getByRole('button', { name: 'Vaihda vesilaitos' }));
-
-    await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
-      expect(promptSpy).toHaveBeenCalledTimes(1);
-      expect(onChangeCompanyReset).toHaveBeenCalledWith('C9032CDE');
-    });
+    expect(
+      screen.queryByRole('button', { name: 'Vaihda vesilaitos' }),
+    ).toBeNull();
   });
 
   it('uses non-destructive exclusion from the year decision modal', async () => {
@@ -5322,7 +5457,7 @@ describe('OverviewPageV2', () => {
     expect(screen.getAllByText(/Yksikköhinnat: Manuaalinen/i).length).toBeGreaterThan(0);
     expect(
       document.querySelector('.v2-overview-helper-list.step2-support'),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(document.querySelector('.v2-overview-workspace-layout')).toBeTruthy();
     expect(document.querySelector('.v2-overview-support-rail.step2-support')).toBeTruthy();
     const blockedLaneSummary = screen

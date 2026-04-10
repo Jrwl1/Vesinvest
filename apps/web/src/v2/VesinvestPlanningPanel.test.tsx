@@ -307,6 +307,14 @@ describe('VesinvestPlanningPanel', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Add project' }));
+    const dialog = screen.getByRole('dialog');
+    fireEvent.change(within(dialog).getByRole('combobox', { name: /group/i }), {
+      target: { value: wastewaterTreatmentGroup.key },
+    });
+    fireEvent.change(within(dialog).getByRole('textbox', { name: /project/i }), {
+      target: { value: 'Fresh project' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add project' }));
 
     fireEvent.change(screen.getByRole('textbox', { name: /plan name/i }), {
       target: { value: 'Fresh Vesinvest' },
@@ -327,7 +335,6 @@ describe('VesinvestPlanningPanel', () => {
     expect(allocationInput).toBeTruthy();
 
     fireEvent.change(projectCodeInput!, { target: { value: 'P-101' } });
-    fireEvent.change(projectNameInput!, { target: { value: 'Fresh project' } });
     fireEvent.change(allocationInput!, { target: { value: '250000' } });
 
     await waitFor(() => {
@@ -349,6 +356,7 @@ describe('VesinvestPlanningPanel', () => {
     const payload = createVesinvestPlanV2.mock.calls[0]?.[0] as Record<string, unknown>;
     const projects = payload.projects as Array<Record<string, unknown>>;
     expect(projects?.[0]?.code).toBe('P-101');
+    expect(projects?.[0]?.groupKey).toBe(wastewaterTreatmentGroup.key);
     expect(payload.status).toBeUndefined();
     expect(payload.baselineStatus).toBeUndefined();
     expect(payload.feeRecommendationStatus).toBeUndefined();
@@ -358,6 +366,76 @@ describe('VesinvestPlanningPanel', () => {
     expect(payload.businessId).toBeUndefined();
     expect(payload.veetiId).toBeUndefined();
     expect(payload.identitySource).toBeUndefined();
+  });
+
+  it('does not insert a project row before staged confirmation and keeps cancel non-destructive', async () => {
+    listVesinvestPlansV2.mockResolvedValue([
+      makeSummary({
+        projectCount: 0,
+        totalInvestmentAmount: 0,
+      }),
+    ]);
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        projectCount: 0,
+        totalInvestmentAmount: 0,
+        yearlyTotals: [],
+        fiveYearBands: [],
+        projects: [],
+      }),
+    );
+
+    const { container } = render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(listVesinvestPlansV2).toHaveBeenCalled();
+    });
+
+    expect(
+      container.querySelector('input[name="vesinvest-project-name-0"]'),
+    ).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add project' }));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(
+      container.querySelector('input[name="vesinvest-project-name-0"]'),
+    ).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(
+      container.querySelector('input[name="vesinvest-project-name-0"]'),
+    ).toBeNull();
+    expect(screen.queryByText('Unnamed project')).toBeNull();
+  });
+
+  it('keeps Add project disabled until Vesinvest group defaults are loaded', () => {
+    listVesinvestGroupsV2.mockImplementation(
+      () => new Promise(() => undefined) as Promise<any>,
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    expect(
+      (screen.getByRole('button', { name: 'Add project' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
   });
 
   it('saves an org-scoped group override from the admin editor', async () => {
@@ -1134,8 +1212,8 @@ describe('VesinvestPlanningPanel', () => {
     await screen.findByText('Grouped horizon layout');
     const matrix = screen.getByTestId('vesinvest-grouped-plan');
 
-    expect(within(matrix).getByText('Sanering / vattennatverk')).toBeTruthy();
-    expect(within(matrix).getByText('Avloppsrening')).toBeTruthy();
+    expect(within(matrix).getByText('Water network rehabilitation')).toBeTruthy();
+    expect(within(matrix).getByText('Wastewater treatment')).toBeTruthy();
     expect(within(matrix).getByText('P-001')).toBeTruthy();
     expect(within(matrix).getByText('Main rehabilitation')).toBeTruthy();
     expect(within(matrix).getByText('P-002')).toBeTruthy();
@@ -1155,15 +1233,15 @@ describe('VesinvestPlanningPanel', () => {
     );
 
     await screen.findByDisplayValue('Main rehabilitation');
-    fireEvent.change(screen.getByLabelText('P-001 2026 waterAmount'), {
+    fireEvent.change(screen.getByLabelText('P-001 2026 Water total'), {
       target: { value: '125' },
     });
-    fireEvent.change(screen.getByLabelText('P-001 2026 wastewaterAmount'), {
+    fireEvent.change(screen.getByLabelText('P-001 2026 Wastewater total'), {
       target: { value: '75' },
     });
 
     expect(
-      (screen.getByLabelText('P-001 2026 totalAmount') as HTMLInputElement).value,
+      (screen.getByLabelText('P-001 2026 Total') as HTMLInputElement).value,
     ).toBe('200');
   });
 

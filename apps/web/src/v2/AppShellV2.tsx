@@ -672,14 +672,6 @@ export const AppShellV2: React.FC<Props> = ({
     t,
   ]);
 
-  const handleOverviewChangeCompanyReset = React.useCallback(
-    async (confirmToken: string) => {
-      setClearError(null);
-      await runWorkspaceReset(confirmToken);
-    },
-    [runWorkspaceReset],
-  );
-
   const handleForecastScenarioSelection = React.useCallback(
     (scenarioId: string | null) => {
       setForecastRuntimeState((prev) =>
@@ -851,7 +843,7 @@ export const AppShellV2: React.FC<Props> = ({
                 onClick={closeDrawer}
                 aria-label={t('common.close', 'Close')}
               >
-                ×
+                x
               </button>
             </div>
 
@@ -882,7 +874,7 @@ export const AppShellV2: React.FC<Props> = ({
                   <p className="v2-muted">
                     {t(
                       'v2Shell.clearDataHint',
-                      'Admin tool: clears VEETI imports and forecast scenarios for this org.',
+                      'Admin tool: clears VEETI imports, Vesinvest plans, and forecast scenarios for this org.',
                     )}
                   </p>
                   <p className="v2-muted">
@@ -989,13 +981,6 @@ export const AppShellV2: React.FC<Props> = ({
                     onSetupWizardStateChange={handleSetupWizardStateChange}
                     onSetupOrgNameChange={handleSetupOrgNameChange}
                     setupBackSignal={setupBackSignal}
-                    onChangeCompanyReset={
-                      isAdmin ? handleOverviewChangeCompanyReset : undefined
-                    }
-                    changeCompanyConfirmToken={
-                      isAdmin ? clearConfirmToken : null
-                    }
-                    changeCompanyBusy={clearBusy}
                   />
                 ) : null}
                 {activeTab === 'ennuste' ? (

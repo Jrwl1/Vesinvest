@@ -7,6 +7,11 @@ import en from './en.json';
 import loginFormRaw from '../../components/LoginForm.tsx?raw';
 import appShellV2Raw from '../../v2/AppShellV2.tsx?raw';
 import overviewPageV2Raw from '../../v2/OverviewPageV2.tsx?raw';
+import overviewWizardPanelsRaw from '../../v2/OverviewWizardPanels.tsx?raw';
+import vesinvestPlanningPanelRaw from '../../v2/VesinvestPlanningPanel.tsx?raw';
+import overviewLabelsRaw from '../../v2/overviewLabels.ts?raw';
+import forecastViewModelRaw from '../../v2/forecastViewModel.ts?raw';
+import forecastCockpitSurfaceRaw from '../../v2/ForecastCockpitSurface.tsx?raw';
 import ennustePageV2Raw from '../../v2/EnnustePageV2.tsx?raw';
 import reportsPageV2Raw from '../../v2/ReportsPageV2.tsx?raw';
 
@@ -20,6 +25,11 @@ const uiStringFiles = [
   { name: 'LoginForm.tsx', raw: loginFormRaw },
   { name: 'AppShellV2.tsx', raw: appShellV2Raw },
   { name: 'OverviewPageV2.tsx', raw: overviewPageV2Raw },
+  { name: 'OverviewWizardPanels.tsx', raw: overviewWizardPanelsRaw },
+  { name: 'VesinvestPlanningPanel.tsx', raw: vesinvestPlanningPanelRaw },
+  { name: 'overviewLabels.ts', raw: overviewLabelsRaw },
+  { name: 'forecastViewModel.ts', raw: forecastViewModelRaw },
+  { name: 'ForecastCockpitSurface.tsx', raw: forecastCockpitSurfaceRaw },
   { name: 'EnnustePageV2.tsx', raw: ennustePageV2Raw },
   { name: 'ReportsPageV2.tsx', raw: reportsPageV2Raw },
 ] as const;
@@ -372,6 +382,41 @@ const refreshedFlowLocaleKeys = [
   'v2Reports.listFinancialSource',
   'v2Reports.previewBaselineStatus',
   'v2Reports.previewFinancialSource',
+  'v2Overview.changeCompanyButton',
+  'v2Overview.statementImportFallbackFile',
+  'v2Forecast.statementImportFallbackFile',
+  'v2Reports.statementImportFallbackFile',
+] as const;
+
+const requiredVesinvestLocaleKeys = [
+  'v2Vesinvest.addProject',
+  'v2Vesinvest.planSelector',
+  'v2Vesinvest.planName',
+  'v2Vesinvest.horizonYears',
+  'v2Vesinvest.projectGroup',
+  'v2Vesinvest.projectName',
+  'v2Vesinvest.projectSubtype',
+  'v2Vesinvest.projectNotes',
+  'v2Vesinvest.groupedLayout',
+  'v2Vesinvest.projectRegister',
+  'v2Vesinvest.projectUnnamed',
+  'v2Vesinvest.typeSanering',
+  'v2Vesinvest.typeNewBuild',
+  'v2Vesinvest.typeRepair',
+  'v2Vesinvest.groupSaneringWaterNetwork',
+  'v2Vesinvest.groupSaneringWastewaterNetwork',
+  'v2Vesinvest.groupNewWaterNetwork',
+  'v2Vesinvest.groupNewWastewaterNetwork',
+  'v2Vesinvest.groupWaterworksEquipment',
+  'v2Vesinvest.groupWastewaterEquipment',
+  'v2Vesinvest.groupWaterProduction',
+  'v2Vesinvest.groupWastewaterTreatment',
+  'v2Vesinvest.workflowIdentifyUtility',
+  'v2Vesinvest.workflowIdentifyUtilityBody',
+  'v2Vesinvest.workflowBuildPlan',
+  'v2Vesinvest.workflowBuildPlanBody',
+  'v2Vesinvest.workflowVerifyEvidence',
+  'v2Vesinvest.workflowVerifyEvidenceBody',
 ] as const;
 
 // Wizard chrome stays on the strict parity path so fallback leaks fail fast.
@@ -499,6 +544,15 @@ describe('locale integrity', () => {
     }
   });
 
+  it('keeps active v2Vesinvest locale keys in sync for fi/sv/en', () => {
+    for (const { locale, data } of localeEntries) {
+      for (const key of requiredVesinvestLocaleKeys) {
+        const value = pick(data as Record<string, unknown>, key);
+        expect(value, `${locale}: missing ${key}`).toBeTypeOf('string');
+      }
+    }
+  });
+
   it('avoids leaked source-language tokens in refreshed locale surfaces', () => {
     expect(String(pick(en as Record<string, unknown>, 'v2Overview.opsReports'))).not.toMatch(
       /Toimintakertomus/i,
@@ -530,6 +584,112 @@ describe('locale integrity', () => {
     expect(
       String(pick(en as Record<string, unknown>, 'v2Reports.defaultTitlePrefix')),
     ).toBe('Forecast report');
+    expect(
+      String(
+        pick(
+          en as Record<string, unknown>,
+          'v2Vesinvest.groupSaneringWaterNetwork',
+        ),
+      ),
+    ).toBe('Water network rehabilitation');
+    expect(
+      String(pick(en as Record<string, unknown>, 'v2Vesinvest.typeSanering')),
+    ).toBe('Rehabilitation');
+  });
+
+  it('uses locale-specific statement PDF fallback filenames', () => {
+    expect(
+      String(
+        pick(
+          en as Record<string, unknown>,
+          'v2Overview.statementImportFallbackFile',
+        ),
+      ),
+    ).toBe('statement PDF');
+    expect(
+      String(
+        pick(
+          en as Record<string, unknown>,
+          'v2Forecast.statementImportFallbackFile',
+        ),
+      ),
+    ).toBe('statement PDF');
+    expect(
+      String(
+        pick(
+          en as Record<string, unknown>,
+          'v2Reports.statementImportFallbackFile',
+        ),
+      ),
+    ).toBe('statement PDF');
+
+    expect(
+      String(
+        pick(
+          fi as Record<string, unknown>,
+          'v2Overview.statementImportFallbackFile',
+        ),
+      ),
+    ).toBe('tilinpäätös PDF');
+    expect(
+      String(
+        pick(
+          fi as Record<string, unknown>,
+          'v2Forecast.statementImportFallbackFile',
+        ),
+      ),
+    ).toBe('tilinpäätös PDF');
+    expect(
+      String(
+        pick(
+          fi as Record<string, unknown>,
+          'v2Reports.statementImportFallbackFile',
+        ),
+      ),
+    ).toBe('tilinpäätös PDF');
+
+    expect(
+      String(
+        pick(
+          sv as Record<string, unknown>,
+          'v2Overview.statementImportFallbackFile',
+        ),
+      ),
+    ).toBe('bokslut PDF');
+    expect(
+      String(
+        pick(
+          sv as Record<string, unknown>,
+          'v2Forecast.statementImportFallbackFile',
+        ),
+      ),
+    ).toBe('bokslut PDF');
+    expect(
+      String(
+        pick(
+          sv as Record<string, unknown>,
+          'v2Reports.statementImportFallbackFile',
+        ),
+      ),
+    ).toBe('bokslut PDF');
+  });
+
+  it('keeps active desktop surfaces free of source-language fallback literals', () => {
+    const activeSurfaceFiles = [
+      { name: 'OverviewWizardPanels.tsx', raw: overviewWizardPanelsRaw },
+      { name: 'VesinvestPlanningPanel.tsx', raw: vesinvestPlanningPanelRaw },
+      { name: 'overviewLabels.ts', raw: overviewLabelsRaw },
+      { name: 'forecastViewModel.ts', raw: forecastViewModelRaw },
+      { name: 'ForecastCockpitSurface.tsx', raw: forecastCockpitSurfaceRaw },
+      { name: 'ReportsPageV2.tsx', raw: reportsPageV2Raw },
+    ] as const;
+    const forbiddenLiteral = /bokslut PDF|Sanering \/ vattennatverk|Yhdistä organisaatio/;
+
+    for (const file of activeSurfaceFiles) {
+      expect(file.raw, `fallback leak in ${file.name}`).not.toMatch(
+        forbiddenLiteral,
+      );
+    }
   });
 
   it('keeps login entry copy free of old workflow jargon across fi/sv/en', () => {

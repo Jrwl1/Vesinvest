@@ -7,6 +7,7 @@ import {
   getSyncBlockReasonKey,
   isSyncReadyYear,
   resolveSetupWizardState,
+  resolveVesinvestWorkflowState,
 } from './overviewWorkflow';
 
 describe('overviewWorkflow sync readiness', () => {
@@ -153,6 +154,163 @@ describe('overviewWorkflow sync readiness', () => {
 });
 
 describe('overviewWorkflow setup wizard state', () => {
+  it('treats a saved plan identity as connected workflow truth even when import link state is empty', () => {
+    expect(
+      resolveVesinvestWorkflowState(
+        {
+          connected: false,
+          link: null,
+          years: [],
+          availableYears: [],
+          workspaceYears: [],
+          excludedYears: [],
+          planningBaselineYears: [],
+        },
+        {
+          canCreateScenario: false,
+          vesinvest: {
+            hasPlan: true,
+            planCount: 1,
+            activePlan: {
+              id: 'plan-1',
+              seriesId: 'series-1',
+              name: 'Vesinvest plan',
+              utilityName: 'Kronoby vatten och avlopp ab',
+              businessId: '0180030-9',
+              veetiId: 1535,
+              identitySource: 'veeti',
+              horizonYears: 20,
+              versionNumber: 1,
+              status: 'active',
+              baselineStatus: 'verified',
+              pricingStatus: 'blocked',
+              selectedScenarioId: null,
+              projectCount: 0,
+              totalInvestmentAmount: 0,
+              lastReviewedAt: null,
+              reviewDueAt: null,
+              baselineChangedSinceAcceptedRevision: false,
+              investmentPlanChangedSinceFeeRecommendation: false,
+              baselineFingerprint: null,
+              scenarioFingerprint: null,
+              updatedAt: '2026-04-10T00:00:00.000Z',
+              createdAt: '2026-04-10T00:00:00.000Z',
+            },
+            selectedPlan: null,
+          },
+          baselineYears: [],
+          operations: {
+            latestYear: null,
+            energySeries: [],
+            networkRehabSeries: [],
+            networkAssetsCount: 0,
+            toimintakertomusCount: 0,
+            toimintakertomusLatestYear: null,
+            vedenottolupaCount: 0,
+            activeVedenottolupaCount: 0,
+          },
+        },
+      ),
+    ).toMatchObject({
+      utilityIdentified: true,
+      hasPlan: true,
+      currentStep: 3,
+      baselineVerified: true,
+      forecastReady: false,
+    });
+  });
+
+  it('keeps no-plan states out of forecast and report readiness even when baseline truth exists', () => {
+    expect(
+      resolveVesinvestWorkflowState(
+        {
+          connected: true,
+          link: {
+            connected: true,
+            orgId: 'org-1',
+            veetiId: 1535,
+            nimi: 'Kronoby vatten och avlopp ab',
+            ytunnus: '0180030-9',
+          },
+          years: [],
+          availableYears: [],
+          workspaceYears: [],
+          excludedYears: [],
+          planningBaselineYears: [2024],
+        },
+        {
+          canCreateScenario: true,
+          vesinvest: {
+            hasPlan: false,
+            planCount: 0,
+            activePlan: null,
+            selectedPlan: null,
+          },
+          baselineYears: [
+            {
+              year: 2024,
+              quality: 'complete',
+              sourceStatus: 'VEETI',
+              sourceBreakdown: {
+                veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi'],
+                manualDataTypes: [],
+              },
+              financials: {
+                dataType: 'tilinpaatos',
+                source: 'veeti',
+                provenance: null,
+                editedAt: null,
+                editedBy: null,
+                reason: null,
+              },
+              prices: {
+                dataType: 'taksa',
+                source: 'veeti',
+                provenance: null,
+                editedAt: null,
+                editedBy: null,
+                reason: null,
+              },
+              volumes: {
+                dataType: 'volume_vesi',
+                source: 'veeti',
+                provenance: null,
+                editedAt: null,
+                editedBy: null,
+                reason: null,
+              },
+              investmentAmount: 0,
+              soldWaterVolume: 0,
+              soldWastewaterVolume: 0,
+              combinedSoldVolume: 0,
+              processElectricity: 0,
+              pumpedWaterVolume: 0,
+              waterBoughtVolume: 0,
+              waterSoldVolume: 0,
+              netWaterTradeVolume: 0,
+            },
+          ],
+          operations: {
+            latestYear: null,
+            energySeries: [],
+            networkRehabSeries: [],
+            networkAssetsCount: 0,
+            toimintakertomusCount: 0,
+            toimintakertomusLatestYear: null,
+            vedenottolupaCount: 0,
+            activeVedenottolupaCount: 0,
+          },
+        },
+      ),
+    ).toMatchObject({
+      hasPlan: false,
+      baselineVerified: true,
+      currentStep: 3,
+      forecastReady: false,
+      reportsReady: false,
+    });
+  });
+
   it('recommends the fix step when imported years still need attention', () => {
     expect(
       resolveSetupWizardState({
@@ -341,7 +499,7 @@ describe('overviewWorkflow setup wizard state', () => {
     });
   });
 
-  it('treats accepted planning baseline years as the unlock source even when extra workspace years still need review', () => {
+  it('keeps operators in plan creation until a Vesinvest plan exists even when planning baseline years are accepted', () => {
     expect(
       resolveSetupWizardStateFromImportStatus(
         {
@@ -393,12 +551,12 @@ describe('overviewWorkflow setup wizard state', () => {
         },
       ),
     ).toMatchObject({
-      currentStep: 6,
-      recommendedStep: 6,
-      activeStep: 6,
-      wizardComplete: true,
-      forecastUnlocked: true,
-      reportsUnlocked: true,
+      currentStep: 3,
+      recommendedStep: 3,
+      activeStep: 3,
+      wizardComplete: false,
+      forecastUnlocked: false,
+      reportsUnlocked: false,
       summary: {
         importedYearCount: 1,
         reviewedYearCount: 1,

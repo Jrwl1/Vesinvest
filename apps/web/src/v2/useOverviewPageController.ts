@@ -188,8 +188,14 @@ export function useOverviewPageController({
   });
 
   const activeVesinvestPlan = React.useMemo(
-    () => importController.planningContext?.vesinvest?.activePlan ?? null,
-    [importController.planningContext?.vesinvest?.activePlan],
+    () =>
+      importController.planningContext?.vesinvest?.activePlan ??
+      importController.planningContext?.vesinvest?.selectedPlan ??
+      null,
+    [
+      importController.planningContext?.vesinvest?.activePlan,
+      importController.planningContext?.vesinvest?.selectedPlan,
+    ],
   );
 
   const activeVesinvestScenario = React.useMemo(
@@ -234,7 +240,7 @@ export function useOverviewPageController({
     ).currentStep;
     return (wizardDisplayStep === 4
       ? 4
-      : activeVesinvestPlan && workflowStep >= 4
+      : activeVesinvestPlan && workflowStep > wizardDisplayStep
         ? workflowStep
         : wizardDisplayStep) as typeof shellSetupWizardState.currentStep;
   }, [
@@ -771,13 +777,15 @@ export function useOverviewPageController({
       return;
     }
     onSetupOrgNameChange?.(
-      importController.planningContext?.vesinvest?.activePlan?.utilityName ??
+      (importController.planningContext?.vesinvest?.activePlan?.utilityName ??
+        importController.planningContext?.vesinvest?.selectedPlan?.utilityName) ??
         importController.overview?.importStatus.link?.nimi ??
         null,
     );
   }, [
     importController.loading,
     importController.planningContext?.vesinvest?.activePlan?.utilityName,
+    importController.planningContext?.vesinvest?.selectedPlan?.utilityName,
     importController.overview?.importStatus.link?.nimi,
     onSetupOrgNameChange,
   ]);

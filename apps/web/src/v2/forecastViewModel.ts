@@ -71,7 +71,7 @@ export function buildForecastBaselineDatasetSourceLabel(params: {
       defaultValue: 'Statement import ({{fileName}})',
       fileName: normalizeImportedFileName(
         provenance.fileName,
-        t('v2Forecast.statementImportFallbackFile', 'bokslut PDF'),
+        t('v2Forecast.statementImportFallbackFile', 'statement PDF'),
       ),
     });
   }

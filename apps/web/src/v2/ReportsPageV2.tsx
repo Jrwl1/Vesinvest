@@ -27,6 +27,10 @@ import {
   getImportedFileNameByKind,
   normalizeImportedFileName,
 } from './provenanceDisplay';
+import {
+  resolveVesinvestGroupLabel,
+  resolveVesinvestReportGroupLabel,
+} from './vesinvestLabels';
 
 type Props = {
   refreshToken: number;
@@ -611,7 +615,7 @@ export const ReportsPageV2: React.FC<Props> = ({
             getImportedFileNameByKind(
               provenance,
               'statement_import',
-              t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+              t('v2Reports.statementImportFallbackFile', 'statement PDF'),
             ),
           ],
         );
@@ -634,7 +638,7 @@ export const ReportsPageV2: React.FC<Props> = ({
             defaultValue: 'Statement import ({{fileName}})',
             fileName: normalizeImportedFileName(
               provenance.fileName,
-              t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+              t('v2Reports.statementImportFallbackFile', 'statement PDF'),
             ),
           },
         );
@@ -782,7 +786,7 @@ export const ReportsPageV2: React.FC<Props> = ({
             getImportedFileNameByKind(
               dataset.provenance,
               'statement_import',
-              t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+              t('v2Reports.statementImportFallbackFile', 'statement PDF'),
             ),
           ],
         );
@@ -809,7 +813,7 @@ export const ReportsPageV2: React.FC<Props> = ({
             defaultValue: 'Financials came from {{fileName}}',
             fileName: normalizeImportedFileName(
               dataset.provenance.fileName,
-              t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+              t('v2Reports.statementImportFallbackFile', 'statement PDF'),
             ),
           },
         );
@@ -2151,7 +2155,13 @@ export const ReportsPageV2: React.FC<Props> = ({
                                   <React.Fragment key={group.reportGroupKey}>
                                     <tr className="v2-vesinvest-matrix-group-row">
                                       <td />
-                                      <td>{group.reportGroupLabel}</td>
+                                      <td>
+                                        {resolveVesinvestReportGroupLabel(
+                                          t,
+                                          group.reportGroupKey,
+                                          group.reportGroupLabel,
+                                        )}
+                                      </td>
                                       <td />
                                       <td />
                                       <td>{formatEur(group.totalAmount)}</td>
@@ -2160,7 +2170,13 @@ export const ReportsPageV2: React.FC<Props> = ({
                                       <tr key={`${group.reportGroupKey}-${project.code}`}>
                                         <td>{project.code}</td>
                                         <td>{project.name}</td>
-                                        <td>{project.groupLabel}</td>
+                                        <td>
+                                          {resolveVesinvestGroupLabel(
+                                            t,
+                                            project.groupKey,
+                                            project.groupLabel,
+                                          )}
+                                        </td>
                                         <td>{project.accountKey ?? '-'}</td>
                                         <td>{formatEur(project.totalAmount)}</td>
                                       </tr>

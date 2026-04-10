@@ -401,6 +401,8 @@ export const OverviewImportBoard: React.FC<Props> = ({
                         : renderDatasetCounts(
                             row.datasetCounts as Record<string, number> | undefined,
                           );
+                    const provenanceText =
+                      provenanceSummary || sourceStatusLabel(row.sourceStatus);
                     const isInlineCardActive = cardEditYear === row.vuosi;
                     const activeStep2Field =
                       isInlineCardActive && cardEditContext === 'step2'
@@ -476,67 +478,6 @@ export const OverviewImportBoard: React.FC<Props> = ({
                           </div>
                         ) : null}
 
-                        <div className="v2-year-canon-rows">
-                          {canonRows.map((item) => (
-                            <div
-                              key={`${row.vuosi}-${item.key}`}
-                              className={`v2-year-canon-row ${
-                                item.emphasized ? 'result' : ''
-                              } ${item.missing ? 'missing' : ''} ${
-                                item.zero ? 'zero' : ''
-                              } ${
-                                activeStep2Field === item.inlineField
-                                  ? 'editing-field'
-                                  : ''
-                              }`.trim()}
-                              role={isAdmin ? 'button' : undefined}
-                              tabIndex={isAdmin ? 0 : undefined}
-                              onClick={() => {
-                                if (!isAdmin) return;
-                                void attemptOpenInlineCardEditor(
-                                  row.vuosi,
-                                  item.inlineField,
-                                );
-                              }}
-                              onKeyDown={(event) => {
-                                if (!isAdmin) return;
-                                if (event.key !== 'Enter' && event.key !== ' ') {
-                                  return;
-                                }
-                                event.preventDefault();
-                                void attemptOpenInlineCardEditor(
-                                  row.vuosi,
-                                  item.inlineField,
-                                );
-                              }}
-                            >
-                              <span>{item.label}</span>
-                              <button
-                                type="button"
-                                data-edit-field={item.inlineField}
-                                className={`v2-year-canon-value ${
-                                  item.missing ? 'v2-year-preview-missing' : ''
-                                } ${item.zero ? 'v2-year-preview-zero' : ''} ${
-                                  item.resultToneClass
-                                }`.trim()}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  if (!isAdmin) return;
-                                  void attemptOpenInlineCardEditor(
-                                    row.vuosi,
-                                    item.inlineField,
-                                  );
-                                }}
-                              >
-                                {item.displayValue}
-                              </button>
-                              {activeStep2Field === item.inlineField
-                                ? renderStep2InlineFieldEditor(item.inlineField)
-                                : null}
-                            </div>
-                          ))}
-                        </div>
-
                         {row.trustNote ? (
                           <p
                             className={
@@ -549,90 +490,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
                           </p>
                         ) : null}
 
-                        <div className="v2-year-card-secondary">
-                          <div className="v2-year-card-secondary-grid compact">
-                            {secondaryStats.map((item) => {
-                              const isSecondaryFieldActive =
-                                activeStep2Field === item.focusField;
-                              return isAdmin ? (
-                                <div
-                                  key={`${row.vuosi}-${item.label}`}
-                                  className={`v2-year-preview-item secondary ${
-                                    item.missing ? 'missing' : ''
-                                  } ${item.zero ? 'zero' : ''} ${
-                                    isSecondaryFieldActive ? 'editing-field' : ''
-                                  }`.trim()}
-                                >
-                                  <button
-                                    type="button"
-                                    data-edit-field={item.focusField}
-                                    className="v2-year-preview-item-button"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      void attemptOpenInlineCardEditor(
-                                        row.vuosi,
-                                        item.focusField,
-                                        'step2',
-                                        row.missingRequirements,
-                                        'manualEdit',
-                                      );
-                                    }}
-                                  >
-                                    <span>{item.label}</span>
-                                    <strong
-                                      className={`${item.missing ? 'v2-year-preview-missing' : ''} ${
-                                        item.zero ? 'v2-year-preview-zero' : ''
-                                      }`.trim()}
-                                    >
-                                      {item.displayValue}
-                                    </strong>
-                                  </button>
-                                  {isSecondaryFieldActive
-                                    ? renderStep2InlineFieldEditor(item.focusField)
-                                    : null}
-                                </div>
-                              ) : (
-                                <div
-                                  key={`${row.vuosi}-${item.label}`}
-                                  className={`v2-year-preview-item secondary ${
-                                    item.missing ? 'missing' : ''
-                                  } ${item.zero ? 'zero' : ''}`.trim()}
-                                >
-                                  <span>{item.label}</span>
-                                  <strong
-                                    className={`${item.missing ? 'v2-year-preview-missing' : ''} ${
-                                      item.zero ? 'v2-year-preview-zero' : ''
-                                    }`.trim()}
-                                  >
-                                    {item.displayValue}
-                                  </strong>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          {repairActions.length > 0 ? (
-                            <div className="v2-year-card-repair-actions">
-                              {repairActions.map((action) => (
-                                <button
-                                  key={`${row.vuosi}-${action.key}`}
-                                  type="button"
-                                  className="v2-btn v2-btn-small"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    void openInlineCardEditor(
-                                      row.vuosi,
-                                      action.focusField,
-                                      'step2',
-                                      row.missingRequirements,
-                                      'manualEdit',
-                                    );
-                                  }}
-                                >
-                                  {action.label}
-                                </button>
-                              ))}
-                            </div>
-                          ) : null}
+                        <div className="v2-year-triage-meta">
                           {sourceLayers.length > 0 ? (
                             <div className="v2-year-source-list">
                               {sourceLayers.map((layer) => (
@@ -646,43 +504,245 @@ export const OverviewImportBoard: React.FC<Props> = ({
                             </div>
                           ) : (
                             <div className="v2-year-card-meta">
-                              <span>{provenanceSummary}</span>
+                              <span>{provenanceText}</span>
                             </div>
                           )}
                         </div>
 
-                        {isInlineCardActive ? (
-                          <div className="v2-inline-card-editor">
-                            {loadingYearData === row.vuosi ? (
-                              <p className="v2-muted">
-                                {t('common.loading', 'Loading...')}
-                              </p>
-                            ) : (
-                              <>
-                                {manualPatchError ? (
-                                  <div className="v2-alert v2-alert-error">
-                                    {manualPatchError}
-                                  </div>
-                                ) : null}
-                                {row.missingRequirements.length > 0 ? (
-                                  <p className="v2-manual-required-note">
-                                    {t(
-                                      'v2Overview.manualPatchRequiredHint',
-                                      'Required for sync readiness: {{requirements}}',
-                                      {
-                                        requirements: row.missingRequirements
-                                          .map((item: MissingRequirement) =>
-                                            missingRequirementLabel(item),
-                                          )
-                                          .join(', '),
-                                      },
-                                    )}
-                                  </p>
-                                ) : null}
-                              </>
+                        <details
+                          className="v2-year-technical-details"
+                          open={isInlineCardActive || undefined}
+                        >
+                          <summary>
+                            {t(
+                              'v2Overview.yearTechnicalDetailsSummary',
+                              'Technical source details',
                             )}
+                          </summary>
+
+                          <div className="v2-year-canon-rows">
+                            {canonRows.map((item) => (
+                              <div
+                                key={`${row.vuosi}-${item.key}`}
+                                className={`v2-year-canon-row ${
+                                  item.emphasized ? 'result' : ''
+                                } ${item.missing ? 'missing' : ''} ${
+                                  item.zero ? 'zero' : ''
+                                } ${
+                                  activeStep2Field === item.inlineField
+                                    ? 'editing-field'
+                                    : ''
+                                }`.trim()}
+                                role={isAdmin ? 'button' : undefined}
+                                tabIndex={isAdmin ? 0 : undefined}
+                                onClick={() => {
+                                  if (!isAdmin) return;
+                                  void attemptOpenInlineCardEditor(
+                                    row.vuosi,
+                                    item.inlineField,
+                                  );
+                                }}
+                                onKeyDown={(event) => {
+                                  if (!isAdmin) return;
+                                  if (event.key !== 'Enter' && event.key !== ' ') {
+                                    return;
+                                  }
+                                  event.preventDefault();
+                                  void attemptOpenInlineCardEditor(
+                                    row.vuosi,
+                                    item.inlineField,
+                                  );
+                                }}
+                              >
+                                <span>{item.label}</span>
+                                <button
+                                  type="button"
+                                  data-edit-field={item.inlineField}
+                                  className={`v2-year-canon-value ${
+                                    item.missing ? 'v2-year-preview-missing' : ''
+                                  } ${item.zero ? 'v2-year-preview-zero' : ''} ${
+                                    item.resultToneClass
+                                  }`.trim()}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    if (!isAdmin) return;
+                                    void attemptOpenInlineCardEditor(
+                                      row.vuosi,
+                                      item.inlineField,
+                                    );
+                                  }}
+                                >
+                                  {item.displayValue}
+                                </button>
+                                {activeStep2Field === item.inlineField
+                                  ? renderStep2InlineFieldEditor(item.inlineField)
+                                  : null}
+                              </div>
+                            ))}
                           </div>
-                        ) : null}
+
+                          <div className="v2-year-card-secondary">
+                            <div className="v2-year-card-secondary-grid compact">
+                              {secondaryStats.map((item) => {
+                                const isSecondaryFieldActive =
+                                  activeStep2Field === item.focusField;
+                                return isAdmin ? (
+                                  <div
+                                    key={`${row.vuosi}-${item.label}`}
+                                    className={`v2-year-preview-item secondary ${
+                                      item.missing ? 'missing' : ''
+                                    } ${item.zero ? 'zero' : ''} ${
+                                      isSecondaryFieldActive ? 'editing-field' : ''
+                                    }`.trim()}
+                                  >
+                                    <button
+                                      type="button"
+                                      data-edit-field={item.focusField}
+                                      className="v2-year-preview-item-button"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        void attemptOpenInlineCardEditor(
+                                          row.vuosi,
+                                          item.focusField,
+                                          'step2',
+                                          row.missingRequirements,
+                                          'manualEdit',
+                                        );
+                                      }}
+                                    >
+                                      <span>{item.label}</span>
+                                      <strong
+                                        className={`${item.missing ? 'v2-year-preview-missing' : ''} ${
+                                          item.zero ? 'v2-year-preview-zero' : ''
+                                        }`.trim()}
+                                      >
+                                        {item.displayValue}
+                                      </strong>
+                                    </button>
+                                    {isSecondaryFieldActive
+                                      ? renderStep2InlineFieldEditor(item.focusField)
+                                      : null}
+                                  </div>
+                                ) : (
+                                  <div
+                                    key={`${row.vuosi}-${item.label}`}
+                                    className={`v2-year-preview-item secondary ${
+                                      item.missing ? 'missing' : ''
+                                    } ${item.zero ? 'zero' : ''}`.trim()}
+                                  >
+                                    <span>{item.label}</span>
+                                    <strong
+                                      className={`${item.missing ? 'v2-year-preview-missing' : ''} ${
+                                        item.zero ? 'v2-year-preview-zero' : ''
+                                      }`.trim()}
+                                    >
+                                      {item.displayValue}
+                                    </strong>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {repairActions.length > 0 ? (
+                              <div className="v2-year-card-repair-actions">
+                                {repairActions.map((action) => (
+                                  <button
+                                    key={`${row.vuosi}-${action.key}`}
+                                    type="button"
+                                    className="v2-btn v2-btn-small"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      void openInlineCardEditor(
+                                        row.vuosi,
+                                        action.focusField,
+                                        'step2',
+                                        row.missingRequirements,
+                                        'manualEdit',
+                                      );
+                                    }}
+                                  >
+                                    {action.label}
+                                  </button>
+                                ))}
+                              </div>
+                            ) : null}
+
+                            {lane.key === 'blocked' && isAdmin ? (
+                              <div className="v2-year-card-repair-actions">
+                                <button
+                                  type="button"
+                                  className="v2-btn v2-btn-small"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void openInlineCardEditor(
+                                      row.vuosi,
+                                      null,
+                                      'step2',
+                                      row.missingRequirements,
+                                      'documentImport',
+                                    );
+                                  }}
+                                >
+                                  {t(
+                                    'v2Overview.documentImportAction',
+                                    'Import source PDF',
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="v2-btn v2-btn-small"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void openInlineCardEditor(
+                                      row.vuosi,
+                                      null,
+                                      'step2',
+                                      row.missingRequirements,
+                                      'workbookImport',
+                                    );
+                                  }}
+                                >
+                                  {t(
+                                    'v2Overview.workbookImportAction',
+                                    'Import KVA workbook',
+                                  )}
+                                </button>
+                              </div>
+                            ) : null}
+
+                            {isInlineCardActive ? (
+                              <div className="v2-inline-card-editor">
+                                {loadingYearData === row.vuosi ? (
+                                  <p className="v2-muted">
+                                    {t('common.loading', 'Loading...')}
+                                  </p>
+                                ) : (
+                                  <>
+                                    {manualPatchError ? (
+                                      <div className="v2-alert v2-alert-error">
+                                        {manualPatchError}
+                                      </div>
+                                    ) : null}
+                                    {row.missingRequirements.length > 0 ? (
+                                      <p className="v2-manual-required-note">
+                                        {t(
+                                          'v2Overview.manualPatchRequiredHint',
+                                          'Required for sync readiness: {{requirements}}',
+                                          {
+                                            requirements: row.missingRequirements
+                                              .map((item: MissingRequirement) =>
+                                                missingRequirementLabel(item),
+                                              )
+                                              .join(', '),
+                                          },
+                                        )}
+                                      </p>
+                                    ) : null}
+                                  </>
+                                )}
+                              </div>
+                            ) : null}
+                          </div>
+                        </details>
 
                         {lane.key === 'blocked' && isAdmin ? (
                           <div className="v2-year-card-repair-actions">
@@ -703,44 +763,6 @@ export const OverviewImportBoard: React.FC<Props> = ({
                               {t(
                                 'v2Overview.manualPatchButton',
                                 'Complete manually',
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              className="v2-btn v2-btn-small"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                void openInlineCardEditor(
-                                  row.vuosi,
-                                  null,
-                                  'step2',
-                                  row.missingRequirements,
-                                  'documentImport',
-                                );
-                              }}
-                            >
-                              {t(
-                                'v2Overview.documentImportAction',
-                                'Import source PDF',
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              className="v2-btn v2-btn-small"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                void openInlineCardEditor(
-                                  row.vuosi,
-                                  null,
-                                  'step2',
-                                  row.missingRequirements,
-                                  'workbookImport',
-                                );
-                              }}
-                            >
-                              {t(
-                                'v2Overview.workbookImportAction',
-                                'Import KVA workbook',
                               )}
                             </button>
                           </div>
@@ -798,6 +820,11 @@ export const OverviewImportBoard: React.FC<Props> = ({
                   <details
                     key={lane.key}
                     className={`v2-import-board-lane v2-import-board-lane-${lane.key}`}
+                    open={
+                      lane.key === 'blocked' && shouldLeadWithRepair
+                        ? true
+                        : undefined
+                    }
                   >
                     <summary>{laneHeader}</summary>
                     {laneGrid}

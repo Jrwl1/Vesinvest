@@ -337,9 +337,9 @@ describe('ReportsPageV2', () => {
     expect(await screen.findByText(/Operating costs 70 000 EUR/)).toBeTruthy();
     expect(await screen.findByText('Työkirjaimportti (kva-2024.xlsx)')).toBeTruthy();
     expect(await screen.findByText('2026-2030 (5)')).toBeTruthy();
-    expect(screen.getByText('Network rehabilitation')).toBeTruthy();
+    expect(screen.getByText('Verkoston saneeraus')).toBeTruthy();
     expect(screen.getByText('sanering_water_network')).toBeTruthy();
-    expect(screen.getByText('Sanering / vattennatverk')).toBeTruthy();
+    expect(screen.getByText('Vesiverkon saneeraus')).toBeTruthy();
     expect(screen.getByText('Main rehabilitation')).toBeTruthy();
   });
 

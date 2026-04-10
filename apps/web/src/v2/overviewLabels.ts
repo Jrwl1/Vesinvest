@@ -175,7 +175,7 @@ export function getDatasetSourceLabel(
       defaultValue: 'Statement import ({{fileName}})',
       fileName: normalizeImportedFileName(
         provenance.fileName,
-        t('v2Overview.statementImportFallbackFile', 'bokslut PDF'),
+        t('v2Overview.statementImportFallbackFile', 'statement PDF'),
       ),
     });
   }
@@ -241,7 +241,7 @@ function getSourceLayerSourceLabel(
       defaultValue: 'Statement import ({{fileName}})',
       fileName: normalizeImportedFileName(
         layer.fileName,
-        t('v2Overview.statementImportFallbackFile', 'bokslut PDF'),
+        t('v2Overview.statementImportFallbackFile', 'statement PDF'),
       ),
     });
   }

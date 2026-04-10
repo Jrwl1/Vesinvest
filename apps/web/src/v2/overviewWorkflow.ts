@@ -229,9 +229,14 @@ export function resolveVesinvestWorkflowState(
   },
 ): VesinvestWorkflowState {
   const activePlan = planningContext?.vesinvest?.activePlan ?? null;
+  const selectedPlan = planningContext?.vesinvest?.selectedPlan ?? null;
+  const workflowPlan = activePlan ?? selectedPlan;
+  const confirmedImportedYears = getConfirmedImportedYears(importStatus);
   const hasPlan =
-    planningContext?.vesinvest?.hasPlan === true || activePlan != null;
-  const utilityIdentified =
+    planningContext?.vesinvest?.hasPlan === true ||
+    activePlan != null ||
+    selectedPlan != null;
+  const linkedUtilityIdentified =
     importStatus.connected === true &&
     importStatus.link != null &&
     (Number.isFinite(importStatus.link.veetiId ?? null) ||
@@ -239,33 +244,53 @@ export function resolveVesinvestWorkflowState(
         importStatus.link.nimi.trim().length > 0) ||
       (typeof importStatus.link.ytunnus === 'string' &&
         importStatus.link.ytunnus.trim().length > 0));
+  const planUtilityIdentified =
+    workflowPlan != null &&
+    (Number.isFinite(workflowPlan.veetiId ?? null) ||
+      (typeof workflowPlan.utilityName === 'string' &&
+        workflowPlan.utilityName.trim().length > 0) ||
+      (typeof workflowPlan.businessId === 'string' &&
+        workflowPlan.businessId.trim().length > 0));
+  const utilityIdentified = linkedUtilityIdentified || planUtilityIdentified;
+  const hasImportedWorkspaceYears = confirmedImportedYears.length > 0;
   const investmentPlanReady =
-    (activePlan?.projectCount ?? 0) > 0 &&
-    (activePlan?.totalInvestmentAmount ?? 0) > 0;
+    (workflowPlan?.projectCount ?? 0) > 0 &&
+    (workflowPlan?.totalInvestmentAmount ?? 0) > 0;
   const baselineVerified =
-    activePlan?.baselineStatus === 'verified' ||
+    workflowPlan?.baselineStatus === 'verified' ||
     planningContext?.canCreateScenario === true ||
     getAcceptedPlanningBaselineYears(importStatus, planningContext).length > 0;
   const forecastReady =
     baselineVerified === true &&
-    typeof activePlan?.selectedScenarioId === 'string' &&
-    activePlan.selectedScenarioId.length > 0;
+    hasPlan === true &&
+    typeof workflowPlan?.selectedScenarioId === 'string' &&
+    workflowPlan.selectedScenarioId.length > 0;
   const reportsReady =
+    baselineVerified === true &&
+    hasPlan === true &&
     forecastReady === true &&
-    activePlan?.pricingStatus === 'verified' &&
+    workflowPlan?.pricingStatus === 'verified' &&
     isSelectedScenarioReadyForReports(options?.selectedScenario);
 
-  const currentStep: SetupWizardStep = !utilityIdentified
-    ? 1
-    : !hasPlan
-    ? 2
-    : !investmentPlanReady
-    ? 3
-    : !baselineVerified
-    ? 4
-    : !forecastReady || activePlan?.pricingStatus !== 'verified'
-    ? 5
-    : 6;
+  let currentStep: SetupWizardStep;
+  if (!utilityIdentified) {
+    currentStep = 1;
+  } else if (!hasPlan && !hasImportedWorkspaceYears && !baselineVerified) {
+    currentStep = 2;
+  } else if (!hasPlan) {
+    currentStep = 3;
+  } else if (hasPlan && !investmentPlanReady) {
+    currentStep = 3;
+  } else if (hasPlan && !baselineVerified) {
+    currentStep = 4;
+  } else if (
+    hasPlan &&
+    (!forecastReady || workflowPlan?.pricingStatus !== 'verified')
+  ) {
+    currentStep = 5;
+  } else {
+    currentStep = 6;
+  }
 
   return {
     currentStep,

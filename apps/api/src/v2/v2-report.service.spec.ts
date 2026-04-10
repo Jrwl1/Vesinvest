@@ -24,6 +24,7 @@ describe('V2ReportService collaborator helpers', () => {
     expect(variant).toBe('public_summary');
     expect(sections).toEqual({
       baselineSources: true,
+      investmentPlan: true,
       assumptions: false,
       yearlyInvestments: false,
       riskSummary: true,

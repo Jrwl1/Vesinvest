@@ -22,7 +22,11 @@ import {
   getReportDisplayTitle,
   getScenarioDisplayName,
 } from './displayNames';
-import { normalizeImportedFileName } from './provenanceDisplay';
+import {
+  getDocumentImportEvidence,
+  getImportedFileNameByKind,
+  normalizeImportedFileName,
+} from './provenanceDisplay';
 
 type Props = {
   refreshToken: number;
@@ -63,6 +67,7 @@ const REPORT_VARIANT_OPTIONS: Array<{
   description: string;
   sections: {
     baselineSources: boolean;
+    investmentPlan: boolean;
     assumptions: boolean;
     yearlyInvestments: boolean;
     riskSummary: boolean;
@@ -74,9 +79,10 @@ const REPORT_VARIANT_OPTIONS: Array<{
     label: 'Public summary',
     descriptionKey: 'v2Reports.variantPublicHint',
     description:
-      'Shows fee, risk, and baseline context without the detailed assumption and investment appendix.',
+      'Shows tariff path, grouped investment plan, and baseline context without the detailed assumptions or yearly investment rows.',
     sections: {
       baselineSources: true,
+      investmentPlan: true,
       assumptions: false,
       yearlyInvestments: false,
       riskSummary: true,
@@ -88,9 +94,10 @@ const REPORT_VARIANT_OPTIONS: Array<{
     label: 'Confidential appendix',
     descriptionKey: 'v2Reports.variantConfidentialHint',
     description:
-      'Includes the detailed assumptions and yearly investment appendix alongside the summary.',
+      'Adds assumptions and detailed yearly investment rows on top of the grouped investment plan and summary.',
     sections: {
       baselineSources: true,
+      investmentPlan: true,
       assumptions: true,
       yearlyInvestments: true,
       riskSummary: true,
@@ -104,6 +111,7 @@ const ASSUMPTION_LABEL_KEYS: Record<string, string> = {
   henkilostokerroin: 'assumptions.personnelFactor',
   vesimaaran_muutos: 'assumptions.volumeChange',
   hintakorotus: 'assumptions.priceIncrease',
+  perusmaksuMuutos: 'assumptions.baseFeeChange',
   investointikerroin: 'assumptions.investmentFactor',
 };
 
@@ -115,6 +123,16 @@ const formatScenarioUpdatedAt = (value: string): string => {
     month: 'short',
     day: 'numeric',
   });
+};
+
+const appendDetailSuffix = (
+  base: string,
+  suffixes: Array<string | null | undefined>,
+): string => {
+  const details = suffixes.filter(
+    (value): value is string => typeof value === 'string' && value.trim().length > 0,
+  );
+  return details.length > 0 ? `${base} | ${details.join(' | ')}` : base;
 };
 
 const formatInvestmentSnapshotMethod = (
@@ -371,6 +389,15 @@ export const ReportsPageV2: React.FC<Props> = ({
     (key: string) => t(ASSUMPTION_LABEL_KEYS[key] ?? key, key),
     [t],
   );
+  const formatAssumptionSnapshotValue = React.useCallback(
+    (key: string, value: number) => {
+      if (key === 'investointikerroin') {
+        return formatNumber(value, 4);
+      }
+      return `${formatNumber(value * 100, 2)} %`;
+    },
+    [],
+  );
 
   const emptyStateForecastFreshnessState = React.useMemo(
     () =>
@@ -537,10 +564,23 @@ export const ReportsPageV2: React.FC<Props> = ({
       source: 'veeti' | 'manual' | 'none',
       provenance: V2OverrideProvenance | null | undefined,
     ) => {
+      const documentEvidence = getDocumentImportEvidence(provenance);
+      const documentFileName = normalizeImportedFileName(
+        documentEvidence.fileName ?? provenance?.fileName,
+        'PDF document',
+      );
+      const withDocumentEvidence = (value: string, extraDetails: string[] = []) =>
+        appendDetailSuffix(value, [...extraDetails, documentEvidence.pageLabel]);
       const hasStatementImport =
         provenance?.kind === 'statement_import' ||
         (provenance?.fieldSources?.some(
           (item) => item.provenance.kind === 'statement_import',
+        ) ??
+          false);
+      const hasDocumentImport =
+        provenance?.kind === 'document_import' ||
+        (provenance?.fieldSources?.some(
+          (item) => item.provenance.kind === 'document_import',
         ) ??
           false);
       const hasWorkbookImport =
@@ -552,10 +592,39 @@ export const ReportsPageV2: React.FC<Props> = ({
             item.provenance.kind === 'excel_import',
         ) ??
           false);
+      if (hasDocumentImport && hasWorkbookImport) {
+        return withDocumentEvidence(
+          t(
+            'v2Reports.baselineSourceDocumentWorkbookMixed',
+            'Source document + workbook repair',
+          ),
+          [documentFileName],
+        );
+      }
       if (hasStatementImport && hasWorkbookImport) {
-        return t(
-          'v2Reports.baselineSourceStatementWorkbookMixed',
-          'Statement PDF + workbook repair',
+        return appendDetailSuffix(
+          t(
+            'v2Reports.baselineSourceStatementWorkbookMixed',
+            'Statement PDF + workbook repair',
+          ),
+          [
+            getImportedFileNameByKind(
+              provenance,
+              'statement_import',
+              t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+            ),
+          ],
+        );
+      }
+      if (hasDocumentImport) {
+        return withDocumentEvidence(
+          t(
+            'v2Reports.baselineSourceDocumentImport',
+            {
+              defaultValue: 'Source document ({{fileName}})',
+              fileName: documentFileName,
+            },
+          ),
         );
       }
       if (provenance?.kind === 'statement_import') {
@@ -664,10 +733,25 @@ export const ReportsPageV2: React.FC<Props> = ({
       reason: string | null;
       provenance: V2OverrideProvenance | null | undefined;
     }) => {
+      const documentEvidence = getDocumentImportEvidence(dataset.provenance);
+      const documentFileName = normalizeImportedFileName(
+        documentEvidence.fileName ?? dataset.provenance?.fileName,
+        'PDF document',
+      );
+      const documentEvidenceDetail = [
+        documentEvidence.pageLabel,
+        ...documentEvidence.sourceLines,
+      ];
       const hasStatementImport =
         dataset.provenance?.kind === 'statement_import' ||
         (dataset.provenance?.fieldSources?.some(
           (item) => item.provenance.kind === 'statement_import',
+        ) ??
+          false);
+      const hasDocumentImport =
+        dataset.provenance?.kind === 'document_import' ||
+        (dataset.provenance?.fieldSources?.some(
+          (item) => item.provenance.kind === 'document_import',
         ) ??
           false);
       const hasWorkbookImport =
@@ -679,10 +763,43 @@ export const ReportsPageV2: React.FC<Props> = ({
             item.provenance.kind === 'excel_import',
         ) ??
           false);
+      if (hasDocumentImport && hasWorkbookImport) {
+        return appendDetailSuffix(
+          t(
+          'v2Reports.baselineDocumentWorkbookDetail',
+          'Document-backed values and workbook repairs both affect this year.',
+          ),
+          [documentFileName, ...documentEvidenceDetail],
+        );
+      }
       if (hasStatementImport && hasWorkbookImport) {
-        return t(
-          'v2Reports.baselineStatementWorkbookDetail',
-          'Statement-backed values and workbook repairs both affect this year.',
+        return appendDetailSuffix(
+          t(
+            'v2Reports.baselineStatementWorkbookDetail',
+            'Statement-backed values and workbook repairs both affect this year.',
+          ),
+          [
+            getImportedFileNameByKind(
+              dataset.provenance,
+              'statement_import',
+              t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+            ),
+          ],
+        );
+      }
+      if (hasDocumentImport) {
+        return appendDetailSuffix(
+          t(
+          'v2Reports.baselineDocumentImportDetail',
+          {
+            defaultValue: 'Values came from {{fileName}}',
+            fileName: normalizeImportedFileName(
+              documentEvidence.fileName ?? dataset.provenance?.fileName,
+              'PDF document',
+            ),
+          },
+          ),
+          documentEvidenceDetail,
         );
       }
       if (dataset.provenance?.kind === 'statement_import') {
@@ -834,6 +951,57 @@ export const ReportsPageV2: React.FC<Props> = ({
       ),
     [t],
   );
+  const formatScenarioBranch = React.useCallback(
+    (value: V2ForecastScenario['scenarioType'] | undefined) => {
+      if (value === 'base') {
+        return t('v2Forecast.baseScenario', 'Base');
+      }
+      if (value === 'committed') {
+        return t('v2Forecast.committedScenario', 'Committed');
+      }
+      if (value === 'hypothesis') {
+        return t('v2Forecast.hypothesisScenario', 'Hypothesis');
+      }
+      if (value === 'stress') {
+        return t('v2Forecast.stressScenario', 'Stress');
+      }
+      return '-';
+    },
+    [t],
+  );
+  const selectedAcceptedBaselineYearsLabel = React.useMemo(() => {
+    const years = selectedReport?.snapshot.acceptedBaselineYears ?? [];
+    return years.length > 0 ? years.join(', ') : '-';
+  }, [selectedReport]);
+  const selectedBaselineSourceSummaries = React.useMemo(() => {
+    const summaries = selectedReport?.snapshot.baselineSourceSummaries ?? [];
+    if (summaries.length > 0) {
+      return [...summaries].sort((left, right) => left.year - right.year);
+    }
+    const primary = selectedReport?.snapshot.baselineSourceSummary ?? null;
+    return primary ? [primary] : [];
+  }, [selectedReport]);
+  const selectedScenarioBranchLabel = React.useMemo(
+    () => formatScenarioBranch(selectedReport?.snapshot.scenario.scenarioType),
+    [formatScenarioBranch, selectedReport],
+  );
+  const selectedScenarioHorizonLabel = React.useMemo(() => {
+    const years = selectedReport?.snapshot.scenario.years ?? [];
+    if (years.length > 0) {
+      return `${years[0]?.year}-${years[years.length - 1]?.year}`;
+    }
+    const baselineYear = selectedReport?.snapshot.scenario.baselineYear ?? null;
+    const horizonYears = selectedReport?.snapshot.scenario.horizonYears ?? null;
+    if (
+      baselineYear != null &&
+      horizonYears != null &&
+      Number.isFinite(horizonYears) &&
+      horizonYears > 0
+    ) {
+      return `${baselineYear}-${baselineYear + horizonYears - 1}`;
+    }
+    return '-';
+  }, [selectedReport]);
 
   const selectedReportPrimaryFeeSignal = React.useMemo(() => {
     const scenario = selectedReport?.snapshot.scenario ?? null;
@@ -859,6 +1027,13 @@ export const ReportsPageV2: React.FC<Props> = ({
         0,
     };
   }, [selectedReport, t]);
+  const selectedPrimaryBaselineSourceSummary = React.useMemo(
+    () =>
+      selectedReport?.snapshot.baselineSourceSummary ??
+      selectedBaselineSourceSummaries[selectedBaselineSourceSummaries.length - 1] ??
+      null,
+    [selectedBaselineSourceSummaries, selectedReport],
+  );
 
   React.useEffect(() => {
     onFocusedReportChange?.(
@@ -867,29 +1042,80 @@ export const ReportsPageV2: React.FC<Props> = ({
     );
   }, [onFocusedReportChange, selectedListReport, selectedReportId]);
 
+  const selectedVesinvestAppendix =
+    selectedReport?.snapshot.vesinvestAppendix ?? null;
   const selectedInvestmentSummary = React.useMemo(() => {
-    if (!selectedReport) return null;
-    const items = selectedReport.snapshot.scenario.yearlyInvestments;
-    if (items.length === 0) {
+    const yearlyTotals = selectedVesinvestAppendix?.yearlyTotals ?? [];
+    if (yearlyTotals.length === 0) {
       return {
-        count: 0,
-        firstYear: null as number | null,
+        coverageLabel: '-',
         peakYear: null as number | null,
         peakAmount: 0,
       };
     }
-    const peak = items.reduce((current, item) =>
-      item.amount > current.amount ? item : current,
+    const distinctYears = [...new Set(yearlyTotals.map((item) => item.year))].sort(
+      (left, right) => left - right,
+    );
+    const peak = yearlyTotals.reduce((current, item) =>
+      item.totalAmount > current.totalAmount ? item : current,
+    );
+    const firstYear = distinctYears[0] ?? null;
+    const lastYear = distinctYears[distinctYears.length - 1] ?? null;
+    return {
+      coverageLabel:
+        firstYear != null && lastYear != null
+          ? firstYear === lastYear
+            ? `${firstYear} (${distinctYears.length})`
+            : `${firstYear}-${lastYear} (${distinctYears.length})`
+          : '-',
+      peakYear: peak.year,
+      peakAmount: peak.totalAmount,
+    };
+  }, [selectedVesinvestAppendix]);
+  const selectedTariffDriverSummary = React.useMemo(() => {
+    if (!selectedReport) {
+      return null;
+    }
+    const scenario = selectedReport.snapshot.scenario;
+    const openingYear = scenario.years[0] ?? null;
+    const peakYearlyInvestment =
+      selectedVesinvestAppendix?.yearlyTotals?.reduce((current, item) =>
+        item.totalAmount > current.totalAmount ? item : current,
+      ) ?? null;
+    const nearTermExpenseRows = [...scenario.nearTermExpenseAssumptions].sort(
+      (left, right) => left.year - right.year,
     );
     return {
-      count: items.length,
-      firstYear: items[0]?.year ?? null,
-      peakYear: peak.year,
-      peakAmount: peak.amount,
+      baselineCombinedPrice: scenario.baselinePriceTodayCombined,
+      baselineSoldVolume: openingYear?.soldVolume ?? null,
+      openingDepreciation: openingYear?.totalDepreciation ?? null,
+      peakInvestmentYear: peakYearlyInvestment?.year ?? null,
+      peakInvestmentAmount: peakYearlyInvestment?.totalAmount ?? null,
+      nearTermExpenseYears:
+        nearTermExpenseRows.length > 0
+          ? `${nearTermExpenseRows[0]?.year}-${nearTermExpenseRows[nearTermExpenseRows.length - 1]?.year}`
+          : null,
     };
-  }, [selectedReport]);
-  const selectedVesinvestAppendix =
-    selectedReport?.snapshot.vesinvestAppendix ?? null;
+  }, [selectedReport, selectedVesinvestAppendix]);
+  const selectedTariffAssumptionRows = React.useMemo(
+    () =>
+      !activeVariant.sections.assumptions
+        ? []
+        :
+      Object.entries(selectedReport?.snapshot.scenario.assumptions ?? {})
+        .filter(([key]) => key !== '__scenarioTypeCode')
+        .map(([key, value]) => ({
+          key,
+          label: assumptionLabelByKey(key),
+          value: formatAssumptionSnapshotValue(key, value),
+        })),
+    [
+      activeVariant.sections.assumptions,
+      assumptionLabelByKey,
+      formatAssumptionSnapshotValue,
+      selectedReport,
+    ],
+  );
 
   const downloadMatchesPreview =
     selectedReport != null ? selectedReport.variant === previewVariant : true;
@@ -1416,7 +1642,24 @@ export const ReportsPageV2: React.FC<Props> = ({
                             <strong>{`${selectedReport.snapshot.vesinvestPlan.name} / v${selectedReport.snapshot.vesinvestPlan.versionNumber}`}</strong>
                           </div>
                         ) : null}
-                        {selectedReport.snapshot.baselineSourceSummary ? (
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t(
+                              'v2Reports.acceptedBaselineYears',
+                              'Accepted baseline years',
+                            )}
+                          </span>
+                          <strong>{selectedAcceptedBaselineYearsLabel}</strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>{t('v2Forecast.scenarioTypeLabel', 'Branch type')}</span>
+                          <strong>{selectedScenarioBranchLabel}</strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
+                          <strong>{selectedScenarioHorizonLabel}</strong>
+                        </div>
+                        {selectedPrimaryBaselineSourceSummary ? (
                           <div className="v2-keyvalue-row">
                             <span>
                               {t(
@@ -1426,15 +1669,13 @@ export const ReportsPageV2: React.FC<Props> = ({
                             </span>
                             <strong>
                               {baselineStatusLabel(
-                                selectedReport.snapshot.baselineSourceSummary
-                                  .sourceStatus,
-                                selectedReport.snapshot.baselineSourceSummary
-                                  .planningRole,
+                                selectedPrimaryBaselineSourceSummary.sourceStatus,
+                                selectedPrimaryBaselineSourceSummary.planningRole,
                               )}
                             </strong>
                           </div>
                         ) : null}
-                        {selectedReport.snapshot.baselineSourceSummary ? (
+                        {selectedPrimaryBaselineSourceSummary ? (
                           <div className="v2-keyvalue-row">
                             <span>
                               {t(
@@ -1444,10 +1685,10 @@ export const ReportsPageV2: React.FC<Props> = ({
                             </span>
                             <strong>
                               {baselineDatasetSourceLabel(
-                                selectedReport.snapshot.baselineSourceSummary
-                                  .financials.source,
-                                selectedReport.snapshot.baselineSourceSummary
-                                  .financials.provenance,
+                                selectedPrimaryBaselineSourceSummary.financials
+                                  .source,
+                                selectedPrimaryBaselineSourceSummary.financials
+                                  .provenance,
                               )}
                             </strong>
                           </div>
@@ -1524,6 +1765,14 @@ export const ReportsPageV2: React.FC<Props> = ({
                               </strong>
                             </div>
                             <div className="v2-keyvalue-row">
+                              <span>{t('v2Vesinvest.investmentPlan', 'Investment plan')}</span>
+                              <strong>
+                                {option.sections.investmentPlan
+                                  ? t('common.yes', 'Yes')
+                                  : t('common.no', 'No')}
+                              </strong>
+                            </div>
+                            <div className="v2-keyvalue-row">
                               <span>
                                 {t(
                                   'v2Reports.sectionAssumptions',
@@ -1569,116 +1818,194 @@ export const ReportsPageV2: React.FC<Props> = ({
                   </section>
 
                   {activeVariant.sections.baselineSources &&
-                  selectedReport.snapshot.baselineSourceSummary ? (
+                  selectedBaselineSourceSummaries.length > 0 ? (
                     <article className="v2-subcard v2-reports-panel-card">
                       <h3>
                         {t(
                           'v2Reports.baselineSourcesTitle',
                         )}
                       </h3>
-                      <div className="v2-reports-provenance-summary">
-                        <div>
+                      {selectedBaselineSourceSummaries.map((summary) => (
+                        <React.Fragment key={summary.year}>
+                          <div className="v2-reports-provenance-summary">
+                            <div>
+                              <span>
+                                {t(
+                                  'projection.v2.baselineYearLabel',
+                                  'Baseline year',
+                                )}
+                              </span>
+                              <strong>{summary.year}</strong>
+                            </div>
+                            <div>
+                              <span>{t('v2Reports.colVariant', 'Variant')}</span>
+                              <strong>
+                                {baselineStatusLabel(
+                                  summary.sourceStatus,
+                                  summary.planningRole,
+                                )}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>{t('v2Reports.baselineSourceVeeti', 'VEETI')}</span>
+                              <strong>
+                                {summary.sourceBreakdown.veetiDataTypes
+                                  .map(dataTypeLabel)
+                                  .join(', ') || t('common.no', 'No')}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>
+                                {t('v2Reports.baselineSourceManual', 'Manual review')}
+                              </span>
+                              <strong>
+                                {summary.sourceBreakdown.manualDataTypes
+                                  .map(dataTypeLabel)
+                                  .join(', ') || t('common.no', 'No')}
+                              </strong>
+                            </div>
+                          </div>
+                          <div className="v2-reports-provenance-grid">
+                            <article className="v2-keyvalue-row v2-reports-provenance-row">
+                              <div>
+                                <span>
+                                  {t('v2Reports.baselineFinancials', 'Financials')}
+                                </span>
+                                <strong>
+                                  {baselineDatasetSourceLabel(
+                                    summary.financials.source,
+                                    summary.financials.provenance,
+                                  )}
+                                </strong>
+                              </div>
+                              <p className="v2-muted">
+                                {datasetPublicationNote(summary.financials)}
+                              </p>
+                            </article>
+                            <article className="v2-keyvalue-row v2-reports-provenance-row">
+                              <div>
+                                <span>{t('v2Reports.baselinePrices', 'Prices')}</span>
+                                <strong>
+                                  {baselineDatasetSourceLabel(
+                                    summary.prices.source,
+                                    summary.prices.provenance,
+                                  )}
+                                </strong>
+                              </div>
+                              <p className="v2-muted">
+                                {datasetPublicationNote(summary.prices)}
+                              </p>
+                            </article>
+                            <article className="v2-keyvalue-row v2-reports-provenance-row">
+                              <div>
+                                <span>
+                                  {t('v2Reports.baselineVolumes', 'Sold volumes')}
+                                </span>
+                                <strong>
+                                  {baselineDatasetSourceLabel(
+                                    summary.volumes.source,
+                                    summary.volumes.provenance,
+                                  )}
+                                </strong>
+                              </div>
+                              <p className="v2-muted">
+                                {datasetPublicationNote(summary.volumes)}
+                              </p>
+                            </article>
+                          </div>
+                        </React.Fragment>
+                      ))}
+                    </article>
+                  ) : null}
+
+                  {selectedTariffDriverSummary ? (
+                    <article className="v2-subcard v2-reports-panel-card">
+                      <h3>{t('v2Forecast.tariffDriversTitle', 'Why this price')}</h3>
+                      <div className="v2-keyvalue-list v2-reports-investment-list">
+                        <div className="v2-keyvalue-row">
                           <span>
                             {t(
-                              'projection.v2.baselineYearLabel',
-                              'Baseline year',
+                              'v2Reports.requiredCombinedPriceToday',
+                              'Required combined price today',
                             )}
                           </span>
                           <strong>
-                            {selectedReport.snapshot.baselineSourceSummary.year}
-                          </strong>
-                        </div>
-                        <div>
-                          <span>{t('v2Reports.colVariant', 'Variant')}</span>
-                          <strong>
-                            {baselineStatusLabel(
-                              selectedReport.snapshot.baselineSourceSummary
-                                .sourceStatus,
-                              selectedReport.snapshot.baselineSourceSummary
-                                .planningRole,
+                            {formatPrice(
+                              selectedReportPrimaryFeeSignal.price,
                             )}
                           </strong>
                         </div>
-                        <div>
-                          <span>{t('v2Reports.baselineSourceVeeti', 'VEETI')}</span>
-                          <strong>
-                            {selectedReport.snapshot.baselineSourceSummary.sourceBreakdown.veetiDataTypes
-                              .map(dataTypeLabel)
-                              .join(', ') || t('common.no', 'No')}
-                          </strong>
-                        </div>
-                        <div>
+                        <div className="v2-keyvalue-row">
                           <span>
-                            {t('v2Reports.baselineSourceManual', 'Manual review')}
+                            {t(
+                              'v2Reports.requiredCombinedIncreaseFromCurrent',
+                              'Required increase from current combined price',
+                            )}
                           </span>
                           <strong>
-                            {selectedReport.snapshot.baselineSourceSummary.sourceBreakdown.manualDataTypes
-                              .map(dataTypeLabel)
-                              .join(', ') || t('common.no', 'No')}
+                            {formatPercent(
+                              selectedReportPrimaryFeeSignal.increase,
+                            )}
                           </strong>
                         </div>
-                      </div>
-                      <div className="v2-reports-provenance-grid">
-                        <article className="v2-keyvalue-row v2-reports-provenance-row">
-                          <div>
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t('v2Vesinvest.baselineYearVolume', 'Combined sold volume')}
+                          </span>
+                          <strong>
+                            {selectedTariffDriverSummary.baselineSoldVolume != null
+                              ? formatNumber(
+                                  selectedTariffDriverSummary.baselineSoldVolume,
+                                  0,
+                                )
+                              : '-'}
+                          </strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>{t('v2Forecast.totalDepreciationTitle', 'Total depreciation')}</span>
+                          <strong>
+                            {selectedTariffDriverSummary.openingDepreciation != null
+                              ? formatEur(
+                                  selectedTariffDriverSummary.openingDepreciation,
+                                )
+                              : '-'}
+                          </strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t(
+                              'v2Forecast.investmentPeakAnnualTotal',
+                              'Peak annual investment total',
+                            )}
+                          </span>
+                          <strong>
+                            {selectedTariffDriverSummary.peakInvestmentYear != null &&
+                            selectedTariffDriverSummary.peakInvestmentAmount != null
+                              ? `${selectedTariffDriverSummary.peakInvestmentYear} · ${formatEur(
+                                  selectedTariffDriverSummary.peakInvestmentAmount,
+                                )}`
+                              : '-'}
+                          </strong>
+                        </div>
+                        {selectedTariffDriverSummary.nearTermExpenseYears ? (
+                          <div className="v2-keyvalue-row">
                             <span>
-                              {t('v2Reports.baselineFinancials', 'Financials')}
+                              {t(
+                                'v2Forecast.nearTermExpenseTitle',
+                                'Near-term expense assumptions (editable)',
+                              )}
                             </span>
                             <strong>
-                              {baselineDatasetSourceLabel(
-                                selectedReport.snapshot.baselineSourceSummary
-                                  .financials.source,
-                                selectedReport.snapshot.baselineSourceSummary
-                                  .financials.provenance,
-                              )}
+                              {selectedTariffDriverSummary.nearTermExpenseYears}
                             </strong>
                           </div>
-                          <p className="v2-muted">
-                            {datasetPublicationNote(
-                              selectedReport.snapshot.baselineSourceSummary
-                                .financials,
-                            )}
-                          </p>
-                        </article>
-                        <article className="v2-keyvalue-row v2-reports-provenance-row">
-                          <div>
-                            <span>{t('v2Reports.baselinePrices', 'Prices')}</span>
-                            <strong>
-                              {baselineDatasetSourceLabel(
-                                selectedReport.snapshot.baselineSourceSummary
-                                  .prices.source,
-                                selectedReport.snapshot.baselineSourceSummary
-                                  .prices.provenance,
-                              )}
-                            </strong>
+                        ) : null}
+                        {selectedTariffAssumptionRows.map((row) => (
+                          <div key={row.key} className="v2-keyvalue-row">
+                            <span>{row.label}</span>
+                            <strong>{row.value}</strong>
                           </div>
-                          <p className="v2-muted">
-                            {datasetPublicationNote(
-                              selectedReport.snapshot.baselineSourceSummary.prices,
-                            )}
-                          </p>
-                        </article>
-                        <article className="v2-keyvalue-row v2-reports-provenance-row">
-                          <div>
-                            <span>
-                              {t('v2Reports.baselineVolumes', 'Sold volumes')}
-                            </span>
-                            <strong>
-                              {baselineDatasetSourceLabel(
-                                selectedReport.snapshot.baselineSourceSummary
-                                  .volumes.source,
-                                selectedReport.snapshot.baselineSourceSummary
-                                  .volumes.provenance,
-                              )}
-                            </strong>
-                          </div>
-                          <p className="v2-muted">
-                            {datasetPublicationNote(
-                              selectedReport.snapshot.baselineSourceSummary
-                                .volumes,
-                            )}
-                          </p>
-                        </article>
+                        ))}
                       </div>
                     </article>
                   ) : null}
@@ -1693,39 +2020,70 @@ export const ReportsPageV2: React.FC<Props> = ({
                       <div className="v2-reports-assumption-grid">
                         {Object.entries(
                           selectedReport.snapshot.scenario.assumptions,
-                        ).map(([key, value]) => (
+                        )
+                          .filter(([key]) => key !== '__scenarioTypeCode')
+                          .map(([key, value]) => (
                           <div key={key} className="v2-reports-assumption-item">
                             <span>{assumptionLabelByKey(key)}</span>
-                            <strong>{formatNumber(value, 4)}</strong>
+                            <strong>
+                              {formatAssumptionSnapshotValue(key, value)}
+                            </strong>
                           </div>
-                        ))}
+                          ))}
+                        {selectedReport.snapshot.scenario.nearTermExpenseAssumptions.map(
+                          (row) => (
+                            <div
+                              key={`near-term-${row.year}`}
+                              className="v2-reports-assumption-item"
+                            >
+                              <span>
+                                {`${t(
+                                  'v2Forecast.nearTermExpenseTitle',
+                                  'Near-term expense assumptions (editable)',
+                                )} ${row.year}`}
+                              </span>
+                              <strong>{`${formatPercent(
+                                row.personnelPct,
+                              )} / ${formatPercent(
+                                row.energyPct,
+                              )} / ${formatPercent(row.opexOtherPct)}`}</strong>
+                            </div>
+                          ),
+                        )}
+                        <div className="v2-reports-assumption-item">
+                          <span>
+                            {t(
+                              'v2Forecast.planningInputsEditableSummary',
+                              'Near-term expenses, investments, and depreciation',
+                            )}
+                          </span>
+                          <strong>{`${formatPercent(
+                            selectedReport.snapshot.scenario.thereafterExpenseAssumptions
+                              .personnelPct,
+                          )} / ${formatPercent(
+                            selectedReport.snapshot.scenario.thereafterExpenseAssumptions
+                              .energyPct,
+                          )} / ${formatPercent(
+                            selectedReport.snapshot.scenario.thereafterExpenseAssumptions
+                              .opexOtherPct,
+                          )}`}</strong>
+                        </div>
                       </div>
                     </article>
                   ) : null}
 
-                  {activeVariant.sections.yearlyInvestments ? (
+                  {activeVariant.sections.investmentPlan ? (
                     <article className="v2-subcard v2-reports-panel-card">
                       <h3>
-                        {t(
-                          'v2Reports.yearlyInvestmentsSnapshot',
-                        )}
+                        {t('v2Vesinvest.investmentPlan', 'Investment plan')}
                       </h3>
                       <div className="v2-reports-investment-summary">
                         <div>
                           <span>
                             {t('v2Reports.investmentYearsCovered', 'Years covered')}
                           </span>
-                          <strong>{selectedInvestmentSummary?.count ?? 0}</strong>
-                        </div>
-                        <div>
-                          <span>
-                            {t(
-                              'projection.v2.baselineYearLabel',
-                              'Baseline year',
-                            )}
-                          </span>
                           <strong>
-                            {selectedInvestmentSummary?.firstYear ?? '-'}
+                            {selectedInvestmentSummary?.coverageLabel ?? '-'}
                           </strong>
                         </div>
                         <div>
@@ -1743,6 +2101,21 @@ export const ReportsPageV2: React.FC<Props> = ({
                           </strong>
                         </div>
                       </div>
+                      {selectedVesinvestAppendix?.yearlyTotals?.length ? (
+                        <>
+                          <h4>
+                            {t('v2Forecast.investmentAnnualTable', 'Full annual table')}
+                          </h4>
+                          <div className="v2-keyvalue-list v2-reports-investment-list">
+                            {selectedVesinvestAppendix.yearlyTotals.map((row) => (
+                              <div key={row.year} className="v2-keyvalue-row">
+                                <span>{row.year}</span>
+                                <strong>{formatEur(row.totalAmount)}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      ) : null}
                       {selectedVesinvestAppendix?.fiveYearBands?.length ? (
                         <>
                           <h4>{t('v2Vesinvest.fiveYearBands', 'Five-year bands')}</h4>
@@ -1799,6 +2172,15 @@ export const ReportsPageV2: React.FC<Props> = ({
                           </div>
                         </>
                       ) : null}
+                    </article>
+                  ) : null}
+                  {activeVariant.sections.yearlyInvestments ? (
+                    <article className="v2-subcard v2-reports-panel-card">
+                      <h3>
+                        {t(
+                          'v2Reports.yearlyInvestmentsSnapshot',
+                        )}
+                      </h3>
                       <div className="v2-keyvalue-list v2-reports-investment-list">
                         {selectedReport.snapshot.scenario.yearlyInvestments.map(
                           (item) => {

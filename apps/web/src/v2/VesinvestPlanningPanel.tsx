@@ -29,7 +29,11 @@ import {
 } from '../api';
 import { buildDefaultReportTitle } from './displayNames';
 import { formatDateTime, formatEur, formatPercent, formatPrice } from './format';
-import { normalizeImportedFileName } from './provenanceDisplay';
+import {
+  getDocumentImportEvidence,
+  getImportedFileNameByKind,
+  normalizeImportedFileName,
+} from './provenanceDisplay';
 
 type Props = {
   t: TFunction;
@@ -46,6 +50,16 @@ type Props = {
   onGoToForecast: (scenarioId?: string | null) => void;
   onGoToReports: () => void;
   onPlansChanged?: () => Promise<void> | void;
+};
+
+const appendDetailSuffix = (
+  base: string,
+  suffixes: Array<string | null | undefined>,
+): string => {
+  const details = suffixes.filter(
+    (value): value is string => typeof value === 'string' && value.trim().length > 0,
+  );
+  return details.length > 0 ? `${base} | ${details.join(' | ')}` : base;
 };
 
 type VesinvestDraft = {
@@ -282,10 +296,22 @@ const datasetSourceLabel = (
   t: TFunction,
   dataset: VesinvestBaselineYear['financials'],
 ) => {
+  const documentEvidence = getDocumentImportEvidence(dataset.provenance);
+  const documentFileName = normalizeImportedFileName(
+    documentEvidence.fileName ?? dataset.provenance?.fileName,
+    'PDF document',
+  );
+  const withDocumentEvidence = (value: string, extraDetails: string[] = []) =>
+    appendDetailSuffix(value, [...extraDetails, documentEvidence.pageLabel]);
   const hasStatementImport =
     dataset.provenance?.kind === 'statement_import' ||
     (dataset.provenance?.fieldSources?.some(
       (item) => item.provenance.kind === 'statement_import',
+    ) ?? false);
+  const hasDocumentImport =
+    dataset.provenance?.kind === 'document_import' ||
+    (dataset.provenance?.fieldSources?.some(
+      (item) => item.provenance.kind === 'document_import',
     ) ?? false);
   const hasWorkbookImport =
     dataset.provenance?.kind === 'kva_import' ||
@@ -295,10 +321,36 @@ const datasetSourceLabel = (
         item.provenance.kind === 'kva_import' ||
         item.provenance.kind === 'excel_import',
     ) ?? false);
+  if (hasDocumentImport && hasWorkbookImport) {
+    return withDocumentEvidence(
+      t(
+        'v2Reports.baselineSourceDocumentWorkbookMixed',
+        'Source document + workbook repair',
+      ),
+      [documentFileName],
+    );
+  }
   if (hasStatementImport && hasWorkbookImport) {
-    return t(
-      'v2Reports.baselineSourceStatementWorkbookMixed',
-      'Statement PDF + workbook repair',
+    return appendDetailSuffix(
+      t(
+        'v2Reports.baselineSourceStatementWorkbookMixed',
+        'Statement PDF + workbook repair',
+      ),
+      [
+        getImportedFileNameByKind(
+          dataset.provenance,
+          'statement_import',
+          t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+        ),
+      ],
+    );
+  }
+  if (hasDocumentImport) {
+    return withDocumentEvidence(
+      t('v2Reports.baselineSourceDocumentImport', {
+        defaultValue: 'Source document ({{fileName}})',
+        fileName: documentFileName,
+      }),
     );
   }
   if (dataset.provenance?.kind === 'statement_import') {
@@ -338,10 +390,24 @@ const datasetSourceNote = (
   t: TFunction,
   dataset: VesinvestBaselineYear['financials'],
 ) => {
+  const documentEvidence = getDocumentImportEvidence(dataset.provenance);
+  const documentFileName = normalizeImportedFileName(
+    documentEvidence.fileName ?? dataset.provenance?.fileName,
+    'PDF document',
+  );
+  const documentEvidenceDetail = [
+    documentEvidence.pageLabel,
+    ...documentEvidence.sourceLines,
+  ];
   const hasStatementImport =
     dataset.provenance?.kind === 'statement_import' ||
     (dataset.provenance?.fieldSources?.some(
       (item) => item.provenance.kind === 'statement_import',
+    ) ?? false);
+  const hasDocumentImport =
+    dataset.provenance?.kind === 'document_import' ||
+    (dataset.provenance?.fieldSources?.some(
+      (item) => item.provenance.kind === 'document_import',
     ) ?? false);
   const hasWorkbookImport =
     dataset.provenance?.kind === 'kva_import' ||
@@ -351,10 +417,40 @@ const datasetSourceNote = (
         item.provenance.kind === 'kva_import' ||
         item.provenance.kind === 'excel_import',
     ) ?? false);
+  if (hasDocumentImport && hasWorkbookImport) {
+    return appendDetailSuffix(
+      t(
+      'v2Reports.baselineDocumentWorkbookDetail',
+      'Document-backed values and workbook repairs both affect this year.',
+      ),
+      [documentFileName, ...documentEvidenceDetail],
+    );
+  }
   if (hasStatementImport && hasWorkbookImport) {
-    return t(
-      'v2Reports.baselineStatementWorkbookDetail',
-      'Statement-backed values and workbook repairs both affect this year.',
+    return appendDetailSuffix(
+      t(
+        'v2Reports.baselineStatementWorkbookDetail',
+        'Statement-backed values and workbook repairs both affect this year.',
+      ),
+      [
+        getImportedFileNameByKind(
+          dataset.provenance,
+          'statement_import',
+          t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+        ),
+      ],
+    );
+  }
+  if (hasDocumentImport) {
+    return appendDetailSuffix(
+      t('v2Reports.baselineDocumentImportDetail', {
+      defaultValue: 'Values came from {{fileName}}',
+      fileName: normalizeImportedFileName(
+        documentEvidence.fileName ?? dataset.provenance?.fileName,
+        'PDF document',
+      ),
+      }),
+      documentEvidenceDetail,
     );
   }
   if (dataset.provenance?.kind === 'statement_import') {
@@ -738,8 +834,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             : readSavedBaselineYears(savedBaselineSource)
         ),
       ]
-        .sort((left, right) => right.year - left.year)
-        .slice(0, 3),
+        .sort((left, right) => right.year - left.year),
     [plan?.id, planningContext?.baselineYears, savedBaselineSource],
   );
   const pricingReady =
@@ -1074,7 +1169,12 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
       try {
         await connectImportOrganizationV2(hit.id);
         await onPlansChanged?.();
-        setInfo(t('v2Overview.infoConnected', 'Organization connected. Select years and run sync.'));
+        setInfo(
+          t(
+            'v2Overview.infoConnected',
+            'Organization connected. Create the first Vesinvest plan to continue.',
+          ),
+        );
       } catch (err) {
         setError(
           err instanceof Error
@@ -1601,7 +1701,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
       <div className="v2-section-header">
         <div>
           <p className="v2-overview-eyebrow">{t('v2Vesinvest.eyebrow', 'Vesinvest')}</p>
-          <h2>{t('v2Vesinvest.title', 'Vesinvest plan-first workspace')}</h2>
+          <h2>{t('v2Vesinvest.title', 'Vesinvest VEETI-first workspace')}</h2>
         </div>
         <div className="v2-actions-row">
           {plans.length > 0 ? (
@@ -1703,7 +1803,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
 
       <div className="v2-overview-year-summary-grid">
         <div>
-          <span>{t('v2Vesinvest.totalInvestments', '20-year total')}</span>
+          <span>{t('v2Vesinvest.totalInvestments', 'Horizon total')}</span>
           <strong>{formatEur(totalInvestments)}</strong>
         </div>
         <div>
@@ -2108,7 +2208,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         <div className="v2-section-header">
           <div>
             <p className="v2-overview-eyebrow">{t('v2Vesinvest.investmentPlan', 'Investment plan')}</p>
-            <h3>{t('v2Vesinvest.groupedLayout', 'Grouped 20-year layout')}</h3>
+            <h3>{t('v2Vesinvest.groupedLayout', 'Grouped horizon layout')}</h3>
           </div>
         </div>
         <div className="v2-vesinvest-table-wrap v2-vesinvest-matrix-wrap" data-testid="vesinvest-grouped-plan">
@@ -2170,7 +2270,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                 <tr className="v2-vesinvest-matrix-total-row">
                   <td />
                   <td className="v2-vesinvest-matrix-label">
-                    {t('v2Vesinvest.totalInvestments', '20-year total')}
+                    {t('v2Vesinvest.totalInvestments', 'Horizon total')}
                   </td>
                   {yearTotals.map((item) => (
                     <td key={`matrix-total-${item.year}`}>

@@ -1641,6 +1641,295 @@ describe('V2Service forecast starter contract', () => {
   });
 });
 
+describe('V2Service scenario branch compatibility', () => {
+  const ORG_ID = 'org-1';
+  const SCENARIO_ID = 'scenario-1';
+
+  it('defaults the first created scenario to the base branch and marks it as onOletus', async () => {
+    const prisma = {} as any;
+    const projectionsService = {
+      list: jest.fn().mockResolvedValue([]),
+      create: jest.fn().mockResolvedValue({ id: SCENARIO_ID }),
+      compute: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    const service = buildFacadeFromArgs(
+      prisma,
+      projectionsService,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest
+      .spyOn((service as any).forecastService, 'resolveAcceptedPlanningBaselineBudgetIds')
+      .mockResolvedValue([]);
+    jest
+      .spyOn((service as any).forecastService, 'resolveLatestAcceptedVeetiBudgetId')
+      .mockResolvedValue('budget-2024');
+    jest
+      .spyOn((service as any).forecastService, 'getForecastScenario')
+      .mockResolvedValue({ id: SCENARIO_ID, scenarioType: 'base' } as any);
+
+    await service.createForecastScenario(ORG_ID, {
+      name: 'First scenario',
+      compute: false,
+    });
+
+    expect(projectionsService.create).toHaveBeenCalledWith(
+      ORG_ID,
+      expect.objectContaining({
+        nimi: 'First scenario',
+        talousarvioId: 'budget-2024',
+        onOletus: true,
+        olettamusYlikirjoitukset: {},
+      }),
+    );
+  });
+
+  it('inherits a copied non-base branch type when no explicit type is requested', async () => {
+    const prisma = {} as any;
+    const projectionsService = {
+      list: jest.fn().mockResolvedValue([{ id: 'base-1', onOletus: true }]),
+      findById: jest.fn().mockResolvedValue({
+        id: 'scenario-source',
+        onOletus: false,
+        olettamusYlikirjoitukset: {
+          hintakorotus: 0.03,
+          __scenarioTypeCode: 3,
+        },
+        userInvestments: [],
+        talousarvio: { vuosi: 2024 },
+        vuosiYlikirjoitukset: {},
+      }),
+      create: jest.fn().mockResolvedValue({ id: SCENARIO_ID }),
+      compute: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    const service = buildFacadeFromArgs(
+      prisma,
+      projectionsService,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest
+      .spyOn((service as any).forecastService, 'resolveAcceptedPlanningBaselineBudgetIds')
+      .mockResolvedValue([]);
+    jest
+      .spyOn((service as any).forecastService, 'resolveLatestAcceptedVeetiBudgetId')
+      .mockResolvedValue('budget-2024');
+    jest
+      .spyOn((service as any).forecastService, 'getForecastScenario')
+      .mockResolvedValue({ id: SCENARIO_ID, scenarioType: 'stress' } as any);
+
+    await service.createForecastScenario(ORG_ID, {
+      copyFromScenarioId: 'scenario-source',
+      compute: false,
+    });
+
+    expect(projectionsService.create).toHaveBeenCalledWith(
+      ORG_ID,
+      expect.objectContaining({
+        talousarvioId: 'budget-2024',
+        olettamusYlikirjoitukset: expect.objectContaining({
+          hintakorotus: 0.03,
+          __scenarioTypeCode: 3,
+        }),
+      }),
+    );
+  });
+
+  it('stores non-base branch metadata while keeping public assumption maps clean', async () => {
+    const prisma = {
+      olettamus: {
+        findMany: jest.fn().mockResolvedValue([
+          { avain: 'hintakorotus', arvo: 0.01 },
+        ]),
+      },
+      ennuste: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    } as any;
+    const currentProjection = {
+      id: SCENARIO_ID,
+      nimi: 'Committed branch',
+      onOletus: false,
+      talousarvioId: 'budget-2024',
+      talousarvio: {
+        vuosi: 2024,
+        data: [
+          {
+            Liikevaihto: 100000,
+            LiiketoiminnanMuutTuotot: 0,
+            MateriaalitJaPalvelut: 10000,
+            Henkilostokulut: 10000,
+            PoistotJaArvonalentumiset: 5000,
+            LiiketoiminnanMuutKulut: 5000,
+            TilikaudenYliJaama: 5000,
+          },
+        ],
+      },
+      aikajaksoVuosia: 1,
+      vuodet: [],
+      olettamusYlikirjoitukset: {
+        hintakorotus: 0.03,
+        __scenarioTypeCode: 2,
+      },
+      userInvestments: [],
+      vuosiYlikirjoitukset: {},
+      baselineDepreciation: [],
+      scenarioDepreciationRules: [],
+      computedAt: null,
+      computedFromUpdatedAt: null,
+      updatedAt: '2026-04-10T00:00:00.000Z',
+      createdAt: '2026-04-10T00:00:00.000Z',
+    };
+    const committedProjection = {
+      ...currentProjection,
+      olettamusYlikirjoitukset: {
+        hintakorotus: 0.03,
+        __scenarioTypeCode: 1,
+      },
+    };
+    const projectionsService = {
+      findById: jest
+        .fn()
+        .mockResolvedValueOnce(currentProjection)
+        .mockResolvedValue(committedProjection),
+      update: jest.fn().mockResolvedValue({}),
+    } as any;
+
+    const service = buildFacadeFromArgs(
+      prisma,
+      projectionsService,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest
+      .spyOn((service as any).forecastService, 'ensureScenarioDepreciationStorage')
+      .mockResolvedValue({ rules: [] });
+    jest
+      .spyOn((service as any).forecastService, 'resolveLatestComparableBaselinePrice')
+      .mockResolvedValue(4.2);
+
+    await service.updateForecastScenario(ORG_ID, SCENARIO_ID, {
+      scenarioType: 'committed',
+    });
+
+    expect(projectionsService.update).toHaveBeenCalledWith(
+      ORG_ID,
+      SCENARIO_ID,
+      expect.objectContaining({
+        olettamusYlikirjoitukset: expect.objectContaining({
+          hintakorotus: 0.03,
+          __scenarioTypeCode: 1,
+        }),
+      }),
+    );
+
+    const refreshed = await service.getForecastScenario(ORG_ID, SCENARIO_ID);
+
+    expect(refreshed.scenarioType).toBe('committed');
+    expect(refreshed.assumptions).toEqual(
+      expect.objectContaining({
+        hintakorotus: 0.03,
+      }),
+    );
+    expect(refreshed.assumptions).not.toHaveProperty('__scenarioTypeCode');
+  });
+
+  it('defaults legacy non-base scenarios without an override key to the hypothesis branch', async () => {
+    const service = buildFacadeFromArgs(
+      {} as any,
+      {
+        list: jest.fn().mockResolvedValue([
+          {
+            id: 'legacy-1',
+            nimi: 'Legacy scenario',
+            onOletus: false,
+            olettamusYlikirjoitukset: {},
+            aikajaksoVuosia: 20,
+            talousarvio: { vuosi: 2024 },
+            _count: { vuodet: 0 },
+            updatedAt: '2026-04-10T00:00:00.000Z',
+          },
+        ]),
+      } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    const scenarios = await service.listForecastScenarios(ORG_ID);
+
+    expect(scenarios).toEqual([
+      expect.objectContaining({
+        id: 'legacy-1',
+        scenarioType: 'hypothesis',
+      }),
+    ]);
+  });
+
+  it('rejects near-term expense rows outside the editable five-year window', async () => {
+    const prisma = {
+      ennuste: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    } as any;
+    const projectionsService = {
+      findById: jest.fn().mockResolvedValue({
+        id: SCENARIO_ID,
+        onOletus: false,
+        olettamusYlikirjoitukset: {},
+        userInvestments: [],
+        talousarvio: { vuosi: 2024 },
+        vuosiYlikirjoitukset: {},
+        baselineDepreciation: [],
+        scenarioDepreciationRules: [],
+      }),
+      update: jest.fn(),
+    } as any;
+
+    const service = buildFacadeFromArgs(
+      prisma,
+      projectionsService,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    await expect(
+      service.updateForecastScenario(ORG_ID, SCENARIO_ID, {
+        nearTermExpenseAssumptions: [
+          {
+            year: 2030,
+            personnelPct: 5,
+          },
+        ],
+      }),
+    ).rejects.toThrow(/outside the editable range 2024-2028/i);
+  });
+});
+
 describe('V2Service fee sufficiency helpers', () => {
   const buildService = () =>
     buildFacadeFromArgs(
@@ -2701,6 +2990,212 @@ describe('V2Service statement import manual-year regression', () => {
       ]),
     });
   });
+
+  it('stores generic document provenance when one PDF patches financials and tariff data together', async () => {
+    const upsertOverride = jest.fn().mockResolvedValue(undefined);
+    const veetiSyncService = {
+      getStatus: jest.fn().mockResolvedValue({
+        orgId: ORG_ID,
+        veetiId: 1535,
+        workspaceYears: [YEAR],
+      }),
+      getAvailableYears: jest.fn().mockResolvedValue([
+        {
+          vuosi: YEAR,
+          completeness: {
+            tilinpaatos: true,
+            taksa: true,
+            volume_vesi: true,
+            volume_jatevesi: true,
+          },
+        },
+      ]),
+    } as any;
+    const veetiEffectiveDataService = {
+      getYearDataset: jest.fn().mockResolvedValue({
+        year: YEAR,
+        veetiId: 1535,
+        sourceStatus: 'VEETI',
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        hasManualOverrides: false,
+        hasVeetiData: true,
+        datasets: [
+          {
+            dataType: 'tilinpaatos',
+            rawRows: [
+              {
+                Vuosi: YEAR,
+                Liikevaihto: 700000,
+                AineetJaPalvelut: 175000,
+                Henkilostokulut: 220000,
+                LiiketoiminnanMuutKulut: 315000,
+                Poistot: 182000,
+                TilikaudenYliJaama: 4000,
+              },
+            ],
+            effectiveRows: [
+              {
+                Vuosi: YEAR,
+                Liikevaihto: 700000,
+                AineetJaPalvelut: 175000,
+                Henkilostokulut: 220000,
+                LiiketoiminnanMuutKulut: 315000,
+                Poistot: 182000,
+                TilikaudenYliJaama: 4000,
+              },
+            ],
+            source: 'veeti',
+            hasOverride: false,
+            reconcileNeeded: false,
+            overrideMeta: null,
+          },
+        ],
+      }),
+      upsertOverride,
+    } as any;
+
+    const service = buildFacadeFromArgs(
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiSyncService,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest.spyOn((service as any).importOverviewService, 'getImportStatus').mockResolvedValue({
+      connected: true,
+      years: [
+        {
+          vuosi: YEAR,
+          completeness: {
+            tilinpaatos: true,
+            taksa: true,
+            volume_vesi: true,
+            volume_jatevesi: true,
+          },
+          sourceStatus: 'MIXED',
+          sourceBreakdown: {
+            veetiDataTypes: [],
+            manualDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
+          },
+        },
+      ],
+      excludedYears: [],
+    } as any);
+
+    await service.completeImportYearManually(
+      ORG_ID,
+      'user-1',
+      ['ADMIN'],
+      {
+        year: YEAR,
+        reason: 'Imported from source document: source-2024.pdf',
+        financials: {
+          liikevaihto: 786930.85,
+          tilikaudenYliJaama: 3691.35,
+        },
+        prices: {
+          waterUnitPrice: 1.2,
+          wastewaterUnitPrice: 2.5,
+        },
+        volumes: {
+          soldWaterVolume: 65000,
+          soldWastewaterVolume: 35000,
+        },
+        documentImport: {
+          fileName: 'source-2024.pdf',
+          pageNumber: undefined,
+          pageNumbers: [1, 2],
+          confidence: 91,
+          scannedPageCount: 6,
+          matchedFields: [
+            'Liikevaihto',
+            'TilikaudenYliJaama',
+            'waterUnitPrice',
+            'wastewaterUnitPrice',
+            'soldWaterVolume',
+            'soldWastewaterVolume',
+          ],
+          warnings: ['Generic PDF detection needs manual review before saving.'],
+          documentProfile: 'generic_pdf',
+          datasetKinds: ['financials', 'prices', 'volumes'],
+          sourceLines: [
+            {
+              text: 'Omsattning 786 930,85',
+              pageNumber: 2,
+            },
+            {
+              text: 'Water 1,20 EUR/m3',
+              pageNumber: 1,
+            },
+          ],
+        },
+      } as any,
+    );
+
+    expect(upsertOverride).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dataType: 'tilinpaatos',
+        rows: [
+          expect.objectContaining({
+            Liikevaihto: 786930.85,
+            TilikaudenYliJaama: 3691.35,
+            __sourceMeta: expect.objectContaining({
+              provenance: expect.objectContaining({
+                kind: 'document_import',
+                fileName: 'source-2024.pdf',
+                pageNumber: null,
+                pageNumbers: [1, 2],
+                documentProfile: 'generic_pdf',
+                datasetKinds: ['financials', 'prices', 'volumes'],
+                sourceLines: [
+                  {
+                    text: 'Omsattning 786 930,85',
+                    pageNumber: 2,
+                  },
+                  {
+                    text: 'Water 1,20 EUR/m3',
+                    pageNumber: 1,
+                  },
+                ],
+                fieldSources: expect.arrayContaining([
+                  expect.objectContaining({
+                    sourceField: 'Liikevaihto',
+                    provenance: expect.objectContaining({
+                      kind: 'document_import',
+                    }),
+                  }),
+                ]),
+              }),
+            }),
+          }),
+        ],
+      }),
+    );
+    expect(upsertOverride).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dataType: 'taksa',
+        rows: expect.arrayContaining([
+          expect.objectContaining({
+            __sourceMeta: expect.objectContaining({
+              provenance: expect.objectContaining({
+                kind: 'document_import',
+                fileName: 'source-2024.pdf',
+              }),
+            }),
+          }),
+        ]),
+      }),
+    );
+  });
 });
 
 describe('V2Service report variant regression', () => {
@@ -2764,12 +3259,83 @@ describe('V2Service report variant regression', () => {
         costs: 805000,
         result: -25000,
         investments: 150000,
+        totalDepreciation: 186000,
         combinedPrice: 2.5,
         soldVolume: 100000,
         cashflow: -45000,
         cumulativeCashflow: -45000,
         waterPrice: 1.2,
         wastewaterPrice: 1.3,
+      },
+      {
+        year: 2025,
+        revenue: 790000,
+        costs: 812000,
+        result: -22000,
+        investments: 0,
+        totalDepreciation: 188000,
+        combinedPrice: 2.6,
+        soldVolume: 99500,
+        cashflow: -32000,
+        cumulativeCashflow: -77000,
+        waterPrice: 1.24,
+        wastewaterPrice: 1.36,
+      },
+      {
+        year: 2026,
+        revenue: 805000,
+        costs: 820000,
+        result: -15000,
+        investments: 50000,
+        totalDepreciation: 190000,
+        combinedPrice: 2.72,
+        soldVolume: 99000,
+        cashflow: -20000,
+        cumulativeCashflow: -97000,
+        waterPrice: 1.3,
+        wastewaterPrice: 1.42,
+      },
+      {
+        year: 2027,
+        revenue: 820000,
+        costs: 829000,
+        result: -9000,
+        investments: 100000,
+        totalDepreciation: 194000,
+        combinedPrice: 2.86,
+        soldVolume: 98500,
+        cashflow: -15000,
+        cumulativeCashflow: -112000,
+        waterPrice: 1.37,
+        wastewaterPrice: 1.49,
+      },
+      {
+        year: 2028,
+        revenue: 838000,
+        costs: 840000,
+        result: -2000,
+        investments: 50000,
+        totalDepreciation: 197000,
+        combinedPrice: 2.98,
+        soldVolume: 98000,
+        cashflow: -7000,
+        cumulativeCashflow: -119000,
+        waterPrice: 1.43,
+        wastewaterPrice: 1.55,
+      },
+      {
+        year: 2029,
+        revenue: 854000,
+        costs: 848000,
+        result: 6000,
+        investments: 150000,
+        totalDepreciation: 201000,
+        combinedPrice: 3.1,
+        soldVolume: 97500,
+        cashflow: 2000,
+        cumulativeCashflow: -117000,
+        waterPrice: 1.49,
+        wastewaterPrice: 1.61,
       },
     ],
     priceSeries: [],
@@ -3342,10 +3908,13 @@ describe('V2Service report variant regression', () => {
     expect(snapshot.reportVariant).toBe('public_summary');
     expect(snapshot.reportSections).toMatchObject({
       baselineSources: true,
+      investmentPlan: true,
       assumptions: false,
       yearlyInvestments: false,
       riskSummary: true,
     });
+    expect(snapshot.acceptedBaselineYears).toEqual([2024]);
+    expect(snapshot.baselineSourceSummaries).toHaveLength(1);
     expect(snapshot.baselineSourceSummary.financials).toMatchObject({
       source: 'manual',
       provenance: expect.objectContaining({
@@ -3374,10 +3943,13 @@ describe('V2Service report variant regression', () => {
     expect(report.variant).toBe('public_summary');
     expect(report.snapshot.reportSections).toMatchObject({
       baselineSources: true,
+      investmentPlan: true,
       assumptions: false,
       yearlyInvestments: false,
       riskSummary: true,
     });
+    expect(report.snapshot.acceptedBaselineYears).toEqual([2024]);
+    expect(report.snapshot.baselineSourceSummaries).toHaveLength(1);
     expect(report.snapshot.baselineSourceSummary?.financials.provenance).toMatchObject(
       {
         kind: 'statement_import',
@@ -3437,13 +4009,87 @@ describe('V2Service report variant regression', () => {
           feeRecommendation: null,
           baselineSourceState: {
             source: 'accepted_planning_baseline',
-            acceptedYears: [2024],
+            acceptedYears: [2022, 2023, 2024],
             latestAcceptedBudgetId: 'budget-2024',
             veetiId: 1535,
             utilityName: 'Water Utility',
             businessId: '1234567-8',
             identitySource: 'veeti',
             baselineYears: [
+              {
+                year: 2022,
+                planningRole: 'historical',
+                sourceStatus: 'VEETI',
+                sourceBreakdown: {
+                  veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi'],
+                  manualDataTypes: [],
+                },
+                financials: {
+                  dataType: 'tilinpaatos',
+                  source: 'veeti',
+                  provenance: null,
+                  editedAt: null,
+                  editedBy: null,
+                  reason: null,
+                },
+                prices: {
+                  dataType: 'taksa',
+                  source: 'veeti',
+                  provenance: null,
+                  editedAt: null,
+                  editedBy: null,
+                  reason: null,
+                },
+                volumes: {
+                  dataType: 'volume_vesi+volume_jatevesi',
+                  source: 'veeti',
+                  provenance: null,
+                  editedAt: null,
+                  editedBy: null,
+                  reason: null,
+                },
+              },
+              {
+                year: 2023,
+                planningRole: 'historical',
+                sourceStatus: 'MIXED',
+                sourceBreakdown: {
+                  veetiDataTypes: ['taksa'],
+                  manualDataTypes: ['tilinpaatos'],
+                },
+                financials: {
+                  dataType: 'tilinpaatos',
+                  source: 'manual',
+                  provenance: {
+                    kind: 'document_import',
+                    fileName: 'saved-2023-source.pdf',
+                    pageNumbers: [3, 4],
+                    confidence: 94,
+                    scannedPageCount: 6,
+                    matchedFields: ['Liikevaihto'],
+                    warnings: [],
+                  },
+                  editedAt: NOW.toISOString(),
+                  editedBy: 'user-1',
+                  reason: 'Saved with Vesinvest',
+                },
+                prices: {
+                  dataType: 'taksa',
+                  source: 'veeti',
+                  provenance: null,
+                  editedAt: null,
+                  editedBy: null,
+                  reason: null,
+                },
+                volumes: {
+                  dataType: 'volume_vesi+volume_jatevesi',
+                  source: 'veeti',
+                  provenance: null,
+                  editedAt: null,
+                  editedBy: null,
+                  reason: null,
+                },
+              },
               {
                 year: 2024,
                 planningRole: 'historical',
@@ -3560,7 +4206,7 @@ describe('V2Service report variant regression', () => {
           businessId: '1234567-8',
           identitySource: 'veeti',
         },
-        acceptedYears: [2024],
+        acceptedYears: [2022, 2023, 2024],
         latestAcceptedBudgetId: 'budget-2024',
         baselineYears: [],
         hasTrustedBaseline: true,
@@ -3580,12 +4226,26 @@ describe('V2Service report variant regression', () => {
       name: 'Water Utility Vesinvest',
       versionNumber: 2,
     });
+    expect(snapshot.acceptedBaselineYears).toEqual([2022, 2023, 2024]);
     expect(snapshot.vesinvestAppendix).toMatchObject({
+      yearlyTotals: [
+        { year: 2024, totalAmount: 0 },
+        { year: 2025, totalAmount: 0 },
+        { year: 2026, totalAmount: 50000 },
+        { year: 2027, totalAmount: 100000 },
+        { year: 2028, totalAmount: 50000 },
+        { year: 2029, totalAmount: 150000 },
+      ],
       fiveYearBands: [
         {
           startYear: 2024,
+          endYear: 2028,
+          totalAmount: 200000,
+        },
+        {
+          startYear: 2029,
           endYear: 2029,
-          totalAmount: 350000,
+          totalAmount: 150000,
         },
       ],
       groupedProjects: [
@@ -3621,6 +4281,18 @@ describe('V2Service report variant regression', () => {
           ],
         },
       ],
+    });
+    expect(snapshot.baselineSourceSummaries).toHaveLength(3);
+    expect(snapshot.baselineSourceSummaries[1]).toMatchObject({
+      year: 2023,
+      sourceStatus: 'MIXED',
+      financials: {
+        source: 'manual',
+        provenance: expect.objectContaining({
+          kind: 'document_import',
+          fileName: 'saved-2023-source.pdf',
+        }),
+      },
     });
     expect(snapshot.baselineSourceSummary).toMatchObject({
       sourceStatus: 'MANUAL',

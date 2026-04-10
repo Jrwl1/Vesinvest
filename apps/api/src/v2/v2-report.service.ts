@@ -326,6 +326,8 @@ type ScenarioPayload = {
 type SnapshotPayload = {
   scenario: ScenarioPayload;
   generatedAt: string;
+  acceptedBaselineYears: number[];
+  baselineSourceSummaries: BaselineSourceSummary[];
   baselineSourceSummary: BaselineSourceSummary | null;
   vesinvestPlan: {
     id: string;
@@ -379,6 +381,7 @@ type ReportVariant = 'public_summary' | 'confidential_appendix';
 
 type ReportSections = {
   baselineSources: boolean;
+  investmentPlan: boolean;
   assumptions: boolean;
   yearlyInvestments: boolean;
   riskSummary: boolean;
@@ -686,18 +689,26 @@ export class V2ReportService {
       } => {
         const snapshot = (row.snapshotJson ?? {}) as Partial<SnapshotPayload>;
         const reportVariant = this.normalizeReportVariant(snapshot.reportVariant);
+        const baselineSourceSummaries =
+          this.readSnapshotBaselineSourceSummaries(snapshot);
+        const baselineSourceSummary =
+          snapshot.baselineSourceSummary ??
+          this.selectPrimaryBaselineSourceSummary(
+            baselineSourceSummaries,
+            row.baselineYear,
+          );
         return {
-        id: row.id,
-        title: this.normalizeText(row.title) ?? row.title,
-        createdAt: row.createdAt,
-        ennuste: row.ennuste,
-        baselineYear: row.baselineYear,
-        requiredPriceToday: this.toNumber(row.requiredPriceToday),
-        requiredAnnualIncreasePct: this.toNumber(row.requiredAnnualIncreasePct),
-        totalInvestments: this.toNumber(row.totalInvestments),
-        baselineSourceSummary: snapshot.baselineSourceSummary ?? null,
-        variant: reportVariant,
-        pdfUrl: `/v2/reports/${row.id}/pdf`,
+          id: row.id,
+          title: this.normalizeText(row.title) ?? row.title,
+          createdAt: row.createdAt,
+          ennuste: row.ennuste,
+          baselineYear: row.baselineYear,
+          requiredPriceToday: this.toNumber(row.requiredPriceToday),
+          requiredAnnualIncreasePct: this.toNumber(row.requiredAnnualIncreasePct),
+          totalInvestments: this.toNumber(row.totalInvestments),
+          baselineSourceSummary,
+          variant: reportVariant,
+          pdfUrl: `/v2/reports/${row.id}/pdf`,
         };
       },
     );
@@ -869,11 +880,29 @@ export class V2ReportService {
       });
     }
 
-    let baselineSourceSummary =
-      this.buildBaselineSourceSummaryFromVesinvestSnapshot(
+    const savedBaselineSourceState = this.readSavedBaselineSourceState(
+      vesinvestPlan.baselineSourceState,
+    );
+    const acceptedBaselineYears =
+      currentBaseline.acceptedYears.length > 0
+        ? [...currentBaseline.acceptedYears]
+        : savedBaselineSourceState.acceptedYears;
+    let baselineSourceSummaries =
+      this.buildBaselineSourceSummariesFromVesinvestSnapshot(
         vesinvestPlan?.baselineSourceState ?? null,
-        scenario.baselineYear,
+        acceptedBaselineYears,
       );
+    if (baselineSourceSummaries.length === 0) {
+      baselineSourceSummaries =
+        this.buildBaselineSourceSummariesFromCurrentBaseline(
+          currentBaseline,
+          acceptedBaselineYears,
+        );
+    }
+    let baselineSourceSummary = this.selectPrimaryBaselineSourceSummary(
+      baselineSourceSummaries,
+      scenario.baselineYear,
+    );
     if (!baselineSourceSummary && scenario.baselineYear != null) {
       try {
         const [importStatus, yearDataset] = await Promise.all([
@@ -888,8 +917,12 @@ export class V2ReportService {
           scenario.baselineYear,
           yearDataset,
         );
+        baselineSourceSummaries = baselineSourceSummary
+          ? [baselineSourceSummary]
+          : [];
       } catch {
         baselineSourceSummary = null;
+        baselineSourceSummaries = [];
       }
     }
 
@@ -897,12 +930,14 @@ export class V2ReportService {
     const reportSections = this.buildReportSections(reportVariant);
     const vesinvestAppendix = await this.buildVesinvestAppendix(
       vesinvestPlan.projects,
-      scenario.yearlyInvestments.map((item) => item.year),
+      scenario.years.map((item) => item.year),
       orgId,
     );
     const snapshot: SnapshotPayload = {
       scenario,
       generatedAt: new Date().toISOString(),
+      acceptedBaselineYears,
+      baselineSourceSummaries,
       baselineSourceSummary,
       vesinvestPlan: {
         id: vesinvestPlan.id,
@@ -1193,6 +1228,7 @@ export class V2ReportService {
       utilityIdentity,
       acceptedYears,
       latestAcceptedBudgetId,
+      baselineYears,
       fingerprint: computeVesinvestBaselineFingerprint({
         acceptedYears,
         latestAcceptedBudgetId,
@@ -1378,64 +1414,117 @@ export class V2ReportService {
     rawState: Prisma.JsonValue | null,
     requestedYear: number | null,
   ): BaselineSourceSummary | null {
+    const summaries = this.buildBaselineSourceSummariesFromVesinvestSnapshot(
+      rawState,
+      [],
+    );
+    return this.selectPrimaryBaselineSourceSummary(summaries, requestedYear);
+  }
+
+  private buildBaselineSourceSummariesFromCurrentBaseline(
+    currentBaseline: Awaited<
+      ReturnType<V2ReportService['getCurrentBaselineSnapshot']>
+    >,
+    acceptedYears: number[],
+  ): BaselineSourceSummary[] {
+    return this.buildBaselineSourceSummariesFromYears(
+      currentBaseline.baselineYears,
+      acceptedYears,
+    );
+  }
+
+  private buildBaselineSourceSummariesFromVesinvestSnapshot(
+    rawState: Prisma.JsonValue | null,
+    acceptedYears: number[],
+  ): BaselineSourceSummary[] {
     if (!rawState || typeof rawState !== 'object' || Array.isArray(rawState)) {
-      return null;
+      return [];
     }
     const state = rawState as Record<string, unknown>;
     const years = Array.isArray(state.baselineYears)
       ? (state.baselineYears as VesinvestBaselineSnapshotYear[])
       : [];
-    if (years.length === 0) {
+    return this.buildBaselineSourceSummariesFromYears(years, acceptedYears);
+  }
+
+  private buildBaselineSourceSummariesFromYears(
+    years: VesinvestBaselineSnapshotYear[],
+    acceptedYears: number[],
+  ): BaselineSourceSummary[] {
+    const acceptedYearSet =
+      acceptedYears.length > 0 ? new Set(acceptedYears) : null;
+    return [...years]
+      .filter((item) => {
+        const year = this.toNumber(item.year);
+        if (!Number.isInteger(year) || year <= 0) {
+          return false;
+        }
+        return acceptedYearSet == null || acceptedYearSet.has(year);
+      })
+      .map((item) => ({
+        year: this.toNumber(item.year),
+        planningRole: (
+          item.planningRole === 'current_year_estimate'
+            ? 'current_year_estimate'
+            : 'historical'
+        ) as PlanningRole,
+        sourceStatus: (
+          item.sourceStatus === 'VEETI' ||
+          item.sourceStatus === 'MANUAL' ||
+          item.sourceStatus === 'MIXED'
+            ? item.sourceStatus
+            : 'INCOMPLETE'
+        ) as BaselineSourceSummary['sourceStatus'],
+        sourceBreakdown: {
+          veetiDataTypes: Array.isArray(item.sourceBreakdown?.veetiDataTypes)
+            ? item.sourceBreakdown?.veetiDataTypes.filter(
+                (entry): entry is string => typeof entry === 'string',
+              )
+            : [],
+          manualDataTypes: Array.isArray(item.sourceBreakdown?.manualDataTypes)
+            ? item.sourceBreakdown?.manualDataTypes.filter(
+                (entry): entry is string => typeof entry === 'string',
+              )
+            : [],
+        },
+        financials: this.normalizeSavedBaselineDataset(
+          item.financials,
+          'tilinpaatos',
+        ),
+        prices: this.normalizeSavedBaselineDataset(item.prices, 'taksa'),
+        volumes: this.normalizeSavedBaselineDataset(
+          item.volumes,
+          'volume_vesi+volume_jatevesi',
+        ),
+      }))
+      .sort((left, right) => left.year - right.year);
+  }
+
+  private selectPrimaryBaselineSourceSummary(
+    summaries: BaselineSourceSummary[],
+    requestedYear: number | null,
+  ): BaselineSourceSummary | null {
+    if (summaries.length === 0) {
       return null;
     }
-    const targetYear =
-      requestedYear != null &&
-      years.some((item) => this.toNumber(item.year) === requestedYear)
-        ? requestedYear
-        : this.toNumber(
-            [...years]
-              .map((item) => this.toNumber(item.year))
-              .sort((left, right) => right - left)[0] ?? 0,
-          );
-    const selected =
-      years.find((item) => this.toNumber(item.year) === targetYear) ?? years[0];
-    if (!selected) {
-      return null;
+    if (requestedYear != null) {
+      const requested = summaries.find((item) => item.year === requestedYear);
+      if (requested) {
+        return requested;
+      }
     }
-    return {
-      year: this.toNumber(selected.year),
-      planningRole:
-        selected.planningRole === 'current_year_estimate'
-          ? 'current_year_estimate'
-          : 'historical',
-      sourceStatus:
-        selected.sourceStatus === 'VEETI' ||
-        selected.sourceStatus === 'MANUAL' ||
-        selected.sourceStatus === 'MIXED'
-          ? selected.sourceStatus
-          : 'INCOMPLETE',
-      sourceBreakdown: {
-        veetiDataTypes: Array.isArray(selected.sourceBreakdown?.veetiDataTypes)
-          ? selected.sourceBreakdown?.veetiDataTypes.filter(
-              (item): item is string => typeof item === 'string',
-            )
-          : [],
-        manualDataTypes: Array.isArray(selected.sourceBreakdown?.manualDataTypes)
-          ? selected.sourceBreakdown?.manualDataTypes.filter(
-              (item): item is string => typeof item === 'string',
-            )
-          : [],
-      },
-      financials: this.normalizeSavedBaselineDataset(
-        selected.financials,
-        'tilinpaatos',
-      ),
-      prices: this.normalizeSavedBaselineDataset(selected.prices, 'taksa'),
-      volumes: this.normalizeSavedBaselineDataset(
-        selected.volumes,
-        'volume_vesi+volume_jatevesi',
-      ),
-    };
+    return summaries[summaries.length - 1] ?? null;
+  }
+
+  private readSnapshotBaselineSourceSummaries(
+    snapshot: Partial<SnapshotPayload>,
+  ): BaselineSourceSummary[] {
+    if (Array.isArray(snapshot.baselineSourceSummaries)) {
+      return [...snapshot.baselineSourceSummaries].sort(
+        (left, right) => left.year - right.year,
+      );
+    }
+    return snapshot.baselineSourceSummary ? [snapshot.baselineSourceSummary] : [];
   }
 
   private normalizeSavedBaselineDataset(
@@ -1538,6 +1627,14 @@ export class V2ReportService {
     const reportVariant = this.normalizeReportVariant(snapshot.reportVariant);
     const reportSections =
       snapshot.reportSections ?? this.buildReportSections(reportVariant);
+    const baselineSourceSummaries =
+      this.readSnapshotBaselineSourceSummaries(snapshot);
+    const baselineSourceSummary =
+      snapshot.baselineSourceSummary ??
+      this.selectPrimaryBaselineSourceSummary(
+        baselineSourceSummaries,
+        report.baselineYear,
+      );
 
     return {
       id: report.id,
@@ -1552,7 +1649,9 @@ export class V2ReportService {
       ennuste: report.ennuste,
       snapshot: {
         ...snapshot,
-        baselineSourceSummary: snapshot.baselineSourceSummary ?? null,
+        acceptedBaselineYears: snapshot.acceptedBaselineYears ?? [],
+        baselineSourceSummaries,
+        baselineSourceSummary,
         vesinvestAppendix: snapshot.vesinvestAppendix ?? null,
         generatedAt: snapshot.generatedAt ?? report.createdAt.toISOString(),
         reportVariant,
@@ -1573,6 +1672,7 @@ export class V2ReportService {
     if (variant === 'public_summary') {
       return {
         baselineSources: true,
+        investmentPlan: true,
         assumptions: false,
         yearlyInvestments: false,
         riskSummary: true,
@@ -1581,6 +1681,7 @@ export class V2ReportService {
 
     return {
       baselineSources: true,
+      investmentPlan: true,
       assumptions: true,
       yearlyInvestments: true,
       riskSummary: true,

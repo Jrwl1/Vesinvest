@@ -452,7 +452,7 @@ describe('VesinvestPlanningPanel', () => {
 
     expect(headings.indexOf('Utility name')).toBeLessThan(headings.indexOf('Group'));
     expect(headings.indexOf('Group')).toBeLessThan(
-      headings.indexOf('Grouped 20-year layout'),
+      headings.indexOf('Grouped horizon layout'),
     );
   });
 
@@ -751,6 +751,268 @@ describe('VesinvestPlanningPanel', () => {
     expect(within(feePathTitle.closest('section')!).getByText('Verified')).toBeTruthy();
   });
 
+  it('shows all accepted baseline years in the evidence section', async () => {
+    const allBaselineYears = [2021, 2022, 2023, 2024].map((year) => ({
+      ...baselineYear,
+      year,
+      financials: {
+        ...baselineYear.financials,
+        provenance: {
+          ...baselineYear.financials.provenance,
+          fileName: `bokslut-${year}.pdf`,
+        },
+      },
+      volumes: {
+        ...baselineYear.volumes,
+        provenance: {
+          ...baselineYear.volumes.provenance,
+          fileName: `qdis-${year}.pdf`,
+        },
+      },
+    }));
+
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        baselineStatus: 'verified',
+        baselineSourceState: {
+          source: 'accepted_planning_baseline',
+          acceptedYears: allBaselineYears.map((item) => item.year),
+          latestAcceptedBudgetId: 'budget-2024',
+          baselineYears: allBaselineYears,
+        },
+      }),
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('4 year(s)')).toBeTruthy();
+    expect(screen.getByText('2021')).toBeTruthy();
+    expect(screen.getByText('2024')).toBeTruthy();
+  });
+
+  it('shows document page and source-line provenance in the evidence section', async () => {
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        baselineStatus: 'verified',
+        baselineSourceState: {
+          source: 'accepted_planning_baseline',
+          acceptedYears: [2024],
+          latestAcceptedBudgetId: 'budget-2024',
+          baselineYears: [
+            {
+              ...baselineYear,
+              financials: {
+                ...baselineYear.financials,
+                provenance: {
+                  kind: 'document_import',
+                  fileName: 'baseline-2024.pdf',
+                  pageNumber: 3,
+                  pageNumbers: [3, 4],
+                  confidence: 94,
+                  scannedPageCount: 4,
+                  matchedFields: ['Liikevaihto'],
+                  warnings: [],
+                  sourceLines: [
+                    { pageNumber: 3, text: 'Revenue 95 000 EUR' },
+                    { pageNumber: 4, text: 'Operating costs 70 000 EUR' },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      }),
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    expect(
+      await screen.findByText(/Source document \(baseline-2024\.pdf\).+pp\. 3, 4/),
+    ).toBeTruthy();
+    expect(await screen.findByText(/Revenue 95 000 EUR/)).toBeTruthy();
+    expect(await screen.findByText(/Operating costs 70 000 EUR/)).toBeTruthy();
+  });
+
+  it('keeps the source document filename visible when workbook repair is mixed into the same dataset', async () => {
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        baselineStatus: 'verified',
+        baselineSourceState: {
+          source: 'accepted_planning_baseline',
+          acceptedYears: [2024],
+          latestAcceptedBudgetId: 'budget-2024',
+          baselineYears: [
+            {
+              ...baselineYear,
+              financials: {
+                ...baselineYear.financials,
+                provenance: {
+                  kind: 'document_import',
+                  fileName: 'baseline-2024.pdf',
+                  pageNumber: 3,
+                  pageNumbers: [3, 4],
+                  confidence: 94,
+                  scannedPageCount: 4,
+                  matchedFields: ['Liikevaihto'],
+                  warnings: [],
+                  sourceLines: [{ pageNumber: 3, text: 'Revenue 95 000 EUR' }],
+                  fieldSources: [
+                    {
+                      sourceField: 'Liikevaihto',
+                      provenance: {
+                        kind: 'document_import',
+                        fileName: 'baseline-2024.pdf',
+                        pageNumber: 3,
+                        pageNumbers: [3, 4],
+                        confidence: 94,
+                        scannedPageCount: 4,
+                        matchedFields: ['Liikevaihto'],
+                        warnings: [],
+                        sourceLines: [{ pageNumber: 3, text: 'Revenue 95 000 EUR' }],
+                      },
+                    },
+                    {
+                      sourceField: 'Poistot',
+                      provenance: {
+                        kind: 'excel_import',
+                        fileName: 'kva-2024.xlsx',
+                        pageNumber: null,
+                        confidence: null,
+                        scannedPageCount: null,
+                        matchedFields: ['Poistot'],
+                        warnings: [],
+                        sheetName: 'KVA',
+                        matchedYears: [2024],
+                        confirmedSourceFields: ['Poistot'],
+                        candidateRows: [],
+                      },
+                    },
+                  ],
+                },
+              },
+            } as any,
+          ],
+        },
+      }),
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    expect(
+      await screen.findByText(
+        /Source document \+ workbook repair.+baseline-2024\.pdf.+pp\. 3, 4/,
+      ),
+    ).toBeTruthy();
+    expect(
+      await screen.findByText(
+        /Document-backed values and workbook repairs both affect this year\..+baseline-2024\.pdf.+pp\. 3, 4/,
+      ),
+    ).toBeTruthy();
+  });
+
+  it('keeps the statement filename visible when workbook repair is mixed into the same dataset', async () => {
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        baselineStatus: 'verified',
+        baselineSourceState: {
+          source: 'accepted_planning_baseline',
+          acceptedYears: [2024],
+          latestAcceptedBudgetId: 'budget-2024',
+          baselineYears: [
+            {
+              ...baselineYear,
+              financials: {
+                ...baselineYear.financials,
+                provenance: {
+                  kind: 'statement_import',
+                  fileName: 'bokslut-2024.pdf',
+                  pageNumber: 3,
+                  confidence: 98,
+                  scannedPageCount: 4,
+                  matchedFields: ['Liikevaihto'],
+                  warnings: [],
+                  fieldSources: [
+                    {
+                      sourceField: 'Liikevaihto',
+                      provenance: {
+                        kind: 'statement_import',
+                        fileName: 'bokslut-2024.pdf',
+                        pageNumber: 3,
+                        confidence: 98,
+                        scannedPageCount: 4,
+                        matchedFields: ['Liikevaihto'],
+                        warnings: [],
+                      },
+                    },
+                    {
+                      sourceField: 'Poistot',
+                      provenance: {
+                        kind: 'excel_import',
+                        fileName: 'kva-2024.xlsx',
+                        pageNumber: null,
+                        confidence: null,
+                        scannedPageCount: null,
+                        matchedFields: ['Poistot'],
+                        warnings: [],
+                        sheetName: 'KVA',
+                        matchedYears: [2024],
+                        confirmedSourceFields: ['Poistot'],
+                        candidateRows: [],
+                      },
+                    },
+                  ],
+                },
+              },
+            } as any,
+          ],
+        },
+      }),
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    expect(
+      await screen.findByText(/Statement PDF \+ workbook repair.+bokslut-2024\.pdf/),
+    ).toBeTruthy();
+    expect(
+      await screen.findByText(
+        /Statement-backed values and workbook repairs both affect this year\..+bokslut-2024\.pdf/,
+      ),
+    ).toBeTruthy();
+  });
+
   it('renders the grouped 20-year layout with class subtotal rows before project rows', async () => {
     getVesinvestPlanV2.mockResolvedValue(
       makePlan({
@@ -827,7 +1089,7 @@ describe('VesinvestPlanningPanel', () => {
       />,
     );
 
-    await screen.findByText('Grouped 20-year layout');
+    await screen.findByText('Grouped horizon layout');
     const matrix = screen.getByTestId('vesinvest-grouped-plan');
 
     expect(within(matrix).getByText('Sanering / vattennatverk')).toBeTruthy();
@@ -836,7 +1098,7 @@ describe('VesinvestPlanningPanel', () => {
     expect(within(matrix).getByText('Main rehabilitation')).toBeTruthy();
     expect(within(matrix).getByText('P-002')).toBeTruthy();
     expect(within(matrix).getByText('Plant renewal')).toBeTruthy();
-    expect(within(matrix).getByText('20-year total')).toBeTruthy();
+    expect(within(matrix).getByText('Horizon total')).toBeTruthy();
   });
 
   it('derives total allocation from the water and wastewater split inputs', async () => {

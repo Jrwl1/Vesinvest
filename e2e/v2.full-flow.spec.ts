@@ -70,6 +70,19 @@ async function login(page: Page): Promise<void> {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("networkidle").catch(() => {});
 
+  const overviewButton = page.getByRole("button", {
+    name: /Yhteenveto|Overview|Översikt/i,
+  });
+  const demoButton = page.getByRole("button", {
+    name: /Try demo|Kokeile demoa|Testa demo/i,
+  });
+  if (await demoButton.isVisible().catch(() => false)) {
+    await demoButton.click();
+    await maybeAcceptLegalGate(page);
+    await expect(overviewButton).toBeVisible({ timeout: 20_000 });
+    return;
+  }
+
   await expect(page.locator('input[name="email"]')).toBeVisible({ timeout: 20_000 });
   await page.locator('input[name="email"]').fill(CREDENTIALS.email);
   await page.locator('input[name="password"]').fill(CREDENTIALS.password);
@@ -80,11 +93,7 @@ async function login(page: Page): Promise<void> {
     .click();
 
   await maybeAcceptLegalGate(page);
-  await expect(
-    page.getByRole("button", {
-      name: /Yhteenveto|Overview|Översikt/i,
-    })
-  ).toBeVisible({ timeout: 20_000 });
+  await expect(overviewButton).toBeVisible({ timeout: 20_000 });
 }
 
 async function switchToEnglish(page: Page): Promise<void> {
@@ -440,11 +449,6 @@ test.describe("V2 full e2e (no export)", () => {
       await nudgeAllByPrefix(page, "nearTermPersonnelPct-", 0.1, 2);
       await nudgeAllByPrefix(page, "nearTermEnergyPct-", 0.1, 2);
       await nudgeAllByPrefix(page, "nearTermOpexOtherPct-", 0.1, 2);
-      await clickIfVisibleEnabled(
-        page.getByRole("button", {
-          name: /Open depreciation planning|Avaa poistosuunnittelu|Öppna avskrivningsplaneringen/i,
-        }),
-      );
 
       const visibleInvestmentTotals = page.getByRole("spinbutton", {
         name: /Total EUR \d{4}|Yearly investments \(EUR\) \d{4}/i,
@@ -452,45 +456,6 @@ test.describe("V2 full e2e (no export)", () => {
       await expect(visibleInvestmentTotals.first()).toBeVisible({ timeout: 20_000 });
       await nudgeNumericInput(visibleInvestmentTotals.first(), 250, 0);
       await visibleInvestmentTotals.first().blur();
-
-      const addDepreciationRuleButton = page.getByRole("button", {
-        name: /Add depreciation plan|Add depreciation class rule|Lisää poistosuunnitelma|Lägg till avskrivningsplan/i,
-      });
-      if (await clickIfVisibleEnabled(addDepreciationRuleButton)) {
-        const firstRuleRow = page.locator(".v2-depreciation-rule-row").first();
-        await expect(firstRuleRow).toBeVisible({ timeout: 10_000 });
-        await firstRuleRow.locator('input[type="text"]').first().fill("network");
-        await firstRuleRow.locator('input[type="text"]').nth(1).fill("Network assets");
-        await firstRuleRow.locator("select").selectOption("straight-line");
-        await firstRuleRow.locator('input[type="number"]').first().fill("20");
-
-        const saveRuleButton = firstRuleRow.getByRole("button", {
-          name: /Save|Tallenna|Spara/i,
-        });
-        await clickIfVisibleEnabled(saveRuleButton);
-      }
-
-      const firstAllocationInput = page.locator(".v2-class-allocation-row input").first();
-      if (await firstAllocationInput.isVisible().catch(() => false)) {
-        await firstAllocationInput.fill("100");
-      }
-
-      const saveAllocationsButton = page.getByRole("button", {
-        name: /Save depreciation plans|Save allocations|Tallenna poistosuunnitelmat|Spara avskrivningsplanerna/i,
-      });
-      const mappingCard = page.locator("article", {
-        has: page.getByText(/Set a depreciation plan for each investment year/i),
-      });
-      const mappedRuleSelect = mappingCard.getByRole("combobox", {
-        name: /Depreciation rule/i,
-      });
-      if ((await mappedRuleSelect.count()) > 0) {
-        const selectedValue = await mappedRuleSelect.first().inputValue();
-        if (!selectedValue) {
-          await mappedRuleSelect.first().selectOption({ index: 1 });
-        }
-      }
-      await clickIfVisibleEnabled(saveAllocationsButton);
 
       const saveDraftButton = page.getByRole("button", {
         name: /Save draft|Tallenna luonnos|Spara utkast/i,
@@ -572,6 +537,16 @@ test.describe("V2 full e2e (no export)", () => {
         page.getByRole("heading", {
           name: /Yearly investments from snapshot/i,
         })
+      ).toBeVisible({ timeout: 20_000 });
+      await expect(
+        page.getByRole("heading", {
+          name: /Investment plan|Investointisuunnitelma|Investeringsplan/i,
+        }).first()
+      ).toBeVisible({ timeout: 20_000 });
+      await expect(
+        page.getByRole("heading", {
+          name: /Depreciation plan|Poistosuunnitelma|Avskrivningsplan/i,
+        }).first()
       ).toBeVisible({ timeout: 20_000 });
     });
 

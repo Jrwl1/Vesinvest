@@ -1,5 +1,6 @@
 import React from 'react';
 import type { TFunction } from 'i18next';
+import { PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS } from './overviewWorkflow';
 
 type SummaryMetaBlock = {
   label: string;
@@ -54,7 +55,10 @@ export const OverviewSupportRail: React.FC<Props> = ({
           <h3>{supportingChromeTitle}</h3>
         </div>
         <span className="v2-chip v2-status-provenance">
-          {t('v2Overview.wizardProgress', { step: displayedStep })}
+          {t('v2Overview.wizardProgress', {
+            step: displayedStep,
+            total: PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
+          })}
         </span>
       </div>
 

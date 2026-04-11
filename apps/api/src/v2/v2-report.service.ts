@@ -32,7 +32,9 @@ import {
   computeVesinvestBaselineFingerprint,
   computeVesinvestScenarioFingerprint,
   DEFAULT_VESINVEST_GROUP_DEFINITIONS,
-  DEFAULT_VESINVEST_REPORT_GROUP_DEFINITIONS,
+  isVesinvestClassificationReviewRequired,
+  normalizeVesinvestDepreciationClassKey,
+  sortVesinvestGroupDefinitions,
 } from './vesinvest-contract';
 
 type SyncRequirement = 'financials' | 'prices' | 'volumes';
@@ -354,14 +356,14 @@ type SnapshotPayload = {
       totalAmount: number;
     }>;
     groupedProjects: Array<{
-      reportGroupKey: string;
-      reportGroupLabel: string;
+      classKey: string;
+      classLabel: string;
       totalAmount: number;
       projects: Array<{
         code: string;
         name: string;
-        groupKey: string;
-        groupLabel: string;
+        classKey: string;
+        classLabel: string;
         accountKey: string | null;
         allocations: Array<{
           year: number;
@@ -371,6 +373,15 @@ type SnapshotPayload = {
         }>;
         totalAmount: number;
       }>;
+    }>;
+    depreciationPlan: Array<{
+      classKey: string;
+      classLabel: string;
+      accountKey: string | null;
+      serviceSplit: 'water' | 'wastewater' | 'mixed';
+      method: string;
+      linearYears: number | null;
+      residualPercent: number | null;
     }>;
   } | null;
   reportVariant: ReportVariant;
@@ -758,6 +769,7 @@ export class V2ReportService {
           select: {
             groupKey: true,
             accountKey: true,
+            depreciationClassKey: true,
             reportGroupKey: true,
             projectCode: true,
             projectName: true,
@@ -781,6 +793,24 @@ export class V2ReportService {
       throw new ConflictException(
         'Only the active Vesinvest revision can create a report.',
       );
+    }
+    const groupClassificationDefaults =
+      await this.getVesinvestGroupClassificationDefaults(orgId);
+    if (
+      isVesinvestClassificationReviewRequired(
+        vesinvestPlan.projects.map((project) => ({
+          groupKey: project.groupKey,
+          accountKey: project.accountKey,
+          depreciationClassKey: project.depreciationClassKey,
+        })),
+        groupClassificationDefaults,
+      )
+    ) {
+      throw new ConflictException({
+        code: 'VESINVEST_CLASSIFICATION_REVIEW_REQUIRED',
+        message:
+          'Legacy Vesinvest class overrides require review in this revision. Review and save the class-owned depreciation setup before creating a report.',
+      });
     }
     const scenarioId =
       this.normalizeText(body.ennusteId?.trim()) ?? vesinvestPlan.selectedScenarioId;
@@ -1018,7 +1048,6 @@ export class V2ReportService {
     projects: Array<{
       groupKey: string;
       accountKey: string | null;
-      reportGroupKey: string | null;
       projectCode: string;
       projectName: string;
       totalAmount: Prisma.Decimal | number | null;
@@ -1043,25 +1072,25 @@ export class V2ReportService {
     }
 
     const years = [...yearSet].sort((left, right) => left - right);
-    const projectGroupLabels = await this.getVesinvestGroupLabelMap(orgId);
-    const reportGroupLabels = this.getReportGroupLabelMap();
-    const reportGroupOrder = new Map(
-      DEFAULT_VESINVEST_REPORT_GROUP_DEFINITIONS.map((group, index) => [
-        group.key,
-        index,
-      ]),
+    const groupDefinitions = await this.getOrderedVesinvestGroupDefinitions(orgId);
+    const groupDefinitionByKey = new Map(
+      groupDefinitions.map((group, index) => [group.key, { ...group, index }] as const),
+    );
+    const depreciationRules = await this.forecastService.listDepreciationRules(orgId);
+    const depreciationRuleByClassKey = new Map(
+      depreciationRules.map((rule) => [rule.assetClassKey, rule] as const),
     );
     const groupMap = new Map<
       string,
       {
-        reportGroupKey: string;
-        reportGroupLabel: string;
+        classKey: string;
+        classLabel: string;
         totalAmount: number;
         projects: Array<{
           code: string;
           name: string;
-          groupKey: string;
-          groupLabel: string;
+          classKey: string;
+          classLabel: string;
           accountKey: string | null;
           allocations: Array<{
             year: number;
@@ -1077,13 +1106,12 @@ export class V2ReportService {
 
     for (const project of projects) {
       const projectGroupKey = project.groupKey;
-      const groupLabel = projectGroupLabels[projectGroupKey] ?? projectGroupKey;
-      const reportGroupKey = project.reportGroupKey ?? 'network_rehabilitation';
-      const reportGroupLabel = reportGroupLabels[reportGroupKey] ?? reportGroupKey;
+      const groupDefinition = groupDefinitionByKey.get(projectGroupKey);
+      const classLabel = groupDefinition?.label ?? projectGroupKey;
       const totalAmount = this.round2(this.toNumber(project.totalAmount));
-      const currentGroup = groupMap.get(reportGroupKey) ?? {
-        reportGroupKey,
-        reportGroupLabel,
+      const currentGroup = groupMap.get(projectGroupKey) ?? {
+        classKey: projectGroupKey,
+        classLabel,
         totalAmount: 0,
         projects: [],
       };
@@ -1091,9 +1119,12 @@ export class V2ReportService {
       currentGroup.projects.push({
         code: project.projectCode,
         name: project.projectName,
-        groupKey: projectGroupKey,
-        groupLabel,
-        accountKey: project.accountKey ?? null,
+        classKey: projectGroupKey,
+        classLabel,
+        accountKey:
+          project.accountKey ??
+          groupDefinition?.defaultAccountKey ??
+          null,
         allocations: project.allocations.map((allocation) => ({
           year: allocation.year,
           totalAmount: this.round2(this.toNumber(allocation.totalAmount)),
@@ -1108,7 +1139,7 @@ export class V2ReportService {
         })),
         totalAmount,
       });
-      groupMap.set(reportGroupKey, currentGroup);
+      groupMap.set(projectGroupKey, currentGroup);
 
       for (const allocation of project.allocations) {
         yearlyTotalsMap.set(
@@ -1148,13 +1179,13 @@ export class V2ReportService {
     const groupedProjects = [...groupMap.values()]
       .sort((left, right) => {
         const leftOrder =
-          reportGroupOrder.get(left.reportGroupKey) ?? Number.MAX_SAFE_INTEGER;
+          groupDefinitionByKey.get(left.classKey)?.index ?? Number.MAX_SAFE_INTEGER;
         const rightOrder =
-          reportGroupOrder.get(right.reportGroupKey) ?? Number.MAX_SAFE_INTEGER;
+          groupDefinitionByKey.get(right.classKey)?.index ?? Number.MAX_SAFE_INTEGER;
         if (leftOrder !== rightOrder) {
           return leftOrder - rightOrder;
         }
-        return left.reportGroupLabel.localeCompare(right.reportGroupLabel);
+        return left.classLabel.localeCompare(right.classLabel);
       })
       .map((group) => ({
         ...group,
@@ -1162,11 +1193,24 @@ export class V2ReportService {
           left.code.localeCompare(right.code),
         ),
       }));
+    const depreciationPlan = groupDefinitions.map((group) => {
+      const rule = depreciationRuleByClassKey.get(group.key);
+      return {
+        classKey: group.key,
+        classLabel: group.label,
+        accountKey: group.defaultAccountKey ?? null,
+        serviceSplit: group.serviceSplit,
+        method: rule?.method ?? 'none',
+        linearYears: rule?.linearYears ?? null,
+        residualPercent: rule?.residualPercent ?? null,
+      };
+    });
 
     return {
       yearlyTotals,
       fiveYearBands,
       groupedProjects,
+      depreciationPlan,
     };
   }
 
@@ -1308,47 +1352,96 @@ export class V2ReportService {
     );
   }
 
-  private async getVesinvestGroupLabelMap(orgId: string) {
+  private async getOrderedVesinvestGroupDefinitions(orgId: string) {
     const findMany = this.prisma.vesinvestGroupDefinition?.findMany;
     const rows =
       typeof findMany === 'function'
         ? await findMany({
-            orderBy: [{ key: 'asc' }],
+            orderBy: [{ createdAt: 'asc' }, { key: 'asc' }],
             select: {
               key: true,
               label: true,
+              defaultAccountKey: true,
+              defaultDepreciationClassKey: true,
+              reportGroupKey: true,
+              serviceSplit: true,
             },
           })
         : [];
-    const source =
-      rows.length > 0
-        ? rows.map((row) => [row.key, row.label] as const)
-        : DEFAULT_VESINVEST_GROUP_DEFINITIONS.map((row) => [row.key, row.label] as const);
-    const labels = Object.fromEntries(source) as Record<string, string>;
+    const persistedMap = new Map(
+      rows.map((row) => [
+        row.key,
+        {
+          key: row.key,
+          label: row.label,
+          defaultAccountKey: row.defaultAccountKey,
+          defaultDepreciationClassKey:
+            normalizeVesinvestDepreciationClassKey(
+              row.key,
+              row.defaultDepreciationClassKey,
+            ) ?? row.key,
+          reportGroupKey: row.reportGroupKey,
+          serviceSplit: row.serviceSplit,
+        },
+      ]),
+    );
+    const base = DEFAULT_VESINVEST_GROUP_DEFINITIONS.map(
+      (item) => persistedMap.get(item.key) ?? { ...item },
+    );
     const overrideFindMany = this.prisma.vesinvestGroupOverride?.findMany;
     if (typeof overrideFindMany !== 'function') {
-      return labels;
+      return sortVesinvestGroupDefinitions(base);
     }
     const overrides = await overrideFindMany({
       where: { orgId },
+      orderBy: [{ createdAt: 'asc' }, { key: 'asc' }],
       select: {
         key: true,
         label: true,
+        defaultAccountKey: true,
+        defaultDepreciationClassKey: true,
+        reportGroupKey: true,
+        serviceSplit: true,
       },
     });
-    for (const row of overrides) {
-      labels[row.key] = row.label;
+    if (overrides.length === 0) {
+      return sortVesinvestGroupDefinitions(base);
     }
-    return labels;
+    const overrideMap = new Map(
+      overrides.map((row) => [
+        row.key,
+        {
+          key: row.key,
+          label: row.label,
+          defaultAccountKey: row.defaultAccountKey,
+          defaultDepreciationClassKey:
+            normalizeVesinvestDepreciationClassKey(
+              row.key,
+              row.defaultDepreciationClassKey,
+            ) ?? row.key,
+          reportGroupKey: row.reportGroupKey,
+          serviceSplit: row.serviceSplit,
+        },
+      ]),
+    );
+    const merged = base.map((item) => overrideMap.get(item.key) ?? item);
+    return sortVesinvestGroupDefinitions(merged);
   }
 
-  private getReportGroupLabelMap() {
-    return Object.fromEntries(
-      DEFAULT_VESINVEST_REPORT_GROUP_DEFINITIONS.map((group) => [
+  private async getVesinvestGroupClassificationDefaults(orgId: string) {
+    return new Map(
+      (await this.getOrderedVesinvestGroupDefinitions(orgId)).map((group) => [
         group.key,
-        group.label,
-      ]),
-    ) as Record<string, string>;
+        {
+          defaultAccountKey: group.defaultAccountKey,
+          defaultDepreciationClassKey:
+            normalizeVesinvestDepreciationClassKey(
+              group.key,
+              group.defaultDepreciationClassKey,
+            ) ?? group.key,
+        },
+      ] as const),
+    );
   }
 
   private async getOptionalBoundUtilityIdentity(orgId: string) {

@@ -132,10 +132,7 @@ export function useForecastPageController({
   }, [scenarioController.activeWorkbench]);
 
   React.useEffect(() => {
-    if (
-      scenarioController.activeWorkbench === 'investments' ||
-      scenarioController.activeWorkbench === 'depreciation'
-    ) {
+    if (scenarioController.activeWorkbench === 'investments') {
       scenarioController.setActivePrimaryChart('cashflow');
       return;
     }
@@ -155,6 +152,9 @@ export function useForecastPageController({
     ) {
       return 'missingActivePlanLink' as const;
     }
+    if (activePlan.classificationReviewRequired) {
+      return 'classificationReviewRequired' as const;
+    }
     if (scenarioController.forecastFreshnessState === 'computing') {
       return 'missingComputeResults' as const;
     }
@@ -167,12 +167,15 @@ export function useForecastPageController({
       }
       return 'staleComputeToken' as const;
     }
-    if (investmentController.hasIncompleteDepreciationMapping) {
-      return 'depreciationMappingIncomplete' as const;
+    if (
+      scenarioController.scenario.yearlyInvestments.some(
+        (row) => row.amount > 0 && !row.depreciationRuleSnapshot,
+      )
+    ) {
+      return 'missingDepreciationSnapshots' as const;
     }
     return null;
   }, [
-    investmentController.hasIncompleteDepreciationMapping,
     scenarioController.forecastFreshnessState,
     scenarioController.planningContext?.vesinvest?.activePlan,
     scenarioController.scenario,
@@ -192,10 +195,15 @@ export function useForecastPageController({
           'v2Forecast.computeBeforeReport',
           'Recompute results before creating report.',
         );
-      case 'depreciationMappingIncomplete':
+      case 'classificationReviewRequired':
         return t(
-          'v2Forecast.depreciationMappingBlockedHint',
-          'Complete and save a depreciation mapping for every investment year before creating report.',
+          'v2Forecast.classificationReviewRequired',
+          'Review and save the Vesinvest class plan before creating a report.',
+        );
+      case 'missingDepreciationSnapshots':
+        return t(
+          'v2Forecast.depreciationSnapshotsMissingHint',
+          'Refresh the synced Vesinvest class plan and recompute results before creating report.',
         );
       case 'staleComputeToken':
         return t(
@@ -217,7 +225,7 @@ export function useForecastPageController({
     if (
       reportReadinessReason === 'staleComputeToken' ||
       reportReadinessReason === 'unsavedChanges' ||
-      reportReadinessReason === 'depreciationMappingIncomplete'
+      reportReadinessReason === 'missingDepreciationSnapshots'
     ) {
       return 'v2-status-warning';
     }
@@ -719,41 +727,18 @@ export function useForecastPageController({
           'Near-term editable OPEX path',
         ),
       },
-      {
-        id: 'depreciation',
-        title: t('v2Forecast.pillarDepreciation', 'Depreciation'),
-        baseline: t('v2Forecast.depreciationRulesCount', '{{count}} classes', {
-          count: scenarioController.depreciationRuleDrafts.length,
-        }),
-        scenario: t('v2Forecast.mappingSavedYears', '{{saved}}/{{total}} years saved', {
-          saved: investmentController.savedMappedInvestmentYearsCount,
-          total: investmentController.plannedInvestmentYears.length,
-        }),
-        delta:
-          investmentController.unmappedInvestmentYears.length > 0
-            ? t('v2Forecast.mappingStatusBlocked', 'Depreciation incomplete')
-            : t('v2Forecast.mappingStatusReady', 'Depreciation ready'),
-        provenance: depreciationFeatureEnabled
-          ? t('v2Forecast.depreciationRulesTitle', 'Depreciation plans')
-          : t('common.no', 'No'),
-      },
     ];
   }, [
     baselineContext,
     baselineDatasetSourceLabel,
     baselineYearSnapshot?.soldVolume,
-    depreciationFeatureEnabled,
     formatAssumptionPercent,
     horizonYearSnapshot?.soldVolume,
     investmentController.averageNearTermExpense.energyPct,
     investmentController.averageNearTermExpense.opexOtherPct,
     investmentController.averageNearTermExpense.personnelPct,
     investmentController.firstNearTermExpense,
-    investmentController.plannedInvestmentYears.length,
-    investmentController.savedMappedInvestmentYearsCount,
-    investmentController.unmappedInvestmentYears.length,
     investmentController.investmentSummary.peakAnnualAmount,
-    scenarioController.depreciationRuleDrafts.length,
     scenarioController.draftAssumptions.energiakerroin,
     scenarioController.draftAssumptions.henkilostokerroin,
     scenarioController.draftAssumptions.inflaatio,
@@ -807,7 +792,7 @@ export function useForecastPageController({
     () =>
       statementPillars
         .filter((pillar) =>
-          ['investments', 'revenues', 'materials', 'personnel', 'opex', 'depreciation'].includes(
+          ['investments', 'revenues', 'materials', 'personnel', 'opex'].includes(
             pillar.id,
           ),
         )

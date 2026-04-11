@@ -14,7 +14,11 @@ import type {
   ManualPriceForm,
   ManualVolumeForm,
 } from './overviewManualForms';
-import type { MissingRequirement, SetupYearStatus } from './overviewWorkflow';
+import {
+  PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
+  type MissingRequirement,
+  type SetupYearStatus,
+} from './overviewWorkflow';
 import type { ManualPatchMode } from './useOverviewManualPatchEditor';
 import {
   getDocumentImportSelectedPageNumbers,
@@ -1001,7 +1005,10 @@ export const OverviewReviewBoard: React.FC<Props> = ({
     <div className="v2-section-header">
       <div>
         <p className="v2-overview-eyebrow">
-          {t('v2Overview.wizardProgress', { step: workflowStep })}
+          {t('v2Overview.wizardProgress', {
+            step: workflowStep,
+            total: PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
+          })}
         </p>
         <h2>{t('v2Overview.wizardQuestionReviewYears')}</h2>
       </div>

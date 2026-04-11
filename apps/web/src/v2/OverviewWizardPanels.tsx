@@ -9,6 +9,7 @@ import {
   buildOverviewYearFinancialSourceChip,
   buildOverviewYearTargetChip,
 } from './overviewRenderers';
+import { PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS } from './overviewWorkflow';
 import type { ImportYearSourceLayer } from './yearReview';
 
 type AcceptedPlanningYearRow = {
@@ -89,7 +90,10 @@ export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
         <div className="v2-section-header">
           <div>
             <p className="v2-overview-eyebrow">
-              {t('v2Overview.wizardProgress', { step: workflowStep })}
+              {t('v2Overview.wizardProgress', {
+                step: workflowStep,
+                total: PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
+              })}
             </p>
             <h2>{headline}</h2>
           </div>
@@ -254,7 +258,10 @@ export const OverviewPlanningBaselineStep: React.FC<
     <div className="v2-section-header">
       <div>
         <p className="v2-overview-eyebrow">
-          {t('v2Overview.wizardProgress', { step: workflowStep })}
+          {t('v2Overview.wizardProgress', {
+            step: workflowStep,
+            total: PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
+          })}
         </p>
         <h2>{t('v2Overview.wizardQuestionBaseline')}</h2>
       </div>

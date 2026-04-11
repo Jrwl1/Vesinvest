@@ -264,13 +264,14 @@ const buildPlanningContextResponse = (options?: {
               baselineStatus: 'draft',
               pricingStatus: 'blocked',
               selectedScenarioId: null,
-              projectCount: 1,
-              totalInvestmentAmount: 100000,
-              lastReviewedAt: null,
-              reviewDueAt: null,
-              baselineChangedSinceAcceptedRevision: false,
-              investmentPlanChangedSinceFeeRecommendation: false,
-              updatedAt: '2026-04-09T10:00:00.000Z',
+               projectCount: 1,
+               totalInvestmentAmount: 100000,
+               lastReviewedAt: null,
+               reviewDueAt: null,
+               classificationReviewRequired: false,
+               baselineChangedSinceAcceptedRevision: false,
+               investmentPlanChangedSinceFeeRecommendation: false,
+               updatedAt: '2026-04-09T10:00:00.000Z',
               createdAt: '2026-04-09T10:00:00.000Z',
               ...options.activePlan,
             }
@@ -290,13 +291,14 @@ const buildPlanningContextResponse = (options?: {
               baselineStatus: 'draft',
               pricingStatus: 'blocked',
               selectedScenarioId: null,
-              projectCount: 1,
-              totalInvestmentAmount: 100000,
-              lastReviewedAt: null,
-              reviewDueAt: null,
-              baselineChangedSinceAcceptedRevision: false,
-              investmentPlanChangedSinceFeeRecommendation: false,
-              updatedAt: '2026-04-09T10:00:00.000Z',
+               projectCount: 1,
+               totalInvestmentAmount: 100000,
+               lastReviewedAt: null,
+               reviewDueAt: null,
+               classificationReviewRequired: false,
+               baselineChangedSinceAcceptedRevision: false,
+               investmentPlanChangedSinceFeeRecommendation: false,
+               updatedAt: '2026-04-09T10:00:00.000Z',
               createdAt: '2026-04-09T10:00:00.000Z',
               ...options.selectedPlan,
             }
@@ -596,7 +598,9 @@ describe('OverviewPageV2', () => {
     expect(screen.getByText('Water Utility')).toBeTruthy();
     expect(screen.getAllByText('2024, 2023').length).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(localeText('v2Overview.wizardProgress', { step: 2 }))
+      screen.getAllByText(
+        localeText('v2Overview.wizardProgress', { step: 2, total: 5 }),
+      )
         .length,
     ).toBeGreaterThan(0);
     expect(screen.queryByText('Hidden imported-year detail')).toBeNull();
@@ -1802,7 +1806,9 @@ describe('OverviewPageV2', () => {
       screen.getAllByText(localeText('v2Overview.wizardSummaryTitle')).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(localeText('v2Overview.wizardProgress', { step: 3 }))
+      screen.getAllByText(
+        localeText('v2Overview.wizardProgress', { step: 2, total: 5 }),
+      )
         .length,
     ).toBeGreaterThan(0);
     expect(
@@ -4780,7 +4786,9 @@ describe('OverviewPageV2', () => {
     );
 
     expect(
-      (await screen.findAllByText(localeText('v2Overview.wizardProgress', { step: 3 })))
+      (await screen.findAllByText(
+        localeText('v2Overview.wizardProgress', { step: 2, total: 5 }),
+      ))
         .length,
     ).toBeGreaterThan(0);
     expect(await screen.findByTestId('vesinvest-panel')).toBeTruthy();
@@ -8586,7 +8594,9 @@ describe('OverviewPageV2', () => {
       }),
     ).toBeTruthy();
     expect(
-      screen.queryByText(localeText('v2Overview.wizardProgress', { step: 6 })),
+      screen.queryByText(
+        localeText('v2Overview.wizardProgress', { step: 5, total: 5 }),
+      ),
     ).toBeNull();
     expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
     expect(
@@ -9596,7 +9606,9 @@ describe('OverviewPageV2', () => {
       (await screen.findByRole('button', { name: 'Avaa Ennuste' })).className,
     ).toContain('v2-btn-primary');
     expect(
-      screen.queryByText(localeText('v2Overview.wizardProgress', { step: 6 })),
+      screen.queryByText(
+        localeText('v2Overview.wizardProgress', { step: 5, total: 5 }),
+      ),
     ).toBeNull();
     expect(
       screen.queryByText(localeText('v2Overview.wizardSummaryTitle')),

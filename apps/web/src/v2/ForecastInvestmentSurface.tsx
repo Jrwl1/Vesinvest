@@ -36,7 +36,6 @@ type Props = {
   investmentImpactSummary: InvestmentImpactSummary;
   hasInvestmentDepreciationErrors: boolean;
   invalidInvestmentDepreciationYears: number[];
-  onContinueToDepreciation: () => void;
   renderInvestmentProgramRows: (rows: InvestmentSurfaceRow[]) => React.ReactNode;
   nearTermInvestmentRows: InvestmentSurfaceRow[];
   investmentProgramGroupOptions: string[];
@@ -62,7 +61,6 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
   investmentImpactSummary,
   hasInvestmentDepreciationErrors,
   invalidInvestmentDepreciationYears,
-  onContinueToDepreciation,
   renderInvestmentProgramRows,
   nearTermInvestmentRows,
   investmentProgramGroupOptions,
@@ -164,23 +162,11 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
         <div className="v2-alert v2-alert-error">
           <p>
             {t(
-              'v2Forecast.unmappedInvestmentYears',
-              'Unmapped investment years: {{years}}',
+              'v2Forecast.depreciationSnapshotsMissing',
+              'Depreciation snapshots are missing for years: {{years}}',
               { years: invalidInvestmentDepreciationYears.join(', ') },
             )}
           </p>
-          <div className="v2-actions-row">
-            <button
-              type="button"
-              className="v2-btn v2-btn-small"
-              onClick={onContinueToDepreciation}
-            >
-              {t(
-                'v2Forecast.investmentProgramContinueDepreciation',
-                'Continue to depreciation plans',
-              )}
-            </button>
-          </div>
         </div>
       ) : null}
       <div className="v2-investment-workspace-toolbar">
@@ -217,16 +203,6 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
             disabled={busy || draftInvestmentsCount === 0}
           >
             {t('v2Forecast.investmentClearAll', 'Clear all')}
-          </button>
-          <button
-            type="button"
-            className="v2-btn"
-            onClick={onContinueToDepreciation}
-          >
-            {t(
-              'v2Forecast.openDepreciationWorkbench',
-              'Open depreciation planning',
-            )}
           </button>
         </div>
       </div>

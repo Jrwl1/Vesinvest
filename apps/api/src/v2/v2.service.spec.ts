@@ -1030,7 +1030,7 @@ describe('V2Service depreciation compatibility', () => {
     return { service, prisma, projectionsService };
   };
 
-  it('returns an empty depreciation-rule list when none are configured', async () => {
+  it('returns the authoritative class-owned depreciation catalog when no org overrides exist', async () => {
     const { service, prisma } = buildService();
 
     const result = await service.listDepreciationRules(ORG_ID);
@@ -1039,10 +1039,21 @@ describe('V2Service depreciation compatibility', () => {
       where: { orgId: ORG_ID },
       orderBy: [{ assetClassKey: 'asc' }],
     });
-    expect(result).toEqual([]);
+    expect(result.map((item) => item.assetClassKey)).toEqual([
+      'sanering_water_network',
+      'sanering_wastewater_network',
+      'new_water_network',
+      'new_wastewater_network',
+      'repair_water_network',
+      'repair_wastewater_network',
+      'waterworks_equipment',
+      'wastewater_equipment',
+      'water_production',
+      'wastewater_treatment',
+    ]);
   });
 
-  it('maps organization-level linear rules into canonical straight-line methods', async () => {
+  it('maps organization-level legacy rules into the canonical Vesinvest class catalog', async () => {
     const { service, prisma } = buildService();
     prisma.organizationDepreciationRule.findMany.mockResolvedValueOnce([
       {
@@ -1059,13 +1070,68 @@ describe('V2Service depreciation compatibility', () => {
 
     const result = await service.listDepreciationRules(ORG_ID);
 
-    expect(result).toEqual([
-      expect.objectContaining({
+    expect(result).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          assetClassKey: 'sanering_water_network',
+          method: 'straight-line',
+          linearYears: 25,
+        }),
+        expect.objectContaining({
+          assetClassKey: 'new_water_network',
+          method: 'straight-line',
+          linearYears: 25,
+        }),
+        expect.objectContaining({
+          assetClassKey: 'repair_water_network',
+          method: 'straight-line',
+          linearYears: 25,
+        }),
+      ]),
+    );
+  });
+
+  it('keeps explicit class rules ahead of leftover legacy aliases in the class catalog', async () => {
+    const { service, prisma } = buildService();
+    prisma.organizationDepreciationRule.findMany.mockResolvedValueOnce([
+      {
+        id: 'rule-legacy',
         assetClassKey: 'water_network_post_1999',
-        method: 'straight-line',
+        assetClassName: 'Water network',
+        method: 'linear',
         linearYears: 25,
-      }),
+        residualPercent: null,
+        createdAt: '2026-03-25T10:00:00.000Z',
+        updatedAt: '2026-03-25T10:00:00.000Z',
+      },
+      {
+        id: 'rule-class',
+        assetClassKey: 'new_water_network',
+        assetClassName: 'Nyanlaggning / vattennatverk',
+        method: 'linear',
+        linearYears: 40,
+        residualPercent: null,
+        createdAt: '2026-03-25T10:00:00.000Z',
+        updatedAt: '2026-03-25T10:00:00.000Z',
+      },
     ]);
+
+    const result = await service.listDepreciationRules(ORG_ID);
+
+    expect(
+      result.find((item) => item.assetClassKey === 'new_water_network'),
+    ).toMatchObject({
+      assetClassKey: 'new_water_network',
+      method: 'straight-line',
+      linearYears: 40,
+    });
+    expect(
+      result.find((item) => item.assetClassKey === 'sanering_water_network'),
+    ).toMatchObject({
+      assetClassKey: 'sanering_water_network',
+      method: 'straight-line',
+      linearYears: 25,
+    });
   });
 
   it('returns empty class allocations when scenario has no class-allocation overrides', async () => {
@@ -1574,6 +1640,7 @@ describe('V2Service forecast starter contract', () => {
   it('reuses the existing scenario-create contract for explicit name and horizon starter fields', async () => {
     const prisma = {} as any;
     const projectionsService = {
+      list: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockResolvedValue({ id: 'scenario-1' }),
       compute: jest.fn().mockResolvedValue(undefined),
     } as any;
@@ -1615,6 +1682,7 @@ describe('V2Service forecast starter contract', () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-03-19T12:00:00.000Z'));
     const prisma = {} as any;
     const projectionsService = {
+      list: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockResolvedValue({ id: 'scenario-1' }),
       compute: jest.fn().mockResolvedValue(undefined),
     } as any;
@@ -3821,6 +3889,18 @@ describe('V2Service report variant regression', () => {
       vesinvestGroupDefinition: {
         findMany: jest.fn().mockResolvedValue([]),
       },
+      vesinvestGroupOverride: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            key: 'legacy_extra_class',
+            label: 'Legacy extra class',
+            defaultAccountKey: 'legacy_extra_class',
+            defaultDepreciationClassKey: 'legacy_extra_class',
+            reportGroupKey: 'network_rehabilitation',
+            serviceSplit: 'mixed',
+          },
+        ]),
+      },
       vesinvestPlan: {
         findFirst: jest.fn().mockResolvedValue({
           id: '11111111-1111-4111-8111-111111111111',
@@ -4261,28 +4341,35 @@ describe('V2Service report variant regression', () => {
       ],
       groupedProjects: [
         {
-          reportGroupKey: 'network_rehabilitation',
-          reportGroupLabel: 'Network rehabilitation',
-          totalAmount: 350000,
+          classKey: 'sanering_water_network',
+          classLabel: 'Sanering / vattennatverk',
+          totalAmount: 150000,
           projects: [
             {
               code: 'P-001',
               name: 'Main rehabilitation',
-              groupKey: 'sanering_water_network',
-              groupLabel: 'Sanering / vattennatverk',
-              accountKey: null,
+              classKey: 'sanering_water_network',
+              classLabel: 'Sanering / vattennatverk',
+              accountKey: 'sanering_water_network',
               allocations: [
                 { year: 2026, totalAmount: 50000 },
                 { year: 2027, totalAmount: 100000 },
               ],
               totalAmount: 150000,
             },
+          ],
+        },
+        {
+          classKey: 'wastewater_treatment',
+          classLabel: 'Avloppsrening',
+          totalAmount: 200000,
+          projects: [
             {
               code: 'P-002',
               name: 'Plant renewal',
-              groupKey: 'wastewater_treatment',
-              groupLabel: 'Avloppsrening',
-              accountKey: null,
+              classKey: 'wastewater_treatment',
+              classLabel: 'Avloppsrening',
+              accountKey: 'wastewater_treatment',
               allocations: [
                 { year: 2028, totalAmount: 50000 },
                 { year: 2029, totalAmount: 150000 },
@@ -4292,7 +4379,27 @@ describe('V2Service report variant regression', () => {
           ],
         },
       ],
+      depreciationPlan: expect.arrayContaining([
+        expect.objectContaining({
+          classKey: 'sanering_water_network',
+          classLabel: 'Sanering / vattennatverk',
+          accountKey: 'sanering_water_network',
+          serviceSplit: 'water',
+        }),
+        expect.objectContaining({
+          classKey: 'wastewater_treatment',
+          classLabel: 'Avloppsrening',
+          accountKey: 'wastewater_treatment',
+          serviceSplit: 'wastewater',
+        }),
+      ]),
     });
+    expect(snapshot.vesinvestAppendix.depreciationPlan).toHaveLength(10);
+    expect(
+      snapshot.vesinvestAppendix.depreciationPlan.some(
+        (row: any) => row.classKey === 'legacy_extra_class',
+      ),
+    ).toBe(false);
     expect(snapshot.baselineSourceSummaries).toHaveLength(3);
     expect(snapshot.baselineSourceSummaries[1]).toMatchObject({
       year: 2023,

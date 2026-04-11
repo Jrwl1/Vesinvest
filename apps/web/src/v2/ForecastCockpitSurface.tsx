@@ -36,7 +36,7 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
     handleCompute,
     busy,
     hasNearTermValidationErrors,
-    hasInvestmentDepreciationErrors,
+    hasMissingDepreciationRules,
     blockedForecastActionHint,
     computeButtonLabel,
     denseAnalystMode,
@@ -172,7 +172,7 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
                     busy ||
                     !scenario ||
                     hasNearTermValidationErrors ||
-                    hasInvestmentDepreciationErrors
+                    hasMissingDepreciationRules
                   }
                   title={blockedForecastActionHint}
                 >
@@ -189,7 +189,7 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
                     busy ||
                     !scenario ||
                     hasNearTermValidationErrors ||
-                    hasInvestmentDepreciationErrors
+                    hasMissingDepreciationRules
                   }
                   title={blockedForecastActionHint}
                 >
@@ -499,8 +499,7 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
                     (pillar.id === 'revenues' && activeWorkbench === 'revenue') ||
                     (pillar.id === 'materials' && activeWorkbench === 'materials') ||
                     (pillar.id === 'personnel' && activeWorkbench === 'personnel') ||
-                    (pillar.id === 'opex' && activeWorkbench === 'otherOpex') ||
-                    (pillar.id === 'depreciation' && activeWorkbench === 'depreciation')
+                    (pillar.id === 'opex' && activeWorkbench === 'otherOpex')
                       ? 'active'
                       : ''
                   }`}
@@ -514,9 +513,7 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
                       ? t('v2Forecast.openMaterialsWorkbench', 'Open materials planning')
                       : pillar.id === 'personnel'
                       ? t('v2Forecast.openPersonnelWorkbench', 'Open personnel planning')
-                      : pillar.id === 'opex'
-                      ? t('v2Forecast.openOtherOpexWorkbench', 'Open other operating costs')
-                      : t('v2Forecast.openDepreciationWorkbench', 'Open depreciation planning')
+                      : t('v2Forecast.openOtherOpexWorkbench', 'Open other operating costs')
                   }
                   onClick={() => {
                     if (pillar.id === 'investments') setActiveWorkbench('investments');
@@ -524,7 +521,6 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
                     if (pillar.id === 'materials') setActiveWorkbench('materials');
                     if (pillar.id === 'personnel') setActiveWorkbench('personnel');
                     if (pillar.id === 'opex') setActiveWorkbench('otherOpex');
-                    if (pillar.id === 'depreciation') setActiveWorkbench('depreciation');
                   }}
                 >
                   <strong>{pillar.title}</strong>

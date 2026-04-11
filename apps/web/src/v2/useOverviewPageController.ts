@@ -238,14 +238,20 @@ export function useOverviewPageController({
         selectedScenario: activeVesinvestScenario,
       },
     ).currentStep;
+    const shouldRespectBackNavigation =
+      importController.reviewContinueStep != null &&
+      wizardDisplayStep < workflowStep;
     return (wizardDisplayStep === 4
       ? 4
-      : activeVesinvestPlan && workflowStep > wizardDisplayStep
+      : activeVesinvestPlan &&
+          workflowStep > wizardDisplayStep &&
+          !shouldRespectBackNavigation
         ? workflowStep
         : wizardDisplayStep) as typeof shellSetupWizardState.currentStep;
   }, [
     activeVesinvestPlan,
     activeVesinvestScenario,
+    importController.reviewContinueStep,
     importController.overview,
     importController.planningContext,
     shellSetupWizardState,

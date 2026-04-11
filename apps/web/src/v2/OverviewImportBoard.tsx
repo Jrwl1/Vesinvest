@@ -13,7 +13,10 @@ import {
   parseManualNumber,
   type InlineCardField,
 } from './overviewManualForms';
-import type { MissingRequirement } from './overviewWorkflow';
+import {
+  PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
+  type MissingRequirement,
+} from './overviewWorkflow';
 import { buildImportYearSourceLayers } from './yearReview';
 
 type BoardRow = any;
@@ -251,7 +254,10 @@ export const OverviewImportBoard: React.FC<Props> = ({
         <div className="v2-section-header">
           <div>
             <p className="v2-overview-eyebrow">
-              {t('v2Overview.wizardProgress', { step: workflowStep })}
+              {t('v2Overview.wizardProgress', {
+                step: workflowStep,
+                total: PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
+              })}
             </p>
             <h2>{t('v2Overview.wizardQuestionImportYears')}</h2>
           </div>

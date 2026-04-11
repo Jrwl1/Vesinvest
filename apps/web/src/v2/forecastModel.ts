@@ -276,6 +276,8 @@ export type ReportReadinessReason =
   | 'unsavedChanges'
   | 'missingComputeResults'
   | 'depreciationMappingIncomplete'
+  | 'classificationReviewRequired'
+  | 'missingDepreciationSnapshots'
   | 'staleComputeToken';
 
 export type DepreciationRuleDraft = {

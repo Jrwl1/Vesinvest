@@ -268,15 +268,15 @@ describe('ReportsPageV2', () => {
           ],
           groupedProjects: [
             {
-              reportGroupKey: 'network_rehabilitation',
-              reportGroupLabel: 'Network rehabilitation',
+              classKey: 'sanering_water_network',
+              classLabel: 'Sanering / vattennatverk',
               totalAmount: 150000,
               projects: [
                 {
                   code: 'P-001',
                   name: 'Main rehabilitation',
-                  groupKey: 'sanering_water_network',
-                  groupLabel: 'Sanering / vattennatverk',
+                  classKey: 'sanering_water_network',
+                  classLabel: 'Sanering / vattennatverk',
                   accountKey: 'sanering_water_network',
                   allocations: [
                     {
@@ -289,6 +289,17 @@ describe('ReportsPageV2', () => {
                   totalAmount: 150000,
                 },
               ],
+            },
+          ],
+          depreciationPlan: [
+            {
+              classKey: 'sanering_water_network',
+              classLabel: 'Sanering / vattennatverk',
+              accountKey: 'sanering_water_network',
+              serviceSplit: 'water',
+              method: 'straight-line',
+              linearYears: 40,
+              residualPercent: null,
             },
           ],
         },
@@ -337,10 +348,11 @@ describe('ReportsPageV2', () => {
     expect(await screen.findByText(/Operating costs 70 000 EUR/)).toBeTruthy();
     expect(await screen.findByText('Työkirjaimportti (kva-2024.xlsx)')).toBeTruthy();
     expect(await screen.findByText('2026-2030 (5)')).toBeTruthy();
-    expect(screen.getByText('Verkoston saneeraus')).toBeTruthy();
-    expect(screen.getByText('sanering_water_network')).toBeTruthy();
-    expect(screen.getByText('Vesiverkon saneeraus')).toBeTruthy();
+    expect(screen.getAllByText('Vesiverkon saneeraus').length).toBeGreaterThan(0);
     expect(screen.getByText('Main rehabilitation')).toBeTruthy();
+    expect(screen.getByText('Poistosuunnitelma')).toBeTruthy();
+    expect(screen.getByText('Tasapoisto 40 vuotta')).toBeTruthy();
+    expect(screen.getByText('Vesi')).toBeTruthy();
   });
 
   it('keeps detailed assumption rows out of the public summary tariff card', async () => {
@@ -448,6 +460,7 @@ describe('ReportsPageV2', () => {
             { startYear: 2026, endYear: 2026, totalAmount: 100000 },
           ],
           groupedProjects: [],
+          depreciationPlan: [],
         },
         reportVariant: 'public_summary',
         reportSections: {
@@ -577,6 +590,7 @@ describe('ReportsPageV2', () => {
             { startYear: 2026, endYear: 2026, totalAmount: 100000 },
           ],
           groupedProjects: [],
+          depreciationPlan: [],
         },
         reportVariant: 'confidential_appendix',
         reportSections: {

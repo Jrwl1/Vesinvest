@@ -172,12 +172,7 @@ export function useForecastInvestmentController({
           'v2Forecast.depreciationRulesUnavailable',
           'Depreciation rules are missing for this scenario. Refresh the scenario before saving investment years.',
         )
-      : depreciationController.hasInvestmentDepreciationErrors
-        ? t(
-            'v2Forecast.depreciationMappingBlockedHint',
-            'Complete and save a depreciation rule for every investment year before creating report.',
-          )
-        : undefined;
+      : undefined;
 
   const saveDrafts = React.useCallback(async (): Promise<V2ForecastScenario | null> => {
     if (!scenario || !selectedScenarioId) {

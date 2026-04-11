@@ -315,6 +315,7 @@ describe('AppShellV2', () => {
     totalInvestmentAmount: 100000,
     lastReviewedAt: null,
     reviewDueAt: null,
+    classificationReviewRequired: false,
     baselineChangedSinceAcceptedRevision: false,
     investmentPlanChangedSinceFeeRecommendation: false,
     updatedAt: '2026-03-25T12:00:00.000Z',
@@ -812,7 +813,7 @@ describe('AppShellV2', () => {
 
     expect(await screen.findByText('overview-content')).toBeTruthy();
     expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
-    expect(screen.getByText('Step 1 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 1 / 5')).toBeTruthy();
     expect(screen.getByText('Create Vesinvest plan')).toBeTruthy();
     expect(screen.getByText('No utility selected')).toBeTruthy();
     await waitFor(() => {
@@ -883,7 +884,7 @@ describe('AppShellV2', () => {
     );
 
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
-    expect(screen.queryByText('Step 1 / 6')).toBeNull();
+    expect(screen.queryByText('Step 1 / 5')).toBeNull();
     expect(screen.queryByText('No utility selected')).toBeNull();
     await waitFor(() => {
       expect(window.location.pathname).toBe('/forecast');
@@ -1342,7 +1343,7 @@ describe('AppShellV2', () => {
     expect(screen.getByText('Create Vesinvest plan')).toBeTruthy();
     expect(screen.getByText('No utility selected')).toBeTruthy();
     expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
-    expect(screen.getByText('Step 1 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 1 / 5')).toBeTruthy();
     expect(screen.queryByText('ennuste-content:starter-1')).toBeNull();
     expect(
       (
@@ -1468,8 +1469,10 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
 
     expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
-    expect(screen.getByText('Step 2 / 6')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Back to plan' })).toBeTruthy();
+    expect(screen.getByText('Step 2 / 5')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Back to utility identity' }),
+    ).toBeTruthy();
   });
 
   it('keeps the shell back-step control keyboard-focusable while setup is in step 2', async () => {
@@ -1490,7 +1493,7 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
 
     const backButton = await screen.findByRole('button', {
-      name: 'Back to plan',
+      name: 'Back to utility identity',
     });
     backButton.focus();
     expect(document.activeElement).toBe(backButton);
@@ -1518,7 +1521,7 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'focus-problem-year' }));
 
     expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
-    expect(screen.getByText('Step 4 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 3 / 5')).toBeTruthy();
   });
 
   it('tracks the blocked-year branch steps reported by Overview through review, fix, baseline, and handoff', async () => {
@@ -1538,20 +1541,20 @@ describe('AppShellV2', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'review-blocked-year' }));
     expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
-    expect(screen.getByText('Step 3 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 2 / 5')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'focus-problem-year' }));
-    expect(screen.getByText('Step 4 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 3 / 5')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'review-ready' }));
-    expect(screen.getByText('Step 5 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 4 / 5')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
     expect(screen.getByText('Active workspace')).toBeTruthy();
     expect(screen.getAllByText('Overview').length).toBeGreaterThan(0);
     expect(screen.queryByText('Vesinvest workflow')).toBeNull();
-    expect(screen.queryByText('Step 6 / 6')).toBeNull();
+    expect(screen.queryByText('Step 5 / 5')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Back to baseline' })).toBeNull();
   });
 
@@ -1625,7 +1628,7 @@ describe('AppShellV2', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'review-ready' }));
 
-    expect(screen.getByText('Step 5 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 4 / 5')).toBeTruthy();
     expect((forecastTab as HTMLButtonElement).disabled).toBe(true);
     expect((reportsTab as HTMLButtonElement).disabled).toBe(true);
 
@@ -1672,7 +1675,7 @@ describe('AppShellV2', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'focus-problem-year' }));
 
-    expect(screen.getByText('Step 4 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 3 / 5')).toBeTruthy();
     expect((forecastTab as HTMLButtonElement).disabled).toBe(true);
     expect((reportsTab as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText('overview-content')).toBeTruthy();

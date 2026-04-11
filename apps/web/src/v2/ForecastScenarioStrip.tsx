@@ -27,7 +27,7 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
     handleSave,
     hasUnsavedChanges,
     hasNearTermValidationErrors,
-    hasInvestmentDepreciationErrors,
+    hasMissingDepreciationRules,
     blockedForecastActionHint,
     handleDelete,
     loadingList,
@@ -139,7 +139,7 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
                     !scenario ||
                     !hasUnsavedChanges ||
                     hasNearTermValidationErrors ||
-                    hasInvestmentDepreciationErrors
+                    hasMissingDepreciationRules
                   }
                   title={blockedForecastActionHint}
                 >

@@ -8,12 +8,16 @@ import {
   createVesinvestPlanV2,
   getForecastScenarioV2,
   getVesinvestPlanV2,
+  listDepreciationRulesV2,
   listVesinvestGroupsV2,
   listVesinvestPlansV2,
   searchImportOrganizationsV2,
   syncVesinvestPlanToForecastV2,
+  updateDepreciationRuleV2,
   updateVesinvestGroupV2,
   updateVesinvestPlanV2,
+  type V2DepreciationRule,
+  type V2EditableDepreciationRuleMethod,
   type V2ForecastScenario,
   type V2PlanningContextResponse,
   type V2VesinvestBaselineSourceState,
@@ -29,6 +33,7 @@ import {
 } from '../api';
 import { buildDefaultReportTitle } from './displayNames';
 import { formatDateTime, formatEur, formatPercent, formatPrice } from './format';
+import { toDepreciationRuleDraft, type DepreciationRuleDraft } from './forecastModel';
 import {
   getDocumentImportEvidence,
   getImportedFileNameByKind,
@@ -103,34 +108,9 @@ type VesinvestGroupedMatrixSection = {
   }>;
 };
 
+type VesinvestWorkspaceView = 'investment' | 'depreciation';
+
 const FALLBACK_GROUP_KEY = 'sanering_water_network';
-const REPORT_GROUP_OPTIONS = [
-  {
-    key: 'network_rehabilitation',
-    labelKey: 'v2Vesinvest.reportGroupNetworkRehabilitation',
-    defaultLabel: 'Network rehabilitation',
-  },
-  {
-    key: 'new_network',
-    labelKey: 'v2Vesinvest.reportGroupNewNetwork',
-    defaultLabel: 'New network',
-  },
-  {
-    key: 'plant_equipment',
-    labelKey: 'v2Vesinvest.reportGroupPlantEquipment',
-    defaultLabel: 'Plant equipment',
-  },
-  {
-    key: 'production',
-    labelKey: 'v2Vesinvest.reportGroupProduction',
-    defaultLabel: 'Production',
-  },
-  {
-    key: 'treatment',
-    labelKey: 'v2Vesinvest.reportGroupTreatment',
-    defaultLabel: 'Treatment',
-  },
-] as const;
 
 const buildHorizonYears = (startYear: number, horizonYears: number) =>
   Array.from({ length: horizonYears }, (_, index) => startYear + index);
@@ -238,18 +218,20 @@ const createProject = (
   groups: V2VesinvestGroupDefinition[],
   index: number,
   seed: {
+    code: string;
     name: string;
     groupKey: string;
   },
 ): V2VesinvestProject => {
   const group = resolveProjectGroup(groups, seed.groupKey);
+  const resolvedGroupKey = group?.key ?? seed.groupKey ?? FALLBACK_GROUP_KEY;
   return {
-    code: `P-${String(index + 1).padStart(3, '0')}`,
+    code: seed.code.trim() || `P-${String(index + 1).padStart(3, '0')}`,
     name: seed.name.trim(),
-    investmentType: 'sanering',
-    groupKey: group?.key ?? seed.groupKey ?? FALLBACK_GROUP_KEY,
-    groupLabel: group?.label ?? seed.groupKey ?? FALLBACK_GROUP_KEY,
-    depreciationClassKey: group?.defaultDepreciationClassKey ?? null,
+    investmentType: resolveInvestmentTypeFromGroupKey(resolvedGroupKey),
+    groupKey: resolvedGroupKey,
+    groupLabel: group?.label ?? resolvedGroupKey,
+    depreciationClassKey: group?.defaultDepreciationClassKey ?? group?.key ?? null,
     defaultAccountKey: group?.defaultAccountKey ?? null,
     reportGroupKey: group?.reportGroupKey ?? null,
     subtype: null,
@@ -266,12 +248,30 @@ const createProject = (
   };
 };
 
+const resolveInvestmentTypeFromGroupKey = (
+  groupKey: string,
+): V2VesinvestProject['investmentType'] =>
+  groupKey.startsWith('new_')
+    ? 'nyanlaggning'
+    : groupKey.startsWith('repair_')
+    ? 'reparation'
+    : 'sanering';
+
 const typeLabel = (t: TFunction, value: V2VesinvestProject['investmentType']) =>
   value === 'nyanlaggning'
     ? t('v2Vesinvest.typeNewBuild', 'New build')
     : value === 'reparation'
-    ? t('v2Vesinvest.typeRepair', 'Reparation')
+    ? t('v2Vesinvest.typeRepair', 'Repair')
     : t('v2Vesinvest.typeSanering', 'Rehabilitation');
+
+const parseNullableNumberInput = (value: string): number | undefined => {
+  const normalized = value.trim().replace(',', '.');
+  if (normalized.length === 0) {
+    return undefined;
+  }
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
 
 const allocationFieldLabel = (
   t: TFunction,
@@ -294,14 +294,6 @@ const round2 = (value: number) => Math.round(value * 100) / 100;
 
 const formatPlanMatrixAmount = (value: number) =>
   Math.abs(value) > 0.004 ? formatEur(value) : '';
-
-const formatReportGroupOptionLabel = (
-  t: TFunction,
-  key: (typeof REPORT_GROUP_OPTIONS)[number]['key'],
-) => {
-  const option = REPORT_GROUP_OPTIONS.find((item) => item.key === key);
-  return option ? t(option.labelKey, option.defaultLabel) : key;
-};
 
 const syncProjectTotals = (project: V2VesinvestProject): V2VesinvestProject => {
   const waterAmount = round2(
@@ -621,7 +613,7 @@ const VesinvestIdentitySurface: React.FC<{
   </section>
 );
 
-const VesinvestGroupDefaultsSurface: React.FC<{
+const VesinvestDepreciationPlanSurface: React.FC<{
   t: TFunction;
   children: React.ReactNode;
 }> = ({ t, children }) => (
@@ -629,9 +621,9 @@ const VesinvestGroupDefaultsSurface: React.FC<{
     <div className="v2-section-header">
       <div>
         <p className="v2-overview-eyebrow">
-          {t('v2Vesinvest.investmentPlan', 'Investment plan')}
+          {t('v2Vesinvest.depreciationPlan', 'Depreciation plan')}
         </p>
-        <h3>{t('v2Vesinvest.projectGroup', 'Group')}</h3>
+        <h3>{t('v2Vesinvest.classPlanHeading', 'Class-owned depreciation plan')}</h3>
       </div>
     </div>
     {children}
@@ -717,6 +709,12 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
   const [groupDrafts, setGroupDrafts] = React.useState<V2VesinvestGroupDefinition[]>(
     [],
   );
+  const [depreciationRules, setDepreciationRules] = React.useState<V2DepreciationRule[]>(
+    [],
+  );
+  const [depreciationRuleDrafts, setDepreciationRuleDrafts] = React.useState<
+    DepreciationRuleDraft[]
+  >([]);
   const [plans, setPlans] = React.useState<V2VesinvestPlanSummary[]>([]);
   const [selectedPlanId, setSelectedPlanId] = React.useState<string | null>(
     planningContext?.vesinvest?.selectedPlan?.id ??
@@ -740,29 +738,38 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     }>
   >([]);
   const [searchingVeeti, setSearchingVeeti] = React.useState(false);
-  const [savingGroupKey, setSavingGroupKey] = React.useState<string | null>(null);
+  const [savingClassKey, setSavingClassKey] = React.useState<string | null>(null);
   const [linkedScenario, setLinkedScenario] =
     React.useState<V2ForecastScenario | null>(null);
   const [loadingLinkedScenario, setLoadingLinkedScenario] =
     React.useState(false);
+  const [activeWorkspaceView, setActiveWorkspaceView] =
+    React.useState<VesinvestWorkspaceView>('investment');
   const [projectComposer, setProjectComposer] = React.useState<{
     open: boolean;
+    code: string;
     groupKey: string;
     name: string;
   }>({
     open: false,
+    code: '',
     groupKey: FALLBACK_GROUP_KEY,
     name: '',
   });
   const useSimplifiedSetup = simplifiedSetup && isAdmin;
 
   const refreshSummaries = React.useCallback(async (preferredId?: string | null) => {
-    const [groupRows, planRows] = await Promise.all([
+    const [groupRows, depreciationRuleRows, planRows] = await Promise.all([
       listVesinvestGroupsV2(),
+      listDepreciationRulesV2(),
       listVesinvestPlansV2(),
     ]);
     setGroups(groupRows);
     setGroupDrafts(groupRows.map((item) => ({ ...item })));
+    setDepreciationRules(depreciationRuleRows);
+    setDepreciationRuleDrafts(
+      depreciationRuleRows.map((item) => toDepreciationRuleDraft(item)),
+    );
     setPlans(planRows);
     setSelectedPlanId((current) => {
       if (preferredId && planRows.some((item) => item.id === preferredId)) return preferredId;
@@ -1080,6 +1087,9 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     if (!plan?.selectedScenarioId || !linkedScenario) {
       return 'missingScenario' as const;
     }
+    if (selectedSummary?.classificationReviewRequired) {
+      return 'classificationReviewRequired' as const;
+    }
     if (selectedSummary?.pricingStatus !== 'verified') {
       return 'staleComputeToken' as const;
     }
@@ -1100,20 +1110,18 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         (row) => row.amount > 0 && !row.depreciationRuleSnapshot,
       )
     ) {
-      return 'depreciationMappingIncomplete' as const;
+      return 'missingDepreciationSnapshots' as const;
     }
     return null;
-  }, [hasUnsavedChanges, linkedScenario, plan?.selectedScenarioId, selectedSummary?.pricingStatus]);
+  }, [
+    hasUnsavedChanges,
+    linkedScenario,
+    plan?.selectedScenarioId,
+    selectedSummary?.classificationReviewRequired,
+    selectedSummary?.pricingStatus,
+  ]);
   const canCreateReport =
     reportReadinessReason == null && !loadingLinkedScenario && !!plan?.id;
-  const reportGroupOptions = React.useMemo(
-    () =>
-      REPORT_GROUP_OPTIONS.map((option) => ({
-        value: option.key,
-        label: formatReportGroupOptionLabel(t, option.key),
-      })),
-    [t],
-  );
 
   const updateProject = React.useCallback(
     (index: number, updater: (project: V2VesinvestProject) => V2VesinvestProject) => {
@@ -1141,28 +1149,57 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     [],
   );
 
-  const handleSaveGroupDefinition = React.useCallback(
+  const updateDepreciationRuleDraft = React.useCallback(
+    (
+      key: string,
+      updater: (rule: DepreciationRuleDraft) => DepreciationRuleDraft,
+    ) => {
+      setDepreciationRuleDrafts((current) =>
+        current.map((rule) => (rule.assetClassKey === key ? updater(rule) : rule)),
+      );
+    },
+    [],
+  );
+
+  const handleSaveClassDefinition = React.useCallback(
     async (key: string) => {
       const groupDraft = groupDrafts.find((group) => group.key === key);
-      if (!groupDraft) {
+      const ruleDraft = depreciationRuleDrafts.find((rule) => rule.assetClassKey === key);
+      if (!groupDraft || !ruleDraft) {
         return;
       }
       const payload: V2VesinvestGroupUpdateInput = {
         label: groupDraft.label,
         defaultAccountKey: groupDraft.defaultAccountKey,
-        defaultDepreciationClassKey: groupDraft.defaultDepreciationClassKey,
         reportGroupKey: groupDraft.reportGroupKey,
         serviceSplit: groupDraft.serviceSplit,
       };
-      setSavingGroupKey(key);
+      setSavingClassKey(key);
       setError(null);
       try {
-        const updated = await updateVesinvestGroupV2(key, payload);
+        const [updatedGroup, updatedRule] = await Promise.all([
+          updateVesinvestGroupV2(key, payload),
+          updateDepreciationRuleV2(key, {
+            assetClassKey: key,
+            assetClassName: groupDraft.label,
+            method: ruleDraft.method as V2EditableDepreciationRuleMethod,
+            linearYears: parseNullableNumberInput(ruleDraft.linearYears),
+            residualPercent: parseNullableNumberInput(ruleDraft.residualPercent),
+          }),
+        ]);
         setGroups((current) =>
-          current.map((group) => (group.key === key ? updated : group)),
+          current.map((group) => (group.key === key ? updatedGroup : group)),
         );
         setGroupDrafts((current) =>
-          current.map((group) => (group.key === key ? updated : group)),
+          current.map((group) => (group.key === key ? updatedGroup : group)),
+        );
+        setDepreciationRules((current) =>
+          current.map((rule) => (rule.assetClassKey === key ? updatedRule : rule)),
+        );
+        setDepreciationRuleDrafts((current) =>
+          current.map((rule) =>
+            rule.assetClassKey === key ? toDepreciationRuleDraft(updatedRule) : rule,
+          ),
         );
         setDraft((current) => ({
           ...current,
@@ -1170,14 +1207,10 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             project.groupKey === key
               ? {
                   ...project,
-                  groupLabel: updated.label,
-                  depreciationClassKey:
-                    project.depreciationClassKey ??
-                    updated.defaultDepreciationClassKey,
-                  defaultAccountKey:
-                    project.defaultAccountKey ?? updated.defaultAccountKey,
-                  reportGroupKey:
-                    project.reportGroupKey ?? updated.reportGroupKey,
+                  groupLabel: updatedGroup.label,
+                  depreciationClassKey: updatedGroup.key,
+                  defaultAccountKey: updatedGroup.defaultAccountKey,
+                  reportGroupKey: updatedGroup.reportGroupKey,
                 }
               : project,
           ),
@@ -1190,14 +1223,10 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                   project.groupKey === key
                     ? {
                         ...project,
-                        groupLabel: updated.label,
-                        depreciationClassKey:
-                          project.depreciationClassKey ??
-                          updated.defaultDepreciationClassKey,
-                        defaultAccountKey:
-                          project.defaultAccountKey ?? updated.defaultAccountKey,
-                        reportGroupKey:
-                          project.reportGroupKey ?? updated.reportGroupKey,
+                        groupLabel: updatedGroup.label,
+                        depreciationClassKey: updatedGroup.key,
+                        defaultAccountKey: updatedGroup.defaultAccountKey,
+                        reportGroupKey: updatedGroup.reportGroupKey,
                       }
                     : project,
                 ),
@@ -1211,10 +1240,10 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             : t('v2Vesinvest.errorLoad', 'Failed to load Vesinvest plans.'),
         );
       } finally {
-        setSavingGroupKey(null);
+        setSavingClassKey(null);
       }
     },
-    [groupDrafts, t],
+    [depreciationRuleDrafts, groupDrafts, t],
   );
 
   const updateProjectAllocation = React.useCallback(
@@ -1461,10 +1490,15 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
               'v2Forecast.unsavedHint',
               'You have unsaved changes. Save and compute results before creating report.',
             )
-          : reportReadinessReason === 'depreciationMappingIncomplete'
+          : reportReadinessReason === 'classificationReviewRequired'
           ? t(
-              'v2Forecast.depreciationMappingBlockedHint',
-              'Complete and save a depreciation mapping for every investment year before creating report.',
+              'v2Forecast.classificationReviewRequired',
+              'Review and save the Vesinvest class plan before creating a report.',
+            )
+          : reportReadinessReason === 'missingDepreciationSnapshots'
+          ? t(
+              'v2Forecast.depreciationSnapshotsMissingHint',
+              'Refresh the synced Vesinvest class plan and recompute results before creating report.',
             )
           : reportReadinessReason === 'staleComputeToken'
           ? t(
@@ -1525,6 +1559,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     const defaultGroupKey = resolveProjectGroup(groups, null)?.key ?? FALLBACK_GROUP_KEY;
     setProjectComposer({
       open: true,
+      code: '',
       groupKey: defaultGroupKey,
       name: '',
     });
@@ -1534,14 +1569,16 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     setProjectComposer((current) => ({
       ...current,
       open: false,
+      code: '',
       name: '',
     }));
   }, []);
 
   const handleCreateProjectDraft = React.useCallback(() => {
+    const projectCode = projectComposer.code.trim();
     const projectName = projectComposer.name.trim();
     const resolvedGroup = resolveProjectGroup(groups, projectComposerGroupKey);
-    if (!projectName || resolvedGroup == null) {
+    if (!projectCode || !projectName || resolvedGroup == null) {
       return;
     }
     setDraft((current) => ({
@@ -1549,6 +1586,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
       projects: [
         ...current.projects,
         createProject(current.horizonYearsRange, groups, current.projects.length, {
+          code: projectCode,
           name: projectName,
           groupKey: resolvedGroup.key,
         }),
@@ -1556,21 +1594,24 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     }));
     setProjectComposer({
       open: false,
+      code: '',
       groupKey: resolvedGroup.key,
       name: '',
     });
-  }, [groups, projectComposer.name, projectComposerGroupKey]);
+  }, [groups, projectComposer.code, projectComposer.name, projectComposerGroupKey]);
 
   const actionRow = (
     <div className="v2-actions-row">
-      <button
-        type="button"
-        className="v2-btn"
-        onClick={openProjectComposer}
-        disabled={busy || loading || loadingPlan || groups.length === 0}
-      >
-        {t('v2Vesinvest.addProject', 'Add project')}
-      </button>
+      {activeWorkspaceView === 'investment' ? (
+        <button
+          type="button"
+          className="v2-btn"
+          onClick={openProjectComposer}
+          disabled={busy || loading || loadingPlan || groups.length === 0}
+        >
+          {t('v2Vesinvest.addProject', 'Add project')}
+        </button>
+      ) : null}
       <button
         type="button"
         className="v2-btn"
@@ -1606,6 +1647,29 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         {t('v2Forecast.createReport', 'Create report')}
       </button>
     </div>
+  );
+
+  const workspaceTabs = (
+    <section className="v2-vesinvest-section">
+      <div className="v2-actions-row" role="tablist" aria-label={t('v2Vesinvest.workspaceTabs', 'Vesinvest workspace views')}>
+        <button
+          type="button"
+          className={`v2-btn ${activeWorkspaceView === 'investment' ? 'v2-btn-primary' : ''}`}
+          aria-pressed={activeWorkspaceView === 'investment'}
+          onClick={() => setActiveWorkspaceView('investment')}
+        >
+          {t('v2Vesinvest.investmentPlanTab', 'Investment plan')}
+        </button>
+        <button
+          type="button"
+          className={`v2-btn ${activeWorkspaceView === 'depreciation' ? 'v2-btn-primary' : ''}`}
+          aria-pressed={activeWorkspaceView === 'depreciation'}
+          onClick={() => setActiveWorkspaceView('depreciation')}
+        >
+          {t('v2Vesinvest.depreciationPlanTab', 'Depreciation plan')}
+        </button>
+      </div>
+    </section>
   );
 
   const utilityBindingSection = (
@@ -1697,22 +1761,29 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     </VesinvestIdentitySurface>
   );
 
-  const groupDefinitionsSection = isAdmin ? (
-    <VesinvestGroupDefaultsSurface t={t}>
+  const depreciationPlanSection =
+    activeWorkspaceView === 'depreciation' ? (
+    <VesinvestDepreciationPlanSurface t={t}>
       <div className="v2-vesinvest-table-wrap">
         <table className="v2-vesinvest-table">
           <thead>
             <tr>
-              <th>{t('v2Vesinvest.projectGroup', 'Group')}</th>
+              <th>{t('v2Vesinvest.projectClass', 'Class')}</th>
               <th>{t('v2Vesinvest.projectAccount', 'Account')}</th>
-              <th>{t('v2Vesinvest.projectDepreciation', 'Depreciation')}</th>
-              <th>{t('v2Vesinvest.reportGroup', 'Report group')}</th>
               <th>{t('v2Vesinvest.allocationMetric', 'Split')}</th>
+              <th>{t('v2Forecast.depreciationMethod', 'Depreciation method')}</th>
+              <th>{t('v2Vesinvest.writeOffTime', 'Write-off time')}</th>
+              <th>{t('v2Vesinvest.residualShare', 'Residual share')}</th>
               <th>{t('common.actions', 'Actions')}</th>
             </tr>
           </thead>
           <tbody>
-            {groupDrafts.map((group) => (
+            {groupDrafts.map((group) => {
+              const ruleDraft =
+                depreciationRuleDrafts.find(
+                  (rule) => rule.assetClassKey === group.key,
+                ) ?? null;
+              return (
               <tr key={group.key}>
                 <td>
                   <input
@@ -1720,6 +1791,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                     name={`vesinvest-group-label-${group.key}`}
                     className="v2-input"
                     value={group.label}
+                    disabled={!isAdmin}
                     onChange={(event) =>
                       updateGroupDraft(group.key, (current) => ({
                         ...current,
@@ -1734,6 +1806,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                     name={`vesinvest-group-account-${group.key}`}
                     className="v2-input"
                     value={group.defaultAccountKey}
+                    disabled={!isAdmin}
                     onChange={(event) =>
                       updateGroupDraft(group.key, (current) => ({
                         ...current,
@@ -1743,45 +1816,12 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                   />
                 </td>
                 <td>
-                  <input
-                    id={`vesinvest-group-depreciation-${group.key}`}
-                    name={`vesinvest-group-depreciation-${group.key}`}
-                    className="v2-input"
-                    value={group.defaultDepreciationClassKey ?? ''}
-                    onChange={(event) =>
-                      updateGroupDraft(group.key, (current) => ({
-                        ...current,
-                        defaultDepreciationClassKey: event.target.value || null,
-                      }))
-                    }
-                  />
-                </td>
-                <td>
-                  <select
-                    id={`vesinvest-group-report-group-${group.key}`}
-                    name={`vesinvest-group-report-group-${group.key}`}
-                    className="v2-input"
-                    value={group.reportGroupKey}
-                    onChange={(event) =>
-                      updateGroupDraft(group.key, (current) => ({
-                        ...current,
-                        reportGroupKey: event.target.value,
-                      }))
-                    }
-                  >
-                    {reportGroupOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td>
                   <select
                     id={`vesinvest-group-split-${group.key}`}
                     name={`vesinvest-group-split-${group.key}`}
                     className="v2-input"
                     value={group.serviceSplit}
+                    disabled={!isAdmin}
                     onChange={(event) =>
                       updateGroupDraft(group.key, (current) => ({
                         ...current,
@@ -1805,21 +1845,84 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                   </select>
                 </td>
                 <td>
+                  <select
+                    id={`vesinvest-group-method-${group.key}`}
+                    name={`vesinvest-group-method-${group.key}`}
+                    className="v2-input"
+                    value={ruleDraft?.method ?? 'none'}
+                    disabled={!isAdmin}
+                    onChange={(event) =>
+                      updateDepreciationRuleDraft(group.key, (current) => ({
+                        ...current,
+                        method: event.target.value as V2EditableDepreciationRuleMethod,
+                      }))
+                    }
+                  >
+                    <option value="none">{t('v2Vesinvest.none', 'None')}</option>
+                    <option value="straight-line">
+                      {t('v2Forecast.methodStraightLine', 'Straight-line')}
+                    </option>
+                    <option value="residual">
+                      {t('v2Forecast.methodResidual', 'Residual')}
+                    </option>
+                  </select>
+                </td>
+                <td>
+                  <input
+                    id={`vesinvest-group-years-${group.key}`}
+                    name={`vesinvest-group-years-${group.key}`}
+                    className="v2-input"
+                    type="number"
+                    min={0}
+                    value={ruleDraft?.linearYears ?? ''}
+                    disabled={!isAdmin}
+                    onChange={(event) =>
+                      updateDepreciationRuleDraft(group.key, (current) => ({
+                        ...current,
+                        linearYears: event.target.value,
+                      }))
+                    }
+                  />
+                </td>
+                <td>
+                  <input
+                    id={`vesinvest-group-residual-${group.key}`}
+                    name={`vesinvest-group-residual-${group.key}`}
+                    className="v2-input"
+                    type="number"
+                    min={0}
+                    value={ruleDraft?.residualPercent ?? ''}
+                    disabled={!isAdmin}
+                    onChange={(event) =>
+                      updateDepreciationRuleDraft(group.key, (current) => ({
+                        ...current,
+                        residualPercent: event.target.value,
+                      }))
+                    }
+                  />
+                </td>
+                <td>
                   <button
                     type="button"
                     className="v2-btn v2-btn-small"
-                    onClick={() => void handleSaveGroupDefinition(group.key)}
-                    disabled={savingGroupKey === group.key}
+                    onClick={() => void handleSaveClassDefinition(group.key)}
+                    disabled={!isAdmin || savingClassKey === group.key}
                   >
                     {t('common.save', 'Save')}
                   </button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
-    </VesinvestGroupDefaultsSurface>
+      {depreciationRules.length === 0 ? (
+        <p className="v2-muted">
+          {t('common.loading', 'Loading...')}
+        </p>
+      ) : null}
+    </VesinvestDepreciationPlanSurface>
   ) : null;
 
   const feePathSection = feeRecommendation ? (
@@ -2045,7 +2148,22 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             </div>
             <div className="v2-inline-form">
               <label className="v2-field">
-                <span>{t('v2Vesinvest.projectGroup', 'Group')}</span>
+                <span>{t('v2Vesinvest.projectCode', 'Code')}</span>
+                <input
+                  id="vesinvest-project-composer-code"
+                  name="vesinvest-project-composer-code"
+                  className="v2-input"
+                  value={projectComposer.code}
+                  onChange={(event) =>
+                    setProjectComposer((current) => ({
+                      ...current,
+                      code: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label className="v2-field">
+                <span>{t('v2Vesinvest.projectClass', 'Class')}</span>
                 <select
                   id="vesinvest-project-composer-group"
                   name="vesinvest-project-composer-group"
@@ -2099,6 +2217,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                   loading ||
                   loadingPlan ||
                   groups.length === 0 ||
+                  projectComposer.code.trim().length === 0 ||
                   projectComposer.name.trim().length === 0
                 }
               >
@@ -2111,11 +2230,13 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
 
       {utilityBindingSection}
 
-      {groupDefinitionsSection}
-
       {loadingState}
 
       {planStatusStrip}
+
+      {workspaceTabs}
+
+      {depreciationPlanSection}
 
       {useSimplifiedSetup ? null : (
         <>
@@ -2398,139 +2519,8 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         )}
       </VesinvestBaselineReviewSurface>
 
-      {false ? (
-        <section className="v2-vesinvest-section">
-          <div className="v2-section-header">
-            <div>
-              <p className="v2-overview-eyebrow">
-                {t('v2Vesinvest.investmentPlan', 'Investment plan')}
-              </p>
-              <h3>{t('v2Vesinvest.projectGroup', 'Group')}</h3>
-            </div>
-          </div>
-          <div className="v2-vesinvest-table-wrap">
-            <table className="v2-vesinvest-table">
-              <thead>
-                <tr>
-                  <th>{t('v2Vesinvest.projectGroup', 'Group')}</th>
-                  <th>{t('v2Vesinvest.projectAccount', 'Account')}</th>
-                  <th>{t('v2Vesinvest.projectDepreciation', 'Depreciation')}</th>
-                  <th>{t('v2Vesinvest.reportGroup', 'Report group')}</th>
-                  <th>{t('v2Vesinvest.allocationMetric', 'Split')}</th>
-                  <th>{t('common.actions', 'Actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groupDrafts.map((group) => (
-                  <tr key={group.key}>
-                    <td>
-                      <input
-                        id={`vesinvest-group-label-${group.key}`}
-                        name={`vesinvest-group-label-${group.key}`}
-                        className="v2-input"
-                        value={group.label}
-                        onChange={(event) =>
-                          updateGroupDraft(group.key, (current) => ({
-                            ...current,
-                            label: event.target.value,
-                          }))
-                        }
-                      />
-                    </td>
-                    <td>
-                      <input
-                        id={`vesinvest-group-account-${group.key}`}
-                        name={`vesinvest-group-account-${group.key}`}
-                        className="v2-input"
-                        value={group.defaultAccountKey}
-                        onChange={(event) =>
-                          updateGroupDraft(group.key, (current) => ({
-                            ...current,
-                            defaultAccountKey: event.target.value,
-                          }))
-                        }
-                      />
-                    </td>
-                    <td>
-                      <input
-                        id={`vesinvest-group-depreciation-${group.key}`}
-                        name={`vesinvest-group-depreciation-${group.key}`}
-                        className="v2-input"
-                        value={group.defaultDepreciationClassKey ?? ''}
-                        onChange={(event) =>
-                          updateGroupDraft(group.key, (current) => ({
-                            ...current,
-                            defaultDepreciationClassKey: event.target.value || null,
-                          }))
-                        }
-                      />
-                    </td>
-                    <td>
-                      <select
-                        id={`vesinvest-group-report-group-${group.key}`}
-                        name={`vesinvest-group-report-group-${group.key}`}
-                        className="v2-input"
-                        value={group.reportGroupKey}
-                        onChange={(event) =>
-                          updateGroupDraft(group.key, (current) => ({
-                            ...current,
-                            reportGroupKey: event.target.value,
-                          }))
-                        }
-                      >
-                        {reportGroupOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      <select
-                        id={`vesinvest-group-split-${group.key}`}
-                        name={`vesinvest-group-split-${group.key}`}
-                        className="v2-input"
-                        value={group.serviceSplit}
-                        onChange={(event) =>
-                          updateGroupDraft(group.key, (current) => ({
-                            ...current,
-                            serviceSplit:
-                              event.target.value as V2VesinvestGroupDefinition['serviceSplit'],
-                          }))
-                        }
-                      >
-                        <option value="water">
-                          {t('v2Forecast.investmentServiceSplitWater', 'Water')}
-                        </option>
-                        <option value="wastewater">
-                          {t(
-                            'v2Forecast.investmentServiceSplitWastewater',
-                            'Wastewater',
-                          )}
-                        </option>
-                        <option value="mixed">
-                          {t('v2Forecast.investmentServiceSplitMixed', 'Mixed')}
-                        </option>
-                      </select>
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="v2-btn v2-btn-small"
-                        onClick={() => void handleSaveGroupDefinition(group.key)}
-                        disabled={savingGroupKey === group.key}
-                      >
-                        {t('common.save', 'Save')}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ) : null}
-
+      {activeWorkspaceView === 'investment' ? (
+      <>
       <VesinvestMatrixSurface t={t}>
         <div className="v2-vesinvest-table-wrap v2-vesinvest-matrix-wrap" data-testid="vesinvest-grouped-plan">
           <table className="v2-vesinvest-table v2-vesinvest-plan-matrix">
@@ -2613,10 +2603,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
               <tr>
                 <th>{t('v2Vesinvest.projectCode', 'Code')}</th>
                 <th>{t('v2Vesinvest.projectName', 'Project')}</th>
-                <th>{t('v2Vesinvest.projectType', 'Type')}</th>
-                <th>{t('v2Vesinvest.projectGroup', 'Group')}</th>
-                <th>{t('v2Vesinvest.projectDepreciation', 'Depreciation')}</th>
-                <th>{t('v2Vesinvest.projectAccount', 'Account')}</th>
+                <th>{t('v2Vesinvest.projectClass', 'Class')}</th>
                 <th>{t('v2Vesinvest.projectWaterTotal', 'Water total')}</th>
                 <th>{t('v2Vesinvest.projectWastewaterTotal', 'Wastewater total')}</th>
                 <th>{t('v2Vesinvest.projectTotal', 'Total')}</th>
@@ -2626,7 +2613,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             <tbody>
               {draft.projects.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="v2-muted">
+                  <td colSpan={7} className="v2-muted">
                     {t(
                       'v2Vesinvest.projectEmpty',
                       'No projects yet. Add the investment plan first, then connect baseline evidence later.',
@@ -2666,25 +2653,6 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                   </td>
                   <td>
                     <select
-                      id={`vesinvest-project-type-${index}`}
-                      name={`vesinvest-project-type-${index}`}
-                      className="v2-input"
-                      value={project.investmentType}
-                      onChange={(event) =>
-                        updateProject(index, (current) => ({
-                          ...current,
-                          investmentType:
-                            event.target.value as V2VesinvestProject['investmentType'],
-                        }))
-                      }
-                    >
-                      <option value="sanering">{typeLabel(t, 'sanering')}</option>
-                      <option value="nyanlaggning">{typeLabel(t, 'nyanlaggning')}</option>
-                      <option value="reparation">{typeLabel(t, 'reparation')}</option>
-                    </select>
-                  </td>
-                  <td>
-                    <select
                       id={`vesinvest-project-group-${index}`}
                       name={`vesinvest-project-group-${index}`}
                       className="v2-input"
@@ -2695,8 +2663,11 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                           ...current,
                           groupKey: event.target.value,
                           groupLabel: group?.label,
+                          investmentType: resolveInvestmentTypeFromGroupKey(
+                            event.target.value,
+                          ),
                           depreciationClassKey:
-                            group?.defaultDepreciationClassKey ?? null,
+                            group?.defaultDepreciationClassKey ?? group?.key ?? null,
                           defaultAccountKey: group?.defaultAccountKey ?? null,
                           reportGroupKey: group?.reportGroupKey ?? null,
                         }));
@@ -2708,34 +2679,6 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                         </option>
                       ))}
                     </select>
-                  </td>
-                  <td>
-                    <input
-                      id={`vesinvest-project-depreciation-${index}`}
-                      name={`vesinvest-project-depreciation-${index}`}
-                      className="v2-input"
-                      value={project.depreciationClassKey ?? ''}
-                      onChange={(event) =>
-                        updateProject(index, (current) => ({
-                          ...current,
-                          depreciationClassKey: event.target.value,
-                        }))
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      id={`vesinvest-project-account-${index}`}
-                      name={`vesinvest-project-account-${index}`}
-                      className="v2-input"
-                      value={project.defaultAccountKey ?? ''}
-                      onChange={(event) =>
-                        updateProject(index, (current) => ({
-                          ...current,
-                          defaultAccountKey: event.target.value,
-                        }))
-                      }
-                    />
                   </td>
                   <td>{formatEur(project.waterAmount ?? 0)}</td>
                   <td>{formatEur(project.wastewaterAmount ?? 0)}</td>
@@ -2864,6 +2807,8 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             </section>
           ))}
         </VesinvestProjectDetailsSurface>
+      ) : null}
+      </>
       ) : null}
 
       <div className="v2-kpi-strip v2-kpi-strip-three">

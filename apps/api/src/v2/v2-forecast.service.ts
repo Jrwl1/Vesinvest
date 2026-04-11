@@ -24,6 +24,11 @@ import { ManualYearCompletionDto } from './dto/manual-year-completion.dto';
 import { ImportYearReconcileDto } from './dto/import-year-reconcile.dto';
 import { OpsEventDto } from './dto/ops-event.dto';
 import { PTS_SCENARIO_DEPRECIATION_RULE_DEFAULTS } from './pts-depreciation-defaults';
+import {
+  DEFAULT_VESINVEST_GROUP_DEFINITIONS,
+  expandLegacyDepreciationRuleKeyToVesinvestClasses,
+  VESINVEST_LEGACY_DEPRECIATION_RULE_KEY_BY_GROUP_KEY,
+} from './vesinvest-contract';
 import { V2ImportOverviewService } from './v2-import-overview.service';
 import { V2PlanningWorkspaceSupport } from './v2-planning-workspace-support';
 import { buildV2ReportPdf } from './v2-report-pdf';
@@ -975,12 +980,20 @@ export class V2ForecastService {
   }
 
   async listDepreciationRules(orgId: string) {
-    const delegate = (this.prisma as any).organizationDepreciationRule;
-    const rows = await delegate.findMany({
-      where: { orgId },
-      orderBy: [{ assetClassKey: 'asc' }],
-    });
-    return rows.map((row: any) => this.mapDepreciationRule(row));
+    const rules = await this.buildScenarioDepreciationRuleSeed(orgId);
+    return DEFAULT_VESINVEST_GROUP_DEFINITIONS.map((group) =>
+      this.mapScenarioDepreciationRule(
+        rules.find((rule) => rule.assetClassKey === group.key) ?? {
+          id: group.key,
+          assetClassKey: group.key,
+          assetClassName: group.label,
+          method: 'none',
+          linearYears: null,
+          residualPercent: null,
+          annualSchedule: null,
+        },
+      ),
+    );
   }
 
   async createDepreciationRule(orgId: string, body: DepreciationRuleInput) {
@@ -1021,7 +1034,13 @@ export class V2ForecastService {
       where: { id: ruleId, orgId },
     });
     if (!existing) {
-      throw new NotFoundException('Depreciation rule not found.');
+      return this.createDepreciationRule(orgId, {
+        assetClassKey: body.assetClassKey ?? ruleId,
+        assetClassName: body.assetClassName,
+        method: body.method ?? 'none',
+        linearYears: body.linearYears,
+        residualPercent: body.residualPercent,
+      });
     }
 
     const normalized = this.normalizeDepreciationRuleInput({
@@ -2495,6 +2514,9 @@ export class V2ForecastService {
         })
       : [];
     const merged = new Map<string, ScenarioStoredDepreciationRule>();
+    const authoritativeClassKeys = new Set(
+      DEFAULT_VESINVEST_GROUP_DEFINITIONS.map((group) => group.key),
+    );
 
     for (const rule of PTS_SCENARIO_DEPRECIATION_RULE_DEFAULTS) {
       merged.set(rule.assetClassKey, {
@@ -2502,26 +2524,75 @@ export class V2ForecastService {
       });
     }
 
-    for (const row of rows) {
+    for (const group of DEFAULT_VESINVEST_GROUP_DEFINITIONS) {
+      const legacyRule =
+        merged.get(VESINVEST_LEGACY_DEPRECIATION_RULE_KEY_BY_GROUP_KEY[group.key]) ?? null;
+      if (!legacyRule) {
+        continue;
+      }
+      merged.set(group.key, {
+        ...legacyRule,
+        id: group.key,
+        assetClassKey: group.key,
+        assetClassName: group.label,
+      });
+    }
+
+    const explicitClassKeys = new Set<string>();
+    for (const row of rows as Array<{ assetClassKey?: unknown }>) {
+      const assetClassKey = String(row.assetClassKey ?? '').trim();
+      if (authoritativeClassKeys.has(assetClassKey)) {
+        explicitClassKeys.add(assetClassKey);
+      }
+    }
+    const sortedRows = [...rows].sort((left, right) => {
+      const leftIsClass = authoritativeClassKeys.has(
+        String(left.assetClassKey ?? '').trim(),
+      );
+      const rightIsClass = authoritativeClassKeys.has(
+        String(right.assetClassKey ?? '').trim(),
+      );
+      if (leftIsClass === rightIsClass) {
+        return String(left.assetClassKey ?? '').localeCompare(
+          String(right.assetClassKey ?? ''),
+        );
+      }
+      return leftIsClass ? 1 : -1;
+    });
+
+    for (const row of sortedRows) {
       const assetClassKey = String(row.assetClassKey ?? '').trim();
       if (!assetClassKey) continue;
-      merged.set(assetClassKey, {
-        id:
-          String(row.id ?? row.assetClassKey ?? '').trim() || assetClassKey,
+      const isExplicitClassRule = authoritativeClassKeys.has(assetClassKey);
+      const targetKeys = new Set<string>([
         assetClassKey,
-        assetClassName: this.normalizeText(row.assetClassName) ?? null,
-        method:
-          toCanonicalDepreciationMethod(String(row.method ?? '')) ?? 'none',
-        linearYears:
-          row.linearYears == null
-            ? null
-            : Math.round(this.toNumber(row.linearYears)),
-        residualPercent:
-          row.residualPercent == null
-            ? null
-            : this.round2(this.toNumber(row.residualPercent)),
-        annualSchedule: null,
-      });
+        ...expandLegacyDepreciationRuleKeyToVesinvestClasses(assetClassKey),
+      ]);
+      for (const targetKey of targetKeys) {
+        if (!isExplicitClassRule && explicitClassKeys.has(targetKey)) {
+          continue;
+        }
+        const classLabel =
+          DEFAULT_VESINVEST_GROUP_DEFINITIONS.find((group) => group.key === targetKey)
+            ?.label ?? null;
+        merged.set(targetKey, {
+          id: targetKey,
+          assetClassKey: targetKey,
+          assetClassName:
+            classLabel ?? this.normalizeText(row.assetClassName) ?? null,
+          method:
+            toCanonicalDepreciationMethod(String(row.method ?? '')) ?? 'none',
+          linearYears:
+            row.linearYears == null
+              ? null
+              : Math.round(this.toNumber(row.linearYears)),
+          residualPercent:
+            row.residualPercent == null
+              ? null
+              : this.round2(this.toNumber(row.residualPercent)),
+          annualSchedule: null,
+        });
+      }
     }
 
     return [...merged.values()];

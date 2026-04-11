@@ -136,7 +136,7 @@ describe('V2VesinvestService', () => {
       key: 'sanering_water_network',
       label: 'Updated group',
       defaultAccountKey: 'updated_account',
-      defaultDepreciationClassKey: 'updated_depreciation',
+      defaultDepreciationClassKey: 'sanering_water_network',
       reportGroupKey: 'treatment',
       serviceSplit: 'mixed',
     });
@@ -168,10 +168,32 @@ describe('V2VesinvestService', () => {
       key: 'sanering_water_network',
       label: 'Updated group',
       defaultAccountKey: 'updated_account',
-      defaultDepreciationClassKey: 'updated_depreciation',
+      defaultDepreciationClassKey: 'sanering_water_network',
       reportGroupKey: 'treatment',
       serviceSplit: 'mixed',
     });
+  });
+
+  it('returns the authoritative 10-class catalog in customer order', async () => {
+    const { service } = makeService();
+
+    const result = await service.getInvestmentGroupDefinitions('org-1');
+
+    expect(result.map((item: any) => item.key)).toEqual([
+      'sanering_water_network',
+      'sanering_wastewater_network',
+      'new_water_network',
+      'new_wastewater_network',
+      'repair_water_network',
+      'repair_wastewater_network',
+      'waterworks_equipment',
+      'wastewater_equipment',
+      'water_production',
+      'wastewater_treatment',
+    ]);
+    expect(result.every((item: any) => item.defaultDepreciationClassKey === item.key)).toBe(
+      true,
+    );
   });
 
   it('rejects non-admin group override updates', async () => {
@@ -379,7 +401,7 @@ describe('V2VesinvestService', () => {
           expect.objectContaining({
             year: 2026,
             category: 'Sanering / vattennatverk',
-            depreciationClassKey: 'water_network_post_1999',
+            depreciationClassKey: 'sanering_water_network',
             investmentType: 'replacement',
             confidence: 'high',
           }),
@@ -483,6 +505,8 @@ describe('V2VesinvestService', () => {
               projectCode: 'P-002',
               projectName: 'Wastewater extension',
               groupKey: 'new_wastewater_network',
+              accountKey: 'new_wastewater_network',
+              reportGroupKey: 'new_network',
               depreciationClassKey: null,
               investmentType: 'nyanlaggning',
               waterAmount: 0,
@@ -546,7 +570,7 @@ describe('V2VesinvestService', () => {
             year: 2026,
             projectCode: 'P-001',
             category: 'Sanering / vattennatverk',
-            depreciationClassKey: 'water_network_post_1999',
+            depreciationClassKey: 'sanering_water_network',
             investmentType: 'replacement',
             confidence: 'high',
             amount: 100,
@@ -557,7 +581,7 @@ describe('V2VesinvestService', () => {
             year: 2026,
             projectCode: 'P-002',
             category: 'Nyanlaggning / avloppsnatverk',
-            depreciationClassKey: 'wastewater_network_post_1999',
+            depreciationClassKey: 'new_wastewater_network',
             investmentType: 'new',
             confidence: 'high',
             amount: 75,
@@ -566,6 +590,94 @@ describe('V2VesinvestService', () => {
           }),
         ]),
       }),
+    );
+  });
+
+  it('flags conflicting legacy overrides and blocks pricing sync until class review', async () => {
+    const { service, prisma } = makeService();
+    const support = (service as any).planningWorkspaceSupport;
+    support.resolveLatestAcceptedVeetiBudgetId.mockResolvedValue('budget-2024');
+    support.resolvePlanningBaselineYears.mockResolvedValue([2024]);
+    const conflictingProjects = [
+      {
+        ...makePlanRecord().projects[0],
+        accountKey: 'sanering_water_network',
+        depreciationClassKey: 'water_network_post_1999',
+      },
+      {
+        ...makePlanRecord().projects[0],
+        id: 'project-2',
+        projectCode: 'P-002',
+        accountKey: 'legacy_custom_account',
+        depreciationClassKey: 'sanering_water_network',
+      },
+    ];
+    prisma.vesinvestPlan.findMany.mockResolvedValue([
+      makePlanRecord({
+        selectedScenarioId: 'scenario-1',
+        feeRecommendationStatus: 'verified',
+        investmentPlanChangedSinceFeeRecommendation: false,
+        projects: conflictingProjects,
+      }),
+    ]);
+    prisma.vesinvestPlan.findFirst.mockResolvedValue(
+      makePlanRecord({
+        projects: conflictingProjects,
+      }),
+    );
+
+    const plans = await service.listPlans('org-1');
+
+    expect(plans[0]).toMatchObject({
+      classificationReviewRequired: true,
+      pricingStatus: 'blocked',
+    });
+    await expect(service.syncPlanToForecast('org-1', 'plan-1')).rejects.toThrow(
+      /Legacy class overrides require review/i,
+    );
+  });
+
+  it('flags consistent legacy class overrides that differ from the class-owned defaults', async () => {
+    const { service, prisma } = makeService();
+    const support = (service as any).planningWorkspaceSupport;
+    support.resolveLatestAcceptedVeetiBudgetId.mockResolvedValue('budget-2024');
+    support.resolvePlanningBaselineYears.mockResolvedValue([2024]);
+    const overriddenProjects = [
+      {
+        ...makePlanRecord().projects[0],
+        accountKey: 'legacy_custom_account',
+        depreciationClassKey: 'water_network_post_1999',
+      },
+      {
+        ...makePlanRecord().projects[0],
+        id: 'project-2',
+        projectCode: 'P-002',
+        accountKey: 'legacy_custom_account',
+        depreciationClassKey: 'water_network_post_1999',
+      },
+    ];
+    prisma.vesinvestPlan.findMany.mockResolvedValue([
+      makePlanRecord({
+        selectedScenarioId: 'scenario-1',
+        feeRecommendationStatus: 'verified',
+        investmentPlanChangedSinceFeeRecommendation: false,
+        projects: overriddenProjects,
+      }),
+    ]);
+    prisma.vesinvestPlan.findFirst.mockResolvedValue(
+      makePlanRecord({
+        projects: overriddenProjects,
+      }),
+    );
+
+    const plans = await service.listPlans('org-1');
+
+    expect(plans[0]).toMatchObject({
+      classificationReviewRequired: true,
+      pricingStatus: 'blocked',
+    });
+    await expect(service.syncPlanToForecast('org-1', 'plan-1')).rejects.toThrow(
+      /Legacy class overrides require review/i,
     );
   });
 });

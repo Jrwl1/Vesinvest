@@ -15,6 +15,9 @@ import {
   computeVesinvestScenarioFingerprint,
   DEFAULT_VESINVEST_GROUP_DEFINITIONS,
   DEFAULT_VESINVEST_REPORT_GROUP_DEFINITIONS,
+  isVesinvestClassificationReviewRequired,
+  normalizeVesinvestDepreciationClassKey,
+  sortVesinvestGroupDefinitions,
   type VesinvestGroupDefinitionRecord,
   type VesinvestUtilityIdentitySnapshot,
 } from './vesinvest-contract';
@@ -122,7 +125,7 @@ export class V2VesinvestService {
   }
 
   async getPlanningContextSummary(orgId: string) {
-    const [plans, currentBaseline] = await Promise.all([
+    const [plans, currentBaseline, groupDefinitions] = await Promise.all([
       this.prisma.vesinvestPlan.findMany({
         where: {
           orgId,
@@ -148,6 +151,7 @@ export class V2VesinvestService {
         orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
       }),
       this.getCurrentBaselineSnapshot(orgId),
+      this.getPersistedGroupDefinitionMap(orgId),
     ]);
 
     const activePlanRecord = this.resolveActivePlanRecord(plans);
@@ -158,10 +162,18 @@ export class V2VesinvestService {
         hasPlan: plans.length > 0,
         planCount: plans.length,
         activePlan: activePlanRecord
-          ? this.mapPlanSummary(activePlanRecord, currentBaseline)
+          ? this.mapPlanSummary(
+              activePlanRecord,
+              currentBaseline,
+              groupDefinitions,
+            )
           : null,
         selectedPlan: selectedPlanRecord
-          ? this.mapPlanSummary(selectedPlanRecord, currentBaseline)
+          ? this.mapPlanSummary(
+              selectedPlanRecord,
+              currentBaseline,
+              groupDefinitions,
+            )
           : null,
       },
     };
@@ -186,19 +198,15 @@ export class V2VesinvestService {
     const label = this.normalizeText(body.label) ?? current.label;
     const defaultAccountKey =
       this.normalizeText(body.defaultAccountKey) ?? current.defaultAccountKey;
-    const defaultDepreciationClassKey =
-      body.defaultDepreciationClassKey === null
-        ? null
-        : this.normalizeText(body.defaultDepreciationClassKey) ??
-          current.defaultDepreciationClassKey;
+    const defaultDepreciationClassKey = current.key;
     const reportGroupKey =
       this.normalizeReportGroupKey(body.reportGroupKey) ?? current.reportGroupKey;
     const serviceSplit =
       this.normalizeServiceSplit(body.serviceSplit) ?? current.serviceSplit;
 
-    if (!label || !defaultAccountKey || !reportGroupKey) {
+    if (!label || !defaultAccountKey) {
       throw new BadRequestException(
-        'Group label, account key, and report group key are required.',
+        'Group label and account key are required.',
       );
     }
 
@@ -231,14 +239,14 @@ export class V2VesinvestService {
       key: updated.key,
       label: updated.label,
       defaultAccountKey: updated.defaultAccountKey,
-      defaultDepreciationClassKey: updated.defaultDepreciationClassKey,
+      defaultDepreciationClassKey: updated.key,
       reportGroupKey: updated.reportGroupKey,
       serviceSplit: updated.serviceSplit,
     };
   }
 
   async listPlans(orgId: string) {
-    const [plans, currentBaseline] = await Promise.all([
+    const [plans, currentBaseline, groupDefinitions] = await Promise.all([
       this.prisma.vesinvestPlan.findMany({
         where: { orgId },
         include: {
@@ -259,8 +267,11 @@ export class V2VesinvestService {
         orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
       }),
       this.getCurrentBaselineSnapshot(orgId),
+      this.getPersistedGroupDefinitionMap(orgId),
     ]);
-    return plans.map((plan) => this.mapPlanSummary(plan, currentBaseline));
+    return plans.map((plan) =>
+      this.mapPlanSummary(plan, currentBaseline, groupDefinitions),
+    );
   }
 
   async getPlan(orgId: string, planId: string) {
@@ -518,7 +529,11 @@ export class V2VesinvestService {
               name: project.projectName,
               investmentType: project.investmentType,
               groupKey: project.groupKey,
-              depreciationClassKey: project.depreciationClassKey,
+              depreciationClassKey:
+                normalizeVesinvestDepreciationClassKey(
+                  group.key,
+                  project.depreciationClassKey,
+                ) ?? group.key,
               accountKey: project.accountKey ?? group.defaultAccountKey,
               reportGroupKey: project.reportGroupKey ?? group.reportGroupKey,
               subtype: project.subtype,
@@ -584,8 +599,17 @@ export class V2VesinvestService {
         'Baseline not verified. Complete baseline evidence before opening pricing.',
       );
     }
+    const groupDefinitions = await this.getPersistedGroupDefinitionMap(orgId);
+    if (this.isClassificationReviewRequired(plan, groupDefinitions)) {
+      throw new BadRequestException(
+        'Legacy class overrides require review in this Vesinvest revision. Review and save the class-owned account and depreciation setup before opening pricing.',
+      );
+    }
 
-    const yearlyInvestments = await this.buildForecastYearlyInvestments(plan);
+    const yearlyInvestments = await this.buildForecastYearlyInvestments(
+      plan,
+      groupDefinitions,
+    );
     if (!yearlyInvestments.some((item) => item.amount > 0)) {
       throw new BadRequestException(
         'Add at least one investment allocation before opening pricing.',
@@ -830,8 +854,10 @@ export class V2VesinvestService {
       investmentType: this.normalizeInvestmentType(project.investmentType),
       groupKey: group.key,
       depreciationClassKey:
-        this.normalizeText(project.depreciationClassKey) ??
-        group.defaultDepreciationClassKey,
+        normalizeVesinvestDepreciationClassKey(
+          group.key,
+          this.normalizeText(project.depreciationClassKey),
+        ) ?? group.key,
       accountKey:
         this.normalizeText(project.accountKey) ?? group.defaultAccountKey,
       reportGroupKey:
@@ -892,18 +918,20 @@ export class V2VesinvestService {
     };
   }
 
-  private async buildForecastYearlyInvestments(plan: VesinvestPlanRecord) {
-    const groupDefinitions = await this.getPersistedGroupDefinitionMap(plan.orgId);
+  private async buildForecastYearlyInvestments(
+    plan: VesinvestPlanRecord,
+    groupDefinitions?: Map<string, VesinvestGroupDefinitionRecord>,
+  ) {
+    const definitions =
+      groupDefinitions ?? (await this.getPersistedGroupDefinitionMap(plan.orgId));
     const rows = plan.projects.flatMap((project) => {
       const group = this.resolveGroupDefinitionFromMap(
-        groupDefinitions,
+        definitions,
         project.groupKey,
       );
-      const depreciationClassKey =
-        this.normalizeText(project.depreciationClassKey) ??
-        group.defaultDepreciationClassKey;
+      const depreciationClassKey = group.key;
       const forecastInvestmentType =
-        project.investmentType === 'nyanlaggning'
+        group.key.startsWith('new_')
           ? ('new' as const)
           : ('replacement' as const);
       return project.allocations.map((allocation) => ({
@@ -929,7 +957,7 @@ export class V2VesinvestService {
         allocationId: allocation.id,
         projectCode: project.projectCode,
         groupKey: group.key,
-        accountKey: project.accountKey ?? group.defaultAccountKey,
+        accountKey: group.defaultAccountKey,
         reportGroupKey: project.reportGroupKey ?? group.reportGroupKey,
       }));
     });
@@ -944,7 +972,12 @@ export class V2VesinvestService {
   private mapPlanSummary(
     plan: VesinvestPlanRecord,
     currentBaseline: CurrentBaselineSnapshot,
+    groupDefinitions: Map<string, VesinvestGroupDefinitionRecord>,
   ) {
+    const classificationReviewRequired = this.isClassificationReviewRequired(
+      plan,
+      groupDefinitions,
+    );
     const totalInvestmentAmount = this.round2(
       plan.projects.reduce(
         (sum, project) => sum + this.toNumber(project.totalAmount),
@@ -962,6 +995,7 @@ export class V2VesinvestService {
       plan,
       currentBaseline,
       baselineChangedSinceAcceptedRevision,
+      classificationReviewRequired,
     );
     return {
       id: plan.id,
@@ -981,6 +1015,7 @@ export class V2VesinvestService {
       totalInvestmentAmount,
       lastReviewedAt: plan.lastReviewedAt?.toISOString() ?? null,
       reviewDueAt: plan.reviewDueAt?.toISOString() ?? null,
+      classificationReviewRequired,
       baselineChangedSinceAcceptedRevision,
       investmentPlanChangedSinceFeeRecommendation:
         plan.investmentPlanChangedSinceFeeRecommendation,
@@ -996,6 +1031,14 @@ export class V2VesinvestService {
     currentBaseline: CurrentBaselineSnapshot,
   ) {
     const groupDefinitions = await this.getPersistedGroupDefinitionMap(plan.orgId);
+    const classificationReviewRequired = isVesinvestClassificationReviewRequired(
+      plan.projects.map((project) => ({
+        groupKey: project.groupKey,
+        accountKey: project.accountKey,
+        depreciationClassKey: project.depreciationClassKey,
+      })),
+      groupDefinitions,
+    );
     const horizonStart =
       plan.projects.flatMap((project) => project.allocations).reduce<number | null>(
         (minYear, allocation) =>
@@ -1043,11 +1086,12 @@ export class V2VesinvestService {
     }
 
     return {
-      ...this.mapPlanSummary(plan, currentBaseline),
+      ...this.mapPlanSummary(plan, currentBaseline, groupDefinitions),
       feeRecommendationStatus: this.resolvePricingStatus(
         plan,
         currentBaseline,
         this.hasBaselineRevisionDrift(plan, currentBaseline),
+        classificationReviewRequired,
       ),
       feeRecommendation: plan.feeRecommendation ?? null,
       baselineSourceState: plan.baselineSourceState ?? null,
@@ -1069,7 +1113,10 @@ export class V2VesinvestService {
           groupKey: project.groupKey,
           groupLabel: group.label,
           depreciationClassKey:
-            project.depreciationClassKey ?? group.defaultDepreciationClassKey,
+            normalizeVesinvestDepreciationClassKey(
+              group.key,
+              project.depreciationClassKey,
+            ) ?? group.key,
           defaultAccountKey: project.accountKey ?? group.defaultAccountKey,
           reportGroupKey: project.reportGroupKey ?? group.reportGroupKey,
           subtype: project.subtype,
@@ -1115,8 +1162,12 @@ export class V2VesinvestService {
     plan: VesinvestPlanRecord,
     currentBaseline: CurrentBaselineSnapshot,
     baselineChangedSinceAcceptedRevision: boolean,
+    classificationReviewRequired: boolean,
   ) {
     if (this.hasUtilityIdentityDrift(plan, currentBaseline)) {
+      return 'blocked' as const;
+    }
+    if (classificationReviewRequired) {
       return 'blocked' as const;
     }
     if (
@@ -1403,29 +1454,51 @@ export class V2VesinvestService {
 
   private async listPersistedGroupDefinitions(orgId?: string) {
     const rows = await this.prisma.vesinvestGroupDefinition.findMany({
-      orderBy: [{ key: 'asc' }],
+      orderBy: [{ createdAt: 'asc' }, { key: 'asc' }],
     });
-    const source =
-      rows.length > 0
-        ? rows.map((row) => ({
-            key: row.key,
-            label: row.label,
-            defaultAccountKey: row.defaultAccountKey,
-            defaultDepreciationClassKey: row.defaultDepreciationClassKey,
-            reportGroupKey: row.reportGroupKey,
-            serviceSplit: row.serviceSplit,
-          }))
-        : DEFAULT_VESINVEST_GROUP_DEFINITIONS;
-    const base = source.map((item) => ({ ...item }));
+    const persistedMap = new Map<string, VesinvestGroupDefinitionRecord>(
+      rows.map((row) => [
+        row.key,
+        {
+          key: row.key,
+          label: row.label,
+          defaultAccountKey: row.defaultAccountKey,
+          defaultDepreciationClassKey:
+            normalizeVesinvestDepreciationClassKey(
+              row.key,
+              row.defaultDepreciationClassKey,
+            ) ?? row.key,
+          reportGroupKey: row.reportGroupKey,
+          serviceSplit: row.serviceSplit,
+        },
+      ]),
+    );
+    const base = DEFAULT_VESINVEST_GROUP_DEFINITIONS.map(
+      (item) => persistedMap.get(item.key) ?? { ...item },
+    );
+    const extras = rows
+      .filter((row) => !DEFAULT_VESINVEST_GROUP_DEFINITIONS.some((item) => item.key === row.key))
+      .map((row) => ({
+        key: row.key,
+        label: row.label,
+        defaultAccountKey: row.defaultAccountKey,
+        defaultDepreciationClassKey:
+          normalizeVesinvestDepreciationClassKey(
+            row.key,
+            row.defaultDepreciationClassKey,
+          ) ?? row.key,
+        reportGroupKey: row.reportGroupKey,
+        serviceSplit: row.serviceSplit,
+      }));
     if (!orgId) {
-      return base;
+      return sortVesinvestGroupDefinitions([...base, ...extras]);
     }
     const overrides = await this.prisma.vesinvestGroupOverride.findMany({
       where: { orgId },
-      orderBy: [{ key: 'asc' }],
+      orderBy: [{ createdAt: 'asc' }, { key: 'asc' }],
     });
     if (overrides.length === 0) {
-      return base;
+      return sortVesinvestGroupDefinitions([...base, ...extras]);
     }
     const overrideMap = new Map<string, VesinvestGroupDefinitionRecord>(
       overrides.map((row) => [
@@ -1434,24 +1507,46 @@ export class V2VesinvestService {
           key: row.key,
           label: row.label,
           defaultAccountKey: row.defaultAccountKey,
-          defaultDepreciationClassKey: row.defaultDepreciationClassKey,
+          defaultDepreciationClassKey:
+            normalizeVesinvestDepreciationClassKey(
+              row.key,
+              row.defaultDepreciationClassKey,
+            ) ?? row.key,
           reportGroupKey: row.reportGroupKey,
           serviceSplit: row.serviceSplit,
         },
       ]),
     );
-    const merged = base.map((item) => overrideMap.get(item.key) ?? item);
-    const extras = overrides
-      .filter((row) => !base.some((item) => item.key === row.key))
+    const merged = [...base, ...extras].map((item) => overrideMap.get(item.key) ?? item);
+    const overrideExtras = overrides
+      .filter((row) => !merged.some((item) => item.key === row.key))
       .map((row) => ({
         key: row.key,
         label: row.label,
         defaultAccountKey: row.defaultAccountKey,
-        defaultDepreciationClassKey: row.defaultDepreciationClassKey,
+        defaultDepreciationClassKey:
+          normalizeVesinvestDepreciationClassKey(
+            row.key,
+            row.defaultDepreciationClassKey,
+          ) ?? row.key,
         reportGroupKey: row.reportGroupKey,
         serviceSplit: row.serviceSplit,
       }));
-    return [...merged, ...extras];
+    return sortVesinvestGroupDefinitions([...merged, ...overrideExtras]);
+  }
+
+  private isClassificationReviewRequired(
+    plan: VesinvestPlanRecord,
+    groupDefinitions: Map<string, VesinvestGroupDefinitionRecord>,
+  ) {
+    return isVesinvestClassificationReviewRequired(
+      plan.projects.map((project) => ({
+        groupKey: project.groupKey,
+        accountKey: project.accountKey,
+        depreciationClassKey: project.depreciationClassKey,
+      })),
+      groupDefinitions,
+    );
   }
 
   private async getPersistedGroupDefinitionMap(orgId?: string) {

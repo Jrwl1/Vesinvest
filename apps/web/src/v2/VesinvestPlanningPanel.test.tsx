@@ -10,10 +10,12 @@ const createReportV2 = vi.fn();
 const createVesinvestPlanV2 = vi.fn();
 const getForecastScenarioV2 = vi.fn();
 const getVesinvestPlanV2 = vi.fn();
+const listDepreciationRulesV2 = vi.fn();
 const listVesinvestGroupsV2 = vi.fn();
 const listVesinvestPlansV2 = vi.fn();
 const searchImportOrganizationsV2 = vi.fn();
 const syncVesinvestPlanToForecastV2 = vi.fn();
+const updateDepreciationRuleV2 = vi.fn();
 const updateVesinvestGroupV2 = vi.fn();
 const updateVesinvestPlanV2 = vi.fn();
 
@@ -25,12 +27,14 @@ vi.mock('../api', () => ({
   createVesinvestPlanV2: (...args: unknown[]) => createVesinvestPlanV2(...args),
   getForecastScenarioV2: (...args: unknown[]) => getForecastScenarioV2(...args),
   getVesinvestPlanV2: (...args: unknown[]) => getVesinvestPlanV2(...args),
+  listDepreciationRulesV2: (...args: unknown[]) => listDepreciationRulesV2(...args),
   listVesinvestGroupsV2: (...args: unknown[]) => listVesinvestGroupsV2(...args),
   listVesinvestPlansV2: (...args: unknown[]) => listVesinvestPlansV2(...args),
   searchImportOrganizationsV2: (...args: unknown[]) =>
     searchImportOrganizationsV2(...args),
   syncVesinvestPlanToForecastV2: (...args: unknown[]) =>
     syncVesinvestPlanToForecastV2(...args),
+  updateDepreciationRuleV2: (...args: unknown[]) => updateDepreciationRuleV2(...args),
   updateVesinvestGroupV2: (...args: unknown[]) => updateVesinvestGroupV2(...args),
   updateVesinvestPlanV2: (...args: unknown[]) => updateVesinvestPlanV2(...args),
 }));
@@ -61,7 +65,7 @@ const group = {
   key: 'sanering_water_network',
   label: 'Sanering / vattennatverk',
   defaultAccountKey: 'sanering_water_network',
-  defaultDepreciationClassKey: 'water_network_post_1999',
+  defaultDepreciationClassKey: 'sanering_water_network',
   reportGroupKey: 'network_rehabilitation',
   serviceSplit: 'water' as const,
 };
@@ -70,7 +74,7 @@ const wastewaterTreatmentGroup = {
   key: 'wastewater_treatment',
   label: 'Avloppsrening',
   defaultAccountKey: 'wastewater_treatment',
-  defaultDepreciationClassKey: 'plant_buildings',
+  defaultDepreciationClassKey: 'wastewater_treatment',
   reportGroupKey: 'treatment',
   serviceSplit: 'wastewater' as const,
 };
@@ -101,6 +105,7 @@ const makePlan = (overrides: Record<string, unknown> = {}) => ({
   totalInvestmentAmount: 100,
   lastReviewedAt: null,
   reviewDueAt: '2029-04-08T10:00:00.000Z',
+  classificationReviewRequired: false,
   baselineChangedSinceAcceptedRevision: false,
   investmentPlanChangedSinceFeeRecommendation: true,
   updatedAt: '2026-04-08T10:00:00.000Z',
@@ -147,6 +152,7 @@ const makeSummary = (overrides: Record<string, unknown> = {}) => ({
   totalInvestmentAmount: 100,
   lastReviewedAt: null,
   reviewDueAt: '2029-04-08T10:00:00.000Z',
+  classificationReviewRequired: false,
   baselineChangedSinceAcceptedRevision: false,
   investmentPlanChangedSinceFeeRecommendation: true,
   updatedAt: '2026-04-08T10:00:00.000Z',
@@ -222,14 +228,38 @@ describe('VesinvestPlanningPanel', () => {
     createVesinvestPlanV2.mockReset();
     getForecastScenarioV2.mockReset();
     getVesinvestPlanV2.mockReset();
+    listDepreciationRulesV2.mockReset();
     listVesinvestGroupsV2.mockReset();
     listVesinvestPlansV2.mockReset();
     searchImportOrganizationsV2.mockReset();
     syncVesinvestPlanToForecastV2.mockReset();
+    updateDepreciationRuleV2.mockReset();
     updateVesinvestGroupV2.mockReset();
     updateVesinvestPlanV2.mockReset();
 
     listVesinvestGroupsV2.mockResolvedValue([group, wastewaterTreatmentGroup]);
+    listDepreciationRulesV2.mockResolvedValue([
+      {
+        id: group.key,
+        assetClassKey: group.key,
+        assetClassName: group.label,
+        method: 'straight-line',
+        linearYears: 30,
+        residualPercent: null,
+        createdAt: '2026-04-08T10:00:00.000Z',
+        updatedAt: '2026-04-08T10:00:00.000Z',
+      },
+      {
+        id: wastewaterTreatmentGroup.key,
+        assetClassKey: wastewaterTreatmentGroup.key,
+        assetClassName: wastewaterTreatmentGroup.label,
+        method: 'straight-line',
+        linearYears: 20,
+        residualPercent: null,
+        createdAt: '2026-04-08T10:00:00.000Z',
+        updatedAt: '2026-04-08T10:00:00.000Z',
+      },
+    ]);
     listVesinvestPlansV2.mockResolvedValue([makeSummary()]);
     getVesinvestPlanV2.mockResolvedValue(makePlan());
     getForecastScenarioV2.mockResolvedValue({
@@ -244,9 +274,9 @@ describe('VesinvestPlanningPanel', () => {
           amount: 100,
           target: 'Water Utility / Vesinvest',
           category: 'Sanering / vattennatverk',
-          depreciationClassKey: 'water_network_post_1999',
+          depreciationClassKey: 'sanering_water_network',
           depreciationRuleSnapshot: {
-            assetClassKey: 'water_network_post_1999',
+            assetClassKey: 'sanering_water_network',
             assetClassName: 'Water network',
             method: 'straight-line',
             linearYears: 30,
@@ -308,7 +338,10 @@ describe('VesinvestPlanningPanel', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add project' }));
     const dialog = screen.getByRole('dialog');
-    fireEvent.change(within(dialog).getByRole('combobox', { name: /group/i }), {
+    fireEvent.change(within(dialog).getByRole('textbox', { name: /code/i }), {
+      target: { value: 'P-101' },
+    });
+    fireEvent.change(within(dialog).getByRole('combobox', { name: /class/i }), {
       target: { value: wastewaterTreatmentGroup.key },
     });
     fireEvent.change(within(dialog).getByRole('textbox', { name: /project/i }), {
@@ -334,7 +367,6 @@ describe('VesinvestPlanningPanel', () => {
     expect(projectCodeInput).toBeTruthy();
     expect(allocationInput).toBeTruthy();
 
-    fireEvent.change(projectCodeInput!, { target: { value: 'P-101' } });
     fireEvent.change(allocationInput!, { target: { value: '250000' } });
 
     await waitFor(() => {
@@ -443,9 +475,19 @@ describe('VesinvestPlanningPanel', () => {
       ...group,
       label: 'Updated group',
       defaultAccountKey: 'updated_account',
-      defaultDepreciationClassKey: 'updated_depreciation',
+      defaultDepreciationClassKey: 'sanering_water_network',
       reportGroupKey: 'treatment',
       serviceSplit: 'mixed',
+    });
+    updateDepreciationRuleV2.mockResolvedValue({
+      id: group.key,
+      assetClassKey: group.key,
+      assetClassName: 'Updated group',
+      method: 'residual',
+      linearYears: 18,
+      residualPercent: 12,
+      createdAt: '2026-04-08T10:00:00.000Z',
+      updatedAt: '2026-04-08T10:00:00.000Z',
     });
 
     const { container } = render(
@@ -463,37 +505,40 @@ describe('VesinvestPlanningPanel', () => {
       expect(listVesinvestGroupsV2).toHaveBeenCalled();
     });
 
+    fireEvent.click(screen.getByRole('button', { name: 'Depreciation plan' }));
+
     const labelInput = container.querySelector(
       'input[name="vesinvest-group-label-sanering_water_network"]',
     ) as HTMLInputElement | null;
     const accountInput = container.querySelector(
       'input[name="vesinvest-group-account-sanering_water_network"]',
     ) as HTMLInputElement | null;
-    const depreciationInput = container.querySelector(
-      'input[name="vesinvest-group-depreciation-sanering_water_network"]',
-    ) as HTMLInputElement | null;
-    const reportGroupInput = container.querySelector(
-      'select[name="vesinvest-group-report-group-sanering_water_network"]',
-    ) as HTMLSelectElement | null;
     const splitInput = container.querySelector(
       'select[name="vesinvest-group-split-sanering_water_network"]',
     ) as HTMLSelectElement | null;
+    const methodInput = container.querySelector(
+      'select[name="vesinvest-group-method-sanering_water_network"]',
+    ) as HTMLSelectElement | null;
+    const yearsInput = container.querySelector(
+      'input[name="vesinvest-group-years-sanering_water_network"]',
+    ) as HTMLInputElement | null;
+    const residualInput = container.querySelector(
+      'input[name="vesinvest-group-residual-sanering_water_network"]',
+    ) as HTMLInputElement | null;
 
     expect(labelInput).toBeTruthy();
     expect(accountInput).toBeTruthy();
-    expect(depreciationInput).toBeTruthy();
-    expect(reportGroupInput).toBeTruthy();
     expect(splitInput).toBeTruthy();
+    expect(methodInput).toBeTruthy();
+    expect(yearsInput).toBeTruthy();
+    expect(residualInput).toBeTruthy();
 
     fireEvent.change(labelInput!, { target: { value: 'Updated group' } });
     fireEvent.change(accountInput!, { target: { value: 'updated_account' } });
-    fireEvent.change(depreciationInput!, {
-      target: { value: 'updated_depreciation' },
-    });
-    fireEvent.change(reportGroupInput!, {
-      target: { value: 'treatment' },
-    });
     fireEvent.change(splitInput!, { target: { value: 'mixed' } });
+    fireEvent.change(methodInput!, { target: { value: 'residual' } });
+    fireEvent.change(yearsInput!, { target: { value: '18' } });
+    fireEvent.change(residualInput!, { target: { value: '12' } });
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[0]!);
 
@@ -503,9 +548,18 @@ describe('VesinvestPlanningPanel', () => {
         {
           label: 'Updated group',
           defaultAccountKey: 'updated_account',
-          defaultDepreciationClassKey: 'updated_depreciation',
-          reportGroupKey: 'treatment',
+          reportGroupKey: 'network_rehabilitation',
           serviceSplit: 'mixed',
+        },
+      );
+      expect(updateDepreciationRuleV2).toHaveBeenCalledWith(
+        'sanering_water_network',
+        {
+          assetClassKey: 'sanering_water_network',
+          assetClassName: 'Updated group',
+          method: 'residual',
+          linearYears: 18,
+          residualPercent: 12,
         },
       );
     });
@@ -528,10 +582,10 @@ describe('VesinvestPlanningPanel', () => {
       .getAllByRole('heading', { level: 3 })
       .map((heading) => heading.textContent?.trim());
 
-    expect(headings.indexOf('Utility name')).toBeLessThan(headings.indexOf('Group'));
-    expect(headings.indexOf('Group')).toBeLessThan(
-      headings.indexOf('Grouped horizon layout'),
+    expect(headings.indexOf('Utility name')).toBeLessThan(
+      headings.indexOf('Plan state'),
     );
+    expect(screen.getByRole('button', { name: 'Investment plan' })).toBeTruthy();
   });
 
   it('hides the heavy plan sections in simplified setup mode', async () => {
@@ -548,9 +602,9 @@ describe('VesinvestPlanningPanel', () => {
     );
 
     await screen.findByRole('heading', { name: 'Utility name' });
-    expect(screen.getByRole('heading', { name: 'Group' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Plan state' })).toBeTruthy();
     expect(screen.queryByText('Plan revision')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Class-owned depreciation plan' })).toBeNull();
     expect(screen.queryByText('Grouped horizon layout')).toBeNull();
     expect(screen.queryByText('Editable project rows')).toBeNull();
     expect(screen.queryByText('Saved fee-path recommendation')).toBeNull();

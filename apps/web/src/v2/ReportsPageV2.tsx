@@ -29,7 +29,6 @@ import {
 } from './provenanceDisplay';
 import {
   resolveVesinvestGroupLabel,
-  resolveVesinvestReportGroupLabel,
 } from './vesinvestLabels';
 
 type Props = {
@@ -54,7 +53,7 @@ type ReportReadinessReason =
   | 'missingScenario'
   | 'unsavedChanges'
   | 'missingComputeResults'
-  | 'depreciationMappingIncomplete'
+  | 'missingDepreciationSnapshots'
   | 'staleComputeResults';
 
 type ForecastRuntimeState = {
@@ -139,27 +138,52 @@ const appendDetailSuffix = (
   return details.length > 0 ? `${base} | ${details.join(' | ')}` : base;
 };
 
+const formatDepreciationMethod = (
+  item: {
+    method: string;
+    linearYears: number | null;
+    residualPercent: number | null;
+  },
+  t: ReturnType<typeof useTranslation>['t'],
+): string | null => {
+  switch (item.method) {
+    case 'straight-line':
+      return t('v2Forecast.methodStraightLine', 'Straight-line {{years}} years', {
+        years: item.linearYears ?? 0,
+      });
+    case 'linear':
+      return t('v2Forecast.methodLinear', 'Linear');
+    case 'residual':
+      return t('v2Forecast.methodResidual', 'Residual {{percent}} %', {
+        percent: item.residualPercent ?? 0,
+      });
+    case 'none':
+      return t('v2Forecast.methodNone', 'No depreciation');
+    default:
+      return null;
+  }
+};
+
 const formatInvestmentSnapshotMethod = (
   item: V2ForecastScenario['yearlyInvestments'][number],
   t: ReturnType<typeof useTranslation>['t'],
 ): string | null => {
   const snapshot = item.depreciationRuleSnapshot;
   if (!snapshot) return null;
-  switch (snapshot.method) {
-    case 'straight-line':
-      return t('v2Forecast.methodStraightLine', 'Straight-line {{years}} years', {
-        years: snapshot.linearYears ?? 0,
-      });
-    case 'linear':
-      return t('v2Forecast.methodLinear', 'Linear');
-    case 'residual':
-      return t('v2Forecast.methodResidual', 'Residual {{percent}} %', {
-        percent: snapshot.residualPercent ?? 0,
-      });
-    case 'none':
-      return t('v2Forecast.methodNone', 'No depreciation');
+  return formatDepreciationMethod(snapshot, t);
+};
+
+const formatServiceSplitLabel = (
+  value: 'water' | 'wastewater' | 'mixed',
+  t: ReturnType<typeof useTranslation>['t'],
+) => {
+  switch (value) {
+    case 'water':
+      return t('v2Forecast.investmentServiceSplitWater', 'Water');
+    case 'wastewater':
+      return t('v2Forecast.investmentServiceSplitWastewater', 'Wastewater');
     default:
-      return null;
+      return t('v2Forecast.investmentServiceSplitMixed', 'Mixed');
   }
 };
 
@@ -230,7 +254,7 @@ const deriveReportReadinessReason = ({
       (row) => row.amount > 0 && !row.depreciationRuleSnapshot,
     )
   ) {
-    return 'depreciationMappingIncomplete';
+    return 'missingDepreciationSnapshots';
   }
   return null;
 };
@@ -490,10 +514,10 @@ export const ReportsPageV2: React.FC<Props> = ({
           'v2Forecast.staleComputeHint',
           'Saved inputs changed after the last calculation. Recompute results before creating report.',
         );
-      case 'depreciationMappingIncomplete':
+      case 'missingDepreciationSnapshots':
         return t(
-          'v2Forecast.depreciationMappingBlockedHint',
-          'Complete and save a depreciation mapping for every investment year before creating report.',
+          'v2Forecast.depreciationSnapshotsMissingHint',
+          'Refresh the synced Vesinvest class plan and recompute results before creating report.',
         );
       case 'missingScenario':
         return t(
@@ -516,7 +540,7 @@ export const ReportsPageV2: React.FC<Props> = ({
           'Open Forecast to save and compute',
         );
       case 'missingComputeResults':
-      case 'depreciationMappingIncomplete':
+      case 'missingDepreciationSnapshots':
       case 'staleComputeResults':
         return t(
           'v2Reports.openForecastToRecompute',
@@ -2145,43 +2169,84 @@ export const ReportsPageV2: React.FC<Props> = ({
                                 <tr>
                                   <th>{t('v2Vesinvest.projectCode', 'Code')}</th>
                                   <th>{t('v2Vesinvest.projectName', 'Project')}</th>
-                                  <th>{t('v2Vesinvest.projectGroup', 'Group')}</th>
                                   <th>{t('v2Vesinvest.projectAccount', 'Account')}</th>
                                   <th>{t('v2Vesinvest.projectTotal', 'Total')}</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {selectedVesinvestAppendix.groupedProjects.map((group) => (
-                                  <React.Fragment key={group.reportGroupKey}>
+                                  <React.Fragment key={group.classKey}>
                                     <tr className="v2-vesinvest-matrix-group-row">
                                       <td />
                                       <td>
-                                        {resolveVesinvestReportGroupLabel(
+                                        {resolveVesinvestGroupLabel(
                                           t,
-                                          group.reportGroupKey,
-                                          group.reportGroupLabel,
+                                          group.classKey,
+                                          group.classLabel,
                                         )}
                                       </td>
-                                      <td />
                                       <td />
                                       <td>{formatEur(group.totalAmount)}</td>
                                     </tr>
                                     {group.projects.map((project) => (
-                                      <tr key={`${group.reportGroupKey}-${project.code}`}>
+                                      <tr key={`${group.classKey}-${project.code}`}>
                                         <td>{project.code}</td>
                                         <td>{project.name}</td>
-                                        <td>
-                                          {resolveVesinvestGroupLabel(
-                                            t,
-                                            project.groupKey,
-                                            project.groupLabel,
-                                          )}
-                                        </td>
                                         <td>{project.accountKey ?? '-'}</td>
                                         <td>{formatEur(project.totalAmount)}</td>
                                       </tr>
                                     ))}
                                   </React.Fragment>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
+                      ) : null}
+                      {selectedVesinvestAppendix?.depreciationPlan?.length ? (
+                        <>
+                          <h4>{t('v2Vesinvest.depreciationPlan', 'Depreciation plan')}</h4>
+                          <div className="v2-vesinvest-table-wrap">
+                            <table className="v2-vesinvest-table">
+                              <thead>
+                                <tr>
+                                  <th>{t('v2Vesinvest.projectClass', 'Class')}</th>
+                                  <th>{t('v2Vesinvest.projectAccount', 'Account')}</th>
+                                  <th>{t('v2Vesinvest.allocationSummary', 'Service split')}</th>
+                                  <th>{t('v2Forecast.method', 'Method')}</th>
+                                  <th>{t('v2Vesinvest.writeOffTime', 'Write-off time')}</th>
+                                  <th>{t('v2Vesinvest.residualShare', 'Residual share')}</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedVesinvestAppendix.depreciationPlan.map((row) => (
+                                  <tr key={`depreciation-plan-${row.classKey}`}>
+                                    <td>
+                                      {resolveVesinvestGroupLabel(
+                                        t,
+                                        row.classKey,
+                                        row.classLabel,
+                                      )}
+                                    </td>
+                                    <td>{row.accountKey ?? '-'}</td>
+                                    <td>{formatServiceSplitLabel(row.serviceSplit, t)}</td>
+                                    <td>
+                                      {formatDepreciationMethod(
+                                        {
+                                          method: row.method,
+                                          linearYears: row.linearYears,
+                                          residualPercent: row.residualPercent,
+                                        },
+                                        t,
+                                      ) ?? '-'}
+                                    </td>
+                                    <td>{row.linearYears == null ? '-' : row.linearYears}</td>
+                                    <td>
+                                      {row.residualPercent == null
+                                        ? '-'
+                                        : formatPercent(row.residualPercent)}
+                                    </td>
+                                  </tr>
                                 ))}
                               </tbody>
                             </table>

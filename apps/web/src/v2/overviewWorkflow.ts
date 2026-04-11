@@ -138,6 +138,8 @@ export function getSetupYearReviewStatus(
 }
 
 export type SetupWizardStep = 1 | 2 | 3 | 4 | 5 | 6;
+export type PresentedOverviewWorkflowStep = 1 | 2 | 3 | 4 | 5;
+export const PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS = 5;
 
 export type SetupWizardStateInput = {
   connected: boolean;
@@ -194,6 +196,26 @@ export type VesinvestWorkflowState = {
   forecastReady: boolean;
   reportsReady: boolean;
 };
+
+export function getPresentedOverviewWorkflowStep(
+  step: SetupWizardStep,
+): PresentedOverviewWorkflowStep {
+  switch (step) {
+    case 1:
+      return 1;
+    case 2:
+      return 2;
+    case 3:
+      return 2;
+    case 4:
+      return 3;
+    case 5:
+      return 4;
+    case 6:
+    default:
+      return 5;
+  }
+}
 
 function isSelectedScenarioReadyForReports(
   scenario?: SetupSelectedScenario | null,
@@ -265,10 +287,13 @@ export function resolveVesinvestWorkflowState(
     hasPlan === true &&
     typeof workflowPlan?.selectedScenarioId === 'string' &&
     workflowPlan.selectedScenarioId.length > 0;
+  const classificationReviewComplete =
+    workflowPlan?.classificationReviewRequired !== true;
   const reportsReady =
     baselineVerified === true &&
     hasPlan === true &&
     forecastReady === true &&
+    classificationReviewComplete &&
     workflowPlan?.pricingStatus === 'verified' &&
     isSelectedScenarioReadyForReports(options?.selectedScenario);
 
@@ -285,7 +310,9 @@ export function resolveVesinvestWorkflowState(
     currentStep = 4;
   } else if (
     hasPlan &&
-    (!forecastReady || workflowPlan?.pricingStatus !== 'verified')
+    (!forecastReady ||
+      workflowPlan?.pricingStatus !== 'verified' ||
+      !classificationReviewComplete)
   ) {
     currentStep = 5;
   } else {
@@ -310,7 +337,7 @@ export function resolvePreviousSetupStep(
     case 2:
       return 1;
     case 3:
-      return 2;
+      return 1;
     case 4:
       return 3;
     case 5:

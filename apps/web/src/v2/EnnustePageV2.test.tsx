@@ -110,6 +110,14 @@ const buildBaseScenario = () => ({
       amount: 120000,
       target: 'Main line renewal',
       category: 'network',
+      depreciationClassKey: 'network',
+      depreciationRuleSnapshot: {
+        assetClassKey: 'network',
+        assetClassName: 'Network',
+        method: 'straight-line',
+        linearYears: 40,
+        residualPercent: null,
+      },
       investmentType: 'replacement',
       confidence: 'high',
       waterAmount: 70000,
@@ -121,6 +129,14 @@ const buildBaseScenario = () => ({
       amount: 125000,
       target: 'Plant expansion',
       category: 'plant',
+      depreciationClassKey: 'plant',
+      depreciationRuleSnapshot: {
+        assetClassKey: 'plant',
+        assetClassName: 'Plant',
+        method: 'residual',
+        linearYears: null,
+        residualPercent: 10,
+      },
       investmentType: 'new',
       confidence: 'medium',
       waterAmount: 45000,
@@ -301,6 +317,7 @@ const buildVesinvestPlanSummary = (selectedScenarioId = 'base-1') => ({
   totalInvestmentAmount: 245000,
   lastReviewedAt: '2026-03-09T07:05:00.000Z',
   reviewDueAt: '2029-03-09T07:05:00.000Z',
+  classificationReviewRequired: false,
   baselineChangedSinceAcceptedRevision: false,
   investmentPlanChangedSinceFeeRecommendation: false,
   baselineFingerprint: 'baseline-fingerprint',
@@ -498,9 +515,6 @@ describe('EnnustePageV2', () => {
     expect(screen.getByRole('textbox', { name: 'Scenario name' })).toBeTruthy();
     expect(screen.queryByText('Derived result rows')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Analyst view' }));
-    expect(
-      screen.getByRole('button', { name: 'Analyst view' }).className,
-    ).toContain('v2-btn-primary');
     expect(screen.getByText('Scenario name')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Standard view' }));
     expect(
@@ -720,8 +734,19 @@ describe('EnnustePageV2', () => {
     });
   });
 
-  it('blocks saving when an investment row still has no effective depreciation rule', async () => {
-    getScenarioClassAllocationsV2.mockResolvedValueOnce({ years: [] });
+  it('shows missing synced depreciation snapshots as a warning without blocking unrelated draft saves', async () => {
+    getForecastScenarioV2.mockImplementation(async (id: string) => {
+      if (id === 'base-1') {
+        return {
+          ...buildBaseScenario(),
+          yearlyInvestments: buildBaseScenario().yearlyInvestments.map((row) => ({
+            ...row,
+            depreciationRuleSnapshot: row.year === 2025 ? null : row.depreciationRuleSnapshot,
+          })),
+        };
+      }
+      return buildStressScenario();
+    });
 
     render(
       <EnnustePageV2
@@ -741,35 +766,21 @@ describe('EnnustePageV2', () => {
     );
 
     expect(
-      await screen.findAllByText('Unmapped investment years: 2024, 2025'),
-    ).toHaveLength(2);
+      await screen.findAllByText('Depreciation snapshots are missing for years: 2025'),
+    ).toHaveLength(1);
     expect(
       (screen.getByRole('button', { name: 'Save draft' }) as HTMLButtonElement)
         .disabled,
-    ).toBe(true);
+    ).toBe(false);
     expect(
       screen.getByRole('button', { name: 'Save draft' }).getAttribute('title'),
-    ).toBe(
-      'Complete and save a depreciation rule for every investment year before creating report.',
-    );
-
-    const unmappedInvestmentAlert = (
-      await screen.findAllByText('Unmapped investment years: 2024, 2025')
-    )[0]!.closest('.v2-alert') as HTMLElement;
-    fireEvent.click(
-      within(unmappedInvestmentAlert).getByRole('button', {
-        name: 'Continue to depreciation plans',
-      }),
-    );
-
+    ).toBeNull();
     expect(
-      await screen.findByRole('heading', {
-        name: 'Depreciation plans for future investments',
-      }),
-    ).toBeTruthy();
+      screen.queryByRole('button', { name: 'Continue to depreciation plans' }),
+    ).toBeNull();
   });
 
-  it('keeps investments and depreciation visible in one stacked planning flow', async () => {
+  it('keeps investment totals and depreciation impact visible in one stacked planning flow', async () => {
     render(
       <EnnustePageV2
         onReportCreated={() => undefined}
@@ -786,7 +797,7 @@ describe('EnnustePageV2', () => {
       screen.getByRole('button', { name: 'Copy first year to all' }),
     ).toBeTruthy();
     expect(
-      await screen.findByText('Tariff and cash impact'),
+      await screen.findByText('Investment plan effect'),
     ).toBeTruthy();
     expect(
       screen.getAllByText('Required price today (annual result = 0)').length,
@@ -1311,45 +1322,7 @@ describe('EnnustePageV2', () => {
     ).toBe('5');
   });
 
-  it('opens the depreciation planning workspace, blocks reports for unmapped years, and saves one-to-one mappings', async () => {
-    getScenarioClassAllocationsV2.mockResolvedValueOnce({
-      years: [
-        {
-          year: 2024,
-          allocations: [{ classKey: 'network', sharePct: 100 }],
-        },
-        {
-          year: 2025,
-          allocations: [],
-        },
-      ],
-    });
-    updateScenarioClassAllocationsV2.mockResolvedValue({
-      scenarioId: 'base-1',
-      years: [
-        {
-          year: 2024,
-          allocations: [{ classKey: 'network', sharePct: 100 }],
-        },
-        {
-          year: 2025,
-          allocations: [{ classKey: 'plant', sharePct: 100 }],
-        },
-      ],
-    });
-    getScenarioClassAllocationsV2.mockResolvedValue({
-      years: [
-        {
-          year: 2024,
-          allocations: [{ classKey: 'network', sharePct: 100 }],
-        },
-        {
-          year: 2025,
-          allocations: [{ classKey: 'plant', sharePct: 100 }],
-        },
-      ],
-    });
-
+  it('keeps depreciation impact in Forecast but removes the old depreciation planning workbench', async () => {
     render(
       <EnnustePageV2
         onReportCreated={() => undefined}
@@ -1360,469 +1333,64 @@ describe('EnnustePageV2', () => {
       />,
     );
 
-    expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
-    expect(
-      (
-        screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement
-      ).title,
-    ).toContain(
-      'Complete and save a depreciation rule for every investment year before creating report.',
-    );
-    expect(
-      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
+    await openInvestmentWorkbench();
 
-    const investmentProgramSection = await openInvestmentWorkbench();
-    expect(investmentProgramSection).toBeTruthy();
-    fireEvent.click(
-      screen.getAllByRole('button', { name: 'Open depreciation planning' })[1]!,
-    );
-
-    expect(
-      await screen.findByRole('heading', {
-        name: 'Depreciation plans for future investments',
-      }),
-    ).toBeTruthy();
-    expect(screen.getByText('Tariff and cash impact')).toBeTruthy();
-    expect(
-      screen.getAllByText('Required price today (annual result = 0)').length,
-    ).toBeGreaterThan(0);
-    expect(screen.getAllByText('Peak cumulative gap').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Unmapped investment years: 2025').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Baseline depreciation').length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText('New-investment depreciation').length,
-    ).toBeGreaterThan(0);
+    expect(await screen.findByText('Investment plan effect')).toBeTruthy();
     expect(screen.getAllByText('Total depreciation').length).toBeGreaterThan(0);
     expect(
-      screen.getByText('Set a depreciation plan for each investment year'),
-    ).toBeTruthy();
+      screen.queryByRole('button', { name: 'Open depreciation planning' }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Continue to depreciation plans' }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('heading', {
+        name: 'Depreciation plans for future investments',
+      }),
+    ).toBeNull();
+    expect(
+      screen.queryByText('Set a depreciation plan for each investment year'),
+    ).toBeNull();
+  });
+
+  it('blocks report creation when the active Vesinvest plan requires classification review', async () => {
+    getPlanningContextV2.mockResolvedValueOnce({
+      ...buildPlanningContext('base-1'),
+      vesinvest: {
+        hasPlan: true,
+        planCount: 1,
+        activePlan: {
+          ...buildVesinvestPlanSummary('base-1'),
+          classificationReviewRequired: true,
+        },
+        selectedPlan: {
+          ...buildVesinvestPlanSummary('base-1'),
+          classificationReviewRequired: true,
+        },
+      },
+    });
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    await screen.findAllByText('Current results');
+
     expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('1/2 years saved').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Depreciation plans').length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('option', { name: 'Network' }).length).toBeGreaterThan(
-      0,
-    );
-    expect(screen.getAllByRole('option', { name: 'Plant' }).length).toBeGreaterThan(
-      0,
-    );
-    expect(screen.queryByText('2/2 years mapped')).toBeNull();
-    expect(screen.queryByText('2/2 fully mapped')).toBeNull();
-
-    fireEvent.change(
-      screen.getAllByRole('combobox', {
-        name: 'Depreciation rule',
-      })[1],
-      {
-        target: { value: 'plant' },
-      },
-    );
-    const mappingCard = screen
-      .getByText('Set a depreciation plan for each investment year')
-      .closest('article') as HTMLElement;
-    await waitFor(() => {
-      const mappings = screen.getAllByRole('combobox', { name: 'Depreciation rule' });
-      expect((mappings[0] as HTMLSelectElement).value).toBe('network');
-      expect((mappings[1] as HTMLSelectElement).value).toBe('plant');
-    });
-    fireEvent.click(
-      within(mappingCard).getByRole('button', { name: 'Save depreciation plans' }),
-    );
-
-    await waitFor(() => {
-      expect(updateScenarioClassAllocationsV2).toHaveBeenCalledWith('base-1', {
-        years: [
-          {
-            year: 2024,
-            allocations: [{ classKey: 'network', sharePct: 100 }],
-          },
-          {
-            year: 2025,
-            allocations: [{ classKey: 'plant', sharePct: 100 }],
-          },
-        ],
-      });
-    });
-
-    await waitFor(() => {
-      expect(
-        screen.getByText('Saved plans updated successfully.'),
-      ).toBeTruthy();
-      expect(screen.queryByText('Unmapped investment years: 2025')).toBeNull();
-    });
-    expect(
-      screen.getAllByText('Saved, needs recompute').length,
-    ).toBeGreaterThan(0);
     expect(
       (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
-  });
-
-  it('shows explicit default mapping help and lets the user carry forward the previous saved year', async () => {
-    getScenarioClassAllocationsV2.mockResolvedValueOnce({
-      years: [
-        {
-          year: 2024,
-          allocations: [{ classKey: 'network', sharePct: 100 }],
-        },
-        {
-          year: 2025,
-          allocations: [],
-        },
-      ],
-    });
-    updateScenarioClassAllocationsV2.mockResolvedValue({
-      scenarioId: 'base-1',
-      years: [
-        {
-          year: 2024,
-          allocations: [{ classKey: 'network', sharePct: 100 }],
-        },
-        {
-          year: 2025,
-          allocations: [{ classKey: 'network', sharePct: 100 }],
-        },
-      ],
-    });
-    getScenarioClassAllocationsV2.mockResolvedValue({
-      years: [
-        {
-          year: 2024,
-          allocations: [{ classKey: 'network', sharePct: 100 }],
-        },
-        {
-          year: 2025,
-          allocations: [{ classKey: 'network', sharePct: 100 }],
-        },
-      ],
-    });
-
-    render(
-      <EnnustePageV2
-        onReportCreated={() => undefined}
-        initialScenarioId="base-1"
-        computedFromUpdatedAtByScenario={{
-          'base-1': '2026-03-09T07:00:00.000Z',
-        }}
-      />,
-    );
-
-    const investmentProgramSection = await openInvestmentWorkbench();
-    expect(investmentProgramSection).toBeTruthy();
-    fireEvent.click(
-      screen.getAllByRole('button', { name: 'Open depreciation planning' })[1]!,
-    );
-
-    expect(
-      await screen.findByRole('heading', {
-        name: 'Depreciation plans for future investments',
-      }),
-    ).toBeTruthy();
-    expect(screen.getAllByText('Depreciation incomplete').length).toBeGreaterThan(0);
-    expect(
-      screen.getByText(
-        'Default suggestion ready: Plant. Save depreciation plans to keep it for 2025.',
-      ),
-    ).toBeTruthy();
-    const mappings = screen.getAllByRole('combobox', { name: 'Depreciation rule' });
-    expect((mappings[1] as HTMLSelectElement).value).toBe('plant');
-
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Carry forward 2024 mapping' }),
-    );
-
-    await waitFor(() => {
-      expect((screen.getAllByRole('combobox', { name: 'Depreciation rule' })[1] as HTMLSelectElement).value).toBe(
-        'network',
-      );
-    });
-
-    const mappingCard = screen
-      .getByText('Set a depreciation plan for each investment year')
-      .closest('article') as HTMLElement;
-    fireEvent.click(within(mappingCard).getByRole('button', { name: 'Save depreciation plans' }));
-
-    await waitFor(() => {
-      expect(updateScenarioClassAllocationsV2).toHaveBeenCalledWith('base-1', {
-        years: [
-          {
-            year: 2024,
-            allocations: [{ classKey: 'network', sharePct: 100 }],
-          },
-          {
-            year: 2025,
-            allocations: [{ classKey: 'network', sharePct: 100 }],
-          },
-        ],
-      });
-    });
-  });
-
-  it('shows changed depreciation preview and funding pressure after editing a straight-line rule and recomputing', async () => {
-    const initialRules = [
-      {
-        id: 'rule-1',
-        assetClassKey: 'network',
-        assetClassName: 'Network',
-        method: 'straight-line',
-        linearYears: 40,
-        residualPercent: null,
-        annualSchedule: null,
-      },
-      {
-        id: 'rule-2',
-        assetClassKey: 'plant',
-        assetClassName: 'Plant',
-        method: 'residual',
-        linearYears: null,
-        residualPercent: 10,
-        annualSchedule: null,
-      },
-    ];
-    const updatedRules = [
-      {
-        id: 'rule-1',
-        assetClassKey: 'network',
-        assetClassName: 'Network',
-        method: 'straight-line',
-        linearYears: 10,
-        residualPercent: null,
-        annualSchedule: null,
-      },
-      initialRules[1],
-    ];
-    listDepreciationRulesV2.mockResolvedValue(initialRules);
-    listScenarioDepreciationRulesV2
-      .mockResolvedValueOnce(initialRules)
-      .mockResolvedValue(updatedRules);
-    updateScenarioDepreciationRuleV2.mockResolvedValueOnce({
-      ...updatedRules[0],
-    });
-    computeForecastScenarioV2.mockResolvedValueOnce({
-      ...buildBaseScenario(),
-      requiredPriceTodayCombined: 3.3,
-      requiredPriceTodayCombinedAnnualResult: 3.35,
-      requiredPriceTodayCombinedCumulativeCash: 3.5,
-      requiredAnnualIncreasePct: 0.1,
-      requiredAnnualIncreasePctAnnualResult: 0.11,
-      requiredAnnualIncreasePctCumulativeCash: 0.13,
-      feeSufficiency: {
-        baselineCombinedPrice: 2.4,
-        annualResult: {
-          requiredPriceToday: 3.35,
-          requiredAnnualIncreasePct: 0.11,
-          underfundingStartYear: 2027,
-          peakDeficit: 50000,
-        },
-        cumulativeCash: {
-          requiredPriceToday: 3.5,
-          requiredAnnualIncreasePct: 0.13,
-          underfundingStartYear: 2026,
-          peakGap: 140000,
-        },
-      },
-      years: [
-        {
-          ...buildBaseScenario().years[0],
-          investmentDepreciation: 24000,
-          totalDepreciation: 74000,
-        },
-        {
-          ...buildBaseScenario().years[1],
-          investmentDepreciation: 24000,
-          totalDepreciation: 74000,
-        },
-      ],
-      computedAt: '2026-03-09T09:10:00.000Z',
-      computedFromUpdatedAt: '2026-03-09T09:10:00.000Z',
-      updatedAt: '2026-03-09T09:10:00.000Z',
-    });
-
-    render(
-      <EnnustePageV2
-        onReportCreated={() => undefined}
-        initialScenarioId="base-1"
-        computedFromUpdatedAtByScenario={{
-          'base-1': '2026-03-09T07:00:00.000Z',
-        }}
-      />,
-    );
-
-    const investmentProgramSection = await openInvestmentWorkbench();
-    expect(investmentProgramSection).toBeTruthy();
-    fireEvent.click(
-      screen.getAllByRole('button', { name: 'Open depreciation planning' })[1]!,
-    );
-
-    const linearYearsInput = screen.getAllByRole('spinbutton', {
-      name: 'Write-off time (years)',
-    })[0];
-    const ruleRow = linearYearsInput.closest(
-      '.v2-depreciation-rule-row',
-    ) as HTMLElement;
-    fireEvent.change(linearYearsInput, {
-      target: { value: '10' },
-    });
-    fireEvent.click(within(ruleRow).getByRole('button', { name: 'Save' }));
-
-    await waitFor(() => {
-      expect(updateScenarioDepreciationRuleV2).toHaveBeenCalledWith(
-        'base-1',
-        'rule-1',
-        expect.objectContaining({
-          method: 'straight-line',
-          linearYears: 10,
-        }),
-      );
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Recompute results' }));
-
-    await waitFor(() => {
-      expect(computeForecastScenarioV2).toHaveBeenCalledWith('base-1');
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('Scenario calculated.')).toBeTruthy();
-      expect(screen.getAllByText('Current results').length).toBeGreaterThan(0);
-      expect(
-        (
-          screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement
-        ).disabled,
-      ).toBe(false);
-    });
-  });
-
-  it('auto-maps high-confidence investment groups into depreciation-plan defaults', async () => {
-    getScenarioClassAllocationsV2.mockResolvedValueOnce({
-      years: [],
-    });
-    updateScenarioClassAllocationsV2.mockResolvedValue({
-      scenarioId: 'base-1',
-      years: [
-        {
-          year: 2024,
-          allocations: [{ classKey: 'water_network_post_1999', sharePct: 100 }],
-        },
-        {
-          year: 2025,
-          allocations: [{ classKey: 'plant_machinery', sharePct: 100 }],
-        },
-      ],
-    });
-
-    render(
-      <EnnustePageV2
-        onReportCreated={() => undefined}
-        initialScenarioId="base-1"
-        computedFromUpdatedAtByScenario={{
-          'base-1': '2026-03-09T07:00:00.000Z',
-        }}
-      />,
-    );
-
-    const investmentProgramSection = await openInvestmentWorkbench();
-    fireEvent.click(
-      within(investmentProgramSection).getAllByRole('button', {
-        name: 'Continue to depreciation plans',
-      })[0],
-    );
-
-    expect(
-      await screen.findByRole('heading', {
-        name: 'Depreciation plans for future investments',
-      }),
-    ).toBeTruthy();
-
-    const mappingCard = screen
-      .getByText('Set a depreciation plan for each investment year')
-      .closest('article') as HTMLElement;
-    fireEvent.click(within(mappingCard).getByRole('button'));
-
-    await waitFor(() => {
-      expect(updateScenarioClassAllocationsV2).toHaveBeenCalledWith('base-1', {
-        years: [
-          {
-            year: 2024,
-            allocations: [{ classKey: 'network', sharePct: 100 }],
-          },
-          {
-            year: 2025,
-            allocations: [{ classKey: 'plant', sharePct: 100 }],
-          },
-        ],
-      });
-    });
-  });
-
-  it('keeps ambiguous investment groups unmapped in depreciation plans', async () => {
-    getForecastScenarioV2.mockImplementation(async (id: string) => {
-      if (id === 'base-1') {
-        return {
-          ...buildBaseScenario(),
-          yearlyInvestments: [
-            {
-              year: 2024,
-              amount: 120000,
-              target: 'Special asset',
-              category: 'mystery-upgrade',
-              investmentType: 'replacement',
-              confidence: 'medium',
-              waterAmount: 70000,
-              wastewaterAmount: 50000,
-              note: 'Needs manual classification',
-            },
-          ],
-        };
-      }
-      return buildStressScenario();
-    });
-    getScenarioClassAllocationsV2.mockResolvedValueOnce({
-      years: [],
-    });
-
-    render(
-      <EnnustePageV2
-        onReportCreated={() => undefined}
-        initialScenarioId="base-1"
-        computedFromUpdatedAtByScenario={{
-          'base-1': '2026-03-09T07:00:00.000Z',
-        }}
-      />,
-    );
-
-    const investmentProgramSection = await openInvestmentWorkbench();
-    fireEvent.click(
-      within(investmentProgramSection).getAllByRole('button', {
-        name: 'Continue to depreciation plans',
-      })[0],
-    );
-
-    expect(
-      await screen.findByRole('heading', {
-        name: 'Depreciation plans for future investments',
-      }),
-    ).toBeTruthy();
-    expect(screen.getAllByText('Unmapped investment years: 2024').length).toBeGreaterThan(0);
-    expect(
-      screen.getByText(
-        'Reports stay blocked until this investment year has a saved depreciation rule.',
-      ),
-    ).toBeTruthy();
-    expect(
-      screen.queryByText(
-        'Default suggestion ready: Network. Save depreciation plans to keep it for 2024.',
-      ),
-    ).toBeNull();
-    expect(
-      screen.queryByRole('button', { name: 'Carry forward 2023 mapping' }),
-    ).toBeNull();
     expect(
       (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
+        .title,
+    ).toContain('Review and save the Vesinvest class plan before creating a report.');
   });
 
   it('returns to the compact cockpit after drill-down edits are recomputed back to a report-ready state', async () => {

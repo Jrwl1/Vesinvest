@@ -241,10 +241,10 @@ export function useForecastDepreciationController({
         .filter(
           (row) =>
             row.amount > 0 &&
-            !effectiveInvestmentDepreciationClassByYear[row.year],
+            !row.depreciationRuleSnapshot,
         )
         .map((row) => row.year),
-    [draftInvestments, effectiveInvestmentDepreciationClassByYear],
+    [draftInvestments],
   );
 
   const hasMissingDepreciationRules =

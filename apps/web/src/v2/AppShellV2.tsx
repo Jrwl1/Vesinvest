@@ -12,6 +12,8 @@ import { applyOrganizationDefaultLanguage } from '../i18n';
 import { OverviewPageV2 } from './OverviewPageV2';
 import { sendV2OpsEvent } from './opsTelemetry';
 import {
+  getPresentedOverviewWorkflowStep,
+  PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
   resolvePreviousSetupStep,
   resolveSetupWizardStateFromImportStatus,
   type SetupWizardState,
@@ -188,6 +190,7 @@ export const AppShellV2: React.FC<Props> = ({
   const hasSelectedUtility =
     typeof setupOrgName === 'string' && setupOrgName.trim().length > 0;
   const shellSetupStep = setupWizardState?.currentStep ?? 1;
+  const shellPresentedStep = getPresentedOverviewWorkflowStep(shellSetupStep);
   const showCompletedOverviewWorkspace =
     activeTab === 'overview' &&
     !!setupWizardState?.forecastUnlocked &&
@@ -218,8 +221,8 @@ export const AppShellV2: React.FC<Props> = ({
       ? activeTabLabel
     : activeTab === 'overview' && setupWizardState
       ? t('v2Shell.setupStepLabel', 'Step {{step}} / {{total}}', {
-          step: shellSetupStep,
-          total: setupWizardState.totalSteps,
+          step: shellPresentedStep,
+          total: PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
         })
       : !hasSelectedUtility
         ? t('v2Shell.planRequired', 'Create Vesinvest plan')
@@ -239,8 +242,8 @@ export const AppShellV2: React.FC<Props> = ({
       : null;
   const shellBackLabel =
     shellBackStep === 1
-      ? t('v2Shell.backToPlan', 'Back to plan')
-      : shellBackStep === 2
+      ? t('v2Shell.backToIdentity', 'Back to utility identity')
+    : shellBackStep === 2
       ? t('v2Shell.backToIdentity', 'Back to utility identity')
       : shellBackStep === 3
       ? t('v2Shell.backToInvestmentPlan', 'Back to investment plan')

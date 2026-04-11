@@ -129,14 +129,14 @@ type ReportSnapshot = {
       totalAmount: number;
     }>;
     groupedProjects?: Array<{
-      reportGroupKey: string;
-      reportGroupLabel: string;
+      classKey: string;
+      classLabel: string;
       totalAmount: number;
       projects?: Array<{
         code: string;
         name: string;
-        groupKey: string;
-        groupLabel: string;
+        classKey: string;
+        classLabel: string;
         accountKey?: string | null;
         allocations?: Array<{
           year: number;
@@ -146,6 +146,15 @@ type ReportSnapshot = {
         }>;
         totalAmount: number;
       }>;
+    }>;
+    depreciationPlan?: Array<{
+      classKey: string;
+      classLabel: string;
+      accountKey?: string | null;
+      serviceSplit: 'water' | 'wastewater' | 'mixed';
+      method: string;
+      linearYears?: number | null;
+      residualPercent?: number | null;
     }>;
   } | null;
 } | null;
@@ -253,6 +262,37 @@ export async function buildV2ReportPdf({
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })} %`;
+  const formatServiceSplit = (value: 'water' | 'wastewater' | 'mixed') => {
+    switch (value) {
+      case 'water':
+        return 'Water';
+      case 'wastewater':
+        return 'Wastewater';
+      default:
+        return 'Mixed';
+    }
+  };
+  const formatDepreciationMethod = ({
+    method,
+    linearYears,
+    residualPercent,
+  }: {
+    method: string;
+    linearYears?: number | null;
+    residualPercent?: number | null;
+  }) => {
+    switch (method) {
+      case 'straight-line':
+        return `Straight-line ${linearYears ?? 0} years`;
+      case 'linear':
+        return 'Linear';
+      case 'residual':
+        return `Residual ${residualPercent ?? 0} %`;
+      case 'none':
+      default:
+        return 'No depreciation';
+    }
+  };
   const formatVolume = (value: number | null | undefined) =>
     value == null || !Number.isFinite(value)
       ? '-'
@@ -525,9 +565,10 @@ export async function buildV2ReportPdf({
     annualInvestmentRows.length > 0
       ? `Appendix B: annual investment path ${annualInvestmentRows[0]!.year}-${annualInvestmentRows[annualInvestmentRows.length - 1]!.year} (${annualInvestmentRows.length} years)`
       : 'Appendix B: annual investment path';
-  const investmentPlanHeading = 'Appendix C: grouped investment plan';
-  const yearlyInvestmentsHeading = 'Appendix D: yearly investment rows';
-  const assumptionsHeading = 'Appendix E: assumptions';
+  const investmentPlanHeading = 'Appendix C: investment plan by class';
+  const depreciationPlanHeading = 'Appendix D: depreciation plan';
+  const yearlyInvestmentsHeading = 'Appendix E: yearly investment rows';
+  const assumptionsHeading = 'Appendix F: assumptions';
   const baselineTariffRow = annualTariffRows[0] ?? null;
   const peakAnnualInvestmentRow =
     annualInvestmentRows.length > 0
@@ -894,7 +935,8 @@ export async function buildV2ReportPdf({
   if (
     reportSections.investmentPlan &&
     ((vesinvestAppendix?.fiveYearBands?.length ?? 0) > 0 ||
-      (vesinvestAppendix?.groupedProjects?.length ?? 0) > 0)
+      (vesinvestAppendix?.groupedProjects?.length ?? 0) > 0 ||
+      (vesinvestAppendix?.depreciationPlan?.length ?? 0) > 0)
   ) {
     nextPage();
     drawSectionHeading(investmentPlanHeading);
@@ -923,7 +965,7 @@ export async function buildV2ReportPdf({
       for (const group of vesinvestAppendix?.groupedProjects ?? []) {
         ensureSpace(18);
         draw(
-          toPdfText(`${group.reportGroupLabel} (${group.reportGroupKey})`),
+          toPdfText(`${group.classLabel} (${group.classKey})`),
           40,
           y,
           9,
@@ -936,11 +978,7 @@ export async function buildV2ReportPdf({
           ensureSpace(14 + allocationLines.length * 10);
           draw(toPdfText(project.code), 40, y, 8);
           draw(
-            toPdfText(
-              `${project.name}${
-                project.groupLabel ? ` / ${project.groupLabel}` : ''
-              }`.slice(0, 56) || '-',
-            ),
+            toPdfText(project.name.slice(0, 56) || '-'),
             110,
             y,
             8,
@@ -953,6 +991,45 @@ export async function buildV2ReportPdf({
             y -= 9;
           }
         }
+      }
+    }
+
+    if ((vesinvestAppendix?.depreciationPlan?.length ?? 0) > 0) {
+      y -= 4;
+      drawLine(depreciationPlanHeading, MARGIN_LEFT, 10, true, 14);
+      draw('Class', 40, y, 9, true);
+      draw('Account', 240, y, 9, true);
+      draw('Split', 350, y, 9, true);
+      draw('Method', 430, y, 9, true);
+      draw('Write-off', 600, y, 9, true);
+      draw('Residual', 690, y, 9, true);
+      y -= 12;
+
+      for (const row of vesinvestAppendix?.depreciationPlan ?? []) {
+        ensureSpace(14);
+        draw(toPdfText(row.classLabel.slice(0, 28)), 40, y, 8);
+        draw(toPdfText((row.accountKey ?? '-').slice(0, 18)), 240, y, 8);
+        draw(toPdfText(formatServiceSplit(row.serviceSplit)), 350, y, 8);
+        draw(
+          toPdfText(
+            formatDepreciationMethod({
+              method: row.method,
+              linearYears: row.linearYears,
+              residualPercent: row.residualPercent,
+            }).slice(0, 28),
+          ),
+          430,
+          y,
+          8,
+        );
+        draw(String(row.linearYears ?? '-'), 600, y, 8);
+        draw(
+          row.residualPercent == null ? '-' : formatPct(row.residualPercent),
+          690,
+          y,
+          8,
+        );
+        y -= 11;
       }
     }
   }

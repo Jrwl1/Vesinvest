@@ -1863,6 +1863,7 @@ export type V2VesinvestPlanSummary = {
   totalInvestmentAmount: number;
   lastReviewedAt: string | null;
   reviewDueAt: string | null;
+  classificationReviewRequired: boolean;
   baselineChangedSinceAcceptedRevision: boolean;
   investmentPlanChangedSinceFeeRecommendation: boolean;
   baselineFingerprint: string | null;
@@ -2395,14 +2396,14 @@ export type V2ReportDetail = {
         totalAmount: number;
       }>;
       groupedProjects: Array<{
-        reportGroupKey: string;
-        reportGroupLabel: string;
+        classKey: string;
+        classLabel: string;
         totalAmount: number;
         projects: Array<{
           code: string;
           name: string;
-          groupKey: string;
-          groupLabel: string;
+          classKey: string;
+          classLabel: string;
           accountKey: string | null;
           allocations: Array<{
             year: number;
@@ -2412,6 +2413,15 @@ export type V2ReportDetail = {
           }>;
           totalAmount: number;
         }>;
+      }>;
+      depreciationPlan: Array<{
+        classKey: string;
+        classLabel: string;
+        accountKey: string | null;
+        serviceSplit: 'water' | 'wastewater' | 'mixed';
+        method: V2DepreciationRuleMethod;
+        linearYears: number | null;
+        residualPercent: number | null;
       }>;
     } | null;
     reportVariant: 'public_summary' | 'confidential_appendix';

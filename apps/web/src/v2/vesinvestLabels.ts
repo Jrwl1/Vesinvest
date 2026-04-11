@@ -23,6 +23,14 @@ const GROUP_LABELS: Record<
     labelKey: 'v2Vesinvest.groupNewWastewaterNetwork',
     defaultLabel: 'New wastewater network',
   },
+  repair_water_network: {
+    labelKey: 'v2Vesinvest.groupRepairWaterNetwork',
+    defaultLabel: 'Water network repair',
+  },
+  repair_wastewater_network: {
+    labelKey: 'v2Vesinvest.groupRepairWastewaterNetwork',
+    defaultLabel: 'Wastewater network repair',
+  },
   waterworks_equipment: {
     labelKey: 'v2Vesinvest.groupWaterworksEquipment',
     defaultLabel: 'Waterworks equipment',

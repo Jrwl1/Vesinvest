@@ -15,7 +15,9 @@ import { OverviewManualPatchPanel } from './OverviewManualPatchPanel';
 import { getFinancialSourceFieldLabel } from './overviewLabels';
 import { buildOverviewManualPatchViewModel } from './overviewManualPatchModel';
 import {
+  getPresentedOverviewWorkflowStep,
   getMissingSyncRequirements,
+  PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
   resolveVesinvestWorkflowState,
   getSyncBlockReasonKey,
   isSyncReadyYear,
@@ -450,27 +452,16 @@ export const OverviewPageV2: React.FC<Props> = ({
       detail: planningBaselineSummaryDetail,
     },
   ] as const;
-  const wizardStepContent: Record<
-    number,
-    { title: string; body: string; badge: string }
-  > = {
+  const wizardStepContent: Record<number, { title: string; body: string; badge: string }> = {
     1: {
       title: t('v2Vesinvest.workflowIdentifyUtility', 'Identify the utility'),
       body: t(
         'v2Vesinvest.workflowIdentifyUtilityBody',
-        'Search and connect the VEETI utility before creating the first Vesinvest plan.',
+        'Search and connect the VEETI utility. The first Vesinvest plan is created automatically after the utility is linked.',
       ),
       badge: t('v2Vesinvest.workflowPlanFirst', 'VEETI-first'),
     },
     2: {
-      title: t('v2Vesinvest.workflowCreatePlan', 'Create Vesinvest plan'),
-      body: t(
-        'v2Vesinvest.workflowCreatePlanBody',
-        'After the VEETI utility is connected, create the first plan revision and carry the linked identity into Vesinvest.',
-      ),
-      badge: t('v2Vesinvest.eyebrow', 'Vesinvest'),
-    },
-    3: {
       title: t('v2Vesinvest.workflowBuildPlan', 'Build the investment plan'),
       body: t(
         'v2Vesinvest.workflowBuildPlanBody',
@@ -478,7 +469,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       ),
       badge: t('v2Vesinvest.investmentPlan', 'Investment plan'),
     },
-    4: {
+    3: {
       title: t(
         'v2Vesinvest.workflowVerifyEvidence',
         'Verify baseline & evidence',
@@ -489,7 +480,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       ),
       badge: t('v2Vesinvest.evidenceTitle', 'Accepted baseline years'),
     },
-    5: {
+    4: {
       title: t('v2Vesinvest.workflowOpenFeePath', 'Open fee path'),
       body: t(
         'v2Vesinvest.workflowOpenFeePathBody',
@@ -497,7 +488,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       ),
       badge: t('v2Vesinvest.feePathEyebrow', 'Fee path'),
     },
-    6: {
+    5: {
       title: t('v2Vesinvest.workflowCreateReport', 'Create report'),
       body: t(
         'v2Vesinvest.workflowCreateReportBody',
@@ -506,13 +497,17 @@ export const OverviewPageV2: React.FC<Props> = ({
       badge: t('v2Shell.tabs.reports', 'Reports'),
     },
   };
+  const shouldRespectBackNavigation =
+    reviewContinueStep != null && wizardDisplayStep < wizardProgressStep;
   const mountedWorkflowStep =
     wizardDisplayStep === 4
       ? 4
-      : activeVesinvestPlan && wizardProgressStep > wizardDisplayStep
+      : activeVesinvestPlan &&
+          wizardProgressStep > wizardDisplayStep &&
+          !shouldRespectBackNavigation
       ? wizardProgressStep
       : wizardDisplayStep;
-  const overviewVisualStep = mountedWorkflowStep;
+  const overviewVisualStep = getPresentedOverviewWorkflowStep(mountedWorkflowStep);
   const wizardHero = wizardStepContent[overviewVisualStep];
   const isStep2SupportChrome = overviewVisualStep === 2;
   const summaryMetaBlocks = [
@@ -542,17 +537,19 @@ export const OverviewPageV2: React.FC<Props> = ({
     wizardSummaryItems[4],
   ].filter((item): item is (typeof wizardSummaryItems)[number] => item != null);
   const connectButtonClass =
-    mountedWorkflowStep === 1 ? 'v2-btn v2-btn-primary' : 'v2-btn';
+    overviewVisualStep === 1 ? 'v2-btn v2-btn-primary' : 'v2-btn';
   const importYearsButtonClass =
-    mountedWorkflowStep === 2 ? 'v2-btn v2-btn-primary' : 'v2-btn';
+    overviewVisualStep === 2 ? 'v2-btn v2-btn-primary' : 'v2-btn';
   const reviewContinueButtonClass =
-    mountedWorkflowStep === 3 || mountedWorkflowStep === 4
+    overviewVisualStep === 2 || overviewVisualStep === 3
       ? 'v2-btn v2-btn-primary'
       : 'v2-btn';
   const planningBaselineButtonClass =
-    mountedWorkflowStep === 5 ? 'v2-btn v2-btn-primary' : 'v2-btn';
+    overviewVisualStep === 4 ? 'v2-btn v2-btn-primary' : 'v2-btn';
   const openForecastButtonClass =
-    mountedWorkflowStep === 6 ? 'v2-btn v2-btn-primary' : 'v2-btn';
+    overviewVisualStep === PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS
+      ? 'v2-btn v2-btn-primary'
+      : 'v2-btn';
 
   const setWorkbookSelection = (
     year: number,
@@ -591,7 +588,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     mountedWorkflowStep === 1 ? (
       <OverviewConnectStep
         t={t}
-        workflowStep={mountedWorkflowStep}
+        workflowStep={overviewVisualStep}
         query={query}
         onQueryChange={(value) => {
           setQuery(value);
@@ -626,7 +623,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     showImportYearsSurface ? (
       <OverviewImportBoard
         t={t}
-        workflowStep={mountedWorkflowStep}
+        workflowStep={overviewVisualStep}
         wizardBackLabel={wizardBackLabel}
         onBack={handleWizardBack}
         selectedYears={selectedYears}
@@ -667,7 +664,8 @@ export const OverviewPageV2: React.FC<Props> = ({
     overviewVisualStep === 3;
   const shouldShowVesinvestPanel =
     importStatus.connected === true || activeVesinvestPlan != null;
-  const useSupportRail = overviewVisualStep !== 6;
+  const useSupportRail =
+    overviewVisualStep !== PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS;
   const compactSupportingChrome = shouldLeadWithActionSurface;
   const supportingChromeEyebrow = compactSupportingChrome
     ? t('v2Overview.wizardSummaryTitle')
@@ -751,7 +749,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       (mountedWorkflowStep === 3 || mountedWorkflowStep === 4) ? (
         <OverviewReviewBoard
           t={t}
-          workflowStep={mountedWorkflowStep}
+          workflowStep={overviewVisualStep}
           wizardBackLabel={wizardBackLabel}
           onBack={handleWizardBack}
           reviewStatusRows={reviewStatusRows}
@@ -820,7 +818,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       {mountedWorkflowStep === 5 ? (
         <OverviewPlanningBaselineStep
           t={t}
-          workflowStep={mountedWorkflowStep}
+          workflowStep={overviewVisualStep}
           wizardBackLabel={wizardBackLabel}
           onBack={handleWizardBack}
           includedPlanningYears={includedPlanningYears}

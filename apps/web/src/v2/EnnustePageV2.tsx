@@ -1,11 +1,9 @@
 import React from 'react';
 import { ForecastCockpitSurface } from './ForecastCockpitSurface';
-import { ForecastDepreciationSurface } from './ForecastDepreciationSurface';
 import { ForecastInvestmentSurface } from './ForecastInvestmentSurface';
 import { ForecastOpexSurface } from './ForecastOpexSurface';
 import { ForecastRevenueSurface } from './ForecastRevenueSurface';
 import { ForecastScenarioStrip } from './ForecastScenarioStrip';
-import { getDepreciationRuleGroup } from './forecastModel';
 import {
   useForecastPageController,
   type ForecastPageControllerProps,
@@ -16,14 +14,17 @@ type Props = ForecastPageControllerProps;
 export const EnnustePageV2: React.FC<Props> = (props) => {
   const controller = useForecastPageController(props);
   const investmentSectionRef = React.useRef<HTMLDivElement | null>(null);
-  const depreciationSectionRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (controller.activeWorkbench === 'depreciation') {
+      controller.setActiveWorkbench('investments');
+    }
+  }, [controller.activeWorkbench, controller.setActiveWorkbench]);
 
   React.useEffect(() => {
     const targetSection =
       controller.activeWorkbench === 'investments'
         ? investmentSectionRef.current
-        : controller.activeWorkbench === 'depreciation'
-        ? depreciationSectionRef.current
         : null;
     targetSection?.scrollIntoView?.({ block: 'start', inline: 'nearest' });
   }, [controller.activeWorkbench]);
@@ -38,7 +39,6 @@ export const EnnustePageV2: React.FC<Props> = (props) => {
       investmentImpactSummary={controller.investmentImpactSummary}
       hasInvestmentDepreciationErrors={controller.hasInvestmentDepreciationErrors}
       invalidInvestmentDepreciationYears={controller.invalidInvestmentDepreciationYears}
-      onContinueToDepreciation={() => controller.setActiveWorkbench('depreciation')}
       renderInvestmentProgramRows={controller.renderInvestmentProgramRows}
       nearTermInvestmentRows={controller.nearTermInvestmentRows}
       investmentProgramGroupOptions={controller.investmentProgramGroupOptions}
@@ -127,79 +127,6 @@ export const EnnustePageV2: React.FC<Props> = (props) => {
                   </div>
                   {investmentProgramSurface}
                 </section>
-              </div>
-
-              <div
-                ref={depreciationSectionRef}
-                className={`v2-forecast-planning-section ${
-                  controller.activeWorkbench === 'depreciation' ? 'is-active' : ''
-                }`.trim()}
-              >
-                <ForecastDepreciationSurface
-                  t={controller.t}
-                  reportReadinessToneClass={controller.reportReadinessToneClass}
-                  reportReadinessLabel={controller.reportReadinessLabel}
-                  reportReadinessReason={controller.reportReadinessReason}
-                  reportReadinessHint={controller.reportReadinessHint}
-                  baselineDepreciationTotal={controller.baselineDepreciationTotal}
-                  newInvestmentDepreciationTotal={controller.newInvestmentDepreciationTotal}
-                  totalDepreciationEffect={controller.totalDepreciationEffect}
-                  requiredPriceToday={
-                    controller.scenario.requiredPriceTodayCombinedAnnualResult ??
-                    controller.scenario.requiredPriceTodayCombined ??
-                    controller.scenario.baselinePriceTodayCombined ??
-                    0
-                  }
-                  requiredAnnualIncreasePct={
-                    controller.scenario.requiredAnnualIncreasePctAnnualResult ??
-                    controller.scenario.requiredAnnualIncreasePct ??
-                    0
-                  }
-                  underfundingStartYear={
-                    controller.scenario.feeSufficiency.cumulativeCash.underfundingStartYear ??
-                    null
-                  }
-                  peakGap={controller.scenario.feeSufficiency.cumulativeCash.peakGap}
-                  latestCashflow={controller.latestCashflowPoint?.cashflow ?? null}
-                  depreciationPreviewRows={controller.depreciationPreviewRows}
-                  unmappedInvestmentYears={controller.unmappedInvestmentYears}
-                  savedMappedInvestmentYearsCount={
-                    controller.savedMappedInvestmentYearsCount
-                  }
-                  plannedInvestmentYearCount={controller.plannedInvestmentYears.length}
-                  depreciationClassKeys={controller.depreciationClassKeys}
-                  draftInvestments={controller.draftInvestments}
-                  savedMappedDepreciationClassByYear={
-                    controller.savedMappedDepreciationClassByYear
-                  }
-                  inferredDepreciationClassOptionByYear={
-                    controller.inferredDepreciationClassOptionByYear
-                  }
-                  previousSavedDepreciationClassByYear={
-                    controller.previousSavedDepreciationClassByYear
-                  }
-                  mappedDepreciationClassByYear={
-                    controller.mappedDepreciationClassByYear
-                  }
-                  handleAllocationDraftChange={controller.handleAllocationDraftChange}
-                  depreciationClassOptions={controller.depreciationClassOptions}
-                  applyCarryForwardMapping={controller.applyCarryForwardMapping}
-                  busy={controller.busy}
-                  canSaveClassAllocations={Boolean(controller.selectedScenarioId)}
-                  saveClassAllocations={() => void controller.saveClassAllocations()}
-                  loadingDepreciation={controller.loadingDepreciation}
-                  depreciationRuleDrafts={controller.depreciationRuleDrafts}
-                  getDepreciationRuleGroup={getDepreciationRuleGroup}
-                  handleDepreciationRuleDraftChange={
-                    controller.handleDepreciationRuleDraftChange
-                  }
-                  saveDepreciationRuleDraft={(index) =>
-                    void controller.saveDepreciationRuleDraft(index)
-                  }
-                  formatEur={controller.formatEur}
-                  formatPrice={controller.formatPrice}
-                  formatPercent={controller.formatPercent}
-                />
               </div>
 
               {controller.activeWorkbench === 'revenue' ? (

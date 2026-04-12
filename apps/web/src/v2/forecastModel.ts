@@ -213,6 +213,12 @@ export const investmentsEqual = (
       return false;
     }
     if ((left.note ?? '') !== (right.note ?? '')) return false;
+    if ((left.vesinvestPlanId ?? '') !== (right.vesinvestPlanId ?? '')) {
+      return false;
+    }
+    if ((left.vesinvestProjectId ?? '') !== (right.vesinvestProjectId ?? '')) {
+      return false;
+    }
     if ((left.allocationId ?? '') !== (right.allocationId ?? '')) return false;
     if ((left.projectCode ?? '') !== (right.projectCode ?? '')) return false;
     if ((left.groupKey ?? '') !== (right.groupKey ?? '')) return false;
@@ -525,4 +531,11 @@ export const toYearlyInvestmentInput = (
   waterAmount: row.waterAmount ?? null,
   wastewaterAmount: row.wastewaterAmount ?? null,
   note: row.note ?? null,
+  vesinvestPlanId: row.vesinvestPlanId ?? null,
+  vesinvestProjectId: row.vesinvestProjectId ?? null,
+  allocationId: row.allocationId ?? null,
+  projectCode: row.projectCode ?? null,
+  groupKey: row.groupKey ?? null,
+  accountKey: row.accountKey ?? null,
+  reportGroupKey: row.reportGroupKey ?? null,
 });

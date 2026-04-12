@@ -110,6 +110,13 @@ const buildBaseScenario = () => ({
       amount: 120000,
       target: 'Main line renewal',
       category: 'network',
+      vesinvestPlanId: 'plan-1',
+      vesinvestProjectId: 'project-1',
+      allocationId: 'allocation-2024',
+      projectCode: 'P-001',
+      groupKey: 'sanering_water_network',
+      accountKey: 'sanering_water_network',
+      reportGroupKey: 'network_rehabilitation',
       depreciationClassKey: 'network',
       depreciationRuleSnapshot: {
         assetClassKey: 'network',
@@ -129,6 +136,13 @@ const buildBaseScenario = () => ({
       amount: 125000,
       target: 'Plant expansion',
       category: 'plant',
+      vesinvestPlanId: 'plan-1',
+      vesinvestProjectId: 'project-2',
+      allocationId: 'allocation-2025',
+      projectCode: 'P-002',
+      groupKey: 'wastewater_treatment',
+      accountKey: 'wastewater_treatment',
+      reportGroupKey: 'treatment',
       depreciationClassKey: 'plant',
       depreciationRuleSnapshot: {
         assetClassKey: 'plant',
@@ -539,20 +553,21 @@ describe('EnnustePageV2', () => {
     expect(screen.queryByText('Funding pressure and result views')).toBeNull();
     const investmentWorkbench = await openInvestmentWorkbench();
     expect(investmentWorkbench).toBeTruthy();
-    expect(screen.getByDisplayValue('Main line renewal')).toBeTruthy();
-    expect(screen.getAllByDisplayValue('network').length).toBeGreaterThan(0);
+    expect(screen.getByText('Main line renewal')).toBeTruthy();
+    expect(screen.getAllByText('P-001').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Water network rehabilitation').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Straight-line 40 years').length).toBeGreaterThan(0);
     expect(screen.getAllByDisplayValue('70000').length).toBeGreaterThan(0);
     expect(screen.getAllByDisplayValue('50000').length).toBeGreaterThan(0);
-    expect(
-      document.querySelector(
-        'datalist#v2-investment-program-group-options option[value="New network together with the technical department"]',
-      ),
-    ).toBeTruthy();
+    expect(document.querySelector('datalist#v2-investment-program-group-options')).toBeNull();
     expect(screen.getByText('Full annual table')).toBeTruthy();
     fireEvent.click(screen.getByText('Full annual table'));
     expect(
       await screen.findByRole('button', { name: 'Repeat near-term template' }),
     ).toBeTruthy();
+    expect(document.querySelector('input[name="yearlyInvestmentCategory-2024"]')).toBeNull();
+    expect(document.querySelector('select[name="yearlyInvestmentType-2024"]')).toBeNull();
+    expect(document.querySelector('select[name="yearlyInvestmentConfidence-2024"]')).toBeNull();
 
     await waitFor(() => {
       expect(getForecastScenarioV2).toHaveBeenCalledWith('stress-1');
@@ -654,8 +669,15 @@ describe('EnnustePageV2', () => {
         {
           year: 2024,
           amount: 125000,
-          target: 'Pump station upgrade',
+          target: 'Main line renewal',
           category: 'network',
+          vesinvestPlanId: 'plan-1',
+          vesinvestProjectId: 'project-1',
+          allocationId: 'allocation-2024',
+          projectCode: 'P-001',
+          groupKey: 'sanering_water_network',
+          accountKey: 'sanering_water_network',
+          reportGroupKey: 'network_rehabilitation',
           investmentType: 'replacement',
           confidence: 'high',
           waterAmount: 75000,
@@ -683,15 +705,20 @@ describe('EnnustePageV2', () => {
     expect(investmentProgramTable).toBeTruthy();
     const investmentProgramWithin = within(investmentProgramTable!);
 
-    fireEvent.change(investmentProgramWithin.getByRole('textbox', { name: 'Target 2024' }), {
-      target: { value: 'Pump station upgrade' },
-    });
-    fireEvent.change(
-      investmentProgramWithin.getByRole('combobox', { name: 'Group 2024' }),
-      {
-        target: { value: 'network' },
-      },
-    );
+    expect(
+      investmentProgramWithin.queryByRole('textbox', { name: 'Target 2024' }),
+    ).toBeNull();
+    expect(
+      investmentProgramWithin.queryByRole('combobox', { name: 'Type 2024' }),
+    ).toBeNull();
+    expect(
+      investmentProgramWithin.queryByRole('combobox', { name: 'Group 2024' }),
+    ).toBeNull();
+    expect(
+      investmentProgramWithin.queryByRole('combobox', {
+        name: 'Depreciation rule 2024',
+      }),
+    ).toBeNull();
     fireEvent.change(
       investmentProgramWithin.getByRole('spinbutton', {
         name: 'Water EUR 2024',
@@ -721,8 +748,15 @@ describe('EnnustePageV2', () => {
             expect.objectContaining({
               year: 2024,
               amount: 125000,
-              target: 'Pump station upgrade',
+              target: 'Main line renewal',
               category: 'network',
+              vesinvestPlanId: 'plan-1',
+              vesinvestProjectId: 'project-1',
+              allocationId: 'allocation-2024',
+              projectCode: 'P-001',
+              groupKey: 'sanering_water_network',
+              accountKey: 'sanering_water_network',
+              reportGroupKey: 'network_rehabilitation',
               depreciationClassKey: 'network',
               waterAmount: 75000,
               wastewaterAmount: 50000,
@@ -758,12 +792,15 @@ describe('EnnustePageV2', () => {
       />,
     );
 
-    await openInvestmentWorkbench();
+    const investmentProgramSection = await openInvestmentWorkbench();
+    const noteInput = investmentProgramSection.querySelector(
+      'input[name="investmentProgramNote-2024"]',
+    ) as HTMLInputElement | null;
+    expect(noteInput).toBeTruthy();
 
-    fireEvent.change(
-      screen.getByRole('textbox', { name: 'Target 2024' }),
-      { target: { value: 'Pump station rebuild' } },
-    );
+    fireEvent.change(noteInput!, {
+      target: { value: 'Forecast analyst note' },
+    });
 
     expect(
       await screen.findAllByText('Depreciation snapshots are missing for years: 2025'),
@@ -778,6 +815,36 @@ describe('EnnustePageV2', () => {
     expect(
       screen.queryByRole('button', { name: 'Continue to depreciation plans' }),
     ).toBeNull();
+  });
+
+  it('keeps linked depreciation snapshots visible even when editable rules are unavailable', async () => {
+    listDepreciationRulesV2.mockResolvedValue([]);
+    listScenarioDepreciationRulesV2.mockResolvedValue([]);
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    const investmentProgramSection = await openInvestmentWorkbench();
+    const investmentProgramTable = investmentProgramSection.querySelector(
+      '.v2-investment-program-table',
+    ) as HTMLElement | null;
+    expect(investmentProgramTable).toBeTruthy();
+    const investmentProgramWithin = within(investmentProgramTable!);
+
+    expect(
+      await screen.findByText(
+        'Depreciation rules are missing for this scenario. Refresh the scenario before saving investment years.',
+      ),
+    ).toBeTruthy();
+    expect(investmentProgramWithin.getAllByText('Straight-line 40 years').length).toBeGreaterThan(0);
+    expect(investmentProgramWithin.queryByText('Depreciation rules unavailable')).toBeNull();
   });
 
   it('keeps investment totals and depreciation impact visible in one stacked planning flow', async () => {

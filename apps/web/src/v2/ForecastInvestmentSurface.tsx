@@ -4,6 +4,16 @@ import type { V2YearlyInvestmentPlanRow } from '../api';
 
 type InvestmentSurfaceRow = V2YearlyInvestmentPlanRow;
 
+function isVesinvestLinkedForecastRow(row: InvestmentSurfaceRow): boolean {
+  return (
+    (row.vesinvestPlanId ?? '').trim().length > 0 ||
+    (row.vesinvestProjectId ?? '').trim().length > 0 ||
+    (row.allocationId ?? '').trim().length > 0 ||
+    (row.projectCode ?? '').trim().length > 0 ||
+    (row.groupKey ?? '').trim().length > 0
+  );
+}
+
 type LongRangeInvestmentGroup = {
   id: string;
   startYear: number;
@@ -76,6 +86,13 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
   formatEur,
   formatPrice,
 }) => {
+  const allNearTermRowsLinked =
+    nearTermInvestmentRows.length > 0 &&
+    nearTermInvestmentRows.every((row) => isVesinvestLinkedForecastRow(row));
+  const hasEditableNearTermGroupRows = nearTermInvestmentRows.some(
+    (row) => !isVesinvestLinkedForecastRow(row),
+  );
+
   return (
     <article className="v2-subcard v2-investment-program-card">
       <div className="v2-section-header">
@@ -213,8 +230,16 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
         >
           <span>{t('common.year', 'Year')}</span>
           <span>{t('v2Forecast.investmentProgramTargetLabel', 'Target')}</span>
-          <span>{t('v2Forecast.investmentProgramTypeLabel', 'Type')}</span>
-          <span>{t('v2Forecast.investmentProgramGroupLabel', 'Group')}</span>
+          <span>
+            {allNearTermRowsLinked
+              ? t('v2Vesinvest.projectCode', 'Code')
+              : t('v2Forecast.investmentProgramTypeLabel', 'Type')}
+          </span>
+          <span>
+            {allNearTermRowsLinked
+              ? t('v2Vesinvest.projectClass', 'Class')
+              : t('v2Forecast.investmentProgramGroupLabel', 'Group')}
+          </span>
           <span>{t('v2Forecast.depreciationCategory', 'Depreciation rule')}</span>
           <span>{t('v2Forecast.investmentProgramWaterAmount', 'Water EUR')}</span>
           <span>
@@ -225,11 +250,13 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
         </div>
         {renderInvestmentProgramRows(nearTermInvestmentRows)}
       </div>
-      <datalist id="v2-investment-program-group-options">
-        {investmentProgramGroupOptions.map((option) => (
-          <option key={option} value={option} />
-        ))}
-      </datalist>
+      {hasEditableNearTermGroupRows ? (
+        <datalist id="v2-investment-program-group-options">
+          {investmentProgramGroupOptions.map((option) => (
+            <option key={option} value={option} />
+          ))}
+        </datalist>
+      ) : null}
 
       {longRangeInvestmentGroups.length > 0 ? (
         <div className="v2-investment-group-list">

@@ -2,6 +2,10 @@
 
 Water utility financial planning system for Finnish small-to-medium water utilities. Vesipolku uses VEETI as the default seed and comparator, lets operators correct bad historical years with statement-backed manual capture, and builds forecast scenarios and reports from effective year data.
 
+## Repository status
+
+This repository is private, proprietary source code. It is not open source, no open-source license is granted, and redistribution or external contribution is not allowed without explicit written permission from the repository owner.
+
 **Monorepo:** NestJS API (`apps/api`) + React / Vite web (`apps/web`). Shared packages: `domain` (types), `config` (ESLint, Prettier, TS).
 
 **Docs:** For canonical doc set and read order see [docs/CANONICAL.md](docs/CANONICAL.md).
@@ -200,7 +204,7 @@ infra/docker/          docker-compose.yml (Postgres + MinIO)
 | ------------------------------------------------------------ | ------------------------------------------------ |
 | [Architecture](docs/ARCHITECTURE.md)                         | System design, data flow, auth model, invariants |
 | [API Reference](docs/API.md)                                 | All endpoints, auth requirements, error format   |
-| [Contributing](CONTRIBUTING.md)                              | Dev setup, code style, PR guidelines             |
+| [Internal Development](CONTRIBUTING.md)                     | Dev setup and internal engineering workflow      |
 | [V2 Direction Plan](docs/PLAN20_V2_PIVOT_PLAN.md)            | Effective-year product direction and sequencing  |
 | [Decisions (ADR)](docs/DECISIONS.md)                         | Key architectural decisions                      |
 | [Prompts](docs/playbooks/PROMPTS.md)                         | Cursor / AI prompt templates for this repo       |
@@ -209,4 +213,4 @@ infra/docker/          docker-compose.yml (Postgres + MinIO)
 
 ## License
 
-MIT
+Proprietary. All rights reserved.

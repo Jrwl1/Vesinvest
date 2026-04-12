@@ -1,4 +1,6 @@
-# Contributing
+# Internal Development
+
+This repository is private and maintained internally. External contributions are not accepted unless the repository owner has given explicit written permission.
 
 ## Dev environment setup
 
@@ -30,10 +32,10 @@ pnpm --filter api exec prisma migrate dev       # apply new migrations
 pnpm dev
 ```
 
-## Branching / PRs
+## Internal workflow
 
 - Work on feature branches off `main`.
-- Keep PRs small and focused (one feature or fix).
+- Keep branches and PRs small and focused (one feature or fix).
 - Include a short description of what changed and why.
 - Ensure `pnpm typecheck` and `pnpm test` pass before pushing.
 

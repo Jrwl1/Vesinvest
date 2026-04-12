@@ -782,6 +782,7 @@
     "investmentNeedsDepreciationRule": "Valitse poistosaanto ennen investoinnin tallentamista.",
     "investmentMissingDepreciationRule": "Tämän investoinnin poistosaantoa ei ole juuri nyt saatavilla.",
     "methodLinear": "Tasapoisto",
+    "methodResidualShort": "Menojäännös",
     "methodResidual": "Menojäännös {{percent}} %",
     "methodStraightLine": "Tasapoisto {{years}} vuotta",
     "methodCustomSchedule": "Vuosi vuodelta -jakauma",

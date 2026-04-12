@@ -336,7 +336,7 @@ describe('VesinvestPlanningPanel', () => {
       expect(listVesinvestPlansV2).toHaveBeenCalled();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add project' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add project' })[0]!);
     const dialog = screen.getByRole('dialog');
     fireEvent.change(within(dialog).getByRole('textbox', { name: /code/i }), {
       target: { value: 'P-101' },
@@ -435,7 +435,7 @@ describe('VesinvestPlanningPanel', () => {
       container.querySelector('input[name="vesinvest-project-name-0"]'),
     ).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add project' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add project' })[0]!);
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(
       container.querySelector('input[name="vesinvest-project-name-0"]'),
@@ -465,9 +465,51 @@ describe('VesinvestPlanningPanel', () => {
     );
 
     expect(
-      (screen.getByRole('button', { name: 'Add project' }) as HTMLButtonElement)
-        .disabled,
+      screen
+        .getAllByRole('button', { name: 'Add project' })
+        .every((button) => (button as HTMLButtonElement).disabled),
     ).toBe(true);
+  });
+
+  it('opens the project composer from the empty investment-plan state', async () => {
+    listVesinvestPlansV2.mockResolvedValue([
+      makeSummary({
+        projectCount: 0,
+        totalInvestmentAmount: 0,
+      }),
+    ]);
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        projectCount: 0,
+        totalInvestmentAmount: 0,
+        yearlyTotals: [],
+        fiveYearBands: [],
+        projects: [],
+      }),
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(listVesinvestPlansV2).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(
+        (screen.getByTestId('vesinvest-empty-add-project') as HTMLButtonElement).disabled,
+      ).toBe(false);
+    });
+
+    fireEvent.click(screen.getByTestId('vesinvest-empty-add-project'));
+    expect(screen.getByRole('dialog')).toBeTruthy();
   });
 
   it('saves an org-scoped group override from the admin editor', async () => {
@@ -506,6 +548,7 @@ describe('VesinvestPlanningPanel', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Depreciation plan' }));
+    expect(screen.getByText('Depreciation method')).toBeTruthy();
 
     const labelInput = container.querySelector(
       'input[name="vesinvest-group-label-sanering_water_network"]',
@@ -532,6 +575,9 @@ describe('VesinvestPlanningPanel', () => {
     expect(methodInput).toBeTruthy();
     expect(yearsInput).toBeTruthy();
     expect(residualInput).toBeTruthy();
+    expect(
+      Array.from(methodInput?.options ?? []).map((option) => option.text),
+    ).toEqual(['No depreciation', 'Straight-line', 'Residual']);
 
     fireEvent.change(labelInput!, { target: { value: 'Updated group' } });
     fireEvent.change(accountInput!, { target: { value: 'updated_account' } });

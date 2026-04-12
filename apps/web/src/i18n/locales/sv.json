@@ -773,6 +773,7 @@
     "investmentNeedsDepreciationRule": "Välj en avskrivningsregel innan du sparar investeringen.",
     "investmentMissingDepreciationRule": "Den här investeringen pekar på en avskrivningsregel som inte är tillgänglig just nu.",
     "methodLinear": "Linjär",
+    "methodResidualShort": "Restvärde",
     "methodResidual": "Restvärde {{percent}} %",
     "methodStraightLine": "Linjär {{years}} år",
     "methodCustomSchedule": "År-för-år-plan",

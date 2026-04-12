@@ -1605,7 +1605,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
       {activeWorkspaceView === 'investment' ? (
         <button
           type="button"
-          className="v2-btn"
+          className={draft.projects.length === 0 ? 'v2-btn v2-btn-primary' : 'v2-btn'}
           onClick={openProjectComposer}
           disabled={busy || loading || loadingPlan || groups.length === 0}
         >
@@ -1771,7 +1771,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
               <th>{t('v2Vesinvest.projectClass', 'Class')}</th>
               <th>{t('v2Vesinvest.projectAccount', 'Account')}</th>
               <th>{t('v2Vesinvest.allocationMetric', 'Split')}</th>
-              <th>{t('v2Forecast.depreciationMethod', 'Depreciation method')}</th>
+              <th>{t('v2Forecast.method', 'Depreciation method')}</th>
               <th>{t('v2Vesinvest.writeOffTime', 'Write-off time')}</th>
               <th>{t('v2Vesinvest.residualShare', 'Residual share')}</th>
               <th>{t('common.actions', 'Actions')}</th>
@@ -1858,12 +1858,14 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                       }))
                     }
                   >
-                    <option value="none">{t('v2Vesinvest.none', 'None')}</option>
+                    <option value="none">
+                      {t('v2Forecast.methodNone', 'No depreciation')}
+                    </option>
                     <option value="straight-line">
-                      {t('v2Forecast.methodStraightLine', 'Straight-line')}
+                      {t('v2Forecast.methodLinear', 'Straight-line')}
                     </option>
                     <option value="residual">
-                      {t('v2Forecast.methodResidual', 'Residual')}
+                      {t('v2Forecast.methodResidualShort', 'Residual')}
                     </option>
                   </select>
                 </td>
@@ -2541,10 +2543,23 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                     colSpan={draft.horizonYearsRange.length + 3}
                     className="v2-muted"
                   >
-                    {t(
-                      'v2Vesinvest.projectEmpty',
-                      'No projects yet. Add the investment plan first, then connect baseline evidence later.',
-                    )}
+                    <div>
+                      <span>
+                        {t(
+                          'v2Vesinvest.projectEmpty',
+                          'No projects yet. Add the investment plan first, then connect baseline evidence later.',
+                        )}
+                      </span>
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-primary"
+                        data-testid="vesinvest-empty-add-project"
+                        onClick={openProjectComposer}
+                        disabled={busy || loading || loadingPlan || groups.length === 0}
+                      >
+                        {t('v2Vesinvest.addProject', 'Add project')}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ) : null}

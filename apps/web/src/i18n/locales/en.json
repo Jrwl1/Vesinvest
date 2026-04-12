@@ -780,6 +780,7 @@
     "investmentNeedsDepreciationRule": "Select a depreciation rule before saving this investment.",
     "investmentMissingDepreciationRule": "This investment points to a depreciation rule that is not available right now.",
     "methodLinear": "Linear",
+    "methodResidualShort": "Residual",
     "methodResidual": "Residual {{percent}} %",
     "methodStraightLine": "Straight-line {{years}} years",
     "methodCustomSchedule": "Year-by-year schedule",

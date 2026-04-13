@@ -2111,7 +2111,6 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
         {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
         {loadingState}
-        {planStatusStrip}
       </section>
     );
   }

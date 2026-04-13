@@ -240,26 +240,6 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
       </>
     ) : (
       <>
-        {isAdmin
-          ? buildRepairActions(row.year, row.missingRequirements).map((action) => (
-              <button
-                key={`${row.year}-${action.key}`}
-                type="button"
-                className="v2-btn v2-btn-small"
-                onClick={() =>
-                  void openInlineCardEditor(
-                    row.year,
-                    action.focusField,
-                    'step3',
-                    row.missingRequirements,
-                    'manualEdit',
-                  )
-                }
-              >
-                {getReviewRepairActionLabel(t, action)}
-              </button>
-            ))
-          : null}
         <button
           type="button"
           className="v2-btn v2-btn-small"
@@ -272,9 +252,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
             )
           }
         >
-          {row.setupStatus === 'ready_for_review' || row.setupStatus === 'reviewed'
-            ? t('v2Overview.openReviewYearButton')
-            : t('v2Overview.yearDecisionAction')}
+          {t('v2Overview.openReviewYearButton')}
         </button>
       </>
     )}
@@ -1029,6 +1007,9 @@ export const OverviewReviewBoard: React.FC<Props> = ({
     () => resolvePrimaryReviewYear(reviewStatusRows),
     [reviewStatusRows],
   );
+  const reviewActionsTitle = baselineGateReady
+    ? t('v2Overview.baselineClosureTitle')
+    : t('v2Overview.wizardContextReviewQueue');
   const visibleMissingRequirementLabel = React.useCallback(
     (requirement: MissingRequirement) =>
       getReviewMissingRequirementLabel(t, missingRequirementLabel, requirement),
@@ -1308,13 +1289,9 @@ export const OverviewReviewBoard: React.FC<Props> = ({
 
     <div className="v2-overview-review-actions">
       <div className="v2-manual-section-head">
-        <h4>{t('v2Overview.baselineClosureTitle')}</h4>
+        <h4>{reviewActionsTitle}</h4>
       </div>
-      <p className="v2-muted">
-        {baselineGateReady
-          ? `${t('v2Overview.createPlanningBaseline')}: ${baselineGatePrimaryDetail}`
-          : `${t('v2Overview.reviewContinue')}: ${baselineGatePrimaryDetail}`}
-      </p>
+      <p className="v2-muted">{baselineGatePrimaryDetail}</p>
       <p className="v2-muted">{baselineGateSecondaryDetail}</p>
       <button
         type="button"

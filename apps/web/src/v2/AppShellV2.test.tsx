@@ -540,6 +540,10 @@ describe('AppShellV2', () => {
     expect(screen.getAllByText('Reports').length).toBeGreaterThan(0);
     expect(screen.queryByText('No utility selected')).toBeNull();
     expect(screen.queryByText('Setup required')).toBeNull();
+    expect(screen.queryByText('reports-content:-')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Reports' }).className,
+    ).not.toContain('active');
   });
 
   it('hydrates the selected utility and opens Forecast directly when a Vesinvest plan has a verified baseline and linked scenario', async () => {

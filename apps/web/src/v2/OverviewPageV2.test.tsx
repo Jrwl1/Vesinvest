@@ -136,11 +136,14 @@ const openReviewWorkspaceYear = async (year: number) => {
 
 const openYearDecisionWorkspaceYear = async (year: number) => {
   await focusReviewWorkspaceYear(year);
-  fireEvent.click(
-    await screen.findByRole('button', {
+  const actionButton =
+    screen.queryByRole('button', {
       name: localeText('v2Overview.yearDecisionAction'),
-    }),
-  );
+    }) ??
+    (await screen.findByRole('button', {
+      name: localeText('v2Overview.openReviewYearButton'),
+    }));
+  fireEvent.click(actionButton);
 };
 
 const getLatestSetupWizardState = (mock: ReturnType<typeof vi.fn>) =>
@@ -2001,6 +2004,92 @@ describe('OverviewPageV2', () => {
     expect(
       within(focusBlock).getByText(localeText('v2Vesinvest.workflowPlanFirst')),
     ).toBeTruthy();
+  });
+
+  it('keeps the rendered year-review focus truthful when blocked review rows remain', async () => {
+    const currentYear = new Date().getFullYear();
+    const templateYear = buildOverviewResponse().importStatus.years[0];
+    const initialOverview = buildOverviewResponse({
+      workspaceYears: [],
+      years: [
+        {
+          ...templateYear,
+          vuosi: currentYear,
+          planningRole: 'current_year_estimate',
+          completeness: {
+            tilinpaatos: true,
+            taksa: false,
+            volume_vesi: true,
+            volume_jatevesi: false,
+          },
+          sourceStatus: 'VEETI',
+          sourceBreakdown: {
+            veetiDataTypes: ['tilinpaatos', 'volume_vesi'],
+            manualDataTypes: [],
+          },
+          warnings: ['missing_prices'],
+          manualEditedAt: null,
+          manualEditedBy: null,
+          manualReason: null,
+          manualProvenance: null,
+        },
+      ],
+    });
+    const importedOverview = buildOverviewResponse({
+      workspaceYears: [currentYear],
+      years: initialOverview.importStatus.years,
+    });
+    getOverviewV2.mockResolvedValueOnce(initialOverview).mockResolvedValue(
+      importedOverview,
+    );
+    importYearsV2.mockResolvedValueOnce({
+      selectedYears: [currentYear],
+      importedYears: [currentYear],
+      skippedYears: [],
+      sync: {
+        linked: {
+          orgId: 'org-1',
+          veetiId: 1535,
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+        },
+        fetchedAt: '2026-03-08T10:00:00.000Z',
+        years: [currentYear],
+        snapshotUpserts: 1,
+      },
+      status: importedOverview.importStatus,
+    });
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.currentYearEstimateAction'),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(importYearsV2).toHaveBeenCalledWith([currentYear]);
+    });
+    expect(
+      await screen.findByText(localeText('v2Overview.wizardQuestionFixYear')),
+    ).toBeTruthy();
+
+    const focusBlock = screen
+      .getByText(localeText('v2Overview.wizardCurrentFocus'))
+      .closest('.v2-overview-meta-block') as HTMLElement;
+    expect(
+      within(focusBlock).getByText(localeText('v2Overview.blockedYearsTitle')),
+    ).toBeTruthy();
+    expect(
+      within(focusBlock).queryByText(localeText('v2Vesinvest.evidenceTitle')),
+    ).toBeNull();
   });
 
   it('does not fall back to the step-1 connect state when an active Vesinvest plan already carries utility identity', async () => {
@@ -5352,9 +5441,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Mitä tälle vuodelle tehdään?' }),
-    );
+    await openReviewWorkspaceYear(2023);
     fireEvent.click(
       await screen.findByRole('button', {
         name: localeText('v2Overview.fixYearValues'),
@@ -7933,22 +8020,32 @@ describe('OverviewPageV2', () => {
 
     expect(await screen.findByRole('button', { name: 'Jatka' })).toBeTruthy();
     expect(
-      screen.getByRole('button', {
+      screen.queryByRole('button', {
         name: localeText('v2Overview.repairPricesButton'),
       }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.repairVolumesButton'),
+      }),
+    ).toBeNull();
+    await openReviewWorkspaceYear(2024);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.fixYearValues'),
+      }),
+    );
+
+    expect(
+      await screen.findByRole('spinbutton', {
+        name: localeText('v2Overview.manualPriceWastewater'),
+      }),
     ).toBeTruthy();
-    const repairVolumeButton = await screen.findByRole('button', {
-      name: localeText('v2Overview.repairVolumesButton'),
-    });
-    fireEvent.click(repairVolumeButton);
-
-    const input = (await screen.findByRole('spinbutton', {
-      name: localeText('v2Overview.manualVolumeWastewater'),
-    })) as HTMLInputElement;
-
-    await waitFor(() => {
-      expect(document.activeElement).toBe(input);
-    });
+    expect(
+      screen.getByRole('spinbutton', {
+        name: localeText('v2Overview.manualVolumeWastewater'),
+      }),
+    ).toBeTruthy();
   });
 
   it('routes the source-document year-card action into the document import workflow', async () => {
@@ -9229,7 +9326,7 @@ describe('OverviewPageV2', () => {
     expect(await screen.findByText(/Tilinpäätös PDF \+ työkirjakorjaus/i)).toBeTruthy();
     expect(
       screen.getByRole('button', {
-        name: localeText('v2Overview.yearDecisionAction'),
+        name: localeText('v2Overview.openReviewYearButton'),
       }),
     ).toBeTruthy();
   });

@@ -197,9 +197,7 @@ export const AppShellV2: React.FC<Props> = ({
   const isBootstrappingPathTruth =
     pendingPathTab != null && !setupTruthBootstrapped;
   const bootstrappingTargetTab = pendingPathTab ?? activeTab;
-  const shellSurfaceTab = isBootstrappingPathTruth
-    ? bootstrappingTargetTab
-    : activeTab;
+  const shellSurfaceTab = activeTab;
   const bootstrappingTargetLabel = tabLabels[bootstrappingTargetTab];
   const hasSelectedUtility =
     typeof setupOrgName === 'string' && setupOrgName.trim().length > 0;

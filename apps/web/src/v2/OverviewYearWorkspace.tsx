@@ -7,6 +7,8 @@ import {
   buildFinancialForm,
   buildPriceForm,
   buildVolumeForm,
+  getEffectiveFirstRow,
+  getEffectiveRows,
   getRawFirstRow,
   type InlineCardField,
   type ManualFinancialForm,
@@ -35,6 +37,8 @@ type WorkspaceSaveState = {
   saving: boolean;
   error: string | null;
 };
+
+type WorkspaceTouchedFields = Record<number, Record<string, boolean>>;
 
 type WorkspaceFieldConfig =
   | {
@@ -199,6 +203,10 @@ function buildDraft(yearData: V2ImportYearDataResponse): WorkspaceDraft {
   };
 }
 
+function getWorkspaceFieldId(field: WorkspaceFieldConfig): string {
+  return `${field.group}:${String(field.key)}`;
+}
+
 function buildRawValueLookup(yearData: V2ImportYearDataResponse | undefined) {
   const rawFinancials = getRawFirstRow(yearData, 'tilinpaatos');
   const rawPriceRows =
@@ -232,6 +240,63 @@ function buildRawValueLookup(yearData: V2ImportYearDataResponse | undefined) {
       (rawWastewaterVolume as any).Maara,
     ),
   };
+}
+
+function buildEffectiveValueLookup(
+  yearData: V2ImportYearDataResponse | undefined,
+) {
+  const effectiveFinancials = getEffectiveFirstRow(yearData, 'tilinpaatos');
+  const effectivePriceRows = getEffectiveRows(yearData, 'taksa');
+  const effectiveWaterPrice = effectivePriceRows.find(
+    (row) => parseOptionalNumber((row as any).Tyyppi_Id) === 1,
+  );
+  const effectiveWastewaterPrice = effectivePriceRows.find(
+    (row) => parseOptionalNumber((row as any).Tyyppi_Id) === 2,
+  );
+  const effectiveWaterVolume = getEffectiveFirstRow(yearData, 'volume_vesi');
+  const effectiveWastewaterVolume = getEffectiveFirstRow(
+    yearData,
+    'volume_jatevesi',
+  );
+
+  return {
+    liikevaihto: parseOptionalNumber((effectiveFinancials as any).Liikevaihto),
+    perusmaksuYhteensa: parseOptionalNumber(
+      (effectiveFinancials as any).PerusmaksuYhteensa,
+    ),
+    aineetJaPalvelut: parseOptionalNumber(
+      (effectiveFinancials as any).AineetJaPalvelut,
+    ),
+    henkilostokulut: parseOptionalNumber(
+      (effectiveFinancials as any).Henkilostokulut,
+    ),
+    poistot: parseOptionalNumber((effectiveFinancials as any).Poistot),
+    liiketoiminnanMuutKulut: parseOptionalNumber(
+      (effectiveFinancials as any).LiiketoiminnanMuutKulut,
+    ),
+    tilikaudenYliJaama: parseOptionalNumber(
+      (effectiveFinancials as any).TilikaudenYliJaama,
+    ),
+    waterUnitPrice: parseOptionalNumber((effectiveWaterPrice as any)?.Kayttomaksu),
+    wastewaterUnitPrice: parseOptionalNumber(
+      (effectiveWastewaterPrice as any)?.Kayttomaksu,
+    ),
+    soldWaterVolume: parseOptionalNumber((effectiveWaterVolume as any).Maara),
+    soldWastewaterVolume: parseOptionalNumber(
+      (effectiveWastewaterVolume as any).Maara,
+    ),
+  };
+}
+
+function getWorkspaceDraftFieldValue(
+  draft: WorkspaceDraft,
+  field: WorkspaceFieldConfig,
+): number {
+  return field.group === 'financials'
+    ? draft.financials[field.key as keyof ManualFinancialForm]
+    : field.group === 'prices'
+    ? draft.prices[field.key as keyof ManualPriceForm]
+    : draft.volumes[field.key as keyof ManualVolumeForm];
 }
 
 type Props = {
@@ -274,6 +339,8 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
   busy = false,
 }) => {
   const [drafts, setDrafts] = React.useState<Record<number, WorkspaceDraft>>({});
+  const [touchedFields, setTouchedFields] =
+    React.useState<WorkspaceTouchedFields>({});
   const [saveState, setSaveState] = React.useState<Record<number, WorkspaceSaveState>>(
     {},
   );
@@ -366,6 +433,14 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
           ...prev,
           [year]: buildDraft(result.yearData),
         }));
+        setTouchedFields((prev) => {
+          if (!(year in prev)) {
+            return prev;
+          }
+          const next = { ...prev };
+          delete next[year];
+          return next;
+        });
         setSaveState((prev) => ({
           ...prev,
           [year]: { saving: false, error: null },
@@ -387,6 +462,35 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
       }
     },
     [drafts, saveYear, t],
+  );
+
+  const hasExplicitMissingEntry = React.useCallback(
+    (year: number, draft: WorkspaceDraft | undefined) => {
+      if (!draft) {
+        return false;
+      }
+      const yearTouchedFields = touchedFields[year];
+      if (!yearTouchedFields) {
+        return false;
+      }
+      const yearData = yearDataCache[year];
+      const rawValues = buildRawValueLookup(yearData);
+      const effectiveValues = buildEffectiveValueLookup(yearData);
+
+      return WORKSPACE_FIELDS.some((field) => {
+        const fieldId = getWorkspaceFieldId(field);
+        if (yearTouchedFields[fieldId] !== true) {
+          return false;
+        }
+        const fieldKey = field.key as keyof typeof rawValues;
+        return (
+          rawValues[fieldKey] == null &&
+          effectiveValues[fieldKey] == null &&
+          getWorkspaceDraftFieldValue(draft, field) === 0
+        );
+      });
+    },
+    [touchedFields, yearDataCache],
   );
 
   if (reviewStatusRows.length === 0) {
@@ -550,16 +654,25 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                 const draft = drafts[row.year];
                 const yearData = yearDataCache[row.year];
                 const rawValues = buildRawValueLookup(yearData);
+                const effectiveValues = buildEffectiveValueLookup(yearData);
                 const yearBusy = busy || saveState[row.year]?.saving === true;
                 const rawValue = rawValues[field.key as keyof typeof rawValues];
+                const effectiveValue =
+                  effectiveValues[field.key as keyof typeof effectiveValues];
+                const fieldId = getWorkspaceFieldId(field);
                 const currentValue =
                   draft == null
                     ? ''
-                    : field.group === 'financials'
-                    ? draft.financials[field.key as keyof ManualFinancialForm]
-                    : field.group === 'prices'
-                    ? draft.prices[field.key as keyof ManualPriceForm]
-                    : draft.volumes[field.key as keyof ManualVolumeForm];
+                    : getWorkspaceDraftFieldValue(draft, field);
+                const fieldTouched =
+                  touchedFields[row.year]?.[fieldId] === true;
+                const displayValue =
+                  rawValue == null &&
+                  effectiveValue == null &&
+                  currentValue === 0 &&
+                  !fieldTouched
+                    ? ''
+                    : currentValue;
 
                 return (
                   <div
@@ -573,16 +686,27 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                           type="number"
                           min={field.min}
                           step={field.step}
-                          value={currentValue}
+                          value={displayValue}
+                          placeholder={t(
+                            'v2Overview.previewMissingValue',
+                            'Missing data',
+                          )}
                           aria-label={`${t(field.labelKey, field.defaultLabel)} ${row.year}`}
-                          onChange={(event) =>
+                          onChange={(event) => {
+                            setTouchedFields((prev) => ({
+                              ...prev,
+                              [row.year]: {
+                                ...(prev[row.year] ?? {}),
+                                [fieldId]: true,
+                              },
+                            }));
                             updateDraft(
                               row.year,
                               field.group as 'financials' | 'prices' | 'volumes',
                               field.key as never,
                               Number(event.target.value || 0),
-                            )
-                          }
+                            );
+                          }}
                           disabled={yearBusy}
                         />
                       </label>
@@ -610,6 +734,9 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
           {pinnedRows.map((row) => {
             const draft = drafts[row.year];
             const yearBusy = busy || saveState[row.year]?.saving === true;
+            const canSaveYear =
+              draft != null &&
+              (draft.dirty || hasExplicitMissingEntry(row.year, draft));
             return (
               <div
                 key={`workspace-save-${row.year}`}
@@ -623,7 +750,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                     'Save year data',
                   )} ${row.year}`}
                   onClick={() => void handleSave(row.year, false)}
-                  disabled={!draft?.dirty || yearBusy}
+                  disabled={!canSaveYear || yearBusy}
                 >
                   {yearBusy
                     ? t('common.loading', 'Loading...')
@@ -637,7 +764,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                     'Save and sync year',
                   )} ${row.year}`}
                   onClick={() => void handleSave(row.year, true)}
-                  disabled={!draft?.dirty || yearBusy}
+                  disabled={!canSaveYear || yearBusy}
                 >
                   {yearBusy
                     ? t('common.loading', 'Loading...')

@@ -432,6 +432,12 @@ export const OverviewPageV2: React.FC<Props> = ({
         })
       : t('v2Overview.wizardBaselineReadyHint')
     : t('v2Overview.wizardBaselinePendingHint');
+  const hasBlockedReviewRows = reviewStatusRows.some(
+    (row) => row.setupStatus === 'needs_attention',
+  );
+  const hasPendingReviewRows = reviewStatusRows.some(
+    (row) => row.setupStatus === 'ready_for_review',
+  );
   const wizardSummaryItems = [
     {
       label: t('v2Overview.wizardSummaryCompany'),
@@ -464,6 +470,25 @@ export const OverviewPageV2: React.FC<Props> = ({
       detail: planningBaselineSummaryDetail,
     },
   ] as const;
+  const step3WizardHero = {
+    title:
+      hasBlockedReviewRows || hasPendingReviewRows
+        ? t('v2Overview.wizardQuestionReviewYears')
+        : t('v2Vesinvest.workflowVerifyEvidence', 'Verify baseline & evidence'),
+    body:
+      hasBlockedReviewRows || hasPendingReviewRows
+        ? t('v2Overview.wizardBodyReviewYears')
+        : t(
+            'v2Vesinvest.workflowVerifyEvidenceBody',
+            'Use VEETI, PDF, workbook, or manual corrections to verify the accepted baseline that pricing will rely on.',
+          ),
+    badge:
+      hasBlockedReviewRows
+        ? t('v2Overview.blockedYearsTitle')
+        : hasPendingReviewRows
+        ? t('v2Overview.wizardQuestionReviewYears')
+        : t('v2Vesinvest.evidenceTitle', 'Accepted baseline years'),
+  };
   const wizardStepContent: Record<number, { title: string; body: string; badge: string }> = {
     1: {
       title: t('v2Vesinvest.workflowIdentifyUtility', 'Identify the utility'),
@@ -482,15 +507,9 @@ export const OverviewPageV2: React.FC<Props> = ({
       badge: t('v2Overview.wizardFocusImportYears', 'Import years'),
     },
     3: {
-      title: t(
-        'v2Vesinvest.workflowVerifyEvidence',
-        'Verify baseline & evidence',
-      ),
-      body: t(
-        'v2Vesinvest.workflowVerifyEvidenceBody',
-        'Use VEETI, PDF, workbook, or manual corrections to verify the accepted baseline that pricing will rely on.',
-      ),
-      badge: t('v2Vesinvest.evidenceTitle', 'Accepted baseline years'),
+      title: step3WizardHero.title,
+      body: step3WizardHero.body,
+      badge: step3WizardHero.badge,
     },
     4: {
       title: t('v2Vesinvest.workflowOpenFeePath', 'Open fee path'),

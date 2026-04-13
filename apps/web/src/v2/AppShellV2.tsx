@@ -8,7 +8,10 @@ import {
   type DecodedToken,
 } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
-import { applyOrganizationDefaultLanguage } from '../i18n';
+import {
+  applyManualLanguagePreference,
+  applyOrganizationDefaultLanguage,
+} from '../i18n';
 import { OverviewPageV2 } from './OverviewPageV2';
 import { sendV2OpsEvent } from './opsTelemetry';
 import {
@@ -66,6 +69,12 @@ type ForecastRuntimeState = {
 type WorkspaceBootstrapSnapshot = {
   orgName: string | null;
   wizardState: SetupWizardState;
+};
+
+type OrgLanguageNotice = {
+  kind: 'switched' | 'kept_manual';
+  language: 'fi' | 'sv' | 'en';
+  previousLanguage: 'fi' | 'sv' | 'en';
 };
 
 const TAB_PATHS: Record<TabId, string> = {
@@ -172,6 +181,11 @@ export const AppShellV2: React.FC<Props> = ({
   const [setupWizardState, setSetupWizardState] =
     React.useState<SetupWizardState | null>(null);
   const [setupOrgName, setSetupOrgName] = React.useState<string | null>(null);
+  const [orgLanguageNotice, setOrgLanguageNotice] =
+    React.useState<OrgLanguageNotice | null>(null);
+  const [blockedTabNotice, setBlockedTabNotice] = React.useState<TabId | null>(
+    null,
+  );
 
   const tabLabels: Record<TabId, string> = {
     overview: t('v2Shell.tabs.overview', 'Overview'),
@@ -255,6 +269,10 @@ export const AppShellV2: React.FC<Props> = ({
     setDrawerOpen(false);
   }, []);
 
+  const clearOrgLanguageNotice = React.useCallback(() => {
+    setOrgLanguageNotice(null);
+  }, []);
+
   const applySetupWizardState = React.useCallback((nextState: SetupWizardState) => {
     setSetupWizardState((prev) => {
       if (
@@ -334,6 +352,7 @@ export const AppShellV2: React.FC<Props> = ({
 
   const handleLockedTabAttempt = React.useCallback(
     (tab: TabId) => {
+      setBlockedTabNotice(tab);
       sendV2OpsEvent({
         event: 'tab_change_blocked',
         status: 'warn',
@@ -355,6 +374,7 @@ export const AppShellV2: React.FC<Props> = ({
       return;
     }
     closeDrawer();
+    setBlockedTabNotice(null);
     if (typeof scenarioId === 'string' && scenarioId.length > 0) {
       setForecastRuntimeState((prev) =>
         prev.selectedScenarioId === scenarioId
@@ -381,6 +401,7 @@ export const AppShellV2: React.FC<Props> = ({
         );
       }
       setActiveTab('ennuste');
+      setBlockedTabNotice(null);
       syncBrowserPath('ennuste');
     },
     [closeDrawer, handleLockedTabAttempt, isTabLocked],
@@ -392,6 +413,7 @@ export const AppShellV2: React.FC<Props> = ({
       return;
     }
     closeDrawer();
+    setBlockedTabNotice(null);
     setActiveTab('reports');
     syncBrowserPath('reports');
   }, [closeDrawer, handleLockedTabAttempt, isTabLocked]);
@@ -402,6 +424,7 @@ export const AppShellV2: React.FC<Props> = ({
       setFocusedReportId(reportId);
       setReportsRefreshTick((prev) => prev + 1);
       setActiveTab('reports');
+      setBlockedTabNotice(null);
       syncBrowserPath('reports');
     },
     [closeDrawer],
@@ -416,6 +439,7 @@ export const AppShellV2: React.FC<Props> = ({
       }
       if (tab !== activeTab) {
         setActiveTab(tab);
+        setBlockedTabNotice(null);
         syncBrowserPath(tab);
       }
       sendV2OpsEvent({
@@ -517,10 +541,12 @@ export const AppShellV2: React.FC<Props> = ({
       !setupWizardState ||
       isTabLockedForState(pendingPathTab, setupWizardState)
     ) {
+      setBlockedTabNotice(pendingPathTab);
       setActiveTab('overview');
       syncBrowserPath('overview', 'replace');
     } else {
       setActiveTab(pendingPathTab);
+      setBlockedTabNotice(null);
       syncBrowserPath(pendingPathTab, 'replace');
     }
     setPendingPathTab(null);
@@ -540,10 +566,12 @@ export const AppShellV2: React.FC<Props> = ({
         tabFromPath !== 'overview' &&
         (!setupWizardState || isTabLockedForState(tabFromPath, setupWizardState))
       ) {
+        setBlockedTabNotice(tabFromPath);
         setActiveTab('overview');
         syncBrowserPath('overview', 'replace');
         return;
       }
+      setBlockedTabNotice(null);
       setPendingPathTab(null);
       setActiveTab(tabFromPath);
     };
@@ -598,6 +626,7 @@ export const AppShellV2: React.FC<Props> = ({
     if (activeTab === 'overview') return;
     if (!setupWizardState) return;
     if (!isTabLocked(activeTab)) return;
+    setBlockedTabNotice(activeTab);
     setActiveTab('overview');
     syncBrowserPath('overview', 'replace');
   }, [activeTab, isTabLocked, setupWizardState]);
@@ -632,6 +661,8 @@ export const AppShellV2: React.FC<Props> = ({
         setReportsRefreshTick(0);
         setWorkspaceResetVersion((prev) => prev + 1);
         setClearConfirmValue('');
+        clearOrgLanguageNotice();
+        setBlockedTabNotice(null);
         setActiveTab('overview');
         syncBrowserPath('overview', 'replace');
         return result;
@@ -639,7 +670,7 @@ export const AppShellV2: React.FC<Props> = ({
         setClearBusy(false);
       }
     },
-    [applySetupOrgName, applySetupWizardState],
+    [applySetupOrgName, applySetupWizardState, clearOrgLanguageNotice],
   );
 
   const handleClearImportAndScenarios = React.useCallback(async () => {
@@ -817,6 +848,84 @@ export const AppShellV2: React.FC<Props> = ({
         </div>
       </header>
 
+      {orgLanguageNotice ? (
+        <div className="v2-language-notice" role="status" aria-live="polite">
+          <p>
+            {orgLanguageNotice.kind === 'switched'
+              ? t(
+                  'v2Shell.orgLanguageSwitched',
+                  'Organization language is {{language}}. The workspace switched automatically.',
+                  {
+                    language: t(
+                      `language.${orgLanguageNotice.language}`,
+                      orgLanguageNotice.language,
+                    ),
+                  },
+                )
+              : t(
+                  'v2Shell.orgLanguageKept',
+                  'Organization language is {{language}}. Keeping your chosen interface language.',
+                  {
+                    language: t(
+                      `language.${orgLanguageNotice.language}`,
+                      orgLanguageNotice.language,
+                    ),
+                  },
+                )}
+          </p>
+          <div className="v2-language-notice-actions">
+            {orgLanguageNotice.kind === 'switched' ? (
+              <button
+                type="button"
+                className="v2-btn v2-btn-small"
+                onClick={() => {
+                  void applyManualLanguagePreference(
+                    orgLanguageNotice.previousLanguage,
+                  );
+                  clearOrgLanguageNotice();
+                }}
+              >
+                {t('v2Shell.orgLanguageUndo', 'Keep {{language}}', {
+                  language: t(
+                    `language.${orgLanguageNotice.previousLanguage}`,
+                    orgLanguageNotice.previousLanguage,
+                  ),
+                })}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="v2-btn v2-btn-small"
+              onClick={clearOrgLanguageNotice}
+            >
+              {t('common.close', 'Close')}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {blockedTabNotice ? (
+        <div className="v2-language-notice" role="status" aria-live="polite">
+          <p>
+            <strong>{tabLabels[blockedTabNotice]}</strong>
+            {': '}
+            {t(
+              'v2Shell.tabLockedHint',
+              'Complete the setup steps before opening this workspace.',
+            )}
+          </p>
+          <div className="v2-language-notice-actions">
+            <button
+              type="button"
+              className="v2-btn v2-btn-small"
+              onClick={() => setBlockedTabNotice(null)}
+            >
+              {t('common.close', 'Close')}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {drawerOpen ? (
         <div className="v2-account-drawer-layer" onClick={closeDrawer}>
           <aside
@@ -983,6 +1092,7 @@ export const AppShellV2: React.FC<Props> = ({
                     isAdmin={isAdmin}
                     onSetupWizardStateChange={handleSetupWizardStateChange}
                     onSetupOrgNameChange={handleSetupOrgNameChange}
+                    onOrgLanguageNoticeChange={setOrgLanguageNotice}
                     setupBackSignal={setupBackSignal}
                   />
                 ) : null}

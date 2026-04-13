@@ -56,6 +56,27 @@ type RepairAction = {
   focusField: InlineCardField;
 };
 
+function getReviewMissingRequirementLabel(
+  t: TFunction,
+  fallbackLabel: (requirement: MissingRequirement) => string,
+  requirement: MissingRequirement,
+): string {
+  if (requirement === 'tariffRevenue') {
+    return t('v2Overview.datasetTariffRevenue');
+  }
+  return fallbackLabel(requirement);
+}
+
+function getReviewRepairActionLabel(t: TFunction, action: RepairAction): string {
+  if (action.key === 'prices') {
+    return t('v2Overview.repairPricesButton');
+  }
+  if (action.key === 'volumes') {
+    return t('v2Overview.repairVolumesButton');
+  }
+  return t('v2Overview.manualFinancialFixedRevenue');
+}
+
 type OverviewReviewCardActionsProps = {
   t: TFunction;
   row: ReviewStatusRow;
@@ -185,7 +206,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
             onClick={handleModalApplyVeetiFinancials}
             disabled={manualPatchBusy}
           >
-            {t('v2Overview.reapplyVeetiFinancials', 'Restore VEETI financials')}
+            {t('v2Overview.reapplyVeetiFinancials')}
           </button>
         ) : null}
         {canReapplyPricesForYear ? (
@@ -195,7 +216,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
             onClick={handleModalApplyVeetiPrices}
             disabled={manualPatchBusy}
           >
-            {t('v2Overview.reapplyVeetiPrices', 'Restore VEETI prices')}
+            {t('v2Overview.reapplyVeetiPrices')}
           </button>
         ) : null}
         {canReapplyVolumesForYear ? (
@@ -205,7 +226,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
             onClick={handleModalApplyVeetiVolumes}
             disabled={manualPatchBusy}
           >
-            {t('v2Overview.reapplyVeetiVolumes', 'Restore VEETI volumes')}
+            {t('v2Overview.reapplyVeetiVolumes')}
           </button>
         ) : null}
         <button
@@ -235,7 +256,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
                   )
                 }
               >
-                {action.label}
+                {getReviewRepairActionLabel(t, action)}
               </button>
             ))
           : null}
@@ -252,7 +273,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
           }
         >
           {row.setupStatus === 'ready_for_review' || row.setupStatus === 'reviewed'
-            ? t('v2Overview.openReviewYearButton', 'Avaa ja tarkista')
+            ? t('v2Overview.openReviewYearButton')
             : t('v2Overview.yearDecisionAction')}
         </button>
       </>
@@ -279,6 +300,7 @@ type OverviewReviewCardBodyProps = {
   documentFileInputRef: React.RefObject<HTMLInputElement | null>;
   workbookImportBusy: boolean;
   canConfirmImportWorkflow: boolean;
+  isInlineCardDirty: boolean;
   setInlineCardFieldRef: (
     field: InlineCardField,
   ) => (element: HTMLInputElement | null) => void;
@@ -310,6 +332,7 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
   documentFileInputRef,
   workbookImportBusy,
   canConfirmImportWorkflow,
+  isInlineCardDirty,
   setInlineCardFieldRef,
   manualFinancials,
   setManualFinancials,
@@ -335,7 +358,6 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
         <p className="v2-manual-required-note">
           {t(
             'v2Overview.manualPatchRequiredHint',
-            'Required for sync readiness: {{requirements}}',
             {
               requirements: row.missingRequirements
                 .map((item) => missingRequirementLabel(item))
@@ -508,10 +530,7 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
               />
             </label>
             <label>
-              {t(
-                'v2Overview.manualFinancialFixedRevenue',
-                'Fixed revenue total',
-              )}
+              {t('v2Overview.manualFinancialFixedRevenue')}
               <input
                 ref={setInlineCardFieldRef('perusmaksuYhteensa')}
                 className="v2-input"
@@ -697,7 +716,15 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
               type="button"
               className="v2-btn"
               onClick={() => void saveInlineCardEdit(false)}
-              disabled={manualPatchBusy}
+              disabled={manualPatchBusy || !isInlineCardDirty}
+              title={
+                !isInlineCardDirty
+                  ? t(
+                      'v2Overview.manualPatchNoChanges',
+                      'No changes detected. Update at least one field before saving.',
+                    )
+                  : undefined
+              }
             >
               {manualPatchBusy
                 ? t('common.loading', 'Loading...')
@@ -707,7 +734,15 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
               type="button"
               className="v2-btn v2-btn-primary"
               onClick={() => void saveInlineCardEdit(true)}
-              disabled={manualPatchBusy}
+              disabled={manualPatchBusy || !isInlineCardDirty}
+              title={
+                !isInlineCardDirty
+                  ? t(
+                      'v2Overview.manualPatchNoChanges',
+                      'No changes detected. Update at least one field before saving.',
+                    )
+                  : undefined
+              }
             >
               {manualPatchBusy
                 ? t('common.loading', 'Loading...')
@@ -799,6 +834,7 @@ type Props = {
   closeInlineCardEditor: () => void;
   workbookImportBusy: boolean;
   canConfirmImportWorkflow: boolean;
+  isInlineCardDirty: boolean;
   documentFileInputRef: React.RefObject<HTMLInputElement | null>;
   setInlineCardFieldRef: (
     field: InlineCardField,
@@ -824,19 +860,21 @@ function sameYearOrder(left: number[], right: number[]): boolean {
   );
 }
 
-function buildDefaultPinnedYears(reviewStatusRows: ReviewStatusRow[]): number[] {
-  const preferredBuckets: ReviewBucketKey[] = [
-    'good_to_go',
-    'needs_filling',
-    'almost_nothing',
-    'excluded',
-  ];
-  const orderedYears = preferredBuckets.flatMap((bucket) =>
-    reviewStatusRows
-      .filter((row) => getReviewBucket(row) === bucket)
-      .map((row) => row.year),
+function resolvePrimaryReviewYear(
+  reviewStatusRows: ReviewStatusRow[],
+): number | null {
+  return (
+    reviewStatusRows.find((row) => row.setupStatus === 'needs_attention')?.year ??
+    reviewStatusRows.find((row) => row.setupStatus === 'ready_for_review')?.year ??
+    reviewStatusRows.find((row) => row.setupStatus === 'reviewed')?.year ??
+    reviewStatusRows.find((row) => row.setupStatus === 'excluded_from_plan')?.year ??
+    null
   );
-  return orderedYears.slice(0, 3);
+}
+
+function buildDefaultPinnedYears(reviewStatusRows: ReviewStatusRow[]): number[] {
+  const primaryYear = resolvePrimaryReviewYear(reviewStatusRows);
+  return primaryYear == null ? [] : [primaryYear];
 }
 
 function getReviewBucket(row: ReviewStatusRow): ReviewBucketKey {
@@ -847,19 +885,24 @@ function getReviewBucket(row: ReviewStatusRow): ReviewBucketKey {
     return 'good_to_go';
   }
   const readyCount = row.readinessChecks.filter((check) => check.ready).length;
-  return readyCount <= 1 ? 'almost_nothing' : 'needs_filling';
+  const missing = new Set(row.missingRequirements);
+  const isStructurallySparse =
+    readyCount <= 1 ||
+    missing.has('financials') ||
+    (missing.has('prices') && missing.has('volumes'));
+  return isStructurallySparse ? 'almost_nothing' : 'needs_filling';
 }
 
 function getReviewBucketLabel(t: TFunction, bucket: ReviewBucketKey): string {
   switch (bucket) {
     case 'good_to_go':
-      return t('v2Overview.reviewBucketReadyTitle', 'Good to go');
+      return t('v2Overview.reviewBucketReadyTitle');
     case 'needs_filling':
-      return t('v2Overview.reviewBucketRepairTitle', 'Needs filling');
+      return t('v2Overview.reviewBucketRepairTitle');
     case 'almost_nothing':
-      return t('v2Overview.reviewBucketSparseTitle', 'Almost nothing here');
+      return t('v2Overview.blockedYearsTitle');
     case 'excluded':
-      return t('v2Overview.reviewBucketExcludedTitle', 'Excluded');
+      return t('v2Overview.reviewBucketExcludedTitle');
     default:
       return bucket;
   }
@@ -921,6 +964,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
   closeInlineCardEditor,
   workbookImportBusy,
   canConfirmImportWorkflow,
+  isInlineCardDirty,
   documentFileInputRef,
   setInlineCardFieldRef,
   manualFinancials,
@@ -947,6 +991,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
   );
   const previousAvailableYearsKeyRef = React.useRef<string>('');
   const allowEmptyPinnedYearsRef = React.useRef(false);
+  const explicitMultiSelectRef = React.useRef(false);
   const [pinnedYears, setPinnedYears] = React.useState<number[]>([]);
   const groupedRows = React.useMemo(
     () =>
@@ -957,6 +1002,37 @@ export const OverviewReviewBoard: React.FC<Props> = ({
         }))
         .filter((group) => group.rows.length > 0),
     [reviewStatusRows],
+  );
+  const pinnedReviewRows = React.useMemo(
+    () => reviewStatusRows.filter((row) => pinnedYears.includes(row.year)),
+    [pinnedYears, reviewStatusRows],
+  );
+  const baselineGateReady =
+    importedBlockedYearCount === 0 && pendingReviewYearCount === 0;
+  const baselineGatePendingReview =
+    importedBlockedYearCount === 0 && pendingReviewYearCount > 0;
+  const baselineGateStatusLabel = baselineGateReady
+    ? t('v2Overview.wizardSummaryYes')
+    : t('v2Overview.wizardSummaryNo');
+  const baselineGatePrimaryDetail = baselineGateReady
+    ? t('v2Overview.baselineReadyHint')
+    : t('v2Overview.wizardBaselinePendingHint');
+  const baselineGateSecondaryDetail =
+    importedBlockedYearCount > 0
+      ? t('v2Overview.reviewContinueBlockedHint')
+      : baselineGatePendingReview
+      ? t('v2Overview.reviewContinueTechnicalReadyBody', {
+          years: technicalReadyYearsLabel,
+        })
+      : t('v2Overview.reviewContinueReadyBody');
+  const nextReviewFocusYear = React.useMemo(
+    () => resolvePrimaryReviewYear(reviewStatusRows),
+    [reviewStatusRows],
+  );
+  const visibleMissingRequirementLabel = React.useCallback(
+    (requirement: MissingRequirement) =>
+      getReviewMissingRequirementLabel(t, missingRequirementLabel, requirement),
+    [missingRequirementLabel, t],
   );
 
   React.useEffect(() => {
@@ -971,7 +1047,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
         availableYears.has(manualPatchYear) &&
         !next.includes(manualPatchYear)
       ) {
-        next = [...next, manualPatchYear];
+        next = explicitMultiSelectRef.current ? [...next, manualPatchYear] : [manualPatchYear];
         allowEmptyPinnedYearsRef.current = false;
       }
 
@@ -982,6 +1058,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
       ) {
         next = defaultPinnedYears;
         allowEmptyPinnedYearsRef.current = false;
+        explicitMultiSelectRef.current = false;
       }
 
       return sameYearOrder(prev, next) ? prev : next;
@@ -996,8 +1073,15 @@ export const OverviewReviewBoard: React.FC<Props> = ({
         ? prev.filter((currentYear) => currentYear !== year)
         : [...prev, year];
       allowEmptyPinnedYearsRef.current = next.length === 0;
+      explicitMultiSelectRef.current = next.length > 1;
       return next;
     });
+  }, []);
+
+  const handleFocusPinnedYear = React.useCallback((year: number) => {
+    allowEmptyPinnedYearsRef.current = false;
+    explicitMultiSelectRef.current = false;
+    setPinnedYears((prev) => (sameYearOrder(prev, [year]) ? prev : [year]));
   }, []);
 
   return (
@@ -1052,7 +1136,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
                   }`}
                   data-review-group-year={`${group.bucket}-${row.year}`}
                   aria-pressed={pinnedYears.includes(row.year)}
-                  onClick={() => handleTogglePinnedYear(row.year)}
+                  onClick={() => handleFocusPinnedYear(row.year)}
                 >
                   {row.year}
                 </button>
@@ -1071,7 +1155,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
       yearDataCache={yearDataCache}
       sourceStatusClassName={sourceStatusClassName}
       sourceStatusLabel={sourceStatusLabel}
-      missingRequirementLabel={missingRequirementLabel}
+      missingRequirementLabel={visibleMissingRequirementLabel}
       openInlineCardEditor={openInlineCardEditor}
       saveYear={saveReviewWorkspaceYear}
       busy={
@@ -1083,9 +1167,9 @@ export const OverviewReviewBoard: React.FC<Props> = ({
       <div className="v2-empty-state">
         <p>{t('v2Overview.reviewYearsEmpty')}</p>
       </div>
-    ) : (
+    ) : pinnedReviewRows.length > 0 ? (
       <div className="v2-year-status-list">
-        {reviewStatusRows.map((row) => {
+        {pinnedReviewRows.map((row) => {
           const readiness: ReadinessState = {
             financials:
               row.readinessChecks.find((check) => check.key === 'financials')
@@ -1109,20 +1193,14 @@ export const OverviewReviewBoard: React.FC<Props> = ({
             row.setupStatus === 'excluded_from_plan'
               ? t('v2Overview.setupStatusExcludedHint')
               : row.setupStatus === 'reviewed'
-              ? t(
-                  'v2Overview.setupStatusReviewedHint',
-                  'Tämä vuosi on tarkistettu ja hyväksytty mukaan suunnittelupohjaan.',
-                )
+              ? t('v2Overview.setupStatusReviewedHint')
               : row.setupStatus === 'ready_for_review'
-              ? t(
-                  'v2Overview.setupStatusTechnicalReadyHint',
-                  'Vuosi näyttää valmiilta. Tarkista vertailu ja hyväksy vuosi suunnittelupohjaan.',
-                )
+              ? t('v2Overview.setupStatusTechnicalReadyHint')
               : t('v2Overview.setupStatusNeedsAttentionHint', {
                   requirements:
                     row.missingRequirements.length > 0
                       ? row.missingRequirements
-                          .map((item) => missingRequirementLabel(item))
+                          .map((item) => visibleMissingRequirementLabel(item))
                           .join(', ')
                       : t('v2Overview.setupStatusNeedsAttention'),
                 });
@@ -1208,6 +1286,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
                   documentFileInputRef={documentFileInputRef}
                   workbookImportBusy={workbookImportBusy}
                   canConfirmImportWorkflow={canConfirmImportWorkflow}
+                  isInlineCardDirty={isInlineCardDirty}
                   setInlineCardFieldRef={setInlineCardFieldRef}
                   manualFinancials={manualFinancials}
                   setManualFinancials={setManualFinancials}
@@ -1215,7 +1294,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
                   setManualPrices={setManualPrices}
                   manualVolumes={manualVolumes}
                   setManualVolumes={setManualVolumes}
-                  missingRequirementLabel={missingRequirementLabel}
+                  missingRequirementLabel={visibleMissingRequirementLabel}
                   saveInlineCardEdit={saveInlineCardEdit}
                   closeInlineCardEditor={closeInlineCardEditor}
                   workbookImportWorkflowProps={workbookImportWorkflowProps}
@@ -1225,28 +1304,31 @@ export const OverviewReviewBoard: React.FC<Props> = ({
           );
         })}
       </div>
-    )}
+    ) : null}
 
     <div className="v2-overview-review-actions">
+      <div className="v2-manual-section-head">
+        <h4>{t('v2Overview.baselineClosureTitle')}</h4>
+      </div>
+      <p className="v2-muted">
+        {baselineGateReady
+          ? `${t('v2Overview.createPlanningBaseline')}: ${baselineGatePrimaryDetail}`
+          : `${t('v2Overview.reviewContinue')}: ${baselineGatePrimaryDetail}`}
+      </p>
+      <p className="v2-muted">{baselineGateSecondaryDetail}</p>
       <button
         type="button"
         className={reviewContinueButtonClass}
-        onClick={onContinueFromReview}
+        onClick={() => {
+          if (nextReviewFocusYear != null) {
+            handleFocusPinnedYear(nextReviewFocusYear);
+          }
+          onContinueFromReview();
+        }}
         disabled={reviewStatusRows.length === 0}
       >
         {t('v2Overview.reviewContinue')}
       </button>
-      <p className="v2-muted">
-        {importedBlockedYearCount > 0
-          ? t('v2Overview.reviewContinueBlockedHint')
-          : pendingReviewYearCount > 0
-          ? t(
-              'v2Overview.reviewContinueTechnicalReadyBody',
-              'Nämä vuodet odottavat vielä tarkistusta ja hyväksyntää: {{years}}.',
-              { years: technicalReadyYearsLabel },
-            )
-          : t('v2Overview.reviewContinueReadyBody')}
-      </p>
     </div>
     </section>
   );

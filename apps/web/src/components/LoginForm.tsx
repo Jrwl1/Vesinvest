@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { login, demoLogin, resetDemoData, getApiBaseUrl } from '../api';
+import { login, demoLogin, getApiBaseUrl } from '../api';
 import type { DemoEntryState } from '../context/DemoStatusContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
@@ -15,14 +15,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   demoError,
   demoState,
 }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const loginLanguageInitialized = React.useRef(false);
 
   const apiBaseUrl = getApiBaseUrl();
   const demoEnabled = demoState === 'available';
@@ -56,23 +54,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         'Sign in to this environment with a normal user account.',
       );
   const showDemoStatusSummary = demoEnabled || demoStatusLoading || demoUnreachable;
-
-  React.useEffect(() => {
-    if (loginLanguageInitialized.current) {
-      return;
-    }
-    loginLanguageInitialized.current = true;
-
-    const currentLanguage = String(
-      i18n.resolvedLanguage ?? i18n.language ?? '',
-    )
-      .trim()
-      .toLowerCase();
-
-    if (!currentLanguage.startsWith('fi')) {
-      void i18n.changeLanguage('fi');
-    }
-  }, [i18n]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,31 +107,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       if (!retryOk) {
         setError(
           t(
-            'auth.demoRetryAfterReset',
-            "Demo data was reset. Click 'Use Demo' again.",
+            'auth.demoLoginFailed',
+            "Demo sign-in failed. Try Demo again.",
           ),
         );
       }
     }
     setDemoLoading(false);
-  };
-
-  const handleResetDemo = async () => {
-    setResetLoading(true);
-    setError(null);
-    try {
-      await resetDemoData();
-      await demoLogin();
-      onSuccess();
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : t('demo.resetFailed', 'Reset demo failed');
-      setError(message);
-    } finally {
-      setResetLoading(false);
-    }
   };
 
   return (
@@ -226,9 +189,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 className="btn btn-secondary demo-login-btn"
                 data-testid="demo-login-btn"
                 onClick={handleDemoLogin}
-                disabled={
-                  loading || demoLoading || resetLoading || demoStatusLoading
-                }
+                disabled={loading || demoLoading || demoStatusLoading}
               >
                 {demoLoading
                   ? t('common.loading', 'Loading...')
@@ -236,22 +197,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                   ? t('auth.demoChecking', 'Checking demo...')
                   : t('auth.demoLogin', 'Try Demo')}
               </button>
-              {!demoUnavailable && !demoUnreachable && !demoStatusLoading && (
-                <button
-                  type="button"
-                  className="btn btn-outline demo-reset-btn"
-                  onClick={handleResetDemo}
-                  disabled={loading || demoLoading || resetLoading}
-                  title={t(
-                    'demo.resetTitle',
-                    'Clear all demo data and sign in again',
-                  )}
-                >
-                  {resetLoading
-                    ? t('demo.resetting', 'Resetting...')
-                    : t('demo.reset', 'Reset Demo')}
-                </button>
-              )}
             </>
           )}
         </form>
@@ -266,9 +211,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             {showDemoStatusSummary ? <strong>{demoStatusText}</strong> : null}
           </summary>
           <div className="demo-status-body">
-            <div className="demo-status-line">
-              <span>{t('status.api', 'API')}:</span> <code>{apiBaseUrl}</code>
-            </div>
+            {demoUnreachable ? (
+              <div className="demo-status-line">
+                <span>{t('status.api', 'API')}:</span> <code>{apiBaseUrl}</code>
+              </div>
+            ) : null}
             {showDemoStatusSummary ? (
               <div className="demo-status-line">
                 <span>{t('auth.demoStatusLabel', 'Demo sign-in')}:</span>{' '}

@@ -762,7 +762,7 @@ describe('AppShellV2', () => {
     expect(await screen.findByText('reports-content:report-123')).toBeTruthy();
   });
 
-  it('redirects direct /reports entry back to overview when setup is still incomplete', async () => {
+  it('redirects direct /reports entry back to overview with a visible locked-workspace notice when setup is still incomplete', async () => {
     window.history.replaceState({}, '', '/reports');
 
     render(
@@ -780,12 +780,16 @@ describe('AppShellV2', () => {
     );
 
     expect(await screen.findByText('overview-content')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain('Reports');
+    expect(screen.getByRole('status').textContent).toContain(
+      'Complete the setup steps before opening this workspace.',
+    );
     await waitFor(() => {
       expect(window.location.pathname).toBe('/');
     });
   });
 
-  it('redirects direct /forecast entry back to overview and keeps step-1 shell truth when no utility is connected', async () => {
+  it('redirects direct /forecast entry back to overview with a visible locked-workspace notice and keeps step-1 shell truth when no utility is connected', async () => {
     window.history.replaceState({}, '', '/forecast');
     getImportStatusV2Mock.mockResolvedValueOnce({
       connected: false,
@@ -812,6 +816,10 @@ describe('AppShellV2', () => {
     );
 
     expect(await screen.findByText('overview-content')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain('Forecast');
+    expect(screen.getByRole('status').textContent).toContain(
+      'Complete the setup steps before opening this workspace.',
+    );
     expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
     expect(screen.getByText('Step 1 / 5')).toBeTruthy();
     expect(screen.getByText('Create Vesinvest plan')).toBeTruthy();

@@ -43,6 +43,7 @@ describe('LoginForm demo entry states', () => {
     apiMocks.getApiBaseUrl.mockReturnValue('http://localhost:3000/api');
     apiMocks.login.mockReset();
     apiMocks.resetDemoData.mockReset();
+    window.localStorage.clear();
   });
 
   afterEach(() => {
@@ -109,6 +110,38 @@ describe('LoginForm demo entry states', () => {
     expect(screen.queryByTestId('demo-login-btn')).toBeNull();
   });
 
+  it('preserves a persisted manual language preference on login boot', () => {
+    window.localStorage.setItem('va_language', 'en');
+    window.localStorage.setItem('va_language_source', 'manual');
+
+    render(
+      <LoginForm
+        onSuccess={() => undefined}
+        demoState="unavailable"
+      />,
+    );
+
+    expect(window.localStorage.getItem('va_language')).toBe('en');
+    expect(window.localStorage.getItem('va_language_source')).toBe('manual');
+    expect(changeLanguageMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps a persisted Finnish preference without rewriting its source on login boot', () => {
+    window.localStorage.setItem('va_language', 'fi');
+    window.localStorage.setItem('va_language_source', 'manual');
+
+    render(
+      <LoginForm
+        onSuccess={() => undefined}
+        demoState="unavailable"
+      />,
+    );
+
+    expect(window.localStorage.getItem('va_language')).toBe('fi');
+    expect(window.localStorage.getItem('va_language_source')).toBe('manual');
+    expect(changeLanguageMock).not.toHaveBeenCalled();
+  });
+
   it('allows explicit demo sign-in when demo access is available', async () => {
     apiMocks.demoLogin.mockResolvedValue(undefined);
 
@@ -166,7 +199,7 @@ describe('LoginForm demo entry states', () => {
       screen.getByRole('heading', { level: 2, name: 'Open your workspace' }),
     ).toBeTruthy();
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Vesipolku' }),
+      screen.getByRole('heading', { level: 1, name: 'Vesinvest' }),
     ).toBeTruthy();
     expect(
       screen.getByLabelText('Plan water utility finances'),
@@ -189,7 +222,7 @@ describe('LoginForm demo entry states', () => {
     expect(screen.getAllByText('Sign in')).toHaveLength(1);
   });
 
-  it('forces Finnish on login mount and shows the language switcher on the login card', () => {
+  it('does not force a language change on login mount and shows the language switcher on the login card', () => {
     render(
       <LoginForm
         onSuccess={() => undefined}
@@ -197,7 +230,7 @@ describe('LoginForm demo entry states', () => {
       />,
     );
 
-    expect(changeLanguageMock).toHaveBeenCalledWith('fi');
+    expect(changeLanguageMock).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'FI' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'SV' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'EN' })).toBeTruthy();

@@ -58,6 +58,15 @@ export type OverviewPageControllerProps = {
   isAdmin: boolean;
   onSetupWizardStateChange?: (state: SetupWizardState) => void;
   onSetupOrgNameChange?: (name: string | null) => void;
+  onOrgLanguageNoticeChange?: (
+    notice:
+      | {
+          kind: 'switched' | 'kept_manual';
+          language: 'fi' | 'sv' | 'en';
+          previousLanguage: 'fi' | 'sv' | 'en';
+        }
+      | null,
+  ) => void;
   setupBackSignal?: number;
 };
 
@@ -90,6 +99,7 @@ export function useOverviewPageController({
   isAdmin,
   onSetupWizardStateChange,
   onSetupOrgNameChange,
+  onOrgLanguageNoticeChange,
   setupBackSignal,
 }: OverviewPageControllerProps) {
   const { t } = useTranslation();
@@ -137,6 +147,7 @@ export function useOverviewPageController({
     t,
     pickDefaultSyncYears,
     setYearDataCache: manualController.setYearDataCache,
+    onOrgLanguageNoticeChange,
   });
 
   const {
@@ -504,6 +515,7 @@ export function useOverviewPageController({
         setManualVolumes: manualController.setManualVolumes,
         setInlineCardFieldRef: manualController.setInlineCardFieldRef,
         handleInlineCardKeyDown,
+        isInlineCardDirty: manualController.isInlineCardDirty,
         saveInlineCardEdit,
         dismissInlineCardEditor: manualController.dismissInlineCardEditor,
       }),

@@ -7,7 +7,7 @@ import en from './locales/en.json';
 const LANGUAGE_KEY = 'va_language';
 const LANGUAGE_SOURCE_KEY = 'va_language_source';
 const SUPPORTED_LANGUAGES = new Set(['fi', 'sv', 'en']);
-type SupportedLanguage = 'fi' | 'sv' | 'en';
+export type SupportedLanguage = 'fi' | 'sv' | 'en';
 type LanguageSource = 'manual' | 'org_default' | 'default';
 
 function normalizeLanguage(
@@ -46,7 +46,7 @@ function getSavedLanguageSource(): LanguageSource {
   return 'default';
 }
 
-function persistLanguageSource(source: Exclude<LanguageSource, 'default'>): void {
+function persistLanguageSource(source: LanguageSource): void {
   try {
     localStorage.setItem(LANGUAGE_SOURCE_KEY, source);
   } catch {
@@ -95,6 +95,20 @@ export async function applyManualLanguagePreference(
   const normalized = normalizeLanguage(value);
   persistLanguageSource('manual');
   await i18n.changeLanguage(normalized);
+  return normalized;
+}
+
+export function resetLanguagePreferenceToDefault(
+  value: string | null | undefined = 'fi',
+): SupportedLanguage {
+  const normalized = normalizeLanguage(value);
+  persistLanguageSource('default');
+  try {
+    localStorage.setItem(LANGUAGE_KEY, normalized);
+  } catch {
+    // Ignore localStorage errors
+  }
+  document.documentElement.lang = normalized;
   return normalized;
 }
 

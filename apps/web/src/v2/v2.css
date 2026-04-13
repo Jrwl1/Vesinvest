@@ -535,6 +535,10 @@
   gap: 14px;
 }
 
+.v2-vesinvest-panel-compact {
+  gap: 12px;
+}
+
 .v2-vesinvest-identity-form {
   align-items: end;
 }
@@ -1778,6 +1782,12 @@
 .v2-import-org-summary > div {
   display: grid;
   gap: 2px;
+}
+
+.v2-import-org-summary-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: stretch;
 }
 
 .v2-search-mark {
@@ -4738,6 +4748,41 @@
   display: flex;
   justify-content: flex-end;
   padding: 0 2px;
+}
+
+.v2-language-notice {
+  width: min(var(--v2-page-width), 100%);
+  margin: 10px auto 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(43, 79, 136, 0.12);
+  border-radius: 8px;
+  background: #eef2f7;
+  color: #2b4f88;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v2-language-notice p {
+  margin: 0;
+}
+
+.v2-language-notice-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+  .v2-language-notice {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .v2-language-notice-actions {
+    width: 100%;
+  }
 }
 
 .v2-header-statuses {

@@ -45,6 +45,7 @@ type Props = {
   t: TFunction;
   isAdmin?: boolean;
   simplifiedSetup?: boolean;
+  compactReviewMode?: boolean;
   planningContext: V2PlanningContextResponse | null;
   linkedOrg:
     | {
@@ -699,6 +700,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
   t,
   isAdmin = false,
   simplifiedSetup = false,
+  compactReviewMode = false,
   planningContext,
   linkedOrg,
   onGoToForecast,
@@ -1034,6 +1036,11 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     }
     return null;
   }, [plan?.feeRecommendation]);
+  const showDownstreamActions =
+    baselineVerified ||
+    !!selectedSummary?.selectedScenarioId ||
+    !!plan?.selectedScenarioId ||
+    !!feeRecommendation;
   const revisionStatusMessage = React.useMemo(() => {
     if (!plan?.id || !selectedSummary) {
       return t(
@@ -1630,22 +1637,26 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
       >
         {t('v2Vesinvest.clonePlan', 'New revision')}
       </button>
-      <button
-        type="button"
-        className="v2-btn"
-        onClick={() => void persist('sync')}
-        disabled={busy || !plan || !pricingReady}
-      >
-        {t('v2Vesinvest.openPricing', 'Open fee path')}
-      </button>
-      <button
-        type="button"
-        className="v2-btn"
-        onClick={() => void handleCreateReport()}
-        disabled={busy || !canCreateReport}
-      >
-        {t('v2Forecast.createReport', 'Create report')}
-      </button>
+      {showDownstreamActions ? (
+        <>
+          <button
+            type="button"
+            className="v2-btn"
+            onClick={() => void persist('sync')}
+            disabled={busy || !plan || !pricingReady}
+          >
+            {t('v2Vesinvest.openPricing', 'Open fee path')}
+          </button>
+          <button
+            type="button"
+            className="v2-btn"
+            onClick={() => void handleCreateReport()}
+            disabled={busy || !canCreateReport}
+          >
+            {t('v2Forecast.createReport', 'Create report')}
+          </button>
+        </>
+      ) : null}
     </div>
   );
 
@@ -1688,8 +1699,8 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
           {utilityBindingMissing
             ? t('v2Vesinvest.baselineLinkPending', 'Not yet linked')
             : utilityBindingMismatch
-            ? t('v2Vesinvest.pricingBlocked', 'Blocked')
-            : t('v2Vesinvest.baselineVerified', 'Baseline verified')}
+            ? t('v2Vesinvest.identityNeedsReview', 'Link needs review')
+            : t('v2Vesinvest.identityLinked', 'VEETI linked')}
         </span>
       }
     >
@@ -1998,7 +2009,11 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
   ) : null;
 
   const planStatusStrip = (
-    <div className="v2-kpi-strip v2-kpi-strip-three">
+    <div
+      className={`v2-kpi-strip${
+        showDownstreamActions ? ' v2-kpi-strip-three' : ''
+      }`}
+    >
       <article>
         <h3>{t('v2Vesinvest.planState', 'Plan state')}</h3>
         <p>
@@ -2038,38 +2053,40 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
               )}
         </small>
       </article>
-      <article>
-        <h3>{t('v2Vesinvest.pricingState', 'Pricing output')}</h3>
-        <p>
-          <span
-            className={`v2-badge ${toneClass(
-              selectedSummary?.pricingStatus ?? 'blocked',
-            )}`}
-          >
-            {selectedSummary?.pricingStatus === 'verified'
-              ? t('v2Vesinvest.pricingVerified', 'Verified')
-              : selectedSummary?.pricingStatus === 'provisional'
-              ? t('v2Vesinvest.pricingProvisional', 'Provisional')
-              : t('v2Vesinvest.pricingBlocked', 'Blocked')}
-          </span>
-        </p>
-        <small>
-          {pricingReady
-            ? t(
-                'v2Vesinvest.pricingReadyHint',
-                'Sync the plan to open fee-path and financing results.',
-              )
-            : baselineVerified
-            ? t(
-                'v2Vesinvest.pricingPlanMissingHint',
-                'Add investment rows and yearly allocations before fee-path and financing output can be opened.',
-              )
-            : t(
-                'v2Vesinvest.pricingBlockedHint',
-                'Fee-path and financing output stay blocked until the baseline is verified.',
-              )}
-        </small>
-      </article>
+      {showDownstreamActions ? (
+        <article>
+          <h3>{t('v2Vesinvest.pricingState', 'Pricing output')}</h3>
+          <p>
+            <span
+              className={`v2-badge ${toneClass(
+                selectedSummary?.pricingStatus ?? 'blocked',
+              )}`}
+            >
+              {selectedSummary?.pricingStatus === 'verified'
+                ? t('v2Vesinvest.pricingVerified', 'Verified')
+                : selectedSummary?.pricingStatus === 'provisional'
+                ? t('v2Vesinvest.pricingProvisional', 'Provisional')
+                : t('v2Vesinvest.pricingBlocked', 'Blocked')}
+            </span>
+          </p>
+          <small>
+            {pricingReady
+              ? t(
+                  'v2Vesinvest.pricingReadyHint',
+                  'Sync the plan to open fee-path and financing results.',
+                )
+              : baselineVerified
+              ? t(
+                  'v2Vesinvest.pricingPlanMissingHint',
+                  'Add investment rows and yearly allocations before fee-path and financing output can be opened.',
+                )
+              : t(
+                  'v2Vesinvest.pricingBlockedHint',
+                  'Fee-path and financing output stay blocked until the baseline is verified.',
+                )}
+          </small>
+        </article>
+      ) : null}
     </div>
   );
 
@@ -2080,6 +2097,24 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         <div className="v2-skeleton-line" />
       </div>
     ) : null;
+
+  if (compactReviewMode) {
+    return (
+      <section className="v2-card v2-vesinvest-panel v2-vesinvest-panel-compact">
+        <div className="v2-section-header">
+          <div>
+            <p className="v2-overview-eyebrow">{t('v2Vesinvest.eyebrow', 'Vesinvest')}</p>
+            <h2>{t('v2Vesinvest.title', 'Vesinvest VEETI-first workspace')}</h2>
+          </div>
+        </div>
+
+        {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
+        {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
+        {loadingState}
+        {planStatusStrip}
+      </section>
+    );
+  }
 
   return (
     <section className="v2-card v2-vesinvest-panel">

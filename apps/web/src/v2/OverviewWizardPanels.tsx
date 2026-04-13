@@ -43,6 +43,8 @@ type OverviewConnectStepProps = {
   selectedOrgStillVisible: boolean;
   selectedOrgName: string;
   selectedOrgBusinessId: string;
+  selectedOrgMunicipality: string | null;
+  selectedOrgReadyToConnect: boolean;
   onConnect: (org: VeetiOrganizationSearchHit) => void;
 };
 
@@ -63,6 +65,8 @@ export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
   selectedOrgStillVisible,
   selectedOrgName,
   selectedOrgBusinessId,
+  selectedOrgMunicipality,
+  selectedOrgReadyToConnect,
   onConnect,
 }) => {
   const headline =
@@ -156,7 +160,7 @@ export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
                 type="button"
                 key={org.Id}
                 className={`v2-result-row ${isActive ? 'active' : ''}`}
-                onClick={() => onConnect(org)}
+                onClick={() => onSelectOrg(org)}
                 disabled={connecting || importingYears || syncing}
               >
                 <div className="v2-result-main">
@@ -171,11 +175,11 @@ export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
                     {t('v2Overview.municipalityLabel', 'Municipality')}:{' '}
                     {renderHighlightedSearchMatch(org.Kunta ?? '-')}
                   </span>
-                  <span className="v2-result-selected">
-                    {isActive
-                      ? t('v2Overview.resultSelected', 'Selected')
-                      : t('v2Overview.connectButton', 'Connect selected utility')}
-                  </span>
+                  {isActive ? (
+                    <span className="v2-result-selected">
+                      {t('v2Overview.resultSelected', 'Selected')}
+                    </span>
+                  ) : null}
                 </div>
               </button>
             );
@@ -194,21 +198,42 @@ export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
               {t('v2Overview.businessIdLabel', 'Business ID')}:{' '}
               {selectedOrgBusinessId}
             </span>
-            {selectedOrg?.Kunta ? (
+            {selectedOrgMunicipality ? (
               <span>
                 {t('v2Overview.municipalityLabel', 'Municipality')}:{' '}
-                {selectedOrg.Kunta}
+                {selectedOrgMunicipality}
               </span>
             ) : null}
           </div>
-          <button
-            type="button"
-            className="v2-btn v2-btn-small"
-            onClick={() => onSelectOrg(null)}
-            disabled={connecting || importingYears || syncing}
-          >
-            {t('v2Overview.clearSelectionButton', 'Clear selection')}
-          </button>
+          <div className="v2-import-org-summary-actions">
+            <button
+              type="button"
+              className="v2-btn v2-btn-primary v2-btn-small"
+              onClick={() => {
+                if (!selectedOrg) return;
+                onConnect(selectedOrg);
+              }}
+              disabled={
+                connecting ||
+                importingYears ||
+                syncing ||
+                !selectedOrgReadyToConnect ||
+                !selectedOrg
+              }
+            >
+              {connecting
+                ? t('v2Overview.connectingButton', 'Connecting...')
+                : t('v2Overview.connectButton', 'Connect selected utility')}
+            </button>
+            <button
+              type="button"
+              className="v2-btn v2-btn-small"
+              onClick={() => onSelectOrg(null)}
+              disabled={connecting || importingYears || syncing}
+            >
+              {t('v2Overview.clearSelectionButton', 'Clear selection')}
+            </button>
+          </div>
         </div>
       ) : null}
 

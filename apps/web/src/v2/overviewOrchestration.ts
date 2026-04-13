@@ -17,7 +17,6 @@ import {
   type V2ReportListItem,
   type VeetiOrganizationSearchHit,
 } from '../api';
-import { applyOrganizationDefaultLanguage } from '../i18n';
 import {
   getAvailableImportYears,
   getConfirmedImportedYears,
@@ -219,9 +218,6 @@ export async function connectOverviewOrganization(params: {
     attrs: { veetiId: targetOrg.Id },
   });
   const status = await getImportStatusV2();
-  if (status.link?.uiLanguage) {
-    await applyOrganizationDefaultLanguage(status.link.uiLanguage);
-  }
   return {
     status,
     defaultSelectedYears: pickDefaultSyncYears(

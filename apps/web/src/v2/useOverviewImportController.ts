@@ -1,5 +1,11 @@
 import React from 'react';
 import type { TFunction } from 'i18next';
+import i18n, {
+  applyOrganizationDefaultLanguage,
+  hasManualLanguageOverride,
+  normalizeLanguage,
+  type SupportedLanguage,
+} from '../i18n';
 
 import {
   excludeImportYearsV2,
@@ -13,7 +19,6 @@ import {
   type V2ReportListItem,
   type VeetiOrganizationSearchHit,
 } from '../api';
-import { applyOrganizationDefaultLanguage } from '../i18n';
 import {
   connectOverviewOrganization,
   ensureOverviewPlanContext,
@@ -64,12 +69,22 @@ export type UseOverviewImportControllerParams = {
   setYearDataCache: React.Dispatch<
     React.SetStateAction<Record<number, V2ImportYearDataResponse>>
   >;
+  onOrgLanguageNoticeChange?: (
+    notice:
+      | {
+          kind: 'switched' | 'kept_manual';
+          language: SupportedLanguage;
+          previousLanguage: SupportedLanguage;
+        }
+      | null,
+  ) => void;
 };
 
 export function useOverviewImportController({
   t,
   pickDefaultSyncYears,
   setYearDataCache,
+  onOrgLanguageNoticeChange,
 }: UseOverviewImportControllerParams) {
   const [overview, setOverview] = React.useState<V2OverviewResponse | null>(null);
   const [planningContext, setPlanningContext] =
@@ -292,12 +307,6 @@ export function useOverviewImportController({
     };
   }, [overview?.importStatus.connected, performOrganizationSearch, query]);
 
-  React.useEffect(() => {
-    const orgLanguage = overview?.importStatus.link?.uiLanguage;
-    if (!orgLanguage) return;
-    void applyOrganizationDefaultLanguage(orgLanguage);
-  }, [overview?.importStatus.link?.uiLanguage]);
-
   const handleSearch = React.useCallback(async () => {
     const searchValue = normalizeOrganizationSearchQuery(query);
     if (searchValue.length < 2) return;
@@ -312,11 +321,42 @@ export function useOverviewImportController({
       setError(null);
       setInfo(null);
       try {
+        const previousLanguage = normalizeLanguage(
+          i18n.resolvedLanguage ?? i18n.language,
+        );
         const result = await connectOverviewOrganization({
           targetOrg,
           pickDefaultSyncYears,
           t,
         });
+        const orgLanguage = result.status.link?.uiLanguage;
+        if (orgLanguage) {
+          const hadManualOverride = hasManualLanguageOverride();
+          const languageResult = await applyOrganizationDefaultLanguage(orgLanguage);
+          if (
+            hadManualOverride &&
+            normalizeLanguage(orgLanguage) !== previousLanguage
+          ) {
+            onOrgLanguageNoticeChange?.({
+              kind: 'kept_manual',
+              language: normalizeLanguage(orgLanguage),
+              previousLanguage,
+            });
+          } else if (
+            languageResult != null &&
+            languageResult !== previousLanguage
+          ) {
+            onOrgLanguageNoticeChange?.({
+              kind: 'switched',
+              language: languageResult,
+              previousLanguage,
+            });
+          } else {
+            onOrgLanguageNoticeChange?.(null);
+          }
+        } else {
+          onOrgLanguageNoticeChange?.(null);
+        }
         syncYearSelectionTouchedRef.current = false;
         setSelectedYears(result.defaultSelectedYears);
         setSelectedYearsForDelete([]);
@@ -376,7 +416,13 @@ export function useOverviewImportController({
         setConnecting(false);
       }
     },
-    [loadOverview, pickDefaultSyncYears, selectedOrg, t],
+    [
+      loadOverview,
+      onOrgLanguageNoticeChange,
+      pickDefaultSyncYears,
+      selectedOrg,
+      t,
+    ],
   );
 
   const importYearsIntoWorkspace = React.useCallback(

@@ -126,6 +126,7 @@ type RenderStep2InlineFieldEditorParams = {
     field: InlineCardField,
   ) => (element: HTMLInputElement | null) => void;
   handleInlineCardKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
+  isInlineCardDirty: boolean;
   saveInlineCardEdit: (syncAfterSave?: boolean) => Promise<void> | void;
   dismissInlineCardEditor: (forceDiscard?: boolean) => boolean;
 };
@@ -143,6 +144,7 @@ export function renderOverviewStep2InlineFieldEditor({
   setManualVolumes,
   setInlineCardFieldRef,
   handleInlineCardKeyDown,
+  isInlineCardDirty,
   saveInlineCardEdit,
   dismissInlineCardEditor,
 }: RenderStep2InlineFieldEditorParams): React.ReactNode {
@@ -152,7 +154,15 @@ export function renderOverviewStep2InlineFieldEditor({
         type="button"
         className="v2-btn v2-btn-small v2-btn-primary"
         onClick={() => void saveInlineCardEdit(false)}
-        disabled={manualPatchBusy}
+        disabled={manualPatchBusy || !isInlineCardDirty}
+        title={
+          !isInlineCardDirty
+            ? t(
+                'v2Overview.manualPatchNoChanges',
+                'No changes detected. Update at least one field before saving.',
+              )
+            : undefined
+        }
       >
         {manualPatchBusy
           ? t('common.loading', 'Loading...')

@@ -47,6 +47,15 @@ type Props = {
   isAdmin: boolean;
   onSetupWizardStateChange?: (state: SetupWizardState) => void;
   onSetupOrgNameChange?: (name: string | null) => void;
+  onOrgLanguageNoticeChange?: (
+    notice:
+      | {
+          kind: 'switched' | 'kept_manual';
+          language: 'fi' | 'sv' | 'en';
+          previousLanguage: 'fi' | 'sv' | 'en';
+        }
+      | null,
+  ) => void;
   setupBackSignal?: number;
 };
 type ImportWarningCode =
@@ -89,6 +98,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   isAdmin,
   onSetupWizardStateChange,
   onSetupOrgNameChange,
+  onOrgLanguageNoticeChange,
   setupBackSignal,
 }) => {
   const controller = useOverviewPageController({
@@ -97,6 +107,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     isAdmin,
     onSetupWizardStateChange,
     onSetupOrgNameChange,
+    onOrgLanguageNoticeChange,
     setupBackSignal,
   });
   const {
@@ -381,6 +392,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     t('v2Overview.organizationNotSelected', 'Not selected');
   const selectedOrgBusinessId =
     selectedOrg?.YTunnus ?? selectedConnectedOrg?.ytunnus ?? '-';
+  const selectedOrgMunicipality = selectedOrg?.Kunta ?? null;
   const importStep = Math.min(setupWizardState?.activeStep ?? 1, 3) as 1 | 2 | 3;
   const activeVesinvestPlan =
     planningContext?.vesinvest?.activePlan ??
@@ -462,12 +474,12 @@ export const OverviewPageV2: React.FC<Props> = ({
       badge: t('v2Vesinvest.workflowPlanFirst', 'VEETI-first'),
     },
     2: {
-      title: t('v2Vesinvest.workflowBuildPlan', 'Build the investment plan'),
+      title: t('v2Overview.wizardQuestionImportYears', 'Choose years for this workspace'),
       body: t(
-        'v2Vesinvest.workflowBuildPlanBody',
-        'Add project codes, groups, and yearly allocations across the 20-year horizon before baseline verification.',
+        'v2Overview.wizardBodyImportYears',
+        'Select the years to import. Review them before the planning baseline.',
       ),
-      badge: t('v2Vesinvest.investmentPlan', 'Investment plan'),
+      badge: t('v2Overview.wizardFocusImportYears', 'Import years'),
     },
     3: {
       title: t(
@@ -534,7 +546,9 @@ export const OverviewPageV2: React.FC<Props> = ({
   const compactWizardSummaryItems = [
     wizardSummaryItems[1],
     wizardSummaryItems[2],
-    wizardSummaryItems[4],
+    mountedWorkflowStep === 3 || mountedWorkflowStep === 4
+      ? null
+      : wizardSummaryItems[4],
   ].filter((item): item is (typeof wizardSummaryItems)[number] => item != null);
   const connectButtonClass =
     overviewVisualStep === 1 ? 'v2-btn v2-btn-primary' : 'v2-btn';
@@ -606,6 +620,8 @@ export const OverviewPageV2: React.FC<Props> = ({
         selectedOrgStillVisible={selectedOrgStillVisible}
         selectedOrgName={selectedOrgName}
         selectedOrgBusinessId={selectedOrgBusinessId}
+        selectedOrgMunicipality={selectedOrgMunicipality}
+        selectedOrgReadyToConnect={selectedOrg != null}
         onConnect={(org) => {
           setSelectedOrg(org);
           void handleConnect(org);
@@ -619,6 +635,9 @@ export const OverviewPageV2: React.FC<Props> = ({
     !baselineReady;
   const showImportYearsSurface =
     mountedWorkflowStep === 2 || showSimplifiedPostChoiceSetup;
+  const shouldCompactPlanningPanel =
+    !showSimplifiedPostChoiceSetup &&
+    (mountedWorkflowStep === 3 || mountedWorkflowStep === 4);
   const importYearsSurface =
     showImportYearsSurface ? (
       <OverviewImportBoard
@@ -697,6 +716,7 @@ export const OverviewPageV2: React.FC<Props> = ({
             t={t}
             isAdmin={isAdmin}
             simplifiedSetup={showSimplifiedPostChoiceSetup}
+            compactReviewMode={shouldCompactPlanningPanel}
             planningContext={planningContext}
             linkedOrg={overview?.importStatus.link ?? null}
             onGoToForecast={onGoToForecast}
@@ -797,6 +817,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           closeInlineCardEditor={closeInlineCardEditor}
           workbookImportBusy={workbookImportBusy}
           canConfirmImportWorkflow={canConfirmImportWorkflow}
+          isInlineCardDirty={isInlineCardDirty}
           documentFileInputRef={documentFileInputRef}
           setInlineCardFieldRef={setInlineCardFieldRef}
           manualFinancials={manualFinancials}

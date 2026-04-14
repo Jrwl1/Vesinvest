@@ -126,11 +126,10 @@ export function useOverviewPageController({
     }>) =>
       [...rows]
         .filter((row) => row.planningRole !== 'current_year_estimate')
-        .filter((row) => resolveSyncBlockReason(row) === null)
         .sort((a, b) => b.vuosi - a.vuosi)
         .slice(0, 3)
         .map((item) => item.vuosi),
-    [resolveSyncBlockReason],
+    [],
   );
 
   const buildManualPatchInfoMessage = React.useCallback(

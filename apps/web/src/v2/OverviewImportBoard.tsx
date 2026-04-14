@@ -193,15 +193,18 @@ export const OverviewImportBoard: React.FC<Props> = ({
   );
   const primaryRepairRow = sortedBlockedRows[0] ?? null;
   const hasSelectableImportRows =
-    sortedReadyRows.length > 0 || sortedSuspiciousRows.length > 0;
+    sortedReadyRows.length > 0 ||
+    sortedSuspiciousRows.length > 0 ||
+    sortedBlockedRows.length > 0;
   const selectedSelectableYearsCount = React.useMemo(
     () =>
       selectedYears.filter(
         (year) =>
           sortedReadyRows.some((row) => row.vuosi === year) ||
-          sortedSuspiciousRows.some((row) => row.vuosi === year),
+          sortedSuspiciousRows.some((row) => row.vuosi === year) ||
+          sortedBlockedRows.some((row) => row.vuosi === year),
       ).length,
-    [selectedYears, sortedReadyRows, sortedSuspiciousRows],
+    [selectedYears, sortedBlockedRows, sortedReadyRows, sortedSuspiciousRows],
   );
   const noSelectableYearsRemain = !hasSelectableImportRows;
   const shouldLeadWithRepair =
@@ -236,10 +239,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
     {
       key: 'blocked' as const,
       title: t('v2Overview.trustLaneBlockedTitle', 'Blocked until completed'),
-      body: t(
-        'v2Overview.trustLaneBlockedBody',
-        'These years are missing key inputs and should stay out of the import selection until the gaps are fixed.',
-      ),
+      body: null,
       rows: sortedBlockedRows,
     },
     {
@@ -429,7 +429,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
                         } ${quietOtherCards ? 'quiet' : ''}`.trim()}
                       >
                         <div className="v2-year-readiness-head">
-                          {lane.key === 'blocked' || isCurrentEstimateLane ? (
+                          {isCurrentEstimateLane ? (
                             <div className="v2-year-checkbox v2-year-select-disabled">
                               <strong>{row.vuosi}</strong>
                             </div>

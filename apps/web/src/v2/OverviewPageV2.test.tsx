@@ -1080,7 +1080,7 @@ describe('OverviewPageV2', () => {
     expect(document.body.textContent).not.toContain('Sekundära huvudtal');
   });
 
-  it('switches the top-level CTA to repair-first actions when no selectable years remain', () => {
+  it('keeps blocked historical years in the normal import selection flow', () => {
     const openInlineCardEditor = vi.fn();
     const blockedRows = [
       {
@@ -1177,54 +1177,16 @@ describe('OverviewPageV2', () => {
     expect(footerActions).toBeTruthy();
     expect(
       document.querySelector('details.v2-import-board-lane-blocked[open]'),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(
-      within(footerActions).queryByRole('button', {
+      within(footerActions).getByRole('button', {
         name: localeText('v2Overview.importYearsButton'),
       }),
-    ).toBeNull();
-
-    fireEvent.click(
-      within(footerActions).getByRole('button', {
-        name: localeText('v2Overview.manualPatchButton'),
-      }),
     );
-    expect(openInlineCardEditor).toHaveBeenCalledWith(
-      2024,
-      null,
-      'step2',
-      ['prices', 'tariffRevenue'],
-      'manualEdit',
-    );
-
-    fireEvent.click(
-      within(footerActions).getByRole('button', {
-        name: localeText('v2Overview.documentImportAction'),
-      }),
-    );
-    expect(openInlineCardEditor).toHaveBeenCalledWith(
-      2024,
-      null,
-      'step2',
-      ['prices', 'tariffRevenue'],
-      'documentImport',
-    );
-
-    fireEvent.click(
-      within(footerActions).getByRole('button', {
-        name: localeText('v2Overview.workbookImportAction'),
-      }),
-    );
-    expect(openInlineCardEditor).toHaveBeenCalledWith(
-      2024,
-      null,
-      'step2',
-      ['prices', 'tariffRevenue'],
-      'workbookImport',
-    );
+    expect(openInlineCardEditor).not.toHaveBeenCalled();
   });
 
-  it('does not count stale blocked selections as selected import years for non-admin users', () => {
+  it('counts blocked historical selections as importable years for non-admin users too', () => {
     const blockedRows = [
       {
         vuosi: 2021,
@@ -1291,7 +1253,7 @@ describe('OverviewPageV2', () => {
     );
 
     expect(
-      screen.getByText(`${localeText('v2Overview.selectedYearsLabel')}: 0`),
+      screen.getByText(`${localeText('v2Overview.selectedYearsLabel')}: 1`),
     ).toBeTruthy();
     expect(
       (
@@ -1299,7 +1261,7 @@ describe('OverviewPageV2', () => {
           name: localeText('v2Overview.importYearsButton'),
         }) as HTMLButtonElement
       ).disabled,
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('keeps the current-year estimate out of default historical selection and lanes', async () => {
@@ -6139,6 +6101,27 @@ describe('OverviewPageV2', () => {
 
   it('uses the import-years contract for the step-2 CTA instead of sync', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+    importYearsV2.mockResolvedValueOnce({
+      selectedYears: [2024, 2023],
+      importedYears: [2024, 2023],
+      skippedYears: [],
+      sync: {
+        linked: { orgId: 'org-1', veetiId: 1535, nimi: 'Water Utility', ytunnus: '1234567-8' },
+        fetchedAt: '2026-03-08T10:00:00.000Z',
+        years: [2024, 2023],
+        snapshotUpserts: 4,
+      },
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [],
+        excludedYears: [],
+      },
+    });
 
     render(
       <OverviewPageV2
@@ -6157,12 +6140,145 @@ describe('OverviewPageV2', () => {
     button.click();
 
     await waitFor(() => {
-      expect(importYearsV2).toHaveBeenCalledWith([2024]);
+      expect(importYearsV2).toHaveBeenCalledWith([2024, 2023]);
     });
     expect(syncImportV2).not.toHaveBeenCalled();
+    expect(await screen.findByText(/2024, 2023/)).toBeTruthy();
+  });
+
+  it('defaults blocked historical years into the import selection instead of leaving only the estimate path', async () => {
+    const currentYear = new Date().getFullYear();
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [],
+        years: [
+          {
+            vuosi: 2024,
+            planningRole: 'historical',
+            completeness: {
+              tilinpaatos: true,
+              taksa: false,
+              tariff_revenue: false,
+              volume_vesi: true,
+              volume_jatevesi: false,
+            },
+            sourceStatus: 'VEETI',
+            sourceBreakdown: {
+              veetiDataTypes: ['tilinpaatos', 'volume_vesi'],
+              manualDataTypes: [],
+            },
+            warnings: ['missing_prices'],
+            datasetCounts: {
+              tilinpaatos: 1,
+              volume_vesi: 1,
+            },
+            manualEditedAt: null,
+            manualEditedBy: null,
+            manualReason: null,
+            manualProvenance: null,
+          },
+          {
+            vuosi: 2023,
+            planningRole: 'historical',
+            completeness: {
+              tilinpaatos: true,
+              taksa: false,
+              tariff_revenue: false,
+              volume_vesi: true,
+              volume_jatevesi: false,
+            },
+            sourceStatus: 'VEETI',
+            sourceBreakdown: {
+              veetiDataTypes: ['tilinpaatos', 'volume_vesi'],
+              manualDataTypes: [],
+            },
+            warnings: ['missing_prices'],
+            datasetCounts: {
+              tilinpaatos: 1,
+              volume_vesi: 1,
+            },
+            manualEditedAt: null,
+            manualEditedBy: null,
+            manualReason: null,
+            manualProvenance: null,
+          },
+          {
+            vuosi: currentYear,
+            planningRole: 'current_year_estimate',
+            completeness: {
+              tilinpaatos: true,
+              taksa: false,
+              tariff_revenue: false,
+              volume_vesi: true,
+              volume_jatevesi: false,
+            },
+            sourceStatus: 'VEETI',
+            sourceBreakdown: {
+              veetiDataTypes: ['tilinpaatos', 'volume_vesi'],
+              manualDataTypes: [],
+            },
+            warnings: ['missing_prices'],
+            datasetCounts: {
+              tilinpaatos: 1,
+              volume_vesi: 1,
+            },
+            manualEditedAt: null,
+            manualEditedBy: null,
+            manualReason: null,
+            manualProvenance: null,
+          },
+        ],
+      }),
+    );
+    importYearsV2.mockResolvedValueOnce({
+      selectedYears: [2024, 2023],
+      importedYears: [2024, 2023],
+      skippedYears: [],
+      sync: {
+        linked: {
+          orgId: 'org-1',
+          veetiId: 1535,
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+        },
+        fetchedAt: '2026-03-08T10:00:00.000Z',
+        years: [2024, 2023],
+        snapshotUpserts: 2,
+      },
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [],
+        excludedYears: [],
+      },
+    });
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
     expect(
-      await screen.findByText('Tuodut vuodet ovat nyt työtilassa: 2024.'),
+      await screen.findByText(`${localeText('v2Overview.selectedYearsLabel')}: 2`),
     ).toBeTruthy();
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.importYearsButton'),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(importYearsV2).toHaveBeenCalledWith([2024, 2023]);
+    });
+    expect(importYearsV2).not.toHaveBeenCalledWith([currentYear]);
   });
 
   it('renders suspicious and blocked trust-board lanes on step 2', async () => {
@@ -6199,7 +6315,7 @@ describe('OverviewPageV2', () => {
       screen.getAllByText(localeText('v2Overview.wizardSummarySubtitle')).length,
     ).toBeGreaterThan(0);
     expect(screen.getByRole('checkbox', { name: '2024' })).toBeTruthy();
-    expect(screen.queryByRole('checkbox', { name: '2023' })).toBeNull();
+    expect(screen.getByRole('checkbox', { name: '2023' })).toBeTruthy();
     expect(
       screen.getByText(localeText('v2Overview.trustLargeDiscrepancy')),
     ).toBeTruthy();

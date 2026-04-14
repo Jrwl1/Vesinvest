@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 
 import type { V2ImportYearDataResponse, V2OverviewResponse } from '../api';
 import {
+  getSyncBlockReasonLabel as buildSyncBlockReasonLabel,
   getImportYearSummaryLabel as buildImportYearSummaryLabel,
   getRequirementDatasetLabel as buildRequirementDatasetLabel,
 } from './overviewLabels';
@@ -61,12 +62,19 @@ function getEditedFinancialFieldLabel(
   return sourceField;
 }
 
-function mergeYearCompleteness(
+function mergeYearDataSignals(
   completeness: Record<string, boolean>,
+  tariffRevenueReason: 'missing_fixed_revenue' | 'mismatch' | null | undefined,
   yearData: V2ImportYearDataResponse | undefined,
-): Record<string, boolean> {
+): {
+  completeness: Record<string, boolean>;
+  tariffRevenueReason: 'missing_fixed_revenue' | 'mismatch' | null;
+} {
   if (!yearData) {
-    return completeness;
+    return {
+      completeness,
+      tariffRevenueReason: tariffRevenueReason ?? null,
+    };
   }
 
   const summaryRows = buildImportYearSummaryRows(yearData);
@@ -77,21 +85,28 @@ function mergeYearCompleteness(
   });
 
   return {
-    ...completeness,
-    tilinpaatos: hasCanonicalFinancialRows,
-    taksa:
-      completeness.taksa === true || yearData.completeness.taksa === true,
-    tariff_revenue:
-      completeness.tariff_revenue === false ||
-      yearData.completeness.tariff_revenue === false
-        ? false
-        : true,
-    volume_vesi:
-      completeness.volume_vesi === true ||
-      yearData.completeness.volume_vesi === true,
-    volume_jatevesi:
-      completeness.volume_jatevesi === true ||
-      yearData.completeness.volume_jatevesi === true,
+    completeness: {
+      ...completeness,
+      tilinpaatos: hasCanonicalFinancialRows,
+      taksa:
+        completeness.taksa === true || yearData.completeness.taksa === true,
+      tariff_revenue:
+        completeness.tariff_revenue === false ||
+        yearData.completeness.tariff_revenue === false
+          ? false
+          : true,
+      volume_vesi:
+        completeness.volume_vesi === true ||
+        yearData.completeness.volume_vesi === true,
+      volume_jatevesi:
+        completeness.volume_jatevesi === true ||
+        yearData.completeness.volume_jatevesi === true,
+    },
+    tariffRevenueReason:
+      yearData.tariffRevenueReason ??
+      (yearData.completeness.tariff_revenue === false
+        ? tariffRevenueReason ?? null
+        : null),
   };
 }
 
@@ -175,33 +190,9 @@ export function useOverviewSetupState(params: {
   const resolveSyncBlockReason = React.useCallback(
     (row: {
       completeness: Record<string, boolean>;
+      tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
       vuosi: number;
-    }) => {
-      const reasonKey =
-        !row.completeness.tilinpaatos
-          ? 'v2Overview.yearReasonMissingFinancials'
-          : !row.completeness.taksa
-          ? 'v2Overview.yearReasonMissingPrices'
-          : !row.completeness.volume_vesi && !row.completeness.volume_jatevesi
-          ? 'v2Overview.yearReasonMissingVolumes'
-          : !row.completeness.tariff_revenue
-          ? 'v2Overview.yearReasonMissingTariffRevenue'
-          : null;
-      if (!reasonKey) return null;
-      if (reasonKey === 'v2Overview.yearReasonMissingFinancials') {
-        return t(keyofString(reasonKey), 'Missing financial statement data.');
-      }
-      if (reasonKey === 'v2Overview.yearReasonMissingPrices') {
-        return t(keyofString(reasonKey), 'Missing price data (taksa).');
-      }
-      if (reasonKey === 'v2Overview.yearReasonMissingTariffRevenue') {
-        return t(
-          keyofString(reasonKey),
-          'Fixed revenue is needed to reconcile tariff revenue.',
-        );
-      }
-      return t(keyofString(reasonKey), 'Missing sold volume data.');
-    },
+    }) => buildSyncBlockReasonLabel(t, row),
     [t],
   );
 
@@ -213,12 +204,15 @@ export function useOverviewSetupState(params: {
   const syncYearRows = React.useMemo(
     () =>
       availableYearRows.map((row) => {
+        const mergedSignals = mergeYearDataSignals(
+          row.completeness,
+          row.tariffRevenueReason,
+          yearDataCache[row.vuosi],
+        );
         const mergedRow = {
           ...row,
-          completeness: mergeYearCompleteness(
-            row.completeness,
-            yearDataCache[row.vuosi],
-          ),
+          completeness: mergedSignals.completeness,
+          tariffRevenueReason: mergedSignals.tariffRevenueReason,
         };
         return {
           ...mergedRow,
@@ -306,7 +300,14 @@ export function useOverviewSetupState(params: {
         },
         {
           present: row.completeness?.tariff_revenue !== false,
-          label: t('v2Overview.datasetTariffRevenue', 'Fixed revenue'),
+          label:
+            row.tariffRevenueReason === 'mismatch'
+              ? buildSyncBlockReasonLabel(t, row) ??
+                t(
+                  'v2Overview.requirementTariffRevenueMismatch',
+                  'Tariff revenue does not reconcile with prices, volumes, and base-fee revenue',
+                )
+              : buildRequirementDatasetLabel(t, 'tariffRevenue'),
         },
         {
           present: row.completeness?.volume_vesi,
@@ -549,12 +550,15 @@ export function useOverviewSetupState(params: {
         .filter((row) => confirmedImportedYears.includes(row.vuosi))
         .sort((a, b) => b.vuosi - a.vuosi)
         .map((row) => {
+          const mergedSignals = mergeYearDataSignals(
+            row.completeness,
+            row.tariffRevenueReason,
+            yearDataCache[row.vuosi],
+          );
           const effectiveRow = {
             ...row,
-            completeness: mergeYearCompleteness(
-              row.completeness,
-              yearDataCache[row.vuosi],
-            ),
+            completeness: mergedSignals.completeness,
+            tariffRevenueReason: mergedSignals.tariffRevenueReason,
           };
           const missingRequirements = getMissingSyncRequirements(effectiveRow);
           return {
@@ -618,6 +622,8 @@ export function useOverviewSetupState(params: {
     const rows = importYearRows.map((row) => ({
       year: row.vuosi,
       sourceStatus: row.sourceStatus,
+      completeness: row.completeness,
+      tariffRevenueReason: row.tariffRevenueReason ?? null,
       readinessChecks: row.readinessChecks,
       missingRequirements: row.missingRequirements,
       warnings: (row.warnings ?? []) as ImportWarningCode[],
@@ -640,6 +646,14 @@ export function useOverviewSetupState(params: {
       rows.push({
         year,
         sourceStatus: undefined,
+        completeness: {
+          tilinpaatos: false,
+          taksa: false,
+          tariff_revenue: false,
+          volume_vesi: false,
+          volume_jatevesi: false,
+        },
+        tariffRevenueReason: null,
         readinessChecks: [
           { key: 'financials', labelKey: 'v2Overview.datasetFinancials', ready: false },
           { key: 'prices', labelKey: 'v2Overview.datasetPrices', ready: false },
@@ -857,8 +871,4 @@ export function useOverviewSetupState(params: {
     wizardBackStep,
     previewPrefetchYears,
   };
-}
-
-function keyofString<T extends string>(value: T): T {
-  return value;
 }

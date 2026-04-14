@@ -64,6 +64,20 @@ describe('overviewWorkflow sync readiness', () => {
         },
       }),
     ).toBe('v2Overview.yearReasonMissingFinancials');
+
+    expect(
+      getSyncBlockReasonKey({
+        vuosi: 2018,
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          tariff_revenue: false,
+          volume_vesi: true,
+          volume_jatevesi: false,
+        },
+        tariffRevenueReason: 'mismatch',
+      }),
+    ).toBe('v2Overview.yearReasonTariffRevenueMismatch');
   });
 
   it('derives the setup readiness checks and overall setup status', () => {

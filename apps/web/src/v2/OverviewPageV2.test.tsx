@@ -3455,6 +3455,559 @@ describe('OverviewPageV2', () => {
     });
   });
 
+  it('renders tariff-revenue mismatch wording instead of fixed-revenue-missing wording', async () => {
+    const mismatchYear = {
+      ...buildOverviewResponse().importStatus.years[0],
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        tariff_revenue: false,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      tariffRevenueReason: 'mismatch',
+    };
+    const mismatchOverview = buildOverviewResponse({
+      workspaceYears: [],
+      years: [mismatchYear],
+    });
+    const mismatchYearData = {
+      year: 2024,
+      veetiId: 1,
+      sourceStatus: 'MIXED',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        tariff_revenue: false,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      tariffRevenueReason: 'mismatch',
+      hasManualOverrides: true,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 100000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 15000,
+              Henkilostokulut: 20000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 30000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 100000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 15000,
+              Henkilostokulut: 20000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 30000,
+            },
+          ],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 25000 }],
+          effectiveRows: [{ Maara: 25000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 24000 }],
+          effectiveRows: [{ Maara: 24000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    } as any;
+
+    getOverviewV2.mockResolvedValueOnce(mismatchOverview);
+    getImportYearDataV2.mockResolvedValueOnce(mismatchYearData);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(
+      await screen.findByText(
+        localeText('v2Overview.yearMissingFieldsLabel', {
+          fields: localeText('v2Overview.yearReasonTariffRevenueMismatch'),
+        }),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(localeText('v2Overview.requirementTariffRevenue')),
+    ).toBeNull();
+  });
+
+  it('shows a neutral saved-but-still-blocked review message after save and sync', async () => {
+    const mismatchYear = {
+      ...buildOverviewResponse().importStatus.years[0],
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        tariff_revenue: false,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      tariffRevenueReason: 'mismatch',
+    };
+    const mismatchOverview = buildOverviewResponse({
+      workspaceYears: [2024],
+      years: [mismatchYear],
+    });
+    const mismatchYearData = {
+      year: 2024,
+      veetiId: 1,
+      sourceStatus: 'MIXED',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        tariff_revenue: false,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      tariffRevenueReason: 'mismatch',
+      hasManualOverrides: true,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 100000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 15000,
+              Henkilostokulut: 20000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 30000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 100000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 15000,
+              Henkilostokulut: 20000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 30000,
+            },
+          ],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 25000 }],
+          effectiveRows: [{ Maara: 25000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 24000 }],
+          effectiveRows: [{ Maara: 24000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    } as any;
+
+    getOverviewV2.mockResolvedValue(mismatchOverview);
+    getImportYearDataV2.mockImplementation(async () => mismatchYearData);
+    completeImportYearManuallyV2.mockResolvedValue({
+      year: 2024,
+      patchedDataTypes: ['tilinpaatos'],
+      missingBefore: ['tariffRevenue'],
+      missingAfter: ['tariffRevenue'],
+      syncReady: false,
+      tariffRevenueReason: 'mismatch',
+      status: mismatchOverview.importStatus,
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await clickReviewGroupYear(2024);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.openReviewYearButton'),
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.fixYearValues'),
+      }),
+    );
+    fireEvent.change(
+      await screen.findByRole('spinbutton', {
+        name: localeText('v2Overview.manualFinancialMaterials'),
+      }),
+      { target: { value: '16000' } },
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.manualPatchSaveAndSync'),
+      }),
+    );
+
+    expect(
+      await screen.findByText(
+        localeText('v2Overview.manualPatchSavedNeedsReview', {
+          year: 2024,
+          reason: localeText('v2Overview.yearReasonTariffRevenueMismatch'),
+        }),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.manualPatchSaveAndSync'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(localeText('v2Overview.manualPatchSaved', { year: 2024 })),
+    ).toBeNull();
+  });
+
+  it('keeps the existing baseline-progress success message when the saved year becomes sync-ready', async () => {
+    const readyYear = {
+      ...buildOverviewResponse().importStatus.years[0],
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        tariff_revenue: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      tariffRevenueReason: null,
+    };
+    const readyOverview = buildOverviewResponse({
+      workspaceYears: [2024],
+      years: [readyYear],
+    });
+    const readyYearData = {
+      year: 2024,
+      veetiId: 1,
+      sourceStatus: 'MIXED',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        tariff_revenue: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      tariffRevenueReason: null,
+      hasManualOverrides: true,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 148900,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 15000,
+              Henkilostokulut: 20000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 30000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 148900,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 15000,
+              Henkilostokulut: 20000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 30000,
+            },
+          ],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 25000 }],
+          effectiveRows: [{ Maara: 25000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 24000 }],
+          effectiveRows: [{ Maara: 24000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    } as any;
+
+    getOverviewV2.mockResolvedValue(readyOverview);
+    getImportYearDataV2.mockImplementation(async () => readyYearData);
+    completeImportYearManuallyV2.mockResolvedValue({
+      year: 2024,
+      patchedDataTypes: ['tilinpaatos'],
+      missingBefore: ['tariffRevenue'],
+      missingAfter: [],
+      syncReady: true,
+      tariffRevenueReason: null,
+      status: readyOverview.importStatus,
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await clickReviewGroupYear(2024);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.openReviewYearButton'),
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.fixYearValues'),
+      }),
+    );
+    fireEvent.change(
+      await screen.findByRole('spinbutton', {
+        name: localeText('v2Overview.manualFinancialMaterials'),
+      }),
+      { target: { value: '16000' } },
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.manualPatchSave'),
+      }),
+    );
+
+    expect(
+      await screen.findByText(localeText('v2Overview.manualPatchSaved', { year: 2024 })),
+    ).toBeTruthy();
+  });
+
+  it('keeps the current blocked year open when Continue targets the same unresolved year', async () => {
+    const mismatchYear = {
+      ...buildOverviewResponse().importStatus.years[0],
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        tariff_revenue: false,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      tariffRevenueReason: 'mismatch',
+    };
+    const mismatchOverview = buildOverviewResponse({
+      workspaceYears: [2024],
+      years: [mismatchYear],
+    });
+    const mismatchYearData = {
+      year: 2024,
+      veetiId: 1,
+      sourceStatus: 'MIXED',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        tariff_revenue: false,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      tariffRevenueReason: 'mismatch',
+      hasManualOverrides: true,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 100000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 15000,
+              Henkilostokulut: 20000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 30000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 100000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 15000,
+              Henkilostokulut: 20000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 30000,
+            },
+          ],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 25000 }],
+          effectiveRows: [{ Maara: 25000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 24000 }],
+          effectiveRows: [{ Maara: 24000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    } as any;
+
+    getOverviewV2.mockResolvedValueOnce(mismatchOverview);
+    getImportYearDataV2.mockResolvedValueOnce(mismatchYearData);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await clickReviewGroupYear(2024);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.openReviewYearButton'),
+      }),
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.reviewContinue'),
+      }),
+    );
+
+    expect(
+      (await screen.findAllByText(
+        localeText('v2Overview.yearReasonTariffRevenueMismatch'),
+      )).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.fixYearValues'),
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
   it('opens source-document import as a first-class review workflow without a hidden secondary toggle', async () => {
     render(
       <OverviewPageV2

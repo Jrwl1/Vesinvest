@@ -32,6 +32,7 @@ type SyncRequirement =
   | 'prices'
   | 'volumes'
   | 'tariffRevenue';
+type TariffRevenueReason = 'missing_fixed_revenue' | 'mismatch';
 type PlanningRole = 'historical' | 'current_year_estimate';
 type OverrideProvenanceCore = Omit<OverrideProvenance, 'fieldSources'>;
 type ScenarioAssumptionKey =
@@ -1250,13 +1251,15 @@ export class V2ImportOverviewService {
       targetYear,
     );
     const summaryRows = this.buildImportYearSummaryRows(yearDataset);
-    const completeness = this.augmentCompletenessWithTariffRevenue(
+    const { completeness, tariffRevenueReason } =
+      this.augmentCompletenessWithTariffRevenue(
       yearDataset.completeness ?? this.emptyCompleteness(),
       yearDataset,
     );
     return {
       ...yearDataset,
       completeness,
+      tariffRevenueReason,
       summaryRows,
       trustSignal: this.buildImportYearTrustSignal(yearDataset, summaryRows),
       resultToZero: this.buildImportYearResultToZeroSignal(summaryRows),
@@ -1899,6 +1902,7 @@ export class V2ImportOverviewService {
       missingBefore,
       missingAfter,
       syncReady: missingAfter.length === 0,
+      tariffRevenueReason: afterRow?.tariffRevenueReason ?? null,
       status,
     };
   }
@@ -3026,8 +3030,15 @@ export class V2ImportOverviewService {
   }
 
   private async hydrateYearRowsWithTariffRevenueReadiness<
-    T extends { vuosi: number; completeness: Record<string, boolean> },
-  >(orgId: string, yearRows: T[]): Promise<T[]> {
+    T extends {
+      vuosi: number;
+      completeness: Record<string, boolean>;
+      missingRequirements?: SyncRequirement[];
+    },
+  >(
+    orgId: string,
+    yearRows: T[],
+  ): Promise<Array<T & { tariffRevenueReason: TariffRevenueReason | null }>> {
     const getYearDataset =
       typeof this.veetiEffectiveDataService.getYearDataset === 'function'
         ? this.veetiEffectiveDataService.getYearDataset.bind(
@@ -3039,12 +3050,16 @@ export class V2ImportOverviewService {
         const yearDataset = getYearDataset
           ? await getYearDataset(orgId, row.vuosi)
           : null;
-        return {
-          ...row,
-          completeness: this.augmentCompletenessWithTariffRevenue(
+        const { completeness, tariffRevenueReason } =
+          this.augmentCompletenessWithTariffRevenue(
             row.completeness ?? this.emptyCompleteness(),
             yearDataset,
-          ),
+          );
+        return {
+          ...row,
+          completeness,
+          missingRequirements: this.resolveMissingSyncRequirements(completeness),
+          tariffRevenueReason,
         };
       }),
     );
@@ -3057,14 +3072,24 @@ export class V2ImportOverviewService {
       | Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>
       | null
       | undefined,
-  ): Record<string, boolean> {
+  ): {
+    completeness: Record<string, boolean>;
+    tariffRevenueReason: TariffRevenueReason | null;
+  } {
+    const tariffRevenueStatus =
+      this.evaluateTariffRevenueStructureStatus(yearDataset);
     const tariffRevenueReady =
-      this.evaluateTariffRevenueStructureReadiness(yearDataset) ??
+      tariffRevenueStatus.ready ??
       this.resolveFallbackTariffRevenueReadiness(completeness);
     return {
-      ...this.emptyCompleteness(),
-      ...completeness,
-      tariff_revenue: tariffRevenueReady,
+      completeness: {
+        ...this.emptyCompleteness(),
+        ...completeness,
+        tariff_revenue: tariffRevenueReady,
+      },
+      tariffRevenueReason: tariffRevenueReady
+        ? null
+        : tariffRevenueStatus.reason,
     };
   }
 
@@ -3082,12 +3107,15 @@ export class V2ImportOverviewService {
     );
   }
 
-  private evaluateTariffRevenueStructureReadiness(
+  private evaluateTariffRevenueStructureStatus(
     yearDataset:
       | Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>
       | null
       | undefined,
-  ): boolean | null {
+  ): {
+    ready: boolean | null;
+    reason: TariffRevenueReason | null;
+  } {
     const financialRow =
       (yearDataset?.datasets.find((row) => row.dataType === 'tilinpaatos')
         ?.effectiveRows?.[0] as Record<string, unknown> | undefined) ?? null;
@@ -3112,14 +3140,18 @@ export class V2ImportOverviewService {
       (sum, row) => sum + this.toNumber(row.Maara),
       0,
     );
-    const fixedRevenue = this.toNumber(financialRow?.PerusmaksuYhteensa);
+    const fixedRevenue = this.toNullableNumber(financialRow?.PerusmaksuYhteensa);
 
     const hasRequiredInputs =
       expectedSalesRevenue != null &&
       (soldWaterVolume > 0 || soldWastewaterVolume > 0) &&
       (waterPrice > 0 || wastewaterPrice > 0);
     if (!hasRequiredInputs) {
-      return null;
+      return { ready: null, reason: null };
+    }
+
+    if (fixedRevenue == null) {
+      return { ready: false, reason: 'missing_fixed_revenue' };
     }
 
     const derivedSalesRevenue = this.round2(
@@ -3128,7 +3160,9 @@ export class V2ImportOverviewService {
         fixedRevenue,
     );
 
-    return Math.abs(this.round2(expectedSalesRevenue) - derivedSalesRevenue) <= 1;
+    return Math.abs(this.round2(expectedSalesRevenue) - derivedSalesRevenue) <= 1
+      ? { ready: true, reason: null }
+      : { ready: false, reason: 'mismatch' };
   }
 
   private resolveWorkspaceYearRows(importStatus: {
@@ -5182,4 +5216,3 @@ export class V2ImportOverviewService {
     return Number.isFinite(parsed) ? parsed : null;
   }
 }
-

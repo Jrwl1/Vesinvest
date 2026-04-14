@@ -21,6 +21,7 @@ import type { ManualPatchMode } from './useOverviewManualPatchEditor';
 type ReviewStatusRow = {
   year: number;
   sourceStatus: string | undefined;
+  tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
   missingRequirements: MissingRequirement[];
   setupStatus: SetupYearStatus;
 };
@@ -307,7 +308,12 @@ type Props = {
   yearDataCache: Record<number, V2ImportYearDataResponse>;
   sourceStatusClassName: (status: string | undefined) => string;
   sourceStatusLabel: (status: string | undefined) => string;
-  missingRequirementLabel: (requirement: MissingRequirement) => string;
+  missingRequirementLabel: (
+    requirement: MissingRequirement,
+    options?: {
+      tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
+    },
+  ) => string;
   openInlineCardEditor: (
     year: number,
     focusField: InlineCardField | null,
@@ -553,7 +559,11 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                 {row.missingRequirements.length > 0 ? (
                   <p className="v2-muted v2-overview-year-workspace-year-note">
                     {row.missingRequirements
-                      .map((requirement) => missingRequirementLabel(requirement))
+                      .map((requirement) =>
+                        missingRequirementLabel(requirement, {
+                          tariffRevenueReason: row.tariffRevenueReason,
+                        }),
+                      )
                       .join(', ')}
                   </p>
                 ) : null}

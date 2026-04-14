@@ -44,6 +44,7 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
     t,
     wizardDisplayStep,
     manualPatchYear,
+    reviewStatusRows,
     cardEditContext,
     isDocumentImportMode,
     manualPatchError,
@@ -102,6 +103,10 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
     setInlineCardFieldRef,
     currentYearData,
   } = controller;
+  const activeReviewRow =
+    manualPatchYear == null
+      ? null
+      : reviewStatusRows.find((row) => row.year === manualPatchYear) ?? null;
   const {
     currentFinancialFieldSources,
     canReapplyFinancialVeetiForYear,
@@ -155,7 +160,11 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
               'Required for sync readiness: {{requirements}}',
               {
                 requirements: manualPatchMissing
-                  .map((item) => missingRequirementLabel(item))
+                  .map((item) =>
+                    missingRequirementLabel(item, {
+                      tariffRevenueReason: activeReviewRow?.tariffRevenueReason,
+                    }),
+                  )
                   .join(', '),
               },
             )}

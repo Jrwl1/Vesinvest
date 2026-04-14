@@ -30,6 +30,9 @@ import {
 } from './overviewManualForms';
 import type { MissingRequirement, SetupWizardStep } from './overviewWorkflow';
 import {
+  getSyncBlockReasonLabel as buildSyncBlockReasonLabel,
+} from './overviewLabels';
+import {
   buildImportYearSummaryRows,
   markPersistedReviewedImportYears,
   resolveNextReviewQueueYear,
@@ -900,10 +903,31 @@ export function useOverviewManualPatchEditor(params: {
             closeInlineCardEditor();
             setReviewContinueStep(baselineReady ? 6 : 5);
           }
+        } else if (cardEditContext === 'step3') {
+          setCardEditYear(currentYear);
         } else {
           closeInlineCardEditor();
         }
-        setInfo(t('v2Overview.manualPatchSaved', { year: currentYear }));
+        const savedYear = result.status.years.find(
+          (row) => row.vuosi === currentYear,
+        );
+        const savedYearReason = savedYear
+          ? buildSyncBlockReasonLabel(t, savedYear)
+          : null;
+        setInfo(
+          result.syncReady
+            ? t('v2Overview.manualPatchSaved', { year: currentYear })
+            : savedYearReason
+            ? t('v2Overview.manualPatchSavedNeedsReview', {
+                year: currentYear,
+                reason: savedYearReason,
+              })
+            : t(
+                'v2Overview.manualPatchSavedStillBlocked',
+                'Year {{year}} was saved. Review is still incomplete.',
+                { year: currentYear },
+              ),
+        );
         sendV2OpsEvent({
           event: 'veeti_manual_patch',
           status: 'ok',

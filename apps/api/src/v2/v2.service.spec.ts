@@ -2532,6 +2532,92 @@ describe('V2Service upload validation', () => {
 describe('V2Service statement import manual-year regression', () => {
   const ORG_ID = 'org-1';
   const YEAR = 2024;
+  const buildTariffYearDataset = (params?: {
+    revenue?: number;
+    fixedRevenue?: number | null;
+    waterPrice?: number;
+    wastewaterPrice?: number;
+    soldWaterVolume?: number;
+    soldWastewaterVolume?: number;
+  }) => ({
+    year: YEAR,
+    veetiId: 1535,
+    sourceStatus: 'MIXED',
+    completeness: {
+      tilinpaatos: true,
+      taksa: true,
+      volume_vesi: true,
+      volume_jatevesi: true,
+    },
+    hasManualOverrides: true,
+    hasVeetiData: true,
+    datasets: [
+      {
+        dataType: 'tilinpaatos',
+        rawRows: [
+          {
+            Vuosi: YEAR,
+            Liikevaihto: params?.revenue ?? 100000,
+            PerusmaksuYhteensa: params?.fixedRevenue ?? null,
+            AineetJaPalvelut: 15000,
+            Henkilostokulut: 20000,
+            LiiketoiminnanMuutKulut: 18000,
+            Poistot: 5000,
+            TilikaudenYliJaama: 30000,
+          },
+        ],
+        effectiveRows: [
+          {
+            Vuosi: YEAR,
+            Liikevaihto: params?.revenue ?? 100000,
+            PerusmaksuYhteensa: params?.fixedRevenue ?? null,
+            AineetJaPalvelut: 15000,
+            Henkilostokulut: 20000,
+            LiiketoiminnanMuutKulut: 18000,
+            Poistot: 5000,
+            TilikaudenYliJaama: 30000,
+          },
+        ],
+        source: 'manual',
+        hasOverride: true,
+        reconcileNeeded: true,
+        overrideMeta: null,
+      },
+      {
+        dataType: 'taksa',
+        rawRows: [
+          { Tyyppi_Id: 1, Kayttomaksu: params?.waterPrice ?? 2.5 },
+          { Tyyppi_Id: 2, Kayttomaksu: params?.wastewaterPrice ?? 3.1 },
+        ],
+        effectiveRows: [
+          { Tyyppi_Id: 1, Kayttomaksu: params?.waterPrice ?? 2.5 },
+          { Tyyppi_Id: 2, Kayttomaksu: params?.wastewaterPrice ?? 3.1 },
+        ],
+        source: 'veeti',
+        hasOverride: false,
+        reconcileNeeded: false,
+        overrideMeta: null,
+      },
+      {
+        dataType: 'volume_vesi',
+        rawRows: [{ Maara: params?.soldWaterVolume ?? 25000 }],
+        effectiveRows: [{ Maara: params?.soldWaterVolume ?? 25000 }],
+        source: 'veeti',
+        hasOverride: false,
+        reconcileNeeded: false,
+        overrideMeta: null,
+      },
+      {
+        dataType: 'volume_jatevesi',
+        rawRows: [{ Maara: params?.soldWastewaterVolume ?? 24000 }],
+        effectiveRows: [{ Maara: params?.soldWastewaterVolume ?? 24000 }],
+        source: 'veeti',
+        hasOverride: false,
+        reconcileNeeded: false,
+        overrideMeta: null,
+      },
+    ],
+  });
 
   it('keeps a statement-backed financial patch sync-ready without extra backend workflow flags', async () => {
     const upsertOverride = jest.fn().mockResolvedValue(undefined);
@@ -2732,7 +2818,145 @@ describe('V2Service statement import manual-year regression', () => {
       missingBefore: [],
       missingAfter: [],
       syncReady: true,
+      tariffRevenueReason: null,
     });
+  });
+
+  it('returns a missing_fixed_revenue tariff reason when fixed revenue is absent', async () => {
+    const veetiEffectiveDataService = {
+      getYearDataset: jest.fn().mockResolvedValue(
+        buildTariffYearDataset({
+          revenue: 136900,
+          fixedRevenue: null,
+        }),
+      ),
+    } as any;
+
+    const service = buildFacadeFromArgs(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    const result = await service.getImportYearData(ORG_ID, YEAR);
+
+    expect(result.completeness.tariff_revenue).toBe(false);
+    expect(result.tariffRevenueReason).toBe('missing_fixed_revenue');
+  });
+
+  it('returns a mismatch tariff reason when revenue does not reconcile after fixed revenue is present', async () => {
+    const veetiEffectiveDataService = {
+      getYearDataset: jest.fn().mockResolvedValue(
+        buildTariffYearDataset({
+          revenue: 100000,
+          fixedRevenue: 12000,
+        }),
+      ),
+    } as any;
+
+    const service = buildFacadeFromArgs(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    const result = await service.getImportYearData(ORG_ID, YEAR);
+
+    expect(result.completeness.tariff_revenue).toBe(false);
+    expect(result.tariffRevenueReason).toBe('mismatch');
+  });
+
+  it('treats explicit zero fixed revenue as a real value instead of a missing one', async () => {
+    const veetiEffectiveDataService = {
+      getYearDataset: jest.fn().mockResolvedValue(
+        buildTariffYearDataset({
+          revenue: 136900,
+          fixedRevenue: 0,
+        }),
+      ),
+    } as any;
+
+    const service = buildFacadeFromArgs(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    const result = await service.getImportYearData(ORG_ID, YEAR);
+
+    expect(result.completeness.tariff_revenue).toBe(true);
+    expect(result.tariffRevenueReason).toBeNull();
+  });
+
+  it('includes tariff revenue mismatch metadata in refreshed status rows', async () => {
+    const veetiSyncService = {
+      getStatus: jest.fn().mockResolvedValue({
+        orgId: ORG_ID,
+        veetiId: 1535,
+        workspaceYears: [YEAR],
+      }),
+      getAvailableYears: jest.fn().mockResolvedValue([
+        {
+          vuosi: YEAR,
+          completeness: {
+            tilinpaatos: true,
+            taksa: true,
+            tariff_revenue: false,
+            volume_vesi: true,
+            volume_jatevesi: true,
+          },
+          sourceStatus: 'MIXED',
+          sourceBreakdown: {
+            veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
+            manualDataTypes: [],
+          },
+          warnings: [],
+        },
+      ]),
+    } as any;
+    const veetiEffectiveDataService = {
+      getExcludedYears: jest.fn().mockResolvedValue([]),
+      getYearDataset: jest.fn().mockResolvedValue(
+        buildTariffYearDataset({
+          revenue: 100000,
+          fixedRevenue: 12000,
+        }),
+      ),
+    } as any;
+
+    const service = buildFacadeFromArgs(
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiSyncService,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    const status = await service.getImportStatus(ORG_ID);
+
+    expect(status.years[0]).toMatchObject({
+      vuosi: YEAR,
+      tariffRevenueReason: 'mismatch',
+    });
+    expect(status.years[0].missingRequirements).toContain('tariffRevenue');
   });
 
   it('stores workbook provenance and preserves untouched financial fields during selective override apply', async () => {

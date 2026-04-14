@@ -1139,7 +1139,10 @@ export interface VeetiYearInfo {
     verkko: number;
   };
   completeness: Record<string, boolean>;
-  missingRequirements?: Array<'financials' | 'prices' | 'volumes'>;
+  missingRequirements?: Array<
+    'financials' | 'prices' | 'volumes' | 'tariffRevenue'
+  >;
+  tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
   warnings?: Array<
     | 'missing_financials'
     | 'missing_prices'
@@ -1633,9 +1636,10 @@ export type V2ManualYearPatchPayload = {
 export type V2ManualYearPatchResponse = {
   year: number;
   patchedDataTypes: string[];
-  missingBefore: Array<'financials' | 'prices' | 'volumes'>;
-  missingAfter: Array<'financials' | 'prices' | 'volumes'>;
+  missingBefore: Array<'financials' | 'prices' | 'volumes' | 'tariffRevenue'>;
+  missingAfter: Array<'financials' | 'prices' | 'volumes' | 'tariffRevenue'>;
   syncReady: boolean;
+  tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
   status: V2ImportStatus;
 };
 
@@ -1644,6 +1648,7 @@ export type V2ImportYearDataResponse = {
   veetiId: number;
   sourceStatus: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
   completeness: Record<string, boolean>;
+  tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
   hasManualOverrides: boolean;
   hasVeetiData: boolean;
   summaryRows?: V2ImportYearSummaryRow[];

@@ -9,6 +9,7 @@ import {
   reconcileImportYearV2,
   restoreImportYearsV2,
 } from '../api';
+import { getSyncBlockReasonLabel as buildSyncBlockReasonLabel } from './overviewLabels';
 import { submitWorkbookImportWorkflow } from './overviewImportWorkflows';
 import { sendV2OpsEvent } from './opsTelemetry';
 import type { MissingRequirement, SetupWizardStep } from './overviewWorkflow';
@@ -26,12 +27,14 @@ import {
 
 type ReviewStatusRow = {
   year: number;
+  completeness: Record<string, boolean>;
   setupStatus:
     | 'reviewed'
     | 'ready_for_review'
     | 'needs_attention'
     | 'excluded_from_plan';
   missingRequirements: MissingRequirement[];
+  tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
   sourceStatus?: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
 };
 
@@ -225,13 +228,15 @@ export function useOverviewReviewController({
             ? null
             : nextRows.find((row) => row.year === nextQueueYear) ?? null;
 
-        importController.setReviewedImportedYears(
-          markPersistedReviewedImportYears(
-            reviewStorageOrgId,
-            [currentYear],
-            [...confirmedImportedYears, currentYear],
-          ),
-        );
+        if (result.syncReady) {
+          importController.setReviewedImportedYears(
+            markPersistedReviewedImportYears(
+              reviewStorageOrgId,
+              [currentYear],
+              [...confirmedImportedYears, currentYear],
+            ),
+          );
+        }
         manualController.setYearDataCache((prev) => {
           const next = { ...prev };
           delete next[currentYear];
@@ -255,8 +260,25 @@ export function useOverviewReviewController({
             preserveReviewContinueStep: true,
             deferSecondaryLoads: true,
           });
+          const savedYear = result.status.years.find(
+            (row) => row.vuosi === currentYear,
+          );
+          const savedYearReason = savedYear
+            ? buildSyncBlockReasonLabel(t, savedYear)
+            : null;
           importController.setInfo(
-            t('v2Overview.manualPatchSaved', { year: currentYear }),
+            result.syncReady
+              ? t('v2Overview.manualPatchSaved', { year: currentYear })
+              : savedYearReason
+              ? t('v2Overview.manualPatchSavedNeedsReview', {
+                  year: currentYear,
+                  reason: savedYearReason,
+                })
+              : t(
+                  'v2Overview.manualPatchSavedStillBlocked',
+                  'Year {{year}} was saved. Review is still incomplete.',
+                  { year: currentYear },
+                ),
           );
         }
         if (nextQueueRow) {
@@ -752,6 +774,23 @@ export function useOverviewReviewController({
       const selectedYear =
         reviewStatusRows.find((row) => row.year === reviewTargetYear) ?? null;
       if (selectedYear) {
+        if (
+          manualController.cardEditContext === 'step3' &&
+          manualController.cardEditYear === selectedYear.year
+        ) {
+          const currentYearReason = buildSyncBlockReasonLabel(t, {
+            vuosi: selectedYear.year,
+            completeness: selectedYear.completeness,
+            tariffRevenueReason: selectedYear.tariffRevenueReason,
+          });
+          importController.setInfo(
+            currentYearReason ??
+              (selectedYear.setupStatus === 'ready_for_review'
+                ? t('v2Overview.setupStatusTechnicalReadyHint')
+                : t('v2Overview.reviewContinueBlockedHint')),
+          );
+          return;
+        }
         await manualController.openInlineCardEditor(
           selectedYear.year,
           null,

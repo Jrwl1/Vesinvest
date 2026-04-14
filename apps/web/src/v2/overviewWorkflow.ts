@@ -9,6 +9,7 @@ export type ImportYearLike = {
   vuosi: number;
   planningRole?: 'historical' | 'current_year_estimate';
   completeness: Record<string, boolean>;
+  tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
   reviewState?: 'pending_review' | 'reviewed';
 };
 
@@ -74,6 +75,7 @@ export function getSyncBlockReasonKey(
   | 'v2Overview.yearReasonMissingPrices'
   | 'v2Overview.yearReasonMissingVolumes'
   | 'v2Overview.yearReasonMissingTariffRevenue'
+  | 'v2Overview.yearReasonTariffRevenueMismatch'
   | null {
   if (!row.completeness.tilinpaatos) {
     return 'v2Overview.yearReasonMissingFinancials';
@@ -85,6 +87,9 @@ export function getSyncBlockReasonKey(
     return 'v2Overview.yearReasonMissingVolumes';
   }
   if (row.completeness.tariff_revenue === false) {
+    if (row.tariffRevenueReason === 'mismatch') {
+      return 'v2Overview.yearReasonTariffRevenueMismatch';
+    }
     return 'v2Overview.yearReasonMissingTariffRevenue';
   }
   return null;

@@ -11,6 +11,7 @@ import {
   getFinancialComparisonLabel as buildFinancialComparisonLabel,
   getImportWarningLabel as buildImportWarningLabel,
   getMissingRequirementLabel as buildMissingRequirementLabel,
+  getSyncBlockReasonLabel as buildSyncBlockReasonLabel,
   getPriceComparisonLabel as buildPriceComparisonLabel,
   getSourceLayerText as buildSourceLayerText,
   getSourceStatusClassName as buildSourceStatusClassName,
@@ -41,7 +42,6 @@ import { useOverviewReviewController } from './useOverviewReviewController';
 import { useOverviewReviewSelectors } from './overviewReviewSelectors';
 import { useOverviewSetupState } from './useOverviewSetupState';
 import {
-  getSyncBlockReasonKey,
   resolveVesinvestWorkflowState,
   resolveSetupWizardStateFromImportStatus,
   type MissingRequirement,
@@ -105,25 +105,16 @@ export function useOverviewPageController({
   const { t } = useTranslation();
 
   const resolveSyncBlockReason = React.useCallback(
-    (row: { completeness: Record<string, boolean> }): string | null => {
-      const key = getSyncBlockReasonKey({
+    (row: {
+      completeness: Record<string, boolean>;
+      tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
+      vuosi?: number;
+    }): string | null =>
+      buildSyncBlockReasonLabel(t, {
         vuosi: 0,
         completeness: row.completeness,
-      });
-      if (!key) {
-        return null;
-      }
-      if (key === 'v2Overview.yearReasonMissingFinancials') {
-        return t(key, 'Missing financial statement data.');
-      }
-      if (key === 'v2Overview.yearReasonMissingPrices') {
-        return t(key, 'Missing price data (taksa).');
-      }
-      if (key === 'v2Overview.yearReasonMissingTariffRevenue') {
-        return t(key, 'Fixed revenue is needed to reconcile tariff revenue.');
-      }
-      return t(key, 'Missing sold volume data.');
-    },
+        tariffRevenueReason: row.tariffRevenueReason,
+      }),
     [t],
   );
 
@@ -140,6 +131,40 @@ export function useOverviewPageController({
         .slice(0, 3)
         .map((item) => item.vuosi),
     [resolveSyncBlockReason],
+  );
+
+  const buildManualPatchInfoMessage = React.useCallback(
+    (
+      year: number,
+      result: {
+        syncReady: boolean;
+        status: {
+          years: Array<{
+            vuosi: number;
+            completeness: Record<string, boolean>;
+            tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
+          }>;
+        };
+      },
+    ) => {
+      if (result.syncReady) {
+        return t('v2Overview.manualPatchSaved', { year });
+      }
+      const savedYear = result.status.years.find((row) => row.vuosi === year);
+      const reason = savedYear ? resolveSyncBlockReason(savedYear) : null;
+      if (reason) {
+        return t('v2Overview.manualPatchSavedNeedsReview', {
+          year,
+          reason,
+        });
+      }
+      return t(
+        'v2Overview.manualPatchSavedStillBlocked',
+        'Year {{year}} was saved. Review is still incomplete.',
+        { year },
+      );
+    },
+    [resolveSyncBlockReason, t],
   );
 
   const manualController = useOverviewManualPatchController({ t });
@@ -431,8 +456,12 @@ export function useOverviewPageController({
   );
 
   const missingRequirementLabel = React.useCallback(
-    (requirement: MissingRequirement) =>
-      buildMissingRequirementLabel(t, requirement),
+    (
+      requirement: MissingRequirement,
+      options?: {
+        tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
+      },
+    ) => buildMissingRequirementLabel(t, requirement, options),
     [t],
   );
 
@@ -656,7 +685,7 @@ export function useOverviewPageController({
           preserveReviewContinueStep: true,
           deferSecondaryLoads: true,
         });
-        importController.setInfo(t('v2Overview.manualPatchSaved', { year }));
+        importController.setInfo(buildManualPatchInfoMessage(year, result));
       }
 
       const refreshedYearData = await getImportYearDataV2(year);
@@ -675,6 +704,7 @@ export function useOverviewPageController({
       importController,
       manualController,
       reviewStorageOrgId,
+      buildManualPatchInfoMessage,
       t,
     ],
   );

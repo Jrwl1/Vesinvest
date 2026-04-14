@@ -35,6 +35,7 @@ type ReadinessState = {
 type ReviewStatusRow = {
   year: number;
   sourceStatus: string | undefined;
+  tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
   readinessChecks: Array<{
     key: keyof ReadinessState;
     ready: boolean;
@@ -58,11 +59,17 @@ type RepairAction = {
 
 function getReviewMissingRequirementLabel(
   t: TFunction,
-  fallbackLabel: (requirement: MissingRequirement) => string,
+  fallbackLabel: (
+    requirement: MissingRequirement,
+    options?: {
+      tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
+    },
+  ) => string,
   requirement: MissingRequirement,
+  tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null,
 ): string {
   if (requirement === 'tariffRevenue') {
-    return t('v2Overview.datasetTariffRevenue');
+    return fallbackLabel(requirement, { tariffRevenueReason });
   }
   return fallbackLabel(requirement);
 }
@@ -288,7 +295,12 @@ type OverviewReviewCardBodyProps = {
   setManualPrices: React.Dispatch<React.SetStateAction<ManualPriceForm>>;
   manualVolumes: ManualVolumeForm;
   setManualVolumes: React.Dispatch<React.SetStateAction<ManualVolumeForm>>;
-  missingRequirementLabel: (requirement: MissingRequirement) => string;
+  missingRequirementLabel: (
+    requirement: MissingRequirement,
+    options?: {
+      tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
+    },
+  ) => string;
   saveInlineCardEdit: (syncAfterSave?: boolean) => Promise<void> | void;
   closeInlineCardEditor: () => void;
   workbookImportWorkflowProps: Omit<OverviewWorkbookImportWorkflowProps, 'yearLabel'>;
@@ -338,7 +350,11 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
             'v2Overview.manualPatchRequiredHint',
             {
               requirements: row.missingRequirements
-                .map((item) => missingRequirementLabel(item))
+                .map((item) =>
+                  missingRequirementLabel(item, {
+                    tariffRevenueReason: row.tariffRevenueReason,
+                  }),
+                )
                 .join(', '),
             },
           )}
@@ -761,7 +777,12 @@ type Props = {
   setupStatusLabel: (status: SetupYearStatus) => string;
   yearStatusRowClassName: (status: SetupYearStatus) => string;
   importWarningLabel: (warning: string) => string;
-  missingRequirementLabel: (requirement: MissingRequirement) => string;
+  missingRequirementLabel: (
+    requirement: MissingRequirement,
+    options?: {
+      tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
+    },
+  ) => string;
   isAdmin: boolean;
   buildRepairActions: (
     year: number,
@@ -1011,8 +1032,18 @@ export const OverviewReviewBoard: React.FC<Props> = ({
     ? t('v2Overview.baselineClosureTitle')
     : t('v2Overview.wizardContextReviewQueue');
   const visibleMissingRequirementLabel = React.useCallback(
-    (requirement: MissingRequirement) =>
-      getReviewMissingRequirementLabel(t, missingRequirementLabel, requirement),
+    (
+      requirement: MissingRequirement,
+      options?: {
+        tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
+      },
+    ) =>
+      getReviewMissingRequirementLabel(
+        t,
+        missingRequirementLabel,
+        requirement,
+        options?.tariffRevenueReason,
+      ),
     [missingRequirementLabel, t],
   );
 
@@ -1181,7 +1212,14 @@ export const OverviewReviewBoard: React.FC<Props> = ({
                   requirements:
                     row.missingRequirements.length > 0
                       ? row.missingRequirements
-                          .map((item) => visibleMissingRequirementLabel(item))
+                          .map((item) =>
+                            visibleMissingRequirementLabel(
+                              item,
+                              {
+                                tariffRevenueReason: row.tariffRevenueReason,
+                              },
+                            ),
+                          )
                           .join(', ')
                       : t('v2Overview.setupStatusNeedsAttention'),
                 });

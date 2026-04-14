@@ -6,7 +6,11 @@ import type {
 } from '../api';
 import { IMPORT_BOARD_CANON_ROWS } from './overviewManualForms';
 import { normalizeImportedFileName } from './provenanceDisplay';
-import type { MissingRequirement } from './overviewWorkflow';
+import {
+  getSyncBlockReasonKey,
+  type MissingRequirement,
+  type ImportYearLike,
+} from './overviewWorkflow';
 import type {
   FinancialComparisonFieldKey,
   ImportYearSourceLayer,
@@ -91,6 +95,9 @@ export function getImportYearSummaryLabel(
 export function getMissingRequirementLabel(
   t: TFunction,
   requirement: MissingRequirement,
+  options?: {
+    tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
+  },
 ): string {
   if (requirement === 'financials') {
     return t('v2Overview.requirementFinancials', 'Financial statement data');
@@ -99,12 +106,44 @@ export function getMissingRequirementLabel(
     return t('v2Overview.requirementPrices', 'Price data (taksa)');
   }
   if (requirement === 'tariffRevenue') {
+    if (options?.tariffRevenueReason === 'mismatch') {
+      return t(
+        'v2Overview.requirementTariffRevenueMismatch',
+        'Tariff revenue does not reconcile with prices, volumes, and fixed revenue',
+      );
+    }
     return t(
       'v2Overview.requirementTariffRevenue',
       'Fixed revenue needed to reconcile tariff revenue',
     );
   }
   return t('v2Overview.requirementVolumes', 'Sold volume data');
+}
+
+export function getSyncBlockReasonLabel(
+  t: TFunction,
+  row: Pick<ImportYearLike, 'vuosi' | 'completeness' | 'tariffRevenueReason'>,
+): string | null {
+  const key = getSyncBlockReasonKey(row);
+  if (!key) {
+    return null;
+  }
+  if (key === 'v2Overview.yearReasonMissingFinancials') {
+    return t(key, 'Missing financial statement data.');
+  }
+  if (key === 'v2Overview.yearReasonMissingPrices') {
+    return t(key, 'Missing price data (taksa).');
+  }
+  if (key === 'v2Overview.yearReasonTariffRevenueMismatch') {
+    return t(
+      key,
+      'Tariff revenue does not reconcile with prices, volumes, and fixed revenue.',
+    );
+  }
+  if (key === 'v2Overview.yearReasonMissingTariffRevenue') {
+    return t(key, 'Fixed revenue is needed to reconcile tariff revenue.');
+  }
+  return t(key, 'Missing sold volume data.');
 }
 
 export function getFinancialComparisonLabel(

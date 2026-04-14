@@ -52,7 +52,12 @@ type Props = {
   sourceStatusClassName: (status: string | undefined) => string;
   sourceLayerText: (layer: any) => string;
   renderDatasetCounts: (counts?: Record<string, number>) => string;
-  missingRequirementLabel: (requirement: MissingRequirement) => string;
+  missingRequirementLabel: (
+    requirement: MissingRequirement,
+    options?: {
+      tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
+    },
+  ) => string;
   attemptOpenInlineCardEditor: (
     year: number,
     focusField: InlineCardField | null,
@@ -736,7 +741,10 @@ export const OverviewImportBoard: React.FC<Props> = ({
                                           {
                                             requirements: row.missingRequirements
                                               .map((item: MissingRequirement) =>
-                                                missingRequirementLabel(item),
+                                                missingRequirementLabel(item, {
+                                                  tariffRevenueReason:
+                                                    row.tariffRevenueReason,
+                                                }),
                                               )
                                               .join(', '),
                                           },

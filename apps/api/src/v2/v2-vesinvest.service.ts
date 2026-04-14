@@ -387,7 +387,7 @@ export class V2VesinvestService {
     );
     const currentBaseline = await this.getCurrentBaselineSnapshot(orgId);
     const nextStatus = body.status ?? current.status;
-    if (nextStatus === 'active') {
+    if (current.status !== 'active' && nextStatus === 'active') {
       this.assertPlanCanBecomeActive(current, currentBaseline);
     }
 

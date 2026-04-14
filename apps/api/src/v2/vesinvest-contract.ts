@@ -61,7 +61,7 @@ export const DEFAULT_VESINVEST_REPORT_GROUP_DEFINITIONS: VesinvestReportGroupDef
 export const DEFAULT_VESINVEST_GROUP_DEFINITIONS: VesinvestGroupDefinitionRecord[] = [
   {
     key: 'sanering_water_network',
-    label: 'Sanering / vattennatverk',
+    label: 'Sanering / vattennätverk',
     defaultAccountKey: 'sanering_water_network',
     defaultDepreciationClassKey: 'sanering_water_network',
     reportGroupKey: 'network_rehabilitation',
@@ -69,7 +69,7 @@ export const DEFAULT_VESINVEST_GROUP_DEFINITIONS: VesinvestGroupDefinitionRecord
   },
   {
     key: 'sanering_wastewater_network',
-    label: 'Sanering / avloppsnatverk',
+    label: 'Sanering / avloppsnätverk',
     defaultAccountKey: 'sanering_wastewater_network',
     defaultDepreciationClassKey: 'sanering_wastewater_network',
     reportGroupKey: 'network_rehabilitation',
@@ -77,7 +77,7 @@ export const DEFAULT_VESINVEST_GROUP_DEFINITIONS: VesinvestGroupDefinitionRecord
   },
   {
     key: 'new_water_network',
-    label: 'Nyanlaggning / vattennatverk',
+    label: 'Nyanläggning / vattennätverk',
     defaultAccountKey: 'new_water_network',
     defaultDepreciationClassKey: 'new_water_network',
     reportGroupKey: 'new_network',
@@ -85,7 +85,7 @@ export const DEFAULT_VESINVEST_GROUP_DEFINITIONS: VesinvestGroupDefinitionRecord
   },
   {
     key: 'new_wastewater_network',
-    label: 'Nyanlaggning / avloppsnatverk',
+    label: 'Nyanläggning / avloppsnätverk',
     defaultAccountKey: 'new_wastewater_network',
     defaultDepreciationClassKey: 'new_wastewater_network',
     reportGroupKey: 'new_network',
@@ -93,7 +93,7 @@ export const DEFAULT_VESINVEST_GROUP_DEFINITIONS: VesinvestGroupDefinitionRecord
   },
   {
     key: 'repair_water_network',
-    label: 'Reparation / vattennatverk',
+    label: 'Reparation / vattennätverk',
     defaultAccountKey: 'repair_water_network',
     defaultDepreciationClassKey: 'repair_water_network',
     reportGroupKey: 'network_rehabilitation',
@@ -101,7 +101,7 @@ export const DEFAULT_VESINVEST_GROUP_DEFINITIONS: VesinvestGroupDefinitionRecord
   },
   {
     key: 'repair_wastewater_network',
-    label: 'Reparation / avloppsnatverk',
+    label: 'Reparation / avloppsnätverk',
     defaultAccountKey: 'repair_wastewater_network',
     defaultDepreciationClassKey: 'repair_wastewater_network',
     reportGroupKey: 'network_rehabilitation',

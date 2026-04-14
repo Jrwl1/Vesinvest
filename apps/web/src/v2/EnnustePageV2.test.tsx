@@ -468,6 +468,15 @@ describe('EnnustePageV2', () => {
 
     const scenarioDepreciationRules = [
       {
+        id: 'rule-vesinvest',
+        assetClassKey: 'sanering_water_network',
+        assetClassName: 'Sanering / vattennatverk',
+        method: 'straight-line',
+        linearYears: 25,
+        residualPercent: null,
+        annualSchedule: null,
+      },
+      {
         id: 'rule-1',
         assetClassKey: 'network',
         assetClassName: 'Network',
@@ -594,6 +603,57 @@ describe('EnnustePageV2', () => {
     ).toBeNull();
     expect(screen.getByText('Planning areas')).toBeTruthy();
     expect(screen.getByText('Income statement overview')).toBeTruthy();
+  });
+
+  it('renders tariff-answer cards with explicit driver labels instead of generic baseline rows', async () => {
+    render(<EnnustePageV2 onReportCreated={() => undefined} />);
+
+    const tariffSection = (await screen.findByRole('heading', {
+      name: 'Why this price',
+    })).closest('section') as HTMLElement | null;
+
+    expect(tariffSection).toBeTruthy();
+    expect(
+      within(tariffSection!).queryByText('Baseline'),
+    ).toBeNull();
+    expect(
+      within(tariffSection!).queryByText('Selected scenario'),
+    ).toBeNull();
+    expect(
+      within(tariffSection!).queryByText('Delta'),
+    ).toBeNull();
+    expect(
+      within(tariffSection!).getByText('Peak annual investment total'),
+    ).toBeTruthy();
+    expect(
+      within(tariffSection!).getByText('Strongest rolling 5-year total'),
+    ).toBeTruthy();
+    expect(
+      within(tariffSection!).getByText('Current fee level'),
+    ).toBeTruthy();
+    expect(
+      within(tariffSection!).getAllByText('Source'),
+    ).toHaveLength(2);
+    expect(
+      within(tariffSection!).queryByText('Near-term editable other operating costs'),
+    ).toBeNull();
+  });
+
+  it('keeps view mode toggles out of the primary forecast action row', async () => {
+    render(<EnnustePageV2 onReportCreated={() => undefined} />);
+
+    const createReportButton = await screen.findByRole('button', {
+      name: 'Create report',
+    });
+    const standardViewButton = screen.getByRole('button', {
+      name: 'Standard view',
+    });
+
+    expect(createReportButton.closest('.v2-actions-row')).toBeTruthy();
+    expect(standardViewButton.closest('.v2-actions-row')).toBeTruthy();
+    expect(createReportButton.closest('.v2-actions-row')).not.toBe(
+      standardViewButton.closest('.v2-actions-row'),
+    );
   });
 
   it('does not flash the first-scenario empty state while the scenario list is still loading', async () => {
@@ -1136,6 +1196,12 @@ describe('EnnustePageV2', () => {
         0,
       );
     });
+    expect(
+      screen.getByRole('button', { name: 'Recompute results' }).className,
+    ).toContain('v2-btn-primary');
+    expect(screen.getByRole('button', { name: 'Create report' }).className).not.toContain(
+      'v2-btn-primary',
+    );
   });
 
   it('shows unsaved changes as blocked and points the top strip back to save-and-compute', async () => {
@@ -1178,6 +1244,12 @@ describe('EnnustePageV2', () => {
       (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
+    expect(
+      screen.getByRole('button', { name: 'Save and compute results' }).className,
+    ).toContain('v2-btn-primary');
+    expect(screen.getByRole('button', { name: 'Create report' }).className).not.toContain(
+      'v2-btn-primary',
+    );
   });
 
   it('switches from computing back to current report-ready truth after recompute finishes', async () => {
@@ -1208,6 +1280,12 @@ describe('EnnustePageV2', () => {
       (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
+    expect(
+      screen.getByRole('button', { name: 'Computing results...' }).className,
+    ).toContain('v2-btn-primary');
+    expect(screen.getByRole('button', { name: 'Create report' }).className).not.toContain(
+      'v2-btn-primary',
+    );
 
     pendingCompute.resolve({
       ...buildBaseScenario(),
@@ -1458,6 +1536,43 @@ describe('EnnustePageV2', () => {
       (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
         .title,
     ).toContain('Review and save the Vesinvest class plan before creating a report.');
+    expect(screen.getByRole('button', { name: 'Create report' }).className).toContain(
+      'v2-btn-primary',
+    );
+    expect(
+      screen.getByRole('button', { name: 'Recompute results' }).className,
+    ).not.toContain('v2-btn-primary');
+  });
+
+  it('keeps report creation primary when the selected scenario is not the active Vesinvest revision', async () => {
+    getPlanningContextV2.mockResolvedValueOnce(buildPlanningContext('stress-1'));
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    await screen.findAllByText('Current results');
+
+    expect(
+      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(
+      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
+        .title,
+    ).toContain('Select an active Vesinvest revision before creating a report.');
+    expect(screen.getByRole('button', { name: 'Create report' }).className).toContain(
+      'v2-btn-primary',
+    );
+    expect(
+      screen.getByRole('button', { name: 'Recompute results' }).className,
+    ).not.toContain('v2-btn-primary');
   });
 
   it('returns to the compact cockpit after drill-down edits are recomputed back to a report-ready state', async () => {
@@ -1568,6 +1683,30 @@ describe('EnnustePageV2', () => {
         name: 'First scenario',
         copyFromScenarioId: undefined,
         scenarioType: 'base',
+      });
+    });
+  });
+
+  it('hides quick-create draft fields when the base branch already exists', async () => {
+    createForecastScenarioV2.mockResolvedValueOnce(buildStressScenario());
+
+    render(<EnnustePageV2 onReportCreated={() => undefined} />);
+
+    await waitFor(() => {
+      expect(getForecastScenarioV2).toHaveBeenCalledWith('base-1');
+    });
+
+    expect(document.querySelector('#v2-forecast-new-scenario-name')).toBeNull();
+    expect(document.querySelector('#v2-forecast-new-scenario-type')).toBeNull();
+    expect(document.querySelector('#v2-forecast-scenario-name')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'New' }));
+
+    await waitFor(() => {
+      expect(createForecastScenarioV2).toHaveBeenCalledWith({
+        name: expect.stringMatching(/^Scenario \d{4}-\d{2}-\d{2}$/),
+        copyFromScenarioId: undefined,
+        scenarioType: 'hypothesis',
       });
     });
   });

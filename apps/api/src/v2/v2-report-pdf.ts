@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { DEFAULT_VESINVEST_GROUP_DEFINITIONS } from './vesinvest-contract';
 
 type ReportVariant = 'public_summary' | 'confidential_appendix';
 
@@ -179,6 +180,55 @@ type BuildV2ReportPdfInput = {
   toPdfText: (value: string) => string;
   normalizeText: (value: string | null | undefined) => string | null;
   toNumber: (value: unknown) => number;
+};
+
+const AUTHORITATIVE_VESINVEST_GROUP_LABELS = new Map(
+  DEFAULT_VESINVEST_GROUP_DEFINITIONS.map((group) => [group.key, group.label] as const),
+);
+
+const normalizeYearList = (
+  values: Array<number | null | undefined>,
+): number[] =>
+  [...new Set(
+    values.filter((value): value is number => Number.isFinite(value)).map((value) =>
+      Math.trunc(value),
+    ),
+  )].sort((left, right) => left - right);
+
+const resolveAcceptedBaselineYears = (
+  snapshot: ReportSnapshot,
+): number[] => {
+  const explicitYears = normalizeYearList(snapshot?.acceptedBaselineYears ?? []);
+  if (explicitYears.length > 0) {
+    return explicitYears;
+  }
+  return normalizeYearList([
+    ...(snapshot?.baselineSourceSummaries ?? []).map((summary) => summary?.year),
+    snapshot?.baselineSourceSummary?.year,
+  ]);
+};
+
+const formatAcceptedBaselineYears = (snapshot: ReportSnapshot): string => {
+  const years = resolveAcceptedBaselineYears(snapshot);
+  return years.length > 0 ? years.join(', ') : '-';
+};
+
+const normalizeVesinvestClassLabel = (
+  classKey: string | null | undefined,
+  fallbackLabel: string | null | undefined,
+): string => {
+  const normalizedKey = String(classKey ?? '').trim();
+  if (normalizedKey.length > 0) {
+    const authoritativeLabel = AUTHORITATIVE_VESINVEST_GROUP_LABELS.get(normalizedKey);
+    if (authoritativeLabel) {
+      return authoritativeLabel;
+    }
+  }
+  const normalizedFallback = String(fallbackLabel ?? '').trim();
+  if (normalizedFallback.length > 0) {
+    return normalizedFallback;
+  }
+  return normalizedKey || '-';
 };
 
 export async function buildV2ReportPdf({
@@ -536,9 +586,6 @@ export async function buildV2ReportPdf({
   const annualInvestmentRows = [...(vesinvestAppendix?.yearlyTotals ?? [])].sort(
     (left, right) => left.year - right.year,
   );
-  const acceptedBaselineYears = [...(snapshot?.acceptedBaselineYears ?? [])].sort(
-    (left, right) => left - right,
-  );
   const annualTariffHeading =
     annualTariffRows.length > 0
       ? `Appendix A: annual tariff path ${annualTariffRows[0]!.year}-${annualTariffRows[annualTariffRows.length - 1]!.year} (${annualTariffRows.length} years)`
@@ -547,10 +594,7 @@ export async function buildV2ReportPdf({
     annualTariffRows.length > 0
       ? `${annualTariffRows[0]!.year}-${annualTariffRows[annualTariffRows.length - 1]!.year} (${annualTariffRows.length} years)`
       : '-';
-  const acceptedBaselineYearsLabel =
-    acceptedBaselineYears.length > 0
-      ? acceptedBaselineYears.join(', ')
-      : String(report.baselineYear);
+  const acceptedBaselineYearsLabel = formatAcceptedBaselineYears(snapshot);
   const scenarioBranchLabel =
     scenario?.scenarioType === 'base'
       ? 'Base'
@@ -569,6 +613,7 @@ export async function buildV2ReportPdf({
   const depreciationPlanHeading = 'Appendix D: depreciation plan';
   const yearlyInvestmentsHeading = 'Appendix E: yearly investment rows';
   const assumptionsHeading = 'Appendix F: assumptions';
+  const showDetailedInvestmentAppendices = reportSections.yearlyInvestments;
   const baselineTariffRow = annualTariffRows[0] ?? null;
   const peakAnnualInvestmentRow =
     annualInvestmentRows.length > 0
@@ -916,7 +961,11 @@ export async function buildV2ReportPdf({
     return lines;
   };
 
-  if (reportSections.investmentPlan && annualInvestmentRows.length > 0) {
+  if (
+    reportSections.investmentPlan &&
+    showDetailedInvestmentAppendices &&
+    annualInvestmentRows.length > 0
+  ) {
     nextPage();
     drawSectionHeading(annualInvestmentHeading);
     drawAnnualInvestmentTableHeader();
@@ -936,7 +985,8 @@ export async function buildV2ReportPdf({
     reportSections.investmentPlan &&
     ((vesinvestAppendix?.fiveYearBands?.length ?? 0) > 0 ||
       (vesinvestAppendix?.groupedProjects?.length ?? 0) > 0 ||
-      (vesinvestAppendix?.depreciationPlan?.length ?? 0) > 0)
+      (showDetailedInvestmentAppendices &&
+        (vesinvestAppendix?.depreciationPlan?.length ?? 0) > 0))
   ) {
     nextPage();
     drawSectionHeading(investmentPlanHeading);
@@ -956,45 +1006,70 @@ export async function buildV2ReportPdf({
     }
 
     if ((vesinvestAppendix?.groupedProjects?.length ?? 0) > 0) {
-      draw('Code', 40, y, 9, true);
-      draw('Project', 110, y, 9, true);
-      draw('Account', 420, y, 9, true);
-      draw('Total', 510, y, 9, true);
-      y -= 12;
-
-      for (const group of vesinvestAppendix?.groupedProjects ?? []) {
-        ensureSpace(18);
-        draw(
-          toPdfText(`${group.classLabel} (${group.classKey})`),
-          40,
-          y,
-          9,
-          true,
-        );
-        draw(formatMoney(group.totalAmount), 510, y, 9, true);
+      if (showDetailedInvestmentAppendices) {
+        draw('Code', 40, y, 9, true);
+        draw('Project', 110, y, 9, true);
+        draw('Account', 420, y, 9, true);
+        draw('Total', 510, y, 9, true);
         y -= 12;
-        for (const project of group.projects ?? []) {
-          const allocationLines = formatAllocationLines(project.allocations ?? []);
-          ensureSpace(14 + allocationLines.length * 10);
-          draw(toPdfText(project.code), 40, y, 8);
+
+        for (const group of vesinvestAppendix?.groupedProjects ?? []) {
+          ensureSpace(18);
           draw(
-            toPdfText(project.name.slice(0, 56) || '-'),
-            110,
+            toPdfText(
+              `${normalizeVesinvestClassLabel(group.classKey, group.classLabel)} (${group.classKey})`,
+            ),
+            40,
+            y,
+            9,
+            true,
+          );
+          draw(formatMoney(group.totalAmount), 510, y, 9, true);
+          y -= 12;
+          for (const project of group.projects ?? []) {
+            const allocationLines = formatAllocationLines(project.allocations ?? []);
+            ensureSpace(14 + allocationLines.length * 10);
+            draw(toPdfText(project.code), 40, y, 8);
+            draw(
+              toPdfText(project.name.slice(0, 56) || '-'),
+              110,
+              y,
+              8,
+            );
+            draw(toPdfText((project.accountKey ?? '-').slice(0, 14)), 420, y, 8);
+            draw(formatMoney(project.totalAmount), 510, y, 8);
+            y -= 11;
+            for (const line of allocationLines) {
+              draw(toPdfText(line.slice(0, 86)), 110, y, 7);
+              y -= 9;
+            }
+          }
+        }
+      } else {
+        draw('Class', 40, y, 9, true);
+        draw('Total', 510, y, 9, true);
+        y -= 12;
+
+        for (const group of vesinvestAppendix?.groupedProjects ?? []) {
+          ensureSpace(14);
+          draw(
+            toPdfText(
+              `${normalizeVesinvestClassLabel(group.classKey, group.classLabel)} (${group.classKey})`,
+            ),
+            40,
             y,
             8,
           );
-          draw(toPdfText((project.accountKey ?? '-').slice(0, 14)), 420, y, 8);
-          draw(formatMoney(project.totalAmount), 510, y, 8);
+          draw(formatMoney(group.totalAmount), 510, y, 8);
           y -= 11;
-          for (const line of allocationLines) {
-            draw(toPdfText(line.slice(0, 86)), 110, y, 7);
-            y -= 9;
-          }
         }
       }
     }
 
-    if ((vesinvestAppendix?.depreciationPlan?.length ?? 0) > 0) {
+    if (
+      showDetailedInvestmentAppendices &&
+      (vesinvestAppendix?.depreciationPlan?.length ?? 0) > 0
+    ) {
       y -= 4;
       drawLine(depreciationPlanHeading, MARGIN_LEFT, 10, true, 14);
       draw('Class', 40, y, 9, true);
@@ -1007,7 +1082,14 @@ export async function buildV2ReportPdf({
 
       for (const row of vesinvestAppendix?.depreciationPlan ?? []) {
         ensureSpace(14);
-        draw(toPdfText(row.classLabel.slice(0, 28)), 40, y, 8);
+        draw(
+          toPdfText(
+            normalizeVesinvestClassLabel(row.classKey, row.classLabel).slice(0, 28),
+          ),
+          40,
+          y,
+          8,
+        );
         draw(toPdfText((row.accountKey ?? '-').slice(0, 18)), 240, y, 8);
         draw(toPdfText(formatServiceSplit(row.serviceSplit)), 350, y, 8);
         draw(

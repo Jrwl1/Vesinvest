@@ -138,6 +138,33 @@ const appendDetailSuffix = (
   return details.length > 0 ? `${base} | ${details.join(' | ')}` : base;
 };
 
+const stripTrailingParenthetical = (value: string): string =>
+  value.replace(/\s*\([^)]*\)\s*$/u, '');
+
+const normalizeAcceptedBaselineYears = (
+  values: Array<number | null | undefined>,
+): number[] =>
+  [...new Set(
+    values.filter((value): value is number => Number.isFinite(value)).map((value) =>
+      Math.trunc(value),
+    ),
+  )].sort((left, right) => left - right);
+
+const resolveAcceptedBaselineYears = (
+  snapshot: V2ReportDetail['snapshot'] | null | undefined,
+): number[] => {
+  const explicitYears = normalizeAcceptedBaselineYears(
+    snapshot?.acceptedBaselineYears ?? [],
+  );
+  if (explicitYears.length > 0) {
+    return explicitYears;
+  }
+  return normalizeAcceptedBaselineYears([
+    ...(snapshot?.baselineSourceSummaries ?? []).map((summary) => summary?.year),
+    snapshot?.baselineSourceSummary?.year,
+  ]);
+};
+
 const formatDepreciationMethod = (
   item: {
     method: string;
@@ -566,16 +593,13 @@ export const ReportsPageV2: React.FC<Props> = ({
 
   const reportsHeaderHint = React.useMemo(() => {
     if (reports.length === 0) {
-      return t(
-        'v2Reports.emptyHint',
-        'Open Forecast, compute a scenario, and create your first report.',
-      );
+      return emptyStateReportReadinessHint;
     }
     return t(
       'v2Reports.listHint',
       'Review saved reports, variants, and PDF export state.',
     );
-  }, [reports.length, t]);
+  }, [emptyStateReportReadinessHint, reports.length, t]);
 
   const reportVariantLabel = React.useCallback(
     (variant: ReportVariant) =>
@@ -935,6 +959,17 @@ export const ReportsPageV2: React.FC<Props> = ({
       REPORT_VARIANT_OPTIONS[1],
     [previewVariant],
   );
+  const showDetailedInvestmentPlan = activeVariant.sections.yearlyInvestments;
+  const reportNearTermExpenseLabel = React.useMemo(
+    () =>
+      stripTrailingParenthetical(
+        t(
+          'v2Forecast.nearTermExpenseTitle',
+          'Near-term expense assumptions (editable)',
+        ),
+      ),
+    [t],
+  );
 
   const selectedListReport = React.useMemo(
     () => reports.find((row) => row.id === selectedReportId) ?? null,
@@ -953,15 +988,19 @@ export const ReportsPageV2: React.FC<Props> = ({
         : null,
     [selectedListReport, t],
   );
-  const selectedScenarioDisplayName = React.useMemo(
+  const selectedPreviewTitle = React.useMemo(
     () =>
-      selectedReport
-        ? getScenarioDisplayName(
-            selectedReport.ennuste.nimi ?? selectedReport.ennuste.id,
+      selectedListReportTitle ??
+      (selectedReport
+        ? getReportDisplayTitle({
+            title: selectedReport.title,
+            scenarioName:
+              selectedReport.ennuste.nimi ?? selectedReport.ennuste.id,
+            createdAt: selectedReport.createdAt,
             t,
-          )
-        : null,
-    [selectedReport, t],
+          })
+        : null),
+    [selectedListReportTitle, selectedReport, t],
   );
   const requiredAnnualResultPriceLabel = React.useMemo(
     () =>
@@ -998,7 +1037,7 @@ export const ReportsPageV2: React.FC<Props> = ({
     [t],
   );
   const selectedAcceptedBaselineYearsLabel = React.useMemo(() => {
-    const years = selectedReport?.snapshot.acceptedBaselineYears ?? [];
+    const years = resolveAcceptedBaselineYears(selectedReport?.snapshot);
     return years.length > 0 ? years.join(', ') : '-';
   }, [selectedReport]);
   const selectedBaselineSourceSummaries = React.useMemo(() => {
@@ -1147,6 +1186,12 @@ export const ReportsPageV2: React.FC<Props> = ({
 
   const downloadMatchesPreview =
     selectedReport != null ? selectedReport.variant === previewVariant : true;
+  const selectedReportHasPdf = Boolean(selectedReport?.pdfUrl);
+  const canDownloadPdf =
+    selectedReport != null &&
+    selectedReportHasPdf &&
+    downloadMatchesPreview &&
+    !downloadingPdf;
 
   return (
     <div className="v2-page">
@@ -1444,28 +1489,17 @@ export const ReportsPageV2: React.FC<Props> = ({
           <section className="v2-card v2-reports-preview-card">
             <div className="v2-section-header v2-reports-preview-head">
               <div className="v2-reports-section-copy">
-                <p className="v2-overview-eyebrow">
-                  {t('v2Reports.selectedReportTitle', 'Selected report')}
-                </p>
                 <h2>{t('v2Reports.selectedReportTitle', 'Selected report')}</h2>
-                <p className="v2-muted">
-                  {selectedReport
-                    ? formatDateTime(selectedReport.createdAt)
-                    : t(
-                        'v2Reports.selectFromList',
-                      )}
-                </p>
+                {selectedReport ? (
+                  <p className="v2-muted">{selectedPreviewTitle}</p>
+                ) : (
+                  <p className="v2-muted">
+                    {t(
+                      'v2Reports.selectFromList',
+                    )}
+                  </p>
+                )}
               </div>
-              {selectedReport ? (
-                <div className="v2-badge-row">
-                  <span className="v2-badge v2-status-info">
-                    {selectedScenarioDisplayName}
-                  </span>
-                  <span className="v2-badge v2-status-provenance">
-                    {reportVariantLabel(selectedReport.variant)}
-                  </span>
-                </div>
-              ) : null}
             </div>
 
             {loadingDetail ? (
@@ -1490,60 +1524,17 @@ export const ReportsPageV2: React.FC<Props> = ({
                   )}
                 </p>
                 <p className="v2-muted">
-                  {t(
-                    'v2Reports.emptyHint',
-                  )}
+                  {reports.length === 0
+                    ? emptyStateReportReadinessHint
+                    : t(
+                        'v2Reports.emptyHint',
+                      )}
                 </p>
               </div>
             ) : null}
 
             {selectedReport ? (
               <>
-                <section className="v2-reports-preview-hero">
-                  <div className="v2-reports-preview-hero-copy">
-                    <p className="v2-overview-eyebrow">
-                      {t('projection.scenario', 'Scenario')}
-                    </p>
-                    <h3>{selectedScenarioDisplayName}</h3>
-                    <p className="v2-muted">
-                      {formatDateTime(selectedReport.createdAt)}
-                    </p>
-                  </div>
-                  <div className="v2-reports-preview-primary-kpis">
-                    <article>
-                      <span>
-                        {t(
-                          'projection.v2.baselineYearLabel',
-                          'Baseline year',
-                        )}
-                      </span>
-                      <strong>{selectedReport.baselineYear}</strong>
-                    </article>
-                    <article>
-                      <span>
-                        {selectedReportPrimaryFeeSignal.priceLabel}
-                      </span>
-                      <strong>
-                        {formatPrice(selectedReportPrimaryFeeSignal.price)}
-                      </strong>
-                    </article>
-                    <article>
-                      <span>
-                        {selectedReportPrimaryFeeSignal.increaseLabel}
-                      </span>
-                      <strong>
-                        {formatPercent(selectedReportPrimaryFeeSignal.increase)}
-                      </strong>
-                    </article>
-                    <article>
-                      <span>
-                        {t('v2Forecast.totalInvestments', 'Total investments')}
-                      </span>
-                      <strong>{formatEur(selectedReport.totalInvestments)}</strong>
-                    </article>
-                  </div>
-                </section>
-
                 <article className="v2-kpi-strip v2-reports-secondary-kpis">
                   <div>
                     <h3>
@@ -1598,57 +1589,49 @@ export const ReportsPageV2: React.FC<Props> = ({
                 </article>
 
                 <div className="v2-actions-row v2-reports-toolbar">
-                  <p className="v2-muted">
-                    {downloadMatchesPreview
-                      ? t(
-                          'v2Reports.variantTitle',
-                        )
-                      : t(
-                          'v2Reports.downloadUsesSavedVariant',
-                          'PDF download still uses the saved report variant. Switch back to that variant to export.',
-                        )}
-                  </p>
+                  {downloadMatchesPreview || !selectedReportHasPdf ? <span /> : (
+                    <p className="v2-muted">
+                      {t(
+                        'v2Reports.downloadUsesSavedVariant',
+                        'PDF download still uses the saved report variant. Switch back to that variant to export.',
+                      )}
+                    </p>
+                  )}
                   <div className="v2-report-export-panel">
                     <button
                       className="v2-btn v2-btn-primary"
                       type="button"
                       onClick={handleDownloadPdf}
-                      disabled={downloadingPdf || !downloadMatchesPreview}
-                      title={
-                        !downloadMatchesPreview
-                          ? t(
-                              'v2Reports.downloadUsesSavedVariant',
-                              'PDF download still uses the saved report variant. Switch back to that variant to export.',
-                            )
-                          : undefined
-                      }
+                      disabled={!canDownloadPdf}
                     >
                       {downloadingPdf
                         ? t('v2Reports.downloadingPdf', 'Downloading PDF...')
                         : t('v2Reports.downloadPdf')}
                     </button>
                     <span className="v2-muted">
-                      {selectedReport.pdfUrl
+                      {downloadingPdf
+                        ? null
+                        : !selectedReportHasPdf
+                        ? t(
+                            'v2Reports.errorDownloadPdfUnavailable',
+                            'PDF export is temporarily unavailable. Please try again later.',
+                          )
+                        : !downloadMatchesPreview
+                        ? null
+                        : selectedReportHasPdf
                         ? t(
                             'v2Reports.exportReady',
                             'Saved report is available for export.',
                           )
-                        : t(
-                            'v2Reports.errorDownloadPdfUnavailable',
-                            'PDF export is temporarily unavailable. Please try again later.',
-                          )}
+                        : null}
                     </span>
                   </div>
                 </div>
 
                 <div className="v2-grid v2-grid-two v2-reports-preview-grid">
                   <article className="v2-subcard v2-reports-panel-card v2-reports-meta-card">
-                    <h3>{t('v2Reports.colCreated', 'Created')}</h3>
+                    <h3>{t('v2Reports.generatedAtLabel', 'Generated')}</h3>
                       <div className="v2-keyvalue-list">
-                        <div className="v2-keyvalue-row">
-                          <span>{t('v2Reports.colCreated', 'Created')}</span>
-                          <strong>{formatDateTime(selectedReport.createdAt)}</strong>
-                        </div>
                       <div className="v2-keyvalue-row">
                         <span>{t('v2Reports.generatedAtLabel', 'Generated')}</span>
                         <strong>
@@ -1658,12 +1641,6 @@ export const ReportsPageV2: React.FC<Props> = ({
                           )}
                         </strong>
                       </div>
-                        <div className="v2-keyvalue-row">
-                          <span>{t('v2Reports.variantTitle')}</span>
-                          <strong>
-                            {reportVariantLabel(selectedReport.variant)}
-                          </strong>
-                        </div>
                         {selectedReport.snapshot.vesinvestPlan ? (
                           <div className="v2-keyvalue-row">
                             <span>{t('v2Vesinvest.planSelector', 'Plan revision')}</span>
@@ -1739,11 +1716,6 @@ export const ReportsPageV2: React.FC<Props> = ({
                         <span className="v2-badge v2-status-info">
                           {reportVariantLabel(activeVariant.id)}
                         </span>
-                        {!downloadMatchesPreview ? (
-                          <span className="v2-badge v2-status-warning">
-                            {reportVariantLabel(selectedReport.variant)}
-                          </span>
-                        ) : null}
                       </div>
                     </div>
                     <div className="v2-report-variant-grid">
@@ -1769,11 +1741,6 @@ export const ReportsPageV2: React.FC<Props> = ({
                               {previewVariant === option.id ? (
                                 <span className="v2-badge v2-status-info">
                                   {t('v2Reports.previewTitle')}
-                                </span>
-                              ) : null}
-                              {selectedReport.variant === option.id ? (
-                                <span className="v2-badge v2-status-provenance">
-                                  {t('v2Reports.downloadPdf')}
                                 </span>
                               ) : null}
                             </div>
@@ -2018,10 +1985,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                         {selectedTariffDriverSummary.nearTermExpenseYears ? (
                           <div className="v2-keyvalue-row">
                             <span>
-                              {t(
-                                'v2Forecast.nearTermExpenseTitle',
-                                'Near-term expense assumptions (editable)',
-                              )}
+                              {reportNearTermExpenseLabel}
                             </span>
                             <strong>
                               {selectedTariffDriverSummary.nearTermExpenseYears}
@@ -2065,10 +2029,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                               className="v2-reports-assumption-item"
                             >
                               <span>
-                                {`${t(
-                                  'v2Forecast.nearTermExpenseTitle',
-                                  'Near-term expense assumptions (editable)',
-                                )} ${row.year}`}
+                                {`${reportNearTermExpenseLabel} ${row.year}`}
                               </span>
                               <strong>{`${formatPercent(
                                 row.personnelPct,
@@ -2129,7 +2090,8 @@ export const ReportsPageV2: React.FC<Props> = ({
                           </strong>
                         </div>
                       </div>
-                      {selectedVesinvestAppendix?.yearlyTotals?.length ? (
+                      {showDetailedInvestmentPlan &&
+                      selectedVesinvestAppendix?.yearlyTotals?.length ? (
                         <>
                           <h4>
                             {t('v2Forecast.investmentAnnualTable', 'Full annual table')}
@@ -2164,20 +2126,54 @@ export const ReportsPageV2: React.FC<Props> = ({
                         <>
                           <h4>{t('v2Vesinvest.investmentPlan', 'Investment plan')}</h4>
                           <div className="v2-vesinvest-table-wrap">
-                            <table className="v2-vesinvest-table">
-                              <thead>
-                                <tr>
-                                  <th>{t('v2Vesinvest.projectCode', 'Code')}</th>
-                                  <th>{t('v2Vesinvest.projectName', 'Project')}</th>
-                                  <th>{t('v2Vesinvest.projectAccount', 'Account')}</th>
-                                  <th>{t('v2Vesinvest.projectTotal', 'Total')}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {selectedVesinvestAppendix.groupedProjects.map((group) => (
-                                  <React.Fragment key={group.classKey}>
-                                    <tr className="v2-vesinvest-matrix-group-row">
-                                      <td />
+                            {showDetailedInvestmentPlan ? (
+                              <table className="v2-vesinvest-table">
+                                <thead>
+                                  <tr>
+                                    <th>{t('v2Vesinvest.projectCode', 'Code')}</th>
+                                    <th>{t('v2Vesinvest.projectName', 'Project')}</th>
+                                    <th>{t('v2Vesinvest.projectAccount', 'Account')}</th>
+                                    <th>{t('v2Vesinvest.projectTotal', 'Total')}</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {selectedVesinvestAppendix.groupedProjects.map((group) => (
+                                    <React.Fragment key={group.classKey}>
+                                      <tr className="v2-vesinvest-matrix-group-row">
+                                        <td />
+                                        <td>
+                                          {resolveVesinvestGroupLabel(
+                                            t,
+                                            group.classKey,
+                                            group.classLabel,
+                                          )}
+                                        </td>
+                                        <td />
+                                        <td>{formatEur(group.totalAmount)}</td>
+                                      </tr>
+                                      {group.projects.map((project) => (
+                                        <tr key={`${group.classKey}-${project.code}`}>
+                                          <td>{project.code}</td>
+                                          <td>{project.name}</td>
+                                          <td>{project.accountKey ?? '-'}</td>
+                                          <td>{formatEur(project.totalAmount)}</td>
+                                        </tr>
+                                      ))}
+                                    </React.Fragment>
+                                  ))}
+                                </tbody>
+                              </table>
+                            ) : (
+                              <table className="v2-vesinvest-table">
+                                <thead>
+                                  <tr>
+                                    <th>{t('v2Vesinvest.projectClass', 'Class')}</th>
+                                    <th>{t('v2Vesinvest.projectTotal', 'Total')}</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {selectedVesinvestAppendix.groupedProjects.map((group) => (
+                                    <tr key={`summary-${group.classKey}`}>
                                       <td>
                                         {resolveVesinvestGroupLabel(
                                           t,
@@ -2185,25 +2181,17 @@ export const ReportsPageV2: React.FC<Props> = ({
                                           group.classLabel,
                                         )}
                                       </td>
-                                      <td />
                                       <td>{formatEur(group.totalAmount)}</td>
                                     </tr>
-                                    {group.projects.map((project) => (
-                                      <tr key={`${group.classKey}-${project.code}`}>
-                                        <td>{project.code}</td>
-                                        <td>{project.name}</td>
-                                        <td>{project.accountKey ?? '-'}</td>
-                                        <td>{formatEur(project.totalAmount)}</td>
-                                      </tr>
-                                    ))}
-                                  </React.Fragment>
-                                ))}
-                              </tbody>
-                            </table>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
                           </div>
                         </>
                       ) : null}
-                      {selectedVesinvestAppendix?.depreciationPlan?.length ? (
+                      {showDetailedInvestmentPlan &&
+                      selectedVesinvestAppendix?.depreciationPlan?.length ? (
                         <>
                           <h4>{t('v2Vesinvest.depreciationPlan', 'Depreciation plan')}</h4>
                           <div className="v2-vesinvest-table-wrap">
@@ -2265,11 +2253,16 @@ export const ReportsPageV2: React.FC<Props> = ({
                       <div className="v2-keyvalue-list v2-reports-investment-list">
                         {selectedReport.snapshot.scenario.yearlyInvestments.map(
                           (item) => {
-                            const snapshotLabel =
+                            const snapshotLabel = resolveVesinvestGroupLabel(
+                              t,
+                              item.depreciationRuleSnapshot?.assetClassKey ??
+                                item.depreciationClassKey ??
+                                null,
                               item.depreciationRuleSnapshot?.assetClassName ??
                               item.depreciationRuleSnapshot?.assetClassKey ??
                               item.depreciationClassKey ??
-                              null;
+                              null,
+                            );
                             const snapshotMethod = formatInvestmentSnapshotMethod(item, t);
                             return (
                             <div key={item.year} className="v2-keyvalue-row">

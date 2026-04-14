@@ -18,6 +18,7 @@ import {
   type ClassAllocationDraftByYear,
   type DepreciationRuleDraft,
 } from './forecastModel';
+import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 
 type UseForecastDepreciationControllerParams = {
   t: TFunction;
@@ -83,15 +84,18 @@ export function useForecastDepreciationController({
       depreciationRuleDrafts
         .map((item) => ({
           key: item.assetClassKey.trim(),
-          label:
+          label: resolveVesinvestGroupLabel(
+            t,
+            item.assetClassKey,
             item.assetClassName.trim().length > 0
               ? item.assetClassName.trim()
               : item.assetClassKey.trim(),
+          ),
         }))
         .filter(
           (item): item is { key: string; label: string } => item.key.length > 0,
         ),
-    [depreciationRuleDrafts],
+    [depreciationRuleDrafts, t],
   );
 
   const depreciationRulesUnavailable =
@@ -473,7 +477,14 @@ export function useForecastDepreciationController({
           await createScenarioDepreciationRuleV2(selectedScenarioId, payload);
         }
         const refreshed = await listScenarioDepreciationRulesV2(selectedScenarioId);
-        const nextRuleDrafts = refreshed.map(toDepreciationRuleDraft);
+        const nextRuleDrafts = refreshed.map((rule) => ({
+          ...toDepreciationRuleDraft(rule),
+          assetClassName: resolveVesinvestGroupLabel(
+            t,
+            rule.assetClassKey,
+            rule.assetClassName ?? null,
+          ),
+        }));
         setDepreciationRuleDrafts(nextRuleDrafts);
         setSavedDepreciationRuleDrafts(nextRuleDrafts);
         markScenarioAsNeedsRecompute();

@@ -2395,7 +2395,10 @@ export class V2ForecastService {
     return {
       id: row.id,
       assetClassKey: String(row.assetClassKey ?? ''),
-      assetClassName: this.normalizeText(row.assetClassName) ?? null,
+      assetClassName: this.resolveAuthoritativeDepreciationClassName(
+        String(row.assetClassKey ?? ''),
+        this.normalizeText(row.assetClassName) ?? null,
+      ),
       method,
       linearYears:
         row.linearYears == null
@@ -2420,7 +2423,10 @@ export class V2ForecastService {
     return {
       id: rule.id,
       assetClassKey: rule.assetClassKey,
-      assetClassName: rule.assetClassName,
+      assetClassName: this.resolveAuthoritativeDepreciationClassName(
+        rule.assetClassKey,
+        rule.assetClassName,
+      ),
       method: rule.method,
       linearYears: rule.linearYears,
       residualPercent: rule.residualPercent,
@@ -2433,7 +2439,10 @@ export class V2ForecastService {
   private snapshotDepreciationRule(rule: ScenarioStoredDepreciationRule) {
     return {
       assetClassKey: rule.assetClassKey,
-      assetClassName: rule.assetClassName,
+      assetClassName: this.resolveAuthoritativeDepreciationClassName(
+        rule.assetClassKey,
+        rule.assetClassName,
+      ),
       method: rule.method,
       linearYears: rule.linearYears,
       residualPercent: rule.residualPercent,
@@ -2880,6 +2889,26 @@ export class V2ForecastService {
 
   private buildDefaultScenarioName(value: Date | string): string {
     return `Scenario ${this.formatIsoDate(value)}`;
+  }
+
+  private resolveAuthoritativeDepreciationClassName(
+    assetClassKey: string | null | undefined,
+    fallbackName: string | null | undefined,
+  ): string | null {
+    const normalizedKey = String(assetClassKey ?? '').trim();
+    if (normalizedKey.length > 0) {
+      const authoritativeLabel =
+        DEFAULT_VESINVEST_GROUP_DEFINITIONS.find(
+          (group) => group.key === normalizedKey,
+        )?.label ?? null;
+      if (authoritativeLabel) {
+        return authoritativeLabel;
+      }
+    }
+    const normalizedFallback = this.normalizeText(fallbackName ?? null);
+    return normalizedFallback && normalizedFallback.length > 0
+      ? normalizedFallback
+      : null;
   }
 
   private normalizeScenarioType(raw: unknown): ScenarioType {

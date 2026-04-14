@@ -31,6 +31,7 @@ import {
   type NearTermExpenseDraftText,
   type NearTermExpenseRow,
 } from './forecastModel';
+import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 
 export type UseForecastScenarioControllerParams = {
   t: TFunction;
@@ -203,7 +204,14 @@ export function useForecastScenarioController({
             if (loadSeq !== scenarioLoadSeqRef.current) {
               return;
             }
-            const nextRuleDrafts = rules.map(toDepreciationRuleDraft);
+            const nextRuleDrafts = rules.map((rule) => ({
+              ...toDepreciationRuleDraft(rule),
+              assetClassName: resolveVesinvestGroupLabel(
+                t,
+                rule.assetClassKey,
+                rule.assetClassName ?? null,
+              ),
+            }));
             const nextAllocationDraft = buildClassAllocationDraftByYear(
               data.yearlyInvestments.map((item) => item.year),
               rules.map((item) => item.assetClassKey),

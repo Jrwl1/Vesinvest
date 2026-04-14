@@ -183,6 +183,13 @@ export function useForecastPageController({
   ]);
 
   const canCreateReport = reportReadinessReason == null;
+  const reportBlockerNeedsComputeAction = React.useMemo(
+    () =>
+      reportReadinessReason === 'unsavedChanges' ||
+      reportReadinessReason === 'missingComputeResults' ||
+      reportReadinessReason === 'staleComputeToken',
+    [reportReadinessReason],
+  );
   const reportReadinessHint = React.useMemo(() => {
     switch (reportReadinessReason) {
       case 'unsavedChanges':
@@ -309,13 +316,27 @@ export function useForecastPageController({
       scenarioController.setError(null);
       scenarioController.setInfo(null);
       try {
+        const useQuickCreateDefaults =
+          scenarioController.scenarios.length > 0 &&
+          scenarioController.baseScenarioListItem != null;
+        const nextScenarioType = copyFromCurrent
+          ? scenarioController.scenario?.scenarioType &&
+            scenarioController.scenario.scenarioType !== 'base'
+            ? scenarioController.scenario.scenarioType
+            : 'hypothesis'
+          : useQuickCreateDefaults
+            ? 'hypothesis'
+            : scenarioController.newScenarioType;
         const created = await createForecastScenarioV2({
           name:
-            scenarioController.newScenarioName.trim() || buildDefaultScenarioName(t),
+            useQuickCreateDefaults
+              ? buildDefaultScenarioName(t)
+              : scenarioController.newScenarioName.trim() ||
+                buildDefaultScenarioName(t),
           copyFromScenarioId: copyFromCurrent
             ? scenarioController.selectedScenarioId ?? undefined
             : undefined,
-          scenarioType: scenarioController.newScenarioType,
+          scenarioType: nextScenarioType,
         });
         scenarioController.setNewScenarioName('');
         await scenarioController.loadScenarioList(created.id, true);
@@ -789,22 +810,197 @@ export function useForecastPageController({
   );
 
   const tariffDriverCards = React.useMemo(
-    () =>
-      statementPillars
-        .filter((pillar) =>
-          ['investments', 'revenues', 'materials', 'personnel', 'opex'].includes(
-            pillar.id,
-          ),
-        )
-        .map((pillar) => ({
-          id: pillar.id,
-          title: pillar.title,
-          baseline: pillar.baseline,
-          scenario: pillar.scenario,
-          delta: pillar.delta,
-          provenance: pillar.provenance,
-        })),
-    [statementPillars],
+    () => {
+      const baselineVolume =
+        baselineContext == null
+          ? 0
+          : baselineContext.soldWaterVolume + baselineContext.soldWastewaterVolume;
+      const horizonVolume =
+        horizonYearSnapshot?.soldVolume ?? baselineYearSnapshot?.soldVolume ?? 0;
+
+      return [
+        {
+          id: 'investments',
+          title: t('v2Forecast.investmentProgramTitle', 'Investment program'),
+          rows: [
+            {
+              label: t('v2Forecast.totalInvestments', 'Total investments'),
+              value: formatEur(
+                scenarioController.scenario?.investmentSeries.reduce(
+                  (sum, row) => sum + row.amount,
+                  0,
+                ) ?? 0,
+              ),
+            },
+            {
+              label: t(
+                'v2Forecast.investmentPeakAnnualTotal',
+                'Peak annual investment total',
+              ),
+              value: formatEur(investmentController.investmentSummary.peakAnnualAmount),
+            },
+            {
+              label: t(
+                'v2Forecast.investmentStrongestFiveYear',
+                'Strongest rolling 5-year total',
+              ),
+              value: investmentController.investmentSummary.strongestFiveYearRange
+                ? `${formatEur(
+                    investmentController.investmentSummary.strongestFiveYearTotal,
+                  )} · ${investmentController.investmentSummary.strongestFiveYearRange.startYear}-${investmentController.investmentSummary.strongestFiveYearRange.endYear}`
+                : formatEur(
+                    investmentController.investmentSummary.strongestFiveYearTotal,
+                  ),
+            },
+            {
+              label: t('v2Forecast.investmentPeakYears', 'Peak years'),
+              value:
+                investmentController.investmentSummary.peakYears.length > 0
+                  ? investmentController.investmentSummary.peakYears.join(', ')
+                  : t('v2Forecast.investmentPeakYearsEmpty', 'None'),
+            },
+          ],
+        },
+        {
+          id: 'revenues',
+          title: t('v2Forecast.pillarRevenue', 'Revenue'),
+          rows: [
+            {
+              label: t('v2Forecast.currentFeeLevel', 'Current fee level'),
+              value: formatPrice(
+                scenarioController.scenario?.baselinePriceTodayCombined ?? 0,
+              ),
+            },
+            {
+              label: t('v2Forecast.horizonCombinedPrice', 'Horizon combined'),
+              value: scenarioController.latestPricePoint
+                ? formatPrice(scenarioController.latestPricePoint.combinedPrice)
+                : t('v2Forecast.reportStateMissing'),
+            },
+            {
+              label: t(
+                'v2Forecast.requiredIncreaseFromToday',
+                'Required increase from current combined price',
+              ),
+              value: formatPercent(currentRequiredIncreaseFromToday),
+            },
+            {
+              label: t('v2Vesinvest.baselineYearVolume', 'Combined sold volume'),
+              value: `${formatNumber(baselineVolume || horizonVolume, 0)} m3`,
+            },
+            {
+              label: t('v2Forecast.provenanceLabel', 'Source'),
+              value: baselineContext
+                ? `${baselineDatasetSourceLabel(
+                    baselineContext.prices.source,
+                    baselineContext.prices.provenance,
+                  )} / ${baselineDatasetSourceLabel(
+                    baselineContext.volumes.source,
+                    baselineContext.volumes.provenance,
+                  )}`
+                : t('v2Forecast.reportStateMissing'),
+            },
+          ],
+        },
+        {
+          id: 'materials',
+          title: t('v2Forecast.pillarMaterials', 'Materials and services'),
+          rows: [
+            {
+              label: t('v2Forecast.ctxProcessElectricity', 'Process electricity'),
+              value: baselineContext
+                ? `${formatNumber(baselineContext.processElectricity)} kWh`
+                : t('v2Forecast.reportStateMissing'),
+            },
+            {
+              label: t('v2Forecast.nearTermEnergy', 'Energy %'),
+              value: investmentController.firstNearTermExpense
+                ? formatPercent(investmentController.firstNearTermExpense.energyPct)
+                : t('v2Forecast.reportStateMissing'),
+            },
+            {
+              label: t('assumptions.energyFactor', 'Energy factor'),
+              value: formatAssumptionPercent(
+                scenarioController.draftAssumptions.energiakerroin,
+              ),
+            },
+          ],
+        },
+        {
+          id: 'personnel',
+          title: t('v2Forecast.pillarPersonnel', 'Personnel costs'),
+          rows: [
+            {
+              label: t('assumptions.personnelFactor', 'Personnel factor'),
+              value: formatAssumptionPercent(
+                scenarioController.draftAssumptions.henkilostokerroin,
+              ),
+            },
+            {
+              label: t('v2Forecast.nearTermPersonnel', 'Personnel %'),
+              value: investmentController.firstNearTermExpense
+                ? formatPercent(
+                    investmentController.firstNearTermExpense.personnelPct,
+                  )
+                : t('v2Forecast.reportStateMissing'),
+            },
+            {
+              label: t('v2Forecast.provenanceLabel', 'Source'),
+              value: baselineContext
+                ? baselineDatasetSourceLabel(
+                    baselineContext.financials.source,
+                    baselineContext.financials.provenance,
+                  )
+                : t('v2Forecast.reportStateMissing'),
+            },
+          ],
+        },
+        {
+          id: 'opex',
+          title: t('v2Forecast.pillarOtherOpex', 'Other operating costs'),
+          rows: [
+            {
+              label: t('assumptions.inflation', 'Inflation'),
+              value: formatAssumptionPercent(
+                scenarioController.draftAssumptions.inflaatio,
+              ),
+            },
+            {
+              label: t('v2Forecast.nearTermOpexOther', 'Other operating costs %'),
+              value: investmentController.firstNearTermExpense
+                ? formatPercent(
+                    investmentController.firstNearTermExpense.opexOtherPct,
+                  )
+                : t('v2Forecast.reportStateMissing'),
+            },
+          ],
+        },
+      ];
+    },
+    [
+      baselineContext,
+      baselineDatasetSourceLabel,
+      baselineYearSnapshot?.soldVolume,
+      currentRequiredIncreaseFromToday,
+      formatAssumptionPercent,
+      formatEur,
+      formatNumber,
+      formatPercent,
+      formatPrice,
+      horizonYearSnapshot?.soldVolume,
+      investmentController.firstNearTermExpense,
+      investmentController.investmentSummary.peakAnnualAmount,
+      investmentController.investmentSummary.peakYears,
+      investmentController.investmentSummary.strongestFiveYearRange,
+      investmentController.investmentSummary.strongestFiveYearTotal,
+      scenarioController.draftAssumptions.energiakerroin,
+      scenarioController.draftAssumptions.henkilostokerroin,
+      scenarioController.draftAssumptions.inflaatio,
+      scenarioController.latestPricePoint,
+      scenarioController.scenario?.baselinePriceTodayCombined,
+      scenarioController.scenario?.investmentSeries,
+      t,
+    ],
   );
 
   const opexWorkbenchConfig = React.useMemo(
@@ -889,6 +1085,7 @@ export function useForecastPageController({
     ...scenarioController,
     ...investmentController,
     canCreateReport,
+    reportBlockerNeedsComputeAction,
     reportReadinessReason,
     reportReadinessHint,
     reportReadinessToneClass,

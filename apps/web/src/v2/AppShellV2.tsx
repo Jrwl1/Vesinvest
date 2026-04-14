@@ -331,6 +331,14 @@ export const AppShellV2: React.FC<Props> = ({
     } satisfies WorkspaceBootstrapSnapshot;
   }, []);
 
+  const refreshWorkspaceTruth = React.useCallback(async () => {
+    const snapshot = await loadWorkspaceBootstrapSnapshot();
+    applySetupWizardState(snapshot.wizardState);
+    applySetupOrgName(snapshot.orgName);
+    setSetupTruthBootstrapped(true);
+    return snapshot;
+  }, [applySetupOrgName, applySetupWizardState, loadWorkspaceBootstrapSnapshot]);
+
   const isTabLockedForState = React.useCallback(
     (tab: TabId, state: SetupWizardState | null) => {
       if (tab === 'overview') return false;
@@ -382,7 +390,10 @@ export const AppShellV2: React.FC<Props> = ({
     }
     setActiveTab('ennuste');
     syncBrowserPath('ennuste');
-  }, [closeDrawer, handleLockedTabAttempt, isTabLocked]);
+    if (typeof scenarioId === 'string' && scenarioId.length > 0) {
+      void refreshWorkspaceTruth().catch(() => undefined);
+    }
+  }, [closeDrawer, handleLockedTabAttempt, isTabLocked, refreshWorkspaceTruth]);
 
   const handleGoToForecastFromReport = React.useCallback(
     (scenarioId?: string | null) => {

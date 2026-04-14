@@ -528,10 +528,7 @@ const datasetSourceNote = (
     });
   }
   if (dataset.source === 'veeti') {
-    return t(
-      'v2Reports.baselineSourceVeetiHint',
-      'Current report snapshot follows VEETI for this dataset.',
-    );
+    return null;
   }
   return t(
     'v2Reports.baselineSourceMissingHint',
@@ -2465,35 +2462,20 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
 
       <div className="v2-kpi-strip v2-kpi-strip-three">
         <article>
-          <h3>{t('v2Vesinvest.reviewStatus', 'Revision status')}</h3>
-          <p>
-            <span className={`v2-badge ${toneClass(selectedSummary?.status === 'active' ? 'verified' : 'draft')}`}>
-              {selectedSummary?.status === 'active'
-                ? t('v2Vesinvest.planActive', 'Active revision')
-                : t('v2Vesinvest.planDraftLabel', 'Draft revision')}
-            </span>
-          </p>
-          <small>{revisionStatusMessage}</small>
-        </article>
-        <article>
-          <h3>{t('v2Vesinvest.identityLock', 'Identity guardrail')}</h3>
-          <p>{t('v2Vesinvest.identityGuardrailHint', 'Utility name, business ID, and identity source stay visible before pricing is opened.')}</p>
-          <small>{selectedSummary?.updatedAt ? t('v2Vesinvest.lastSaved', 'Last saved {{time}}', { time: formatDateTime(selectedSummary.updatedAt) }) : t('v2Vesinvest.notSavedYet', 'Not saved yet')}</small>
-        </article>
-        <article>
           <h3>{t('v2Vesinvest.baselineLink', 'Accepted baseline link')}</h3>
           <p>
             {baselineSnapshot?.acceptedYears?.length
               ? baselineSnapshot.acceptedYears.join(', ')
               : t('v2Vesinvest.baselineLinkPending', 'Not yet linked')}
           </p>
-          <small>
-            {baselineSnapshot?.latestAcceptedBudgetId
-              ? t('v2Vesinvest.baselineBudgetLinked', 'Linked accepted budget {{id}}', {
-                  id: baselineSnapshot.latestAcceptedBudgetId,
-                })
-              : t('v2Vesinvest.baselineBudgetPending', 'Fee-path link is created when pricing is opened from a verified baseline.')}
-          </small>
+          {baselineSnapshot?.latestAcceptedBudgetId ? null : (
+            <small>
+              {t(
+                'v2Vesinvest.baselineBudgetPending',
+                'Fee-path link is created when pricing is opened from a verified baseline.',
+              )}
+            </small>
+          )}
         </article>
       </div>
 
@@ -2543,17 +2525,23 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                   <span>{t('v2Reports.baselineFinancials', 'Financials')}</span>
                   <strong>{datasetSourceLabel(t, yearRow.financials)}</strong>
                 </div>
-                <small>{datasetSourceNote(t, yearRow.financials)}</small>
+                {datasetSourceNote(t, yearRow.financials) ? (
+                  <small>{datasetSourceNote(t, yearRow.financials)}</small>
+                ) : null}
                 <div className="v2-keyvalue-row">
                   <span>{t('v2Reports.baselinePrices', 'Prices')}</span>
                   <strong>{datasetSourceLabel(t, yearRow.prices)}</strong>
                 </div>
-                <small>{datasetSourceNote(t, yearRow.prices)}</small>
+                {datasetSourceNote(t, yearRow.prices) ? (
+                  <small>{datasetSourceNote(t, yearRow.prices)}</small>
+                ) : null}
                 <div className="v2-keyvalue-row">
                   <span>{t('v2Reports.baselineVolumes', 'Sold volumes')}</span>
                   <strong>{datasetSourceLabel(t, yearRow.volumes)}</strong>
                 </div>
-                <small>{datasetSourceNote(t, yearRow.volumes)}</small>
+                {datasetSourceNote(t, yearRow.volumes) ? (
+                  <small>{datasetSourceNote(t, yearRow.volumes)}</small>
+                ) : null}
                 <div className="v2-keyvalue-row">
                   <span>{t('v2Vesinvest.baselineYearVolume', 'Combined sold volume')}</span>
                   <strong>{yearRow.combinedSoldVolume.toLocaleString()} m3</strong>

@@ -1074,16 +1074,19 @@ describe('V2Service depreciation compatibility', () => {
       expect.arrayContaining([
         expect.objectContaining({
           assetClassKey: 'sanering_water_network',
+          assetClassName: 'Sanering / vattennätverk',
           method: 'straight-line',
           linearYears: 25,
         }),
         expect.objectContaining({
           assetClassKey: 'new_water_network',
+          assetClassName: 'Nyanläggning / vattennätverk',
           method: 'straight-line',
           linearYears: 25,
         }),
         expect.objectContaining({
           assetClassKey: 'repair_water_network',
+          assetClassName: 'Reparation / vattennätverk',
           method: 'straight-line',
           linearYears: 25,
         }),
@@ -1107,7 +1110,7 @@ describe('V2Service depreciation compatibility', () => {
       {
         id: 'rule-class',
         assetClassKey: 'new_water_network',
-        assetClassName: 'Nyanlaggning / vattennatverk',
+        assetClassName: 'Nyanläggning / vattennätverk',
         method: 'linear',
         linearYears: 40,
         residualPercent: null,
@@ -1122,6 +1125,7 @@ describe('V2Service depreciation compatibility', () => {
       result.find((item) => item.assetClassKey === 'new_water_network'),
     ).toMatchObject({
       assetClassKey: 'new_water_network',
+      assetClassName: 'Nyanläggning / vattennätverk',
       method: 'straight-line',
       linearYears: 40,
     });
@@ -4566,14 +4570,14 @@ describe('V2Service report variant regression', () => {
       groupedProjects: [
         {
           classKey: 'sanering_water_network',
-          classLabel: 'Sanering / vattennatverk',
+          classLabel: 'Sanering / vattennätverk',
           totalAmount: 150000,
           projects: [
             {
               code: 'P-001',
               name: 'Main rehabilitation',
               classKey: 'sanering_water_network',
-              classLabel: 'Sanering / vattennatverk',
+              classLabel: 'Sanering / vattennätverk',
               accountKey: 'sanering_water_network',
               allocations: [
                 { year: 2026, totalAmount: 50000 },
@@ -4606,7 +4610,7 @@ describe('V2Service report variant regression', () => {
       depreciationPlan: expect.arrayContaining([
         expect.objectContaining({
           classKey: 'sanering_water_network',
-          classLabel: 'Sanering / vattennatverk',
+          classLabel: 'Sanering / vattennätverk',
           accountKey: 'sanering_water_network',
           serviceSplit: 'water',
         }),

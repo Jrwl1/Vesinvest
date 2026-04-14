@@ -35,6 +35,8 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
     scenarioTypeOptions,
     scenarioTypeLabel,
   } = controller;
+  const showCreationDraftControls =
+    scenarios.length === 0 || !scenarios.some((item) => item.onOletus);
 
   return (
     <>
@@ -75,35 +77,39 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
                   </select>
                 </label>
               ) : null}
-              <input
-                id="v2-forecast-new-scenario-name"
-                className="v2-input"
-                type="text"
-                name="newScenarioName"
-                autoFocus={scenarios.length === 0}
-                placeholder={t('projection.newScenarioName', 'New scenario name')}
-                value={newScenarioName}
-                onChange={(event) => setNewScenarioName(event.target.value)}
-              />
-              <label className="v2-field">
-                <span>{t('v2Forecast.scenarioTypeLabel', 'Branch type')}</span>
-                <select
-                  id="v2-forecast-new-scenario-type"
-                  className="v2-input"
-                  name="newScenarioType"
-                  value={newScenarioType}
-                  onChange={(event) =>
-                    setNewScenarioType(event.target.value as typeof newScenarioType)
-                  }
-                  disabled={busy}
-                >
-                  {scenarioTypeOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {scenarioTypeLabel(option)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {showCreationDraftControls ? (
+                <>
+                  <input
+                    id="v2-forecast-new-scenario-name"
+                    className="v2-input"
+                    type="text"
+                    name="newScenarioName"
+                    autoFocus={scenarios.length === 0}
+                    placeholder={t('projection.newScenarioName', 'New scenario name')}
+                    value={newScenarioName}
+                    onChange={(event) => setNewScenarioName(event.target.value)}
+                  />
+                  <label className="v2-field">
+                    <span>{t('v2Forecast.scenarioTypeLabel', 'Branch type')}</span>
+                    <select
+                      id="v2-forecast-new-scenario-type"
+                      className="v2-input"
+                      name="newScenarioType"
+                      value={newScenarioType}
+                      onChange={(event) =>
+                        setNewScenarioType(event.target.value as typeof newScenarioType)
+                      }
+                      disabled={busy}
+                    >
+                      {scenarioTypeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {scenarioTypeLabel(option)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              ) : null}
               <button
                 type="button"
                 className="v2-btn"

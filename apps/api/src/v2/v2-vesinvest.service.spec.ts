@@ -400,7 +400,7 @@ describe('V2VesinvestService', () => {
         yearlyInvestments: [
           expect.objectContaining({
             year: 2026,
-            category: 'Sanering / vattennatverk',
+            category: 'Sanering / vattennätverk',
             depreciationClassKey: 'sanering_water_network',
             investmentType: 'replacement',
             confidence: 'high',
@@ -451,6 +451,63 @@ describe('V2VesinvestService', () => {
     await expect(
       service.updatePlan('org-1', 'plan-1', { status: 'active' }),
     ).rejects.toThrow(/re-verified against the current accepted baseline/i);
+  });
+
+  it('allows saving an already-active legacy revision without re-activation conflict', async () => {
+    const { service, prisma } = makeService();
+    prisma.vesinvestPlan.findFirst.mockResolvedValue(
+      makePlanRecord({
+        status: 'active',
+        selectedScenarioId: 'scenario-1',
+        feeRecommendationStatus: 'verified',
+        baselineFingerprint: null,
+        baselineSourceState: null,
+      }),
+    );
+    prisma.vesinvestPlan.update.mockResolvedValue(makePlanRecord());
+
+    await expect(
+      service.updatePlan('org-1', 'plan-1', { name: 'Updated active revision' }),
+    ).resolves.toBeTruthy();
+    expect(prisma.vesinvestPlan.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'plan-1' },
+        data: expect.objectContaining({
+          name: 'Updated active revision',
+          status: 'active',
+        }),
+      }),
+    );
+  });
+
+  it('allows idempotent active saves for an already-active legacy revision', async () => {
+    const { service, prisma } = makeService();
+    prisma.vesinvestPlan.findFirst.mockResolvedValue(
+      makePlanRecord({
+        status: 'active',
+        selectedScenarioId: 'scenario-1',
+        feeRecommendationStatus: 'verified',
+        baselineFingerprint: null,
+        baselineSourceState: null,
+      }),
+    );
+    prisma.vesinvestPlan.update.mockResolvedValue(makePlanRecord());
+
+    await expect(
+      service.updatePlan('org-1', 'plan-1', {
+        name: 'Updated active revision',
+        status: 'active',
+      }),
+    ).resolves.toBeTruthy();
+    expect(prisma.vesinvestPlan.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'plan-1' },
+        data: expect.objectContaining({
+          name: 'Updated active revision',
+          status: 'active',
+        }),
+      }),
+    );
   });
 
   it('treats a legacy active revision without a saved baseline snapshot as drifted', async () => {
@@ -569,7 +626,7 @@ describe('V2VesinvestService', () => {
           expect.objectContaining({
             year: 2026,
             projectCode: 'P-001',
-            category: 'Sanering / vattennatverk',
+            category: 'Sanering / vattennätverk',
             depreciationClassKey: 'sanering_water_network',
             investmentType: 'replacement',
             confidence: 'high',
@@ -580,7 +637,7 @@ describe('V2VesinvestService', () => {
           expect.objectContaining({
             year: 2026,
             projectCode: 'P-002',
-            category: 'Nyanlaggning / avloppsnatverk',
+            category: 'Nyanläggning / avloppsnätverk',
             depreciationClassKey: 'new_wastewater_network',
             investmentType: 'new',
             confidence: 'high',

@@ -71,7 +71,10 @@ const refreshedFlowLocaleKeys = [
   'v2Forecast.branchingTitle',
   'v2Forecast.branchingHint',
   'v2Forecast.branchingHintSelected',
+  'v2Forecast.scenarioTypeLabel',
   'v2Forecast.baseScenario',
+  'v2Forecast.committedScenario',
+  'v2Forecast.hypothesisScenario',
   'v2Forecast.stressScenario',
   'v2Forecast.defaultScenarioPrefix',
   'v2Forecast.updatedLabel',
@@ -87,8 +90,13 @@ const refreshedFlowLocaleKeys = [
   'v2Forecast.editorIntro',
   'v2Forecast.baselineContextMissing',
   'v2Forecast.currentFeeLevel',
+  'v2Forecast.underfundingStarts',
   'v2Forecast.feeSufficiencySnapshot',
   'v2Forecast.feeSufficiencySnapshotHint',
+  'v2Forecast.waterPricePerM3',
+  'v2Forecast.wastewaterPricePerM3',
+  'v2Forecast.baseFeeRevenue',
+  'v2Forecast.connectionCount',
   'v2Forecast.depreciationRulesTitle',
   'v2Forecast.depreciationRulesHint',
   'v2Forecast.depreciationRulesLoading',
@@ -137,6 +145,10 @@ const refreshedFlowLocaleKeys = [
   'v2Forecast.investmentLongRangeHint',
   'v2Forecast.investmentLongRangeGroup',
   'v2Forecast.investmentAnalystTools',
+  'v2Forecast.tariffAnswerEyebrow',
+  'v2Forecast.tariffDriversTitle',
+  'v2Forecast.cashImpactTab',
+  'v2Forecast.pricePathTab',
   'v2Forecast.statementCosts',
   'v2Forecast.statementResult',
   'v2Forecast.statementCashflow',
@@ -199,7 +211,9 @@ const refreshedFlowLocaleKeys = [
   'v2Forecast.depreciationImpactPeakGap',
   'v2Forecast.depreciationImpactHorizonCashflow',
   'v2Forecast.depreciationCategory',
+  'v2Forecast.errorLoadPlanningContext',
   'v2Overview.sourceLabel',
+  'v2Overview.datasetCountLabel',
   'v2Overview.financialComparisonTitle',
   'v2Overview.financialComparisonBody',
   'v2Overview.financialComparisonVeeti',
@@ -376,6 +390,8 @@ const refreshedFlowLocaleKeys = [
   'v2Reports.defaultTitlePrefix',
   'v2Reports.variantPublicHint',
   'v2Reports.variantConfidentialHint',
+  'v2Reports.acceptedBaselineYears',
+  'v2Reports.downloadingPdf',
   'v2Reports.requiredCombinedPriceToday',
   'v2Reports.requiredCombinedIncreaseFromCurrent',
   'v2Reports.openForecastToSaveAndCompute',
@@ -385,6 +401,7 @@ const refreshedFlowLocaleKeys = [
   'v2Reports.listFinancialSource',
   'v2Reports.previewBaselineStatus',
   'v2Reports.previewFinancialSource',
+  'v2Reports.sectionRiskSummary',
   'v2Overview.changeCompanyButton',
   'v2Overview.statementImportFallbackFile',
   'v2Forecast.statementImportFallbackFile',
@@ -440,6 +457,27 @@ describe('locale integrity', () => {
         mojibakePattern,
       );
     }
+  });
+
+  it('keeps touched Finnish Reports strings readable', () => {
+    expect(pick(fi as Record<string, unknown>, 'v2Reports.downloadingPdf')).toBe(
+      'Ladataan PDF...',
+    );
+    expect(
+      pick(fi as Record<string, unknown>, 'v2Reports.sectionRiskSummary'),
+    ).toBe('Riskitiivistelmä');
+    expect(
+      pick(fi as Record<string, unknown>, 'v2Reports.baselineSourceMissingHint'),
+    ).toBe('Tallennetussa pohjavuodessa ei ollut luotettua datasettiä.');
+  });
+
+  it('keeps touched Finnish Reports copy clean', () => {
+    expect(pick(fi as Record<string, unknown>, 'v2Reports.downloadingPdf')).toBe(
+      'Ladataan PDF...',
+    );
+    expect(
+      pick(fi as Record<string, unknown>, 'v2Reports.sectionRiskSummary'),
+    ).toBe('Riskitiivistelmä');
   });
 
   it('has projection.v2 parity for required keys in fi/sv/en', () => {

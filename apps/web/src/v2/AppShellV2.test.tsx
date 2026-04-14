@@ -232,8 +232,39 @@ vi.mock('./OverviewPageV2', () => ({
       >
         unlock-setup
       </button>
+      <button
+        type="button"
+        onClick={() =>
+          props.onSetupWizardStateChange?.({
+            totalSteps: 6,
+            currentStep: 6,
+            recommendedStep: 6,
+            activeStep: 6,
+            selectedProblemYear: null,
+            transitions: {
+              reviewContinue: 5,
+              selectProblemYear: 4,
+            },
+            wizardComplete: false,
+            forecastUnlocked: true,
+            reportsUnlocked: false,
+            summary: {
+              importedYearCount: 2,
+              readyYearCount: 2,
+              blockedYearCount: 0,
+              excludedYearCount: 0,
+              baselineReady: true,
+            },
+          })
+        }
+      >
+        unlock-forecast-only
+      </button>
       <button type="button" onClick={() => props.onGoToForecast()}>
         open-forecast-handoff
+      </button>
+      <button type="button" onClick={() => props.onGoToForecast('scenario-1')}>
+        open-linked-forecast
       </button>
       <button
         type="button"
@@ -1053,6 +1084,119 @@ describe('AppShellV2', () => {
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
     await waitFor(() => {
       expect(window.location.pathname).toBe('/forecast');
+    });
+  });
+
+  it('refreshes shell route locks after overview hands off to a newly linked forecast scenario', async () => {
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1,
+        nimi: 'Wizard Utility',
+        ytunnus: '1234567-8',
+        uiLanguage: 'fi',
+      },
+      years: [],
+      availableYears: [],
+      workspaceYears: [2023],
+      excludedYears: [],
+      planningBaselineYears: [2023],
+    });
+    getPlanningContextV2Mock.mockResolvedValueOnce(
+      buildPlanningContext({
+        canCreateScenario: true,
+        activePlan: {
+          baselineStatus: 'verified',
+          pricingStatus: 'verified',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+        },
+        baselineYears: [
+          {
+            year: 2023,
+            quality: 'complete',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: { veetiDataTypes: [], manualDataTypes: [] },
+            financials: { dataType: 'tilinpaatos', source: 'veeti' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: { dataType: 'volume_vesi', source: 'veeti' },
+            investmentAmount: 0,
+            soldWaterVolume: 0,
+            soldWastewaterVolume: 0,
+            combinedSoldVolume: 0,
+            processElectricity: 0,
+            pumpedWaterVolume: 0,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 0,
+            netWaterTradeVolume: 0,
+          },
+        ],
+      }),
+    );
+    getForecastScenarioV2Mock.mockResolvedValueOnce(buildReadyScenario());
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-forecast-only' }));
+    expect(
+      (screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
+
+    expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement).disabled,
+      ).toBe(false);
+    });
+  });
+
+  it('keeps the linked forecast handoff stable when the shell truth refresh fails', async () => {
+    getImportStatusV2Mock.mockRejectedValueOnce(new Error('refresh failed'));
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-forecast-only' }));
+    expect(
+      (screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
+
+    expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement).disabled,
+      ).toBe(true);
     });
   });
 

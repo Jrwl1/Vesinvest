@@ -32,6 +32,7 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
     reportReadinessLabel,
     reportReadinessHint,
     canCreateReport,
+    reportBlockerNeedsComputeAction,
     handleGenerateReport,
     handleCompute,
     busy,
@@ -179,7 +180,7 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
                   {computeButtonLabel}
                 </button>
               </>
-            ) : (
+            ) : reportBlockerNeedsComputeAction ? (
               <>
                 <button
                   type="button"
@@ -205,21 +206,33 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
                   {t('v2Forecast.createReport', 'Create report')}
                 </button>
               </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-primary"
+                  onClick={handleGenerateReport}
+                  disabled={busy || !canCreateReport}
+                  title={!canCreateReport ? reportReadinessHint ?? undefined : undefined}
+                >
+                  {t('v2Forecast.createReport', 'Create report')}
+                </button>
+                <button
+                  type="button"
+                  className="v2-btn"
+                  onClick={handleCompute}
+                  disabled={
+                    busy ||
+                    !scenario ||
+                    hasNearTermValidationErrors ||
+                    hasMissingDepreciationRules
+                  }
+                  title={blockedForecastActionHint}
+                >
+                  {computeButtonLabel}
+                </button>
+              </>
             )}
-            <button
-              type="button"
-              className={`v2-btn ${denseAnalystMode ? '' : 'v2-btn-primary'}`}
-              onClick={() => setDenseAnalystMode(false)}
-            >
-              {t('v2Forecast.standardViewMode', 'Standard view')}
-            </button>
-            <button
-              type="button"
-              className={`v2-btn ${denseAnalystMode ? 'v2-btn-primary' : ''}`}
-              onClick={() => setDenseAnalystMode(true)}
-            >
-              {t('v2Forecast.analystViewMode', 'Analyst view')}
-            </button>
           </div>
           <div className={`v2-kpi-strip v2-executive-hero-strip ${denseAnalystMode ? 'dense' : ''}`}>
             <div>
@@ -259,6 +272,22 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
               </p>
             </div>
           </div>
+          <div className="v2-actions-row">
+            <button
+              type="button"
+              className={`v2-btn ${denseAnalystMode ? '' : 'v2-btn-primary'}`}
+              onClick={() => setDenseAnalystMode(false)}
+            >
+              {t('v2Forecast.standardViewMode', 'Standard view')}
+            </button>
+            <button
+              type="button"
+              className={`v2-btn ${denseAnalystMode ? 'v2-btn-primary' : ''}`}
+              onClick={() => setDenseAnalystMode(true)}
+            >
+              {t('v2Forecast.analystViewMode', 'Analyst view')}
+            </button>
+          </div>
           {denseAnalystMode ? <p className="v2-muted">{reportCommandSummary}</p> : null}
         </div>
       </div>
@@ -280,22 +309,12 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
             <article className="v2-subcard v2-forecast-driver-card" key={card.id}>
               <strong>{card.title}</strong>
               <div className="v2-keyvalue-list">
-                <div className="v2-keyvalue-row">
-                  <span>{t('v2Forecast.baselineLabel', 'Baseline')}</span>
-                  <strong>{card.baseline}</strong>
-                </div>
-                <div className="v2-keyvalue-row">
-                  <span>{t('v2Forecast.selectedScenario', 'Selected scenario')}</span>
-                  <strong>{card.scenario}</strong>
-                </div>
-                <div className="v2-keyvalue-row">
-                  <span>{t('v2Forecast.deltaLabel', 'Delta')}</span>
-                  <strong>{card.delta}</strong>
-                </div>
-                <div className="v2-keyvalue-row">
-                  <span>{t('v2Forecast.provenanceLabel', 'Source')}</span>
-                  <strong>{card.provenance}</strong>
-                </div>
+                {card.rows.map((row) => (
+                  <div className="v2-keyvalue-row" key={row.label}>
+                    <span>{row.label}</span>
+                    <strong>{row.value}</strong>
+                  </div>
+                ))}
               </div>
             </article>
           ))}

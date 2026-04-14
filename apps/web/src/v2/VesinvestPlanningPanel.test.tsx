@@ -63,7 +63,7 @@ const t = (
 
 const group = {
   key: 'sanering_water_network',
-  label: 'Sanering / vattennatverk',
+  label: 'Sanering / vattennätverk',
   defaultAccountKey: 'sanering_water_network',
   defaultDepreciationClassKey: 'sanering_water_network',
   reportGroupKey: 'network_rehabilitation',
@@ -273,7 +273,7 @@ describe('VesinvestPlanningPanel', () => {
           year: 2026,
           amount: 100,
           target: 'Water Utility / Vesinvest',
-          category: 'Sanering / vattennatverk',
+          category: 'Sanering / vattennätverk',
           depreciationClassKey: 'sanering_water_network',
           depreciationRuleSnapshot: {
             assetClassKey: 'sanering_water_network',
@@ -1088,9 +1088,12 @@ describe('VesinvestPlanningPanel', () => {
     );
 
     const feePathTitle = await screen.findByText('Saved fee-path recommendation');
-    expect(screen.getByText('Linked accepted budget budget-2024')).toBeTruthy();
+    expect(screen.queryByText('Linked accepted budget budget-2024')).toBeNull();
     expect(screen.getByText('Statement import (bokslut-2024.pdf)')).toBeTruthy();
     expect(screen.getByText('Accepted baseline years')).toBeTruthy();
+    expect(
+      screen.queryByText('Current report snapshot follows VEETI for this dataset.'),
+    ).toBeNull();
     expect(within(feePathTitle.closest('section')!).getByText('Verified')).toBeTruthy();
   });
 

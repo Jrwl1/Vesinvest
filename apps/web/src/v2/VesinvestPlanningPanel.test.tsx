@@ -732,6 +732,12 @@ describe('VesinvestPlanningPanel', () => {
         }),
       );
     });
+    const updatePayload = updateVesinvestPlanV2.mock.calls[0]?.[1] as Record<
+      string,
+      unknown
+    >;
+    const updateProjects = updatePayload.projects as Array<Record<string, unknown>>;
+    expect(updateProjects?.[0]?.id).toBeUndefined();
     expect(syncVesinvestPlanToForecastV2).toHaveBeenCalledWith(
       'plan-1',
       expect.objectContaining({
@@ -750,6 +756,123 @@ describe('VesinvestPlanningPanel', () => {
       syncVesinvestPlanToForecastV2.mock.invocationCallOrder[0],
     );
     expect(onGoToForecast).toHaveBeenCalledWith('scenario-1');
+  });
+
+  it('shows the live accepted baseline link before the revision has been resaved', async () => {
+    listVesinvestPlansV2.mockResolvedValue([
+      makeSummary({
+        baselineStatus: 'incomplete',
+        pricingStatus: 'blocked',
+      }),
+    ]);
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        baselineStatus: 'incomplete',
+        baselineSourceState: null,
+        selectedScenarioId: null,
+      }),
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: true, baselineYears: [baselineYear] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    await screen.findByText('Baseline verified');
+    const baselineLinkArticle = screen
+      .getByText('Accepted baseline link')
+      .closest('article');
+    expect(baselineLinkArticle).toBeTruthy();
+    expect(within(baselineLinkArticle!).getByText('2024')).toBeTruthy();
+    expect(within(baselineLinkArticle!).queryByText('Not yet linked')).toBeNull();
+  });
+
+  it('clears a stale saved accepted-budget link when live baseline years drift', async () => {
+    listVesinvestPlansV2.mockResolvedValue([
+      makeSummary({
+        baselineStatus: 'incomplete',
+        pricingStatus: 'blocked',
+      }),
+    ]);
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        baselineStatus: 'incomplete',
+        baselineSourceState: {
+          source: 'accepted_planning_baseline',
+          acceptedYears: [2023],
+          latestAcceptedBudgetId: 'budget-2023',
+          baselineYears: [{ ...baselineYear, year: 2023 }],
+          snapshotCapturedAt: '2026-04-08T10:00:00.000Z',
+        },
+        selectedScenarioId: null,
+      }),
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: true, baselineYears: [baselineYear] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    const baselineLinkArticle = (await screen.findByText('Accepted baseline link')).closest(
+      'article',
+    );
+    expect(baselineLinkArticle).toBeTruthy();
+    expect(within(baselineLinkArticle!).getByText('2024')).toBeTruthy();
+    expect(
+      within(baselineLinkArticle!).queryByText(/Linked accepted budget budget-2023/),
+    ).toBeNull();
+  });
+
+  it('clears a saved accepted-budget link when the revision is flagged as baseline-drifted for the same years', async () => {
+    listVesinvestPlansV2.mockResolvedValue([
+      makeSummary({
+        baselineStatus: 'incomplete',
+        pricingStatus: 'blocked',
+        baselineChangedSinceAcceptedRevision: true,
+      }),
+    ]);
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        baselineStatus: 'incomplete',
+        baselineSourceState: {
+          source: 'accepted_planning_baseline',
+          acceptedYears: [2024],
+          latestAcceptedBudgetId: 'budget-2024',
+          baselineYears: [baselineYear],
+          snapshotCapturedAt: '2026-04-08T10:00:00.000Z',
+        },
+        selectedScenarioId: null,
+      }),
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: true, baselineYears: [baselineYear] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    const baselineLinkArticle = (await screen.findByText('Accepted baseline link')).closest(
+      'article',
+    );
+    expect(baselineLinkArticle).toBeTruthy();
+    expect(within(baselineLinkArticle!).getByText('2024')).toBeTruthy();
+    expect(
+      within(baselineLinkArticle!).queryByText(/Linked accepted budget budget-2024/),
+    ).toBeNull();
   });
 
   it('binds the VEETI utility from the in-panel lookup before plan creation', async () => {

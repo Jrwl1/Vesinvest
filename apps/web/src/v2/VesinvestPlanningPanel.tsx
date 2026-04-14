@@ -169,7 +169,6 @@ const toPlanProjectInputs = (
   draft: VesinvestDraft,
 ) =>
   draft.projects.map((project) => ({
-    id: project.id,
     code: project.code,
     name: project.name,
     investmentType: project.investmentType,
@@ -564,6 +563,7 @@ const readSavedBaselineYears = (
 const buildBaselineSourceSnapshot = (
   planningContext: V2PlanningContextResponse | null,
   currentState: V2VesinvestBaselineSourceState | null,
+  revisionBaselineDrifted = false,
 ): V2VesinvestBaselineSourceState | null => {
   const liveBaselineYears = Array.isArray(planningContext?.baselineYears)
     ? cloneJson(planningContext.baselineYears)
@@ -575,6 +575,14 @@ const buildBaselineSourceSnapshot = (
     .map((row) => Number(row.year))
     .filter((year) => Number.isFinite(year))
     .sort((left, right) => left - right);
+  const savedAcceptedYears = [...(currentState?.acceptedYears ?? [])]
+    .map((year) => Number(year))
+    .filter((year) => Number.isFinite(year))
+    .sort((left, right) => left - right);
+  const hasLiveAcceptedYears = liveBaselineYears.length > 0;
+  const acceptedYearsMatchSaved =
+    acceptedYears.length === savedAcceptedYears.length &&
+    acceptedYears.every((year, index) => year === savedAcceptedYears[index]);
   if (baselineYears.length === 0 && !currentState) {
     return null;
   }
@@ -585,7 +593,12 @@ const buildBaselineSourceSnapshot = (
         ? 'planning_context_verified'
         : currentState?.source ?? 'planning_context',
     acceptedYears,
-    latestAcceptedBudgetId: currentState?.latestAcceptedBudgetId ?? null,
+    latestAcceptedBudgetId:
+      revisionBaselineDrifted
+        ? null
+        : !hasLiveAcceptedYears || acceptedYearsMatchSaved
+      ? currentState?.latestAcceptedBudgetId ?? null
+      : null,
     snapshotCapturedAt: new Date().toISOString(),
     baselineYears,
   };
@@ -975,23 +988,28 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
       ? (current as V2VesinvestBaselineSourceState)
       : null;
   }, [plan?.baselineSourceState]);
+  const selectedSummary = plans.find((item) => item.id === selectedPlanId) ?? null;
+  const baselineSnapshot = React.useMemo(
+    () =>
+      buildBaselineSourceSnapshot(
+        planningContext,
+        savedBaselineSource,
+        selectedSummary?.baselineChangedSinceAcceptedRevision === true,
+      ),
+    [planningContext, savedBaselineSource, selectedSummary?.baselineChangedSinceAcceptedRevision],
+  );
   const loadedPlanDraft = React.useMemo(
     () => (plan ? buildDraftFromPlan(plan, linkedOrg) : null),
     [linkedOrg, plan],
   );
   const hasUnsavedChanges = React.useMemo(() => {
     if (!loadedPlanDraft) return false;
-    const baselineSnapshot = buildBaselineSourceSnapshot(
-      planningContext,
-      savedBaselineSource,
-    );
     return (
       JSON.stringify(toUpdatePlanInput(draft, baselineSnapshot)) !==
       JSON.stringify(toUpdatePlanInput(loadedPlanDraft, baselineSnapshot))
     );
-  }, [draft, loadedPlanDraft, planningContext, savedBaselineSource]);
+  }, [baselineSnapshot, draft, loadedPlanDraft]);
   const liveBaselineVerified = planningContext?.canCreateScenario === true;
-  const selectedSummary = plans.find((item) => item.id === selectedPlanId) ?? null;
   const utilityBindingMissing = !linkedOrg?.veetiId;
   const utilityBindingMismatch =
     !!plan?.id &&
@@ -999,22 +1017,17 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
       ((linkedOrg?.ytunnus?.trim() ?? null) !== null &&
         (plan.businessId ?? null) !== null &&
         (linkedOrg?.ytunnus?.trim() ?? null) !== (plan.businessId ?? null)));
-  const baselineVerified = plan
-    ? selectedSummary?.baselineStatus === 'verified'
-    : liveBaselineVerified;
+  const baselineVerified =
+    (selectedSummary?.baselineStatus === 'verified') || liveBaselineVerified;
   const baselineYears = React.useMemo(
     () =>
       [
-        ...(
-          plan?.id
-            ? readSavedBaselineYears(savedBaselineSource)
-            : planningContext?.baselineYears?.length
-            ? planningContext.baselineYears
-            : readSavedBaselineYears(savedBaselineSource)
-        ),
+        ...(planningContext?.baselineYears?.length
+          ? planningContext.baselineYears
+          : readSavedBaselineYears(savedBaselineSource)),
       ]
         .sort((left, right) => right.year - left.year),
-    [plan?.id, planningContext?.baselineYears, savedBaselineSource],
+    [planningContext?.baselineYears, savedBaselineSource],
   );
   const pricingReady =
     !utilityBindingMissing &&
@@ -1414,10 +1427,6 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
       setError(null);
       setInfo(null);
       try {
-        const baselineSnapshot = buildBaselineSourceSnapshot(
-          planningContext,
-          savedBaselineSource,
-        );
         if (mode === 'create') {
           const created = await createVesinvestPlanV2(
             toCreatePlanInput(draft, baselineSnapshot),
@@ -2474,14 +2483,14 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         <article>
           <h3>{t('v2Vesinvest.baselineLink', 'Accepted baseline link')}</h3>
           <p>
-            {savedBaselineSource?.acceptedYears?.length
-              ? savedBaselineSource.acceptedYears.join(', ')
+            {baselineSnapshot?.acceptedYears?.length
+              ? baselineSnapshot.acceptedYears.join(', ')
               : t('v2Vesinvest.baselineLinkPending', 'Not yet linked')}
           </p>
           <small>
-            {savedBaselineSource?.latestAcceptedBudgetId
+            {baselineSnapshot?.latestAcceptedBudgetId
               ? t('v2Vesinvest.baselineBudgetLinked', 'Linked accepted budget {{id}}', {
-                  id: savedBaselineSource.latestAcceptedBudgetId,
+                  id: baselineSnapshot.latestAcceptedBudgetId,
                 })
               : t('v2Vesinvest.baselineBudgetPending', 'Fee-path link is created when pricing is opened from a verified baseline.')}
           </small>

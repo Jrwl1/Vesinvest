@@ -986,6 +986,148 @@ describe('AppShellV2', () => {
     });
   });
 
+  it('keeps direct /forecast entry on forecast when a saved Vesinvest plan has a verified baseline but no scenario yet', async () => {
+    window.history.replaceState({}, '', '/forecast');
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1,
+        nimi: 'Wizard Utility',
+        ytunnus: '1234567-8',
+        uiLanguage: 'fi',
+      },
+      years: [],
+      availableYears: [],
+      workspaceYears: [2023],
+      excludedYears: [],
+      planningBaselineYears: [2023],
+    });
+    getPlanningContextV2Mock.mockResolvedValueOnce(
+      buildPlanningContext({
+        canCreateScenario: true,
+        activePlan: {
+          baselineStatus: 'verified',
+          pricingStatus: 'blocked',
+          selectedScenarioId: null,
+          status: 'active',
+        },
+        baselineYears: [
+          {
+            year: 2023,
+            quality: 'complete',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: { veetiDataTypes: [], manualDataTypes: [] },
+            financials: { dataType: 'tilinpaatos', source: 'veeti' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: { dataType: 'volume_vesi', source: 'veeti' },
+            investmentAmount: 0,
+            soldWaterVolume: 0,
+            soldWastewaterVolume: 0,
+            combinedSoldVolume: 0,
+            processElectricity: 0,
+            pumpedWaterVolume: 0,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 0,
+            netWaterTradeVolume: 0,
+          },
+        ],
+      }),
+    );
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/forecast');
+    });
+  });
+
+  it('keeps direct /forecast entry locked when the saved plan has a verified baseline but no investment rows', async () => {
+    window.history.replaceState({}, '', '/forecast');
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1,
+        nimi: 'Wizard Utility',
+        ytunnus: '1234567-8',
+        uiLanguage: 'fi',
+      },
+      years: [],
+      availableYears: [],
+      workspaceYears: [2023],
+      excludedYears: [],
+      planningBaselineYears: [2023],
+    });
+    getPlanningContextV2Mock.mockResolvedValueOnce(
+      buildPlanningContext({
+        canCreateScenario: true,
+        activePlan: {
+          baselineStatus: 'verified',
+          pricingStatus: 'blocked',
+          selectedScenarioId: null,
+          status: 'active',
+          projectCount: 0,
+          totalInvestmentAmount: 0,
+        },
+        baselineYears: [
+          {
+            year: 2023,
+            quality: 'complete',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: { veetiDataTypes: [], manualDataTypes: [] },
+            financials: { dataType: 'tilinpaatos', source: 'veeti' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: { dataType: 'volume_vesi', source: 'veeti' },
+            investmentAmount: 0,
+            soldWaterVolume: 0,
+            soldWastewaterVolume: 0,
+            combinedSoldVolume: 0,
+            processElectricity: 0,
+            pumpedWaterVolume: 0,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 0,
+            netWaterTradeVolume: 0,
+          },
+        ],
+      }),
+    );
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('overview-content')).toBeTruthy();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+    });
+  });
+
   it('unlocks forecast and reports only when a saved Vesinvest plan has verified baseline, pricing, and a linked scenario', async () => {
     getPlanningContextV2Mock.mockResolvedValueOnce(
       buildPlanningContext({

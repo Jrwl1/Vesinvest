@@ -471,7 +471,10 @@ export function resolveSetupWizardStateFromImportStatus(
         ? (options?.selectedProblemYear ?? null)
         : null,
     wizardComplete: vesinvestWorkflow.reportsReady,
-    forecastUnlocked: vesinvestWorkflow.forecastReady,
+    forecastUnlocked:
+      vesinvestWorkflow.baselineVerified &&
+      vesinvestWorkflow.hasPlan &&
+      vesinvestWorkflow.investmentPlanReady,
     reportsUnlocked: vesinvestWorkflow.reportsReady,
     summary: {
       ...legacyState.summary,

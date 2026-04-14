@@ -533,6 +533,8 @@
 .v2-vesinvest-panel {
   display: grid;
   gap: 14px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .v2-vesinvest-panel-compact {
@@ -545,12 +547,16 @@
 
 .v2-vesinvest-table-wrap {
   overflow-x: auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .v2-vesinvest-matrix-wrap {
   border: 1px solid rgba(35, 71, 166, 0.14);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.88);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .v2-vesinvest-table {
@@ -655,6 +661,8 @@
   border-radius: 16px;
   padding: 16px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(246, 242, 235, 0.72));
+  min-width: 0;
+  max-width: 100%;
 }
 
 .v2-vesinvest-evidence-grid {
@@ -2261,6 +2269,15 @@
   flex-wrap: wrap;
 }
 
+.v2-vesinvest-action-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.v2-vesinvest-maintenance-actions {
+  padding-top: 2px;
+}
+
 .v2-depreciation-rule-list {
   display: grid;
   gap: 12px;
@@ -3566,6 +3583,11 @@
   align-items: center;
 }
 
+.v2-overview-handoff-year-primary-actions {
+  margin-top: 2px;
+  align-items: center;
+}
+
 .v2-overview-handoff-excluded {
   border: 1px solid rgba(183, 192, 203, 0.42);
   border-radius: 16px;
@@ -4053,6 +4075,15 @@
   white-space: normal;
 }
 
+.v2-report-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--v2-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .v2-report-row.active {
   border-color: #60a5fa;
   box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.28), 0 14px 26px rgba(15, 23, 42, 0.08);
@@ -4521,6 +4552,14 @@
   .v2-actions-row .v2-btn,
   .v2-year-card-actions .v2-btn {
     width: 100%;
+  }
+
+  .v2-vesinvest-maintenance-actions .v2-btn {
+    width: auto;
+  }
+
+  .v2-vesinvest-maintenance-actions {
+    justify-content: flex-start;
   }
 
   .v2-card,
@@ -5269,6 +5308,11 @@
   .v2-kpi-strip.v2-reports-secondary-kpis,
   .v2-executive-hero-strip,
   .v2-reports-list-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-year-status-list-accepted,
+  .v2-year-preview-grid.compact {
     grid-template-columns: 1fr;
   }
 }

@@ -890,7 +890,6 @@ export const OverviewPageV2: React.FC<Props> = ({
           renderYearValuePreview={renderYearValuePreview}
           openForecastButtonClass={openForecastButtonClass}
           onManageYears={handleManageYears}
-          onReopenReview={handleReopenReview}
           onReopenYearReview={(year) => void handleReopenYearReview(year)}
           onDeleteYear={(year) => void handleDeleteYear(year)}
           onExcludeYear={(year) => void handleExcludeYearFromPlan(year)}

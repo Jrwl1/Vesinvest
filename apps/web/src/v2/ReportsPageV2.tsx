@@ -1255,14 +1255,6 @@ export const ReportsPageV2: React.FC<Props> = ({
                     : t('v2Reports.allScenarios', 'All')}
                 </strong>
               </article>
-              <article>
-                <span>{t('v2Reports.selectedReportTitle', 'Selected report')}</span>
-                <strong>
-                  {selectedListReport
-                    ? selectedListReportTitle
-                    : t('v2Reports.selectFromList')}
-                </strong>
-              </article>
             </div>
 
             {loadingList ? (
@@ -1343,53 +1335,6 @@ export const ReportsPageV2: React.FC<Props> = ({
 
             {reports.length > 0 ? (
               <div className="v2-report-table v2-report-list">
-                {selectedListReport ? (
-                  <article className="v2-report-list-focus">
-                    <div className="v2-report-list-focus-head">
-                      <div>
-                        <p className="v2-overview-eyebrow">
-                          {t('v2Reports.selectedReportTitle', 'Selected report')}
-                        </p>
-                        <h3>{selectedListReportTitle}</h3>
-                      </div>
-                      <div className="v2-badge-row">
-                        <span className="v2-badge v2-status-provenance">
-                          {reportVariantLabel(selectedListReport.variant)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="v2-report-list-focus-grid">
-                      <div>
-                        <span>{t('v2Reports.colCreated', 'Created')}</span>
-                        <strong>{formatDateTime(selectedListReport.createdAt)}</strong>
-                      </div>
-                      <div>
-                        <span>
-                          {t(
-                            'projection.v2.baselineYearLabel',
-                            'Baseline year',
-                          )}
-                        </span>
-                        <strong>{selectedListReport.baselineYear}</strong>
-                      </div>
-                      <div>
-                        <span>{requiredAnnualResultPriceLabel}</span>
-                        <strong>
-                          {formatPrice(selectedListReport.requiredPriceToday)}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>{requiredAnnualResultIncreaseLabel}</span>
-                        <strong>
-                          {formatPercent(
-                            selectedListReport.requiredAnnualIncreasePct,
-                          )}
-                        </strong>
-                      </div>
-                    </div>
-                  </article>
-                ) : null}
-
                 {reports.map((row) => (
                   <button
                     key={row.id}
@@ -1421,62 +1366,14 @@ export const ReportsPageV2: React.FC<Props> = ({
                         ) : null}
                       </div>
                     </div>
-                    <div className="v2-report-row-kpis">
-                      <div>
-                        <span>
-                          {t(
-                            'projection.v2.baselineYearLabel',
-                            'Baseline year',
-                          )}
-                        </span>
-                        <strong>{row.baselineYear}</strong>
-                      </div>
-                      <div>
-                        <span>{requiredAnnualResultPriceLabel}</span>
-                        <strong>{formatPrice(row.requiredPriceToday)}</strong>
-                      </div>
-                      <div>
-                        <span>{requiredAnnualResultIncreaseLabel}</span>
-                        <strong>
-                          {formatPercent(row.requiredAnnualIncreasePct)}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>{t('v2Forecast.totalInvestments', 'Investments')}</span>
-                        <strong>{formatEur(row.totalInvestments)}</strong>
-                      </div>
-                      {row.baselineSourceSummary ? (
-                        <div>
-                          <span>
-                            {t(
-                              'v2Reports.listBaselineStatus',
-                              'Baseline source',
-                            )}
-                          </span>
-                          <strong>
-                            {baselineStatusLabel(
-                              row.baselineSourceSummary.sourceStatus,
-                              row.baselineSourceSummary.planningRole,
-                            )}
-                          </strong>
-                        </div>
-                      ) : null}
-                      {row.baselineSourceSummary ? (
-                        <div>
-                          <span>
-                            {t(
-                              'v2Reports.listFinancialSource',
-                              'Financials source',
-                            )}
-                          </span>
-                          <strong>
-                            {baselineDatasetSourceLabel(
-                              row.baselineSourceSummary.financials.source,
-                              row.baselineSourceSummary.financials.provenance,
-                            )}
-                          </strong>
-                        </div>
-                      ) : null}
+                    <div className="v2-report-row-meta">
+                      <span>
+                        {t(
+                          'projection.v2.baselineYearLabel',
+                          'Baseline year',
+                        )}
+                        : {row.baselineYear}
+                      </span>
                     </div>
                   </button>
                 ))}

@@ -1613,55 +1613,74 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     });
   }, [groups, projectComposer.code, projectComposer.name, projectComposerGroupKey]);
 
+  const shouldLeadAddProject =
+    activeWorkspaceView === 'investment' && draft.projects.length === 0;
+  const shouldLeadSave =
+    !shouldLeadAddProject && (hasUnsavedChanges || !plan);
+  const shouldLeadSync =
+    !shouldLeadAddProject &&
+    !shouldLeadSave &&
+    pricingReady &&
+    !canCreateReport;
+  const projectActionClass = shouldLeadAddProject ? 'v2-btn v2-btn-primary' : 'v2-btn';
+  const saveActionClass = shouldLeadSave ? 'v2-btn v2-btn-primary' : 'v2-btn';
+  const syncActionClass = shouldLeadSync ? 'v2-btn v2-btn-primary' : 'v2-btn';
+  const reportActionClass = 'v2-btn';
   const actionRow = (
-    <div className="v2-actions-row">
-      {activeWorkspaceView === 'investment' ? (
+    <div className="v2-vesinvest-action-stack">
+      <div className="v2-actions-row v2-vesinvest-workflow-actions">
+        {activeWorkspaceView === 'investment' ? (
+          <button
+            type="button"
+            className={projectActionClass}
+            onClick={openProjectComposer}
+            disabled={busy || loading || loadingPlan || groups.length === 0}
+          >
+            {t('v2Vesinvest.addProject', 'Add project')}
+          </button>
+        ) : null}
         <button
           type="button"
-          className={draft.projects.length === 0 ? 'v2-btn v2-btn-primary' : 'v2-btn'}
-          onClick={openProjectComposer}
-          disabled={busy || loading || loadingPlan || groups.length === 0}
+          className={saveActionClass}
+          onClick={() => void persist(plan ? 'save' : 'create')}
+          disabled={busy || (!plan && utilityBindingMissing)}
         >
-          {t('v2Vesinvest.addProject', 'Add project')}
+          {plan
+            ? t('v2Vesinvest.savePlan', 'Save Vesinvest')
+            : t('v2Vesinvest.createPlan', 'Create Vesinvest plan')}
         </button>
-      ) : null}
-      <button
-        type="button"
-        className="v2-btn"
-        onClick={() => void persist(plan ? 'save' : 'create')}
-        disabled={busy || (!plan && utilityBindingMissing)}
-      >
-        {plan
-          ? t('v2Vesinvest.savePlan', 'Save Vesinvest')
-          : t('v2Vesinvest.createPlan', 'Create Vesinvest plan')}
-      </button>
-      <button
-        type="button"
-        className="v2-btn"
-        onClick={() => void persist('clone')}
-        disabled={busy || !plan}
-      >
-        {t('v2Vesinvest.clonePlan', 'New revision')}
-      </button>
-      {showDownstreamActions ? (
-        <>
+        {showDownstreamActions ? (
+          <>
+            <button
+              type="button"
+              className={syncActionClass}
+              onClick={() => void persist('sync')}
+              disabled={busy || !plan || !pricingReady}
+            >
+              {t('v2Vesinvest.openPricing', 'Open fee path')}
+            </button>
+            <button
+              type="button"
+              className={reportActionClass}
+              onClick={() => void handleCreateReport()}
+              disabled={busy || !canCreateReport}
+            >
+              {t('v2Forecast.createReport', 'Create report')}
+            </button>
+          </>
+        ) : null}
+      </div>
+      {plan ? (
+        <div className="v2-actions-row v2-vesinvest-maintenance-actions">
           <button
             type="button"
             className="v2-btn"
-            onClick={() => void persist('sync')}
-            disabled={busy || !plan || !pricingReady}
+            onClick={() => void persist('clone')}
+            disabled={busy}
           >
-            {t('v2Vesinvest.openPricing', 'Open fee path')}
+            {t('v2Vesinvest.clonePlan', 'New revision')}
           </button>
-          <button
-            type="button"
-            className="v2-btn"
-            onClick={() => void handleCreateReport()}
-            disabled={busy || !canCreateReport}
-          >
-            {t('v2Forecast.createReport', 'Create report')}
-          </button>
-        </>
+        </div>
       ) : null}
     </div>
   );
@@ -2459,25 +2478,6 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         )}
       </section>
       ) : null}
-
-      <div className="v2-kpi-strip v2-kpi-strip-three">
-        <article>
-          <h3>{t('v2Vesinvest.baselineLink', 'Accepted baseline link')}</h3>
-          <p>
-            {baselineSnapshot?.acceptedYears?.length
-              ? baselineSnapshot.acceptedYears.join(', ')
-              : t('v2Vesinvest.baselineLinkPending', 'Not yet linked')}
-          </p>
-          {baselineSnapshot?.latestAcceptedBudgetId ? null : (
-            <small>
-              {t(
-                'v2Vesinvest.baselineBudgetPending',
-                'Fee-path link is created when pricing is opened from a verified baseline.',
-              )}
-            </small>
-          )}
-        </article>
-      </div>
 
       {loading || loadingPlan ? (
         <div className="v2-loading-state">

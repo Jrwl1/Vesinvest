@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ReportsPageV2 } from './ReportsPageV2';
@@ -371,6 +371,29 @@ describe('ReportsPageV2', () => {
     expect(screen.getAllByText('Tasapoisto 40 vuotta').length).toBeGreaterThan(1);
     expect(screen.getByText('Vesi')).toBeTruthy();
     expect(screen.queryByText('Sanering / vattennatverk')).toBeNull();
+  });
+
+  it('keeps the left rail as a lightweight report chooser', async () => {
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={() => undefined}
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    const reportRow = (await screen.findByRole('button', {
+      name: /Water Utility Vesinvest v2/i,
+    })).closest('.v2-report-row') as HTMLElement;
+    const railSummary = document.querySelector('.v2-reports-list-summary') as HTMLElement;
+
+    expect(within(reportRow).getByText(/2024/)).toBeTruthy();
+    expect(
+      within(reportRow).queryByText('Required price today (annual result = 0)'),
+    ).toBeNull();
+    expect(within(reportRow).queryByText('Investments')).toBeNull();
+    expect(within(railSummary).queryByText('Selected report')).toBeNull();
   });
 
   it('keeps detailed assumption and investment rows out of the public summary preview', async () => {

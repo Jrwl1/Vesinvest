@@ -1497,7 +1497,6 @@ describe('OverviewPageV2', () => {
     const onCreatePlanningBaseline = vi.fn();
     const onOpenForecast = vi.fn();
     const onManageYears = vi.fn();
-    const onReopenReview = vi.fn();
     const onReopenYearReview = vi.fn();
     const onDeleteYear = vi.fn();
     const onExcludeYear = vi.fn();
@@ -1582,7 +1581,6 @@ describe('OverviewPageV2', () => {
         )}
         openForecastButtonClass="v2-btn v2-btn-primary"
         onManageYears={onManageYears}
-        onReopenReview={onReopenReview}
         onReopenYearReview={onReopenYearReview}
         onDeleteYear={onDeleteYear}
         onExcludeYear={onExcludeYear}
@@ -1605,13 +1603,16 @@ describe('OverviewPageV2', () => {
       }),
     );
     expect(onManageYears).toHaveBeenCalled();
-    fireEvent.click(
-      within(managementRow).getByRole('button', {
+    expect(
+      within(managementRow).queryByRole('button', {
         name: localeText('v2Overview.reopenReview'),
       }),
+    ).toBeNull();
+    expect(reopenReviewButtons).toHaveLength(1);
+    expect(reopenReviewButtons[0]!.closest('.v2-actions-row')).not.toBe(
+      screen.getByRole('button', { name: localeText('common.delete') }).closest('.v2-actions-row'),
     );
-    expect(onReopenReview).toHaveBeenCalled();
-    fireEvent.click(reopenReviewButtons[1]!);
+    fireEvent.click(reopenReviewButtons[0]!);
     expect(onReopenYearReview).toHaveBeenCalledWith(2024);
     fireEvent.click(
       screen.getByRole('button', { name: localeText('v2Overview.applyVeetiValues') }),

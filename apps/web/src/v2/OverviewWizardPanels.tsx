@@ -426,7 +426,6 @@ type OverviewForecastHandoffStepProps = {
   ) => React.ReactNode;
   openForecastButtonClass: string;
   onManageYears: () => void;
-  onReopenReview: () => void;
   onReopenYearReview: (year: number) => void;
   onDeleteYear: (year: number) => void;
   onExcludeYear: (year: number) => void;
@@ -448,7 +447,6 @@ export const OverviewForecastHandoffStep: React.FC<
   renderYearValuePreview,
   openForecastButtonClass,
   onManageYears,
-  onReopenReview,
   onReopenYearReview,
   onDeleteYear,
   onExcludeYear,
@@ -469,9 +467,6 @@ export const OverviewForecastHandoffStep: React.FC<
     <div className="v2-actions-row v2-overview-handoff-management-row">
       <button type="button" className="v2-btn" onClick={onManageYears}>
         {t('v2Overview.manageYears', 'Manage years')}
-      </button>
-      <button type="button" className="v2-btn" onClick={onReopenReview}>
-        {t('v2Overview.reopenReview', 'Reopen review')}
       </button>
       <button
         type="button"
@@ -549,6 +544,16 @@ export const OverviewForecastHandoffStep: React.FC<
                 </span>
               </div>
 
+              <div className="v2-actions-row v2-overview-handoff-year-primary-actions">
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
+                  onClick={() => onReopenYearReview(row.vuosi)}
+                >
+                  {t('v2Overview.reopenReview', 'Reopen review')}
+                </button>
+              </div>
+
               {renderYearValuePreview(row.vuosi, availability, {
                 compact: true,
               })}
@@ -560,13 +565,6 @@ export const OverviewForecastHandoffStep: React.FC<
                 </span>
               </div>
               <div className="v2-actions-row v2-overview-handoff-year-actions">
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-small"
-                  onClick={() => onReopenYearReview(row.vuosi)}
-                >
-                  {t('v2Overview.reopenReview', 'Reopen review')}
-                </button>
                 {corrected || row.sourceStatus !== 'VEETI' ? (
                   <button
                     type="button"

@@ -758,7 +758,7 @@ describe('VesinvestPlanningPanel', () => {
     expect(onGoToForecast).toHaveBeenCalledWith('scenario-1');
   });
 
-  it('shows the live accepted baseline link before the revision has been resaved', async () => {
+  it('shows the live accepted baseline evidence before the revision has been resaved', async () => {
     listVesinvestPlansV2.mockResolvedValue([
       makeSummary({
         baselineStatus: 'incomplete',
@@ -784,12 +784,9 @@ describe('VesinvestPlanningPanel', () => {
     );
 
     await screen.findByText('Baseline verified');
-    const baselineLinkArticle = screen
-      .getByText('Accepted baseline link')
-      .closest('article');
-    expect(baselineLinkArticle).toBeTruthy();
-    expect(within(baselineLinkArticle!).getByText('2024')).toBeTruthy();
-    expect(within(baselineLinkArticle!).queryByText('Not yet linked')).toBeNull();
+    expect(screen.queryByText('Accepted baseline link')).toBeNull();
+    expect(screen.getByText('Accepted baseline years')).toBeTruthy();
+    expect(screen.getByText('2024')).toBeTruthy();
   });
 
   it('clears a stale saved accepted-budget link when live baseline years drift', async () => {
@@ -823,13 +820,11 @@ describe('VesinvestPlanningPanel', () => {
       />,
     );
 
-    const baselineLinkArticle = (await screen.findByText('Accepted baseline link')).closest(
-      'article',
-    );
-    expect(baselineLinkArticle).toBeTruthy();
-    expect(within(baselineLinkArticle!).getByText('2024')).toBeTruthy();
+    await screen.findByText('Accepted baseline years');
+    expect(screen.queryByText('Accepted baseline link')).toBeNull();
+    expect(screen.getByText('2024')).toBeTruthy();
     expect(
-      within(baselineLinkArticle!).queryByText(/Linked accepted budget budget-2023/),
+      screen.queryByText(/Linked accepted budget budget-2023/),
     ).toBeNull();
   });
 
@@ -865,14 +860,80 @@ describe('VesinvestPlanningPanel', () => {
       />,
     );
 
-    const baselineLinkArticle = (await screen.findByText('Accepted baseline link')).closest(
-      'article',
-    );
-    expect(baselineLinkArticle).toBeTruthy();
-    expect(within(baselineLinkArticle!).getByText('2024')).toBeTruthy();
+    await screen.findByText('Accepted baseline years');
+    expect(screen.queryByText('Accepted baseline link')).toBeNull();
+    expect(screen.getByText('2024')).toBeTruthy();
     expect(
-      within(baselineLinkArticle!).queryByText(/Linked accepted budget budget-2024/),
+      screen.queryByText(/Linked accepted budget budget-2024/),
     ).toBeNull();
+  });
+
+  it('separates workflow actions from revision maintenance and pins the next CTA', async () => {
+    listVesinvestPlansV2.mockResolvedValue([
+      makeSummary({
+        selectedScenarioId: 'scenario-1',
+        pricingStatus: 'verified',
+        baselineStatus: 'verified',
+        investmentPlanChangedSinceFeeRecommendation: false,
+      }),
+    ]);
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        selectedScenarioId: 'scenario-1',
+        feeRecommendationStatus: 'verified',
+      }),
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: true, baselineYears: [baselineYear] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    const createReportButton = await screen.findByRole('button', {
+      name: 'Create report',
+    });
+    const openPricingButton = screen.getByRole('button', {
+      name: 'Open fee path',
+    });
+    const newRevisionButton = screen.getByRole('button', {
+      name: 'New revision',
+    });
+
+    expect(createReportButton.className).not.toContain('v2-btn-primary');
+    expect(openPricingButton.className).not.toContain('v2-btn-primary');
+    expect(createReportButton.closest('.v2-actions-row')).not.toBe(
+      newRevisionButton.closest('.v2-actions-row'),
+    );
+  });
+
+  it('keeps add project as the only primary CTA for an empty draft', async () => {
+    listVesinvestPlansV2.mockResolvedValue([]);
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    const createPlanButton = screen.getByRole('button', {
+      name: 'Create Vesinvest plan',
+    });
+    const workflowRow = createPlanButton.closest('.v2-actions-row') as HTMLElement;
+    const addProjectButton = within(workflowRow).getByRole('button', {
+      name: 'Add project',
+    });
+
+    expect(addProjectButton.className).toContain('v2-btn-primary');
+    expect(createPlanButton.className).not.toContain('v2-btn-primary');
   });
 
   it('binds the VEETI utility from the in-panel lookup before plan creation', async () => {

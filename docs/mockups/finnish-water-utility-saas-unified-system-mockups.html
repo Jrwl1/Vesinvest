@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Unified system mockups</title>
+  <style>
+    :root {
+      --bg: #f3f1ec;
+      --bg-accent: rgba(244, 226, 181, 0.42);
+      --bg-accent-cool: rgba(219, 233, 246, 0.5);
+      --surface: #fcfbf8;
+      --surface-strong: #ffffff;
+      --surface-soft: #f6f2eb;
+      --line: #d5d8d2;
+      --line-strong: #b7c0cb;
+      --ink: #18212d;
+      --muted: #62707d;
+      --primary: #2347a6;
+      --primary-soft: #e7eefb;
+      --danger: #b54338;
+      --danger-soft: #fdecea;
+      --ok: #27523e;
+      --ok-soft: #e8f4ee;
+      --warn: #7d5f21;
+      --warn-soft: #fff3d9;
+      --info-soft: #ebeff5;
+      --shadow: 0 12px 28px rgba(24, 33, 45, 0.08);
+      --shadow-strong: 0 20px 44px rgba(24, 33, 45, 0.1);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --page-width: 1500px;
+      --gap-xs: 8px;
+      --gap-sm: 12px;
+      --gap-md: 16px;
+      --gap-lg: 24px;
+      --gap-xl: 32px;
+      --rail: 304px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background:
+        linear-gradient(90deg, transparent 0, transparent 47px, rgba(183, 192, 203, 0.1) 48px, transparent 49px) 0 0 / 48px 48px,
+        linear-gradient(transparent 0, transparent 47px, rgba(183, 192, 203, 0.1) 48px, transparent 49px) 0 0 / 48px 48px,
+        radial-gradient(circle at 0% 0%, var(--bg-accent) 0%, transparent 28%),
+        radial-gradient(circle at 100% 0%, var(--bg-accent-cool) 0%, transparent 34%),
+        linear-gradient(180deg, #f7f4ee 0%, var(--bg) 100%);
+      color: var(--ink);
+      font-family: Aptos, "Segoe UI Variable", "Segoe UI", sans-serif;
+      line-height: 1.4;
+    }
+
+    body { padding: 24px; }
+
+    .sheet {
+      width: min(100%, var(--page-width));
+      margin: 0 auto;
+      display: grid;
+      gap: 28px;
+    }
+
+    .artifact-head,
+    .frame,
+    .panel,
+    .surface,
+    .card,
+    .mini,
+    .chip,
+    .tab,
+    .step,
+    .launcher,
+    .report-item,
+    .scenario {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+    }
+
+    .artifact-head,
+    .frame,
+    .panel,
+    .surface,
+    .card,
+    .mini,
+    .report-item,
+    .launcher,
+    .scenario {
+      background: rgba(252, 251, 248, 0.9);
+      box-shadow: var(--shadow);
+    }
+
+    .artifact-head {
+      padding: 20px 24px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .artifact-head h1,
+    .artifact-head p,
+    .story-title h2,
+    .story-title p,
+    .panel h3,
+    .panel h4,
+    .panel p { margin: 0; }
+
+    .artifact-head h1 { font-size: 28px; }
+
+    .artifact-head p,
+    .story-title p,
+    .muted,
+    .caption,
+    .row-label,
+    .meta span,
+    .metric span,
+    .mini span,
+    .field label,
+    .step span,
+    .subtle {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .artifact-meta,
+    .actions,
+    .tabs,
+    .year-meta,
+    .scenario-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--gap-xs);
+      align-items: center;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      background: rgba(255,255,255,0.76);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: none;
+    }
+
+    .chip.primary { background: var(--primary-soft); color: var(--primary); border-color: rgba(35,71,166,0.24); }
+    .chip.ok { background: var(--ok-soft); color: var(--ok); border-color: rgba(39,82,62,0.18); }
+    .chip.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(125,95,33,0.18); }
+    .chip.danger { background: var(--danger-soft); color: var(--danger); border-color: rgba(181,67,56,0.18); }
+    .chip.soft { background: var(--surface-soft); }
+    .chip.info { background: var(--info-soft); }
+
+    .story { display: grid; gap: 12px; }
+
+    .story-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: var(--gap-md);
+      padding: 0 4px;
+    }
+
+    .story-title h2 { font-size: 18px; }
+
+    .frame { overflow: hidden; }
+
+    .shell {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      min-height: 820px;
+    }
+
+    .shell-top { padding: 18px 24px 10px; }
+
+    .shell-bar {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto auto;
+      gap: var(--gap-md);
+      align-items: center;
+      padding: 14px 18px;
+      border: 1px solid rgba(183,192,203,0.78);
+      border-radius: 999px;
+      background: rgba(252,251,248,0.84);
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      display: grid;
+      gap: 3px;
+    }
+
+    .brand strong { font-size: 15px; }
+
+    .tabs { gap: 10px; }
+
+    .tab {
+      min-height: 36px;
+      padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: none;
+      border-radius: var(--radius-sm);
+    }
+
+    .tab.active {
+      background: var(--primary-soft);
+      color: var(--primary);
+      border-color: rgba(35,71,166,0.24);
+    }
+
+    .account {
+      display: flex;
+      gap: var(--gap-xs);
+      align-items: center;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.72);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .shell-stepbar {
+      display: flex;
+      justify-content: center;
+      padding: 0 24px 12px;
+    }
+
+    .step-flow {
+      width: min(980px, 100%);
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0,1fr));
+      gap: var(--gap-xs);
+    }
+
+    .step {
+      padding: 10px 12px;
+      display: grid;
+      gap: 3px;
+      background: rgba(255,255,255,0.72);
+      box-shadow: none;
+    }
+
+    .step strong { font-size: 12px; }
+
+    .step.active {
+      background: #fff;
+      border-color: rgba(35,71,166,0.24);
+      box-shadow: 0 0 0 2px rgba(35,71,166,0.08);
+    }
+
+    .shell-body {
+      padding: 0 24px 24px;
+      display: grid;
+      gap: 20px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) var(--rail);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .layout.single { grid-template-columns: minmax(0,1fr); }
+
+    .panel {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: var(--gap-md);
+    }
+
+    .section-head h3 { font-size: 20px; }
+    .section-head p { margin-top: 4px; color: var(--muted); font-size: 13px; max-width: 760px; }
+
+    .btn {
+      min-height: 36px;
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .btn.soft { background: rgba(255,255,255,0.72); }
+    .btn.danger { color: var(--danger); border-color: rgba(181,67,56,0.28); }
+
+    .support,
+    .stack,
+    .lane-board,
+    .review-column,
+    .report-preview,
+    .report-list,
+    .scenario-stack {
+      display: grid;
+      gap: var(--gap-sm);
+    }
+
+    .meta-grid,
+    .summary-grid,
+    .kpi-grid,
+    .baseline-grid,
+    .accepted-grid,
+    .launcher-grid,
+    .preview-grid,
+    .provenance-grid,
+    .document-grid,
+    .field-grid,
+    .source-grid,
+    .review-grid,
+    .card-grid {
+      display: grid;
+      gap: var(--gap-sm);
+    }
+
+    .meta-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .summary-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .kpi-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
+    .baseline-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .accepted-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .launcher-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
+    .preview-grid { grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr); }
+    .provenance-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .document-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .field-grid { grid-template-columns: minmax(0,1.3fr) minmax(0,0.8fr); align-items: end; }
+    .source-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .review-grid { grid-template-columns: minmax(0,1.55fr) minmax(0,0.95fr); }
+    .card-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+
+    .mini,
+    .card,
+    .surface,
+    .report-item,
+    .launcher,
+    .scenario {
+      padding: 12px;
+      display: grid;
+      gap: var(--gap-xs);
+    }
+
+    .surface {
+      background: rgba(255,255,255,0.72);
+    }
+
+    .meta span,
+    .metric span,
+    .mini span,
+    .row-label,
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .meta strong,
+    .metric strong,
+    .mini strong { font-size: 15px; }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field input {
+      min-height: 38px;
+      width: 100%;
+      padding: 0 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.96);
+      color: var(--ink);
+    }
+
+    .table {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: rgba(255,255,255,0.84);
+    }
+
+    .table-row {
+      display: grid;
+      grid-template-columns: 1.3fr 0.7fr 0.6fr auto;
+      gap: var(--gap-sm);
+      align-items: center;
+      padding: 12px 14px;
+      border-top: 1px solid rgba(213,216,210,0.72);
+      font-size: 13px;
+    }
+
+    .table-row:first-child { border-top: 0; }
+
+    .table-row.head {
+      background: rgba(246,242,235,0.9);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .lane { display: grid; gap: 10px; }
+
+    .lane-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--gap-sm);
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(213,216,210,0.68);
+    }
+
+    .lane-head strong { font-size: 13px; }
+    .lane-head span { font-size: 12px; color: var(--muted); }
+
+    .year-card {
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.88);
+      box-shadow: var(--shadow);
+      min-height: 310px;
+    }
+
+    .year-card.expanded {
+      grid-column: 1 / -1;
+      padding: 18px;
+      min-height: 0;
+      box-shadow: var(--shadow-strong);
+    }
+
+    .year-card.quiet { opacity: 0.74; }
+
+    .year-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: var(--gap-sm);
+    }
+
+    .year-title {
+      display: grid;
+      gap: 7px;
+    }
+
+    .year-title strong { font-size: 18px; }
+
+    .accounting,
+    .checklist,
+    .doc-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .accounting-row {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto;
+      gap: var(--gap-sm);
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .accounting-row.total {
+      margin-top: 2px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      font-weight: 700;
+    }
+
+    .value {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .value.ok { color: var(--ok); }
+    .value.danger { color: var(--danger); }
+
+    .secondary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: var(--gap-xs);
+    }
+
+    .secondary-grid > div {
+      padding: 10px;
+      border: 1px solid rgba(213,216,210,0.72);
+      border-radius: var(--radius-sm);
+      background: rgba(246,242,235,0.8);
+    }
+
+    .secondary-grid strong {
+      display: block;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .note {
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(213,216,210,0.72);
+      background: rgba(246,242,235,0.78);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .note.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(125,95,33,0.18); }
+    .note.danger { background: var(--danger-soft); color: var(--danger); border-color: rgba(181,67,56,0.18); }
+
+    .edit-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 10px 12px;
+    }
+
+    .edit-grid .field input { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .checklist,
+    .doc-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .forecast-dense .panel,
+    .forecast-dense .mini,
+    .forecast-dense .launcher,
+    .forecast-dense .report-item,
+    .forecast-dense .scenario {
+      gap: 10px;
+    }
+
+    .forecast-dense .kpi-grid article,
+    .forecast-dense .launcher {
+      min-height: 92px;
+    }
+
+    .chart-surface {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.78);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    }
+
+    .chart-frame {
+      min-height: 280px;
+      border: 1px solid rgba(183,192,203,0.7);
+      border-radius: var(--radius-md);
+      background: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(246,242,235,0.82));
+      padding: 14px;
+    }
+
+    .chart-frame svg {
+      width: 100%;
+      height: 230px;
+      display: block;
+    }
+
+    .caption {
+      padding: 0 4px;
+      font-size: 12px;
+    }
+
+    @media (max-width: 1220px) {
+      .layout,
+      .review-grid,
+      .preview-grid,
+      .field-grid,
+      .source-grid,
+      .provenance-grid,
+      .document-grid,
+      .report-grid {
+        grid-template-columns: minmax(0,1fr);
+      }
+
+      .step-flow,
+      .summary-grid,
+      .kpi-grid,
+      .baseline-grid,
+      .accepted-grid,
+      .launcher-grid,
+      .card-grid {
+        grid-template-columns: repeat(2, minmax(0,1fr));
+      }
+
+      .shell-bar { grid-template-columns: minmax(0,1fr); }
+    }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <section class="artifact-head">
+      <h1>Unified product system mockups</h1>
+      <p>
+        This second mockup applies the shared-system addendum on top of the earlier current-truth pass. The workflow stays grounded in the same V2 repo reality, but `Yhteenveto`, `Ennuste`, and `Raportit` now clearly belong to one product family, one shell, one palette, and one material system.
+      </p>
+      <div class="artifact-meta">
+        <span class="chip">Grounded in `apps/web/src/v2/**`</span>
+        <span class="chip">Addendum: unified-product-design-system-addendum.md</span>
+        <span class="chip">Finnish-first labels from `fi.json`</span>
+      </div>
+    </section>
+
+    <section class="story">
+      <div class="story-title"><h2>Step 1</h2><p>Fast utility selection inside the shared shell</p></div>
+      <div class="frame"><div class="shell">
+        <div class="shell-top">
+          <div class="shell-bar">
+            <div class="brand"><strong>Vesinvest</strong><span>Yhteenveto</span></div>
+            <div class="tabs"><span class="tab active">Yhteenveto</span><span class="tab">Ennuste</span><span class="tab">Raportit</span></div>
+            <div class="account"><span>Kieli: FI</span><span>admin@vesipolku.dev</span></div>
+          </div>
+        </div>
+        <div class="shell-stepbar"><div class="step-flow"><div class="step active"><strong>Vaihe 1 / 5</strong><span>Valitse vesilaitos</span></div><div class="step"><strong>Vaihe 2</strong><span>Tarkista mitkä vuodet kannattaa tuoda</span></div><div class="step"><strong>Vaihe 3</strong><span>Tarkista tuodut vuodet</span></div><div class="step"><strong>Vaihe 4</strong><span>Luo suunnittelupohja</span></div><div class="step"><strong>Vaihe 5</strong><span>Jatka ennusteeseen</span></div></div></div>
+        <div class="shell-body"><div class="layout">
+          <section class="panel">
+            <div class="section-head"><div><h3>Valitse vesilaitos</h3><p>Hae VEETI-vesilaitos ja yhdistä se tähän työtilaan.</p></div><span class="chip warn">Ei yhdistetty</span></div>
+            <div class="field-grid">
+              <label class="field"><span>Haku nimellä tai Y-tunnuksella</span><input value="kronoby"></label>
+              <div class="actions"><button class="btn">Hae</button><button class="btn soft">Tyhjennä</button></div>
+            </div>
+            <div class="table">
+              <div class="table-row head"><div>Vesilaitos</div><div>Y-tunnus</div><div>Kunta</div><div></div></div>
+              <div class="table-row"><div><strong>Kronoby Vatten och Avlopp</strong></div><div>0187415-2</div><div>Kruunupyy</div><div><span class="chip primary">Valittu</span></div></div>
+              <div class="table-row"><div><strong>Kokkolan Vesi</strong></div><div>0179379-6</div><div>Kokkola</div><div><span class="chip soft">Valitse</span></div></div>
+              <div class="table-row"><div><strong>Pietarsaaren Vesi</strong></div><div>0247434-0</div><div>Pietarsaari</div><div><span class="chip soft">Valitse</span></div></div>
+            </div>
+            <section class="surface">
+              <div class="section-head"><div><h4>Valittu laitos</h4></div></div>
+              <div class="meta-grid"><div class="mini meta"><span>Organisaatio</span><strong>Kronoby Vatten och Avlopp</strong></div><div class="mini meta"><span>Y-tunnus</span><strong>0187415-2</strong></div></div>
+              <div class="actions"><button class="btn primary">Yhdistä valittu vesilaitos</button><button class="btn">Tyhjennä valinta</button></div>
+            </section>
+          </section>
+          <aside class="support">
+            <section class="panel"><div class="section-head"><div><h4>Yhteenveto</h4></div><span class="chip info">Vaihe 1 / 5</span></div><div class="meta-grid"><div class="mini meta"><span>Valittu yhtiö</span><strong>Ei valintaa</strong></div><div class="mini meta"><span>Nykyinen fokus</span><strong>Valitse vesilaitos</strong></div></div></section>
+            <section class="panel"><div class="summary-grid"><article class="mini metric"><span>Tuodut vuodet</span><strong>0</strong></article><article class="mini metric"><span>Valmiit vuodet</span><strong>0</strong></article><article class="mini metric"><span>Pohja valmis</span><strong>Ei</strong></article></div></section>
+            <section class="panel"><h4>Seuraava vaihe</h4><p class="muted">Yhdistä valittu vesilaitos, jotta vuosien tarkistus avautuu.</p></section>
+          </aside>
+        </div></div>
+      </div></div>
+      <div class="caption">Same shell, same tabs, same borders, same chips. Step 1 stays the lightest and simplest workspace.</div>
+    </section>
+
+    <section class="story">
+      <div class="story-title"><h2>Step 2</h2><p>Import board with the year card as the trust object</p></div>
+      <div class="frame"><div class="shell">
+        <div class="shell-top"><div class="shell-bar"><div class="brand"><strong>Vesinvest</strong><span>Yhteenveto</span></div><div class="tabs"><span class="tab active">Yhteenveto</span><span class="tab">Ennuste</span><span class="tab">Raportit</span></div><div class="account"><span>Kieli: FI</span><span>Kronoby Vatten och Avlopp</span></div></div></div>
+        <div class="shell-stepbar"><div class="step-flow"><div class="step"><strong>Vaihe 1</strong><span>Valitse vesilaitos</span></div><div class="step active"><strong>Vaihe 2 / 5</strong><span>Tarkista mitkä vuodet kannattaa tuoda</span></div><div class="step"><strong>Vaihe 3</strong><span>Tarkista tuodut vuodet</span></div><div class="step"><strong>Vaihe 4</strong><span>Luo suunnittelupohja</span></div><div class="step"><strong>Vaihe 5</strong><span>Jatka ennusteeseen</span></div></div></div>
+        <div class="shell-body"><div class="layout">
+          <section class="panel">
+            <div class="section-head"><div><h3>Tarkista mitkä vuodet kannattaa tuoda</h3><p>Vertaa vuosia puuttuvien tietojen mukaan ennen tuontia työtilaan.</p></div><div class="actions"><span class="chip info">Valittuna 3 vuotta</span><button class="btn primary">Tuo valitut vuodet</button></div></div>
+            <div class="lane-board">
+              <div class="lane">
+                <div class="lane-head"><strong>Kuluvan vuoden arvio</strong><span>1 vuosi</span></div>
+                <div class="card-grid" style="grid-template-columns:minmax(0,1fr)">
+                  <article class="year-card">
+                    <div class="year-head"><div class="year-title"><strong>2025</strong><div class="year-meta"><span class="chip soft">Nykyinen arvio</span><span class="chip warn">1 puuttuu</span></div></div><span class="chip primary">Pidä mukana</span></div>
+                    <div class="accounting">
+                      <div class="accounting-row"><span>Tuotot</span><strong class="value">1 920 000 €</strong></div>
+                      <div class="accounting-row"><span>Aineet ja palvelut</span><strong class="value">410 000 €</strong></div>
+                      <div class="accounting-row"><span>Henkilöstökulut</span><strong class="value">525 000 €</strong></div>
+                      <div class="accounting-row"><span>Poistot</span><strong class="value">180 000 €</strong></div>
+                      <div class="accounting-row"><span>Muut toimintakulut</span><strong class="value">318 000 €</strong></div>
+                      <div class="accounting-row total"><span>Tulos</span><strong class="value ok">487 000 €</strong></div>
+                    </div>
+                    <div class="secondary-grid"><div><span>Veden hinta</span><strong>2,15 €/m³</strong></div><div><span>Jäteveden hinta</span><strong>3,62 €/m³</strong></div><div><span>Myyty vesi</span><strong>312 000 m³</strong></div><div><span>Myyty jätevesi</span><strong>Tieto puuttuu</strong></div></div>
+                    <div class="note warn">VEETI ei sisältänyt myytyä jätevesimäärää. Syötä käsin ennen hyväksyntää.</div>
+                    <div class="actions"><button class="btn">Avaa</button><button class="btn">Pois suunnitelmasta</button></div>
+                  </article>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="lane-head"><strong>0 puuttuu</strong><span>2 vuotta</span></div>
+                <div class="card-grid">
+                  <article class="year-card">
+                    <div class="year-head"><div class="year-title"><strong>2024</strong><div class="year-meta"><span class="chip ok">VEETI</span><span class="chip primary">Tulos = 0</span></div></div><span class="chip primary">Valittu</span></div>
+                    <div class="accounting"><div class="accounting-row"><span>Tuotot</span><strong class="value">1 840 000 €</strong></div><div class="accounting-row"><span>Aineet ja palvelut</span><strong class="value">395 000 €</strong></div><div class="accounting-row"><span>Henkilöstökulut</span><strong class="value">501 000 €</strong></div><div class="accounting-row"><span>Poistot</span><strong class="value">186 000 €</strong></div><div class="accounting-row"><span>Muut toimintakulut</span><strong class="value">301 000 €</strong></div><div class="accounting-row total"><span>Tulos</span><strong class="value ok">457 000 €</strong></div></div>
+                    <div class="secondary-grid"><div><span>Veden hinta</span><strong>2,09 €/m³</strong></div><div><span>Jäteveden hinta</span><strong>3,55 €/m³</strong></div><div><span>Myyty vesi</span><strong>307 000 m³</strong></div><div><span>Myyty jätevesi</span><strong>294 000 m³</strong></div></div>
+                    <div class="note">VEETI</div><div class="actions"><button class="btn">Avaa</button><button class="btn">Pois suunnitelmasta</button></div>
+                  </article>
+                  <article class="year-card">
+                    <div class="year-head"><div class="year-title"><strong>2023</strong><div class="year-meta"><span class="chip ok">VEETI</span><span class="chip soft">Valmis</span></div></div><span class="chip primary">Valittu</span></div>
+                    <div class="accounting"><div class="accounting-row"><span>Tuotot</span><strong class="value">1 768 000 €</strong></div><div class="accounting-row"><span>Aineet ja palvelut</span><strong class="value">372 000 €</strong></div><div class="accounting-row"><span>Henkilöstökulut</span><strong class="value">486 000 €</strong></div><div class="accounting-row"><span>Poistot</span><strong class="value">178 000 €</strong></div><div class="accounting-row"><span>Muut toimintakulut</span><strong class="value">284 000 €</strong></div><div class="accounting-row total"><span>Tulos</span><strong class="value ok">448 000 €</strong></div></div>
+                    <div class="secondary-grid"><div><span>Veden hinta</span><strong>2,02 €/m³</strong></div><div><span>Jäteveden hinta</span><strong>3,41 €/m³</strong></div><div><span>Myyty vesi</span><strong>301 000 m³</strong></div><div><span>Myyty jätevesi</span><strong>288 000 m³</strong></div></div>
+                    <div class="note">VEETI</div><div class="actions"><button class="btn">Avaa</button><button class="btn">Pois suunnitelmasta</button></div>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </section>
+          <aside class="support">
+            <section class="panel"><div class="section-head"><div><h4>Yhteenveto</h4></div><span class="chip info">Vaihe 2 / 5</span></div><div class="meta-grid"><div class="mini meta"><span>Valittu yhtiö</span><strong>Kronoby Vatten och Avlopp</strong></div><div class="mini meta"><span>Nykyinen fokus</span><strong>Tarkista mitkä vuodet kannattaa tuoda</strong></div></div></section>
+            <section class="panel"><div class="summary-grid"><article class="mini metric"><span>Tuodut vuodet</span><strong>4</strong></article><article class="mini metric"><span>Valmiit vuodet</span><strong>2</strong></article><article class="mini metric"><span>Pohja valmis</span><strong>Ei</strong></article></div></section>
+            <section class="panel"><div class="stack"><div class="mini"><span>0 puuttuu</span><strong>2024, 2023</strong></div><div class="mini"><span>Vaatii tarkistusta</span><strong>2022, 2025</strong></div></div></section>
+          </aside>
+        </div></div>
+      </div></div>
+      <div class="caption">The import board keeps the same shell and surface treatment the later tabs use. Only the task density and card emphasis differ.</div>
+    </section>
+
+    <section class="story">
+      <div class="story-title"><h2>Step 3</h2><p>Inline review stays in the same product language</p></div>
+      <div class="frame"><div class="shell">
+        <div class="shell-top"><div class="shell-bar"><div class="brand"><strong>Vesinvest</strong><span>Yhteenveto</span></div><div class="tabs"><span class="tab active">Yhteenveto</span><span class="tab">Ennuste</span><span class="tab">Raportit</span></div><div class="account"><span>Kieli: FI</span><span>Kronoby Vatten och Avlopp</span></div></div></div>
+        <div class="shell-stepbar"><div class="step-flow"><div class="step"><strong>Vaihe 1</strong><span>Valitse vesilaitos</span></div><div class="step"><strong>Vaihe 2</strong><span>Tarkista mitkä vuodet kannattaa tuoda</span></div><div class="step active"><strong>Vaihe 3 / 5</strong><span>Tarkista tuodut vuodet</span></div><div class="step"><strong>Vaihe 4</strong><span>Luo suunnittelupohja</span></div><div class="step"><strong>Vaihe 5</strong><span>Jatka ennusteeseen</span></div></div></div>
+        <div class="shell-body"><div class="layout">
+          <section class="panel">
+            <div class="section-head"><div><h3>Tarkista tuodut vuodet</h3><p>Ryhmittele tuodut vuodet valmiuden mukaan, nosta halutut vuodet rinnakkain ja korjaa vain ne vuodet, jotka sitä vielä tarvitsevat.</p></div><div class="actions"><span class="chip info">Valmis tarkistukseen 2</span><button class="btn primary">Jatka tarkistuksesta</button></div></div>
+            <div class="review-grid">
+              <div class="review-column">
+                <section class="surface">
+                  <div class="lane-head"><strong>Vaatii tarkistusta</strong><span>1 vuosi</span></div>
+                  <article class="year-card expanded">
+                    <div class="year-head"><div class="year-title"><strong>2022</strong><div class="year-meta"><span class="chip warn">Vaatii tarkistusta</span><span class="chip soft">Yhdistetty</span><span class="chip danger">Aineet ja palvelut puuttuu</span></div></div><div class="actions"><button class="btn">Sulje</button></div></div>
+                    <div class="edit-grid">
+                      <label class="field"><span>Tuotot</span><input value="1705000"></label>
+                      <label class="field"><span>Aineet ja palvelut</span><input value="" placeholder="Syötä arvo"></label>
+                      <label class="field"><span>Henkilöstökulut</span><input value="474000"></label>
+                      <label class="field"><span>Poistot</span><input value="180000"></label>
+                      <label class="field"><span>Muut toimintakulut</span><input value="290000"></label>
+                      <label class="field"><span>Tulos</span><input value="355000"></label>
+                      <label class="field"><span>Veden hinta</span><input value="" placeholder="Syötä arvo"></label>
+                      <label class="field"><span>Jäteveden hinta</span><input value="3.31"></label>
+                      <label class="field"><span>Myyty vesi</span><input value="287000"></label>
+                      <label class="field"><span>Myyty jätevesi</span><input value="281000"></label>
+                    </div>
+                    <div class="source-grid">
+                      <section class="mini"><span>Lähdetuonti</span><div class="actions"><button class="btn">Tuo lähde-PDF</button><button class="btn">Tuo KVA-työkirja</button></div><ul class="doc-list"><li>VEETI: tilinpäätös, volyymit</li><li>Korjaus tarvitaan: Aineet ja palvelut, Veden hinta</li></ul></section>
+                      <section class="mini"><span>Tarkistuksen tila</span><ul class="doc-list"><li>VEETI ei sisältänyt tätä arvoa. Syötä käsin.</li><li>Tulos on tuottoihin nähden kaukana nollasta.</li><li>Kortti pysyy paikallaan tarkistuksen ajan.</li></ul></section>
+                    </div>
+                    <div class="actions"><button class="btn primary">Tallenna</button><button class="btn primary">Tallenna ja hyväksy</button><button class="btn">Palauta VEETI-arvot</button><button class="btn danger">Pois suunnitelmasta</button></div>
+                  </article>
+                </section>
+              </div>
+              <div class="review-column">
+                <section class="surface"><div class="lane-head"><strong>Valmis</strong><span>2 vuotta</span></div><div class="stack"><article class="year-card quiet" style="min-height:0"><div class="year-head"><div class="year-title"><strong>2024</strong><div class="year-meta"><span class="chip ok">Valmis</span><span class="chip ok">VEETI</span></div></div><button class="btn">Avaa</button></div><div class="accounting"><div class="accounting-row"><span>Tuotot</span><strong class="value">1 840 000 €</strong></div><div class="accounting-row"><span>Aineet ja palvelut</span><strong class="value">395 000 €</strong></div><div class="accounting-row total"><span>Tulos</span><strong class="value ok">457 000 €</strong></div></div></article><article class="year-card quiet" style="min-height:0"><div class="year-head"><div class="year-title"><strong>2023</strong><div class="year-meta"><span class="chip ok">Valmis</span><span class="chip ok">VEETI</span></div></div><button class="btn">Avaa</button></div><div class="accounting"><div class="accounting-row"><span>Tuotot</span><strong class="value">1 768 000 €</strong></div><div class="accounting-row"><span>Aineet ja palvelut</span><strong class="value">372 000 €</strong></div><div class="accounting-row total"><span>Tulos</span><strong class="value ok">448 000 €</strong></div></div></article></div></section>
+                <section class="surface"><div class="lane-head"><strong>Poissuljetut</strong><span>0 vuotta</span></div><div class="note">Ei poissuljettuja vuosia tällä hetkellä.</div></section>
+              </div>
+            </div>
+          </section>
+          <aside class="support">
+            <section class="panel"><div class="section-head"><div><h4>Yhteenveto</h4></div><span class="chip info">Vaihe 3 / 5</span></div><div class="meta-grid"><div class="mini meta"><span>Valittu yhtiö</span><strong>Kronoby Vatten och Avlopp</strong></div><div class="mini meta"><span>Nykyinen fokus</span><strong>Tarkista tuodut vuodet</strong></div></div></section>
+            <section class="panel"><div class="summary-grid"><article class="mini metric"><span>Valmiit vuodet</span><strong>2</strong></article><article class="mini metric"><span>Vaatii tarkistusta</span><strong>1</strong></article><article class="mini metric"><span>Rajatut vuodet</span><strong>0</strong></article></div></section>
+            <section class="panel"><h4>Seuraava vaihe</h4><p class="muted">Korjaa 2022, tallenna ja hyväksy, sitten pohjan luonti avautuu.</p></section>
+          </aside>
+        </div></div>
+      </div></div>
+      <div class="caption">The expanded review card still dominates, but the buttons, fields, borders, chips, and spacing all match the later workspaces.</div>
+    </section>
+
+    <section class="story">
+      <div class="story-title"><h2>Step 4–5</h2><p>Checkpoint and handoff keep the same material language</p></div>
+      <div class="frame"><div class="shell">
+        <div class="shell-top"><div class="shell-bar"><div class="brand"><strong>Vesinvest</strong><span>Yhteenveto</span></div><div class="tabs"><span class="tab active">Yhteenveto</span><span class="tab">Ennuste</span><span class="tab">Raportit</span></div><div class="account"><span>Kieli: FI</span><span>Kronoby Vatten och Avlopp</span></div></div></div>
+        <div class="shell-stepbar"><div class="step-flow"><div class="step"><strong>Vaihe 1</strong><span>Valitse vesilaitos</span></div><div class="step"><strong>Vaihe 2</strong><span>Tarkista mitkä vuodet kannattaa tuoda</span></div><div class="step"><strong>Vaihe 3</strong><span>Tarkista tuodut vuodet</span></div><div class="step active"><strong>Vaihe 4 / 5</strong><span>Luo suunnittelupohja</span></div><div class="step"><strong>Vaihe 5</strong><span>Jatka ennusteeseen</span></div></div></div>
+        <div class="shell-body"><div class="layout single">
+          <section class="panel">
+            <div class="section-head"><div><h3>Luo suunnittelupohja</h3><p>Vahvista mukana olevat vuodet ja korjatut tiedot ennen suunnittelupohjan luontia.</p></div><span class="chip ok">3 vuotta mukana</span></div>
+            <div class="baseline-grid"><article class="mini metric"><span>Mukana suunnittelupohjassa</span><strong>2025, 2024, 2023</strong></article><article class="mini metric"><span>Poissuljetut vuodet</span><strong>Ei yhtään</strong></article><article class="mini metric"><span>Korjatut vuodet</span><strong>2025 korjattu</strong></article></div>
+            <div class="preview-grid">
+              <section class="surface"><h4>Ennen Ennustetta ja Raportteja</h4><ul class="checklist"><li>Korjatut vuodet: 2025 käyttää käsin syötettyä jätevesimäärää.</li><li>VEETI jää voimaan vuosille 2024 ja 2023 ilman korjauksia.</li><li>Suunnittelupohja luodaan vuosille 2025, 2024 ja 2023.</li></ul></section>
+              <section class="surface"><h4>Toimi nyt</h4><div class="stack"><div class="mini"><span>Tarkistukset valmiit</span><strong>Kyllä</strong></div><div class="mini"><span>Rajauksia</span><strong>0</strong></div></div><div class="actions"><button class="btn primary">Luo suunnittelupohja</button><button class="btn">Palaa tarkistukseen</button></div></section>
+            </div>
+            <section class="surface" style="margin-top:4px"><div class="section-head"><div><h4>Jatka ennusteeseen</h4><p>Suunnittelupohja on valmis. Tarkista vuodet ja avaa Ennuste.</p></div><div class="actions"><button class="btn">Hallitse vuosia</button><button class="btn primary">Avaa Ennuste</button></div></div><div class="accepted-grid"><article class="card"><div class="year-head"><div class="year-title"><strong>2025</strong><div class="year-meta"><span class="chip soft">Yhdistetty</span><span class="chip primary">Korjattu</span></div></div></div><div class="accounting"><div class="accounting-row"><span>Tuotot</span><strong class="value">1 920 000 €</strong></div><div class="accounting-row total"><span>Tulos</span><strong class="value ok">487 000 €</strong></div></div></article><article class="card"><div class="year-head"><div class="year-title"><strong>2024</strong><div class="year-meta"><span class="chip ok">VEETI</span><span class="chip ok">Valmis</span></div></div></div><div class="accounting"><div class="accounting-row"><span>Tuotot</span><strong class="value">1 840 000 €</strong></div><div class="accounting-row total"><span>Tulos</span><strong class="value ok">457 000 €</strong></div></div></article><article class="card"><div class="year-head"><div class="year-title"><strong>2023</strong><div class="year-meta"><span class="chip ok">VEETI</span><span class="chip ok">Valmis</span></div></div></div><div class="accounting"><div class="accounting-row"><span>Tuotot</span><strong class="value">1 768 000 €</strong></div><div class="accounting-row total"><span>Tulos</span><strong class="value ok">448 000 €</strong></div></div></article></div></section>
+          </section>
+        </div></div>
+      </div></div>
+      <div class="caption">The baseline checkpoint and forecast handoff stay inside the same shell and panel family instead of becoming a special success mode.</div>
+    </section>
+
+    <section class="story">
+      <div class="story-title"><h2>Ennuste</h2><p>Same shell, same palette, denser operator mode</p></div>
+      <div class="frame"><div class="shell forecast-dense">
+        <div class="shell-top"><div class="shell-bar"><div class="brand"><strong>Vesinvest</strong><span>Ennuste</span></div><div class="tabs"><span class="tab">Yhteenveto</span><span class="tab active">Ennuste</span><span class="tab">Raportit</span></div><div class="account"><span>Kieli: FI</span><span>Kronoby Vatten och Avlopp</span></div></div></div>
+        <div class="shell-body"><div class="layout single">
+          <section class="panel">
+            <div class="section-head"><div><h3>Ennuste</h3><p>Peruspolku jatkuu samassa työkalussa. Nyt painotus siirtyy skenaarioihin, hintapaineeseen ja työpajojen avaamiseen.</p></div><div class="actions"><button class="btn">Uusi skenaario</button><button class="btn primary">Laske ennuste</button></div></div>
+            <div class="scenario-stack">
+              <section class="surface">
+                <div class="section-head"><div><h4>Skenaariot</h4><p class="muted">Sama chip- ja valintalogiikka, tiheämpi sisältö.</p></div><div class="actions"><span class="chip info">Perusvuosi 2025</span><span class="chip ok">Pohja valmis</span></div></div>
+                <div class="scenario-row"><article class="scenario"><strong>Peruspolku 2026–2045</strong><span class="subtle">Ajantasainen</span></article><article class="scenario"><strong>Stressi 1</strong><span class="subtle">Laskenta vanhentunut</span></article><article class="scenario"><strong>Kasvu</strong><span class="subtle">Luonnos</span></article></div>
+              </section>
+              <section class="surface">
+                <div class="kpi-grid"><article class="mini metric"><span>Tulos 2026</span><strong>0,18 €/m³</strong></article><article class="mini metric"><span>Rahoitusvaje</span><strong>1,34 M€</strong></article><article class="mini metric"><span>Poistot yhteensä</span><strong>6,42 M€</strong></article><article class="mini metric"><span>Tilanne</span><strong>Ajantasainen</strong></article></div>
+              </section>
+              <section class="chart-surface">
+                <div class="section-head"><div><h4>Tuloslaskelman yhteenveto</h4><p class="muted">Sama otsikkorakenne, sama reunaviiva, sama värihierarkia kuin Yhteenvedossa.</p></div><div class="actions"><button class="btn">Vertaa</button><button class="btn">Näytä vuositaso</button></div></div>
+                <div class="chart-frame">
+                  <svg viewBox="0 0 900 230" role="img" aria-label="Forecast chart">
+                    <g stroke="rgba(183,192,203,0.9)" stroke-width="1"><line x1="20" y1="26" x2="880" y2="26"/><line x1="20" y1="72" x2="880" y2="72"/><line x1="20" y1="118" x2="880" y2="118"/><line x1="20" y1="164" x2="880" y2="164"/></g>
+                    <polyline fill="none" stroke="#2347a6" stroke-width="4" points="28,172 146,156 264,160 382,138 500,132 618,116 736,104 854,94"/>
+                    <polyline fill="none" stroke="#6e87c6" stroke-width="4" points="28,188 146,182 264,172 382,166 500,154 618,144 736,132 854,124"/>
+                    <g fill="#62707d" font-size="12"><text x="28" y="214">2026</text><text x="146" y="214">2028</text><text x="264" y="214">2030</text><text x="382" y="214">2032</text><text x="500" y="214">2034</text><text x="618" y="214">2036</text><text x="736" y="214">2038</text><text x="854" y="214">2040</text></g>
+                  </svg>
+                </div>
+              </section>
+              <section class="surface">
+                <div class="section-head"><div><h4>Työpajat</h4><p class="muted">Tihein näkymä kolmesta, mutta edelleen sama järjestelmä.</p></div></div>
+                <div class="launcher-grid"><article class="launcher"><strong>Poistosuunnitelmat</strong><span>Ryhmitelty luokkalista, oletusmenetelmä, yksi poistoluokka per investointi.</span></article><article class="launcher"><strong>Tuotot ja volyymiajurit</strong><span>Hintojen ja volyymien säädöt per skenaario.</span></article><article class="launcher"><strong>Investointiohjelma</strong><span>Lähivuosien investoinnit ja pitkän aikavälin jaksotus.</span></article><article class="launcher"><strong>Käyttökulut</strong><span>Kulupolku, energia ja henkilöstö.</span></article></div>
+              </section>
+            </div>
+          </section>
+        </div></div>
+      </div></div>
+      <div class="caption">`Ennuste` is denser, but it no longer switches to a separate dark or analytics identity. It stays in the same product family.</div>
+    </section>
+
+    <section class="story">
+      <div class="story-title"><h2>Raportit</h2><p>Same shell, calmer document/export mode</p></div>
+      <div class="frame"><div class="shell">
+        <div class="shell-top"><div class="shell-bar"><div class="brand"><strong>Vesinvest</strong><span>Raportit</span></div><div class="tabs"><span class="tab">Yhteenveto</span><span class="tab">Ennuste</span><span class="tab active">Raportit</span></div><div class="account"><span>Kieli: FI</span><span>Kronoby Vatten och Avlopp</span></div></div></div>
+        <div class="shell-body"><div class="layout single">
+          <section class="panel">
+            <div class="section-head"><div><h3>Raportit</h3><p>Raportit rauhoittuu dokumentti- ja vientitilaan, mutta pysyy samassa typografiassa, saman reunakielen ja saman kontrolliperheen sisällä.</p></div><div class="actions"><button class="btn">Avaa Ennuste</button><button class="btn primary">Luo raportti</button></div></div>
+            <div class="preview-grid">
+              <section class="report-list">
+                <article class="report-item"><div class="year-head"><div class="year-title"><strong>Julkinen yhteenveto</strong><div class="year-meta"><span class="chip ok">Ajantasainen</span><span class="chip soft">Peruspolku</span></div></div><span class="chip info">13.4.2026</span></div><p class="muted">Näyttää taksapolun, ryhmitellyn investointisuunnitelman ja perusvuoden taustan.</p></article>
+                <article class="report-item"><div class="year-head"><div class="year-title"><strong>Luottamuksellinen liite</strong><div class="year-meta"><span class="chip warn">Vaatii viennin</span><span class="chip soft">Peruspolku</span></div></div><span class="chip info">-</span></div><p class="muted">Lisää oletukset ja yksityiskohtaiset vuosittaiset investointirivit yhteenvedon päälle.</p></article>
+              </section>
+              <section class="surface">
+                <div class="section-head"><div><h4>Raportin esikatselu</h4><p class="muted">Sama paneeli- ja otsikkokieli, vähemmän visuaalista kiirettä.</p></div><div class="actions"><button class="btn">Avaa Ennuste</button><button class="btn primary">Vie PDF</button></div></div>
+                <div class="document-grid"><article class="mini metric"><span>Valittu raportti</span><strong>Julkinen yhteenveto</strong></article><article class="mini metric"><span>Perusvuoden lähde</span><strong>VEETI + korjatut vuodet</strong></article></div>
+                <div class="summary-grid"><article class="mini metric"><span>Taksapolku</span><strong>0,18 → 0,29 €/m³</strong></article><article class="mini metric"><span>Investointiohjelma</span><strong>18,4 M€</strong></article><article class="mini metric"><span>Riskitaso</span><strong>Keskitaso</strong></article></div>
+                <div class="provenance-grid"><article class="mini metric"><span>Talous</span><strong>VEETI</strong></article><article class="mini metric"><span>Hinnat</span><strong>VEETI</strong></article><article class="mini metric"><span>Myydyt määrät</span><strong>Tilinpäätös PDF + VEETI</strong></article></div>
+                <div class="document-grid"><section class="surface"><span class="row-label">Mukana raportissa</span><ul class="doc-list"><li>Taksapolku</li><li>Ryhmitelty investointisuunnitelma</li><li>Perusvuoden tausta</li></ul></section><section class="surface"><span class="row-label">Ei mukana julkisessa versiossa</span><ul class="doc-list"><li>Oletukset</li><li>Yksityiskohtaiset vuosirivit</li><li>Luottamukselliset liitteet</li></ul></section></div>
+              </section>
+            </div>
+          </section>
+        </div></div>
+      </div></div>
+      <div class="caption">`Raportit` becomes calmer and more document-oriented without inventing a new export theme or separate visual identity.</div>
+    </section>
+  </main>
+</body>
+</html>

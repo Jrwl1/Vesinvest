@@ -236,7 +236,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     recommendedYears,
     readyTrustBoardRows,
     suspiciousTrustBoardRows,
-    parkedTrustBoardRows,
+    trashbinTrustBoardRows,
     blockedTrustBoardRows,
     currentYearEstimateBoardRows,
     confirmedImportedYears,
@@ -268,6 +268,8 @@ export const OverviewPageV2: React.FC<Props> = ({
     toggleYearForRestore,
     handleBulkDeleteYears,
     handleBulkRestoreYears,
+    excludeYearFromImportBoard,
+    restoreYearFromImportBoard,
     searchTerm,
     renderHighlightedSearchMatch,
     handleGuideBlockedYears,
@@ -541,6 +543,10 @@ export const OverviewPageV2: React.FC<Props> = ({
   const overviewVisualStep = getPresentedOverviewWorkflowStep(mountedWorkflowStep);
   const wizardHero = wizardStepContent[overviewVisualStep];
   const isStep2SupportChrome = overviewVisualStep === 2;
+  const compactSupportingChrome =
+    overviewVisualStep === 1 ||
+    overviewVisualStep === 2 ||
+    overviewVisualStep === 3;
   const summaryMetaBlocks = [
     {
       label: t('v2Overview.organizationLabel', 'Organization'),
@@ -557,18 +563,59 @@ export const OverviewPageV2: React.FC<Props> = ({
       label: t('v2Overview.lastFetchLabel', 'Last fetch'),
       value: formatDateTime(importStatus.link?.lastFetchedAt),
     },
-    {
-      label: t('v2Overview.wizardCurrentFocus'),
-      value: wizardHero.badge,
-    },
   ];
-  const compactWizardSummaryItems = [
+  const compactSupportStatusItems = [
     wizardSummaryItems[1],
     wizardSummaryItems[2],
-    mountedWorkflowStep === 3 || mountedWorkflowStep === 4
-      ? null
-      : wizardSummaryItems[4],
   ].filter((item): item is (typeof wizardSummaryItems)[number] => item != null);
+  const supportStatusItems =
+    compactSupportingChrome ? compactSupportStatusItems : wizardSummaryItems;
+  const nextAction = (() => {
+    if (overviewVisualStep === 2) {
+      return {
+        title: t('v2Overview.importYearsButton'),
+        body:
+          selectedYears.length > 0
+            ? `${t('v2Overview.selectedYearsLabel')}: ${selectedYears.join(', ')}`
+            : t('v2Overview.noYearsSelected'),
+      };
+    }
+
+    if (overviewVisualStep === 3) {
+      if (hasBlockedReviewRows) {
+        return {
+          title: t('v2Overview.blockedYearsTitle'),
+          body:
+            reviewStatusRows
+              .filter((row) => row.setupStatus === 'needs_attention')
+              .map((row) => String(row.year))
+              .join(', ') || t('v2Overview.noYearsSelected'),
+        };
+      }
+      if (hasPendingReviewRows) {
+        return {
+          title: t('v2Overview.wizardQuestionReviewYears'),
+          body: readyYearsLabel,
+        };
+      }
+      return {
+        title: t('v2Overview.createPlanningBaseline'),
+        body: t('v2Overview.reviewContinueReadyBody'),
+      };
+    }
+
+    if (overviewVisualStep === 4) {
+      return {
+        title: t('v2Overview.createPlanningBaseline'),
+        body: planningBaselineSummaryDetail,
+      };
+    }
+
+    return {
+      title: wizardHero.badge,
+      body: wizardHero.title,
+    };
+  })();
   const connectButtonClass =
     overviewVisualStep === 1 ? 'v2-btn v2-btn-primary' : 'v2-btn';
   const importYearsButtonClass =
@@ -669,7 +716,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         readyRows={readyTrustBoardRows}
         suspiciousRows={suspiciousTrustBoardRows}
         blockedRows={blockedTrustBoardRows}
-        parkedRows={parkedTrustBoardRows}
+        trashbinRows={trashbinTrustBoardRows}
         currentYearEstimateRows={currentYearEstimateBoardRows}
         confirmedImportedYears={confirmedImportedYears}
         yearDataCache={yearDataCache}
@@ -689,22 +736,20 @@ export const OverviewPageV2: React.FC<Props> = ({
         loadingYearData={loadingYearData}
         manualPatchError={manualPatchError}
         blockedYearCount={blockedYearCount}
+        removingYear={removingYear}
         onToggleYear={(year) => toggleYear(year, null)}
         onImportYears={handleImportYears}
         onAddCurrentYearEstimate={handleAddCurrentYearEstimate}
+        onTrashYear={(year) => void excludeYearFromImportBoard(year)}
+        onRestoreYear={(year) => void restoreYearFromImportBoard(year)}
         importYearsButtonClass={importYearsButtonClass}
         importingYears={importingYears}
       />
     ) : null;
-  const shouldLeadWithActionSurface =
-    overviewVisualStep === 1 ||
-    overviewVisualStep === 2 ||
-    overviewVisualStep === 3;
   const shouldShowVesinvestPanel =
     importStatus.connected === true || activeVesinvestPlan != null;
   const useSupportRail =
     overviewVisualStep !== PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS;
-  const compactSupportingChrome = shouldLeadWithActionSurface;
   const supportingChromeEyebrow = compactSupportingChrome
     ? t('v2Overview.wizardSummaryTitle')
     : t('v2Overview.wizardLabel');
@@ -720,11 +765,9 @@ export const OverviewPageV2: React.FC<Props> = ({
       compactSupportingChrome={compactSupportingChrome}
       supportingChromeEyebrow={supportingChromeEyebrow}
       supportingChromeTitle={supportingChromeTitle}
-      wizardHero={wizardHero}
       summaryMetaBlocks={summaryMetaBlocks}
-      wizardSummaryItems={
-        compactSupportingChrome ? compactWizardSummaryItems : wizardSummaryItems
-      }
+      supportStatusItems={supportStatusItems}
+      nextAction={nextAction}
     />
   ) : null;
 
@@ -903,7 +946,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   );
 
   const useCompactWorkspaceLayout =
-    useSupportRail && shouldLeadWithActionSurface;
+    useSupportRail && compactSupportingChrome;
 
   return (
     <div className="v2-page">
@@ -919,7 +962,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           activeSurface
         )
       ) : (
-        shouldLeadWithActionSurface ? (
+        compactSupportingChrome ? (
           <>
             {activeSurface}
             {heroGrid}

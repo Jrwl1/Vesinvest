@@ -990,8 +990,7 @@ export const ReportsPageV2: React.FC<Props> = ({
   );
   const selectedPreviewTitle = React.useMemo(
     () =>
-      selectedListReportTitle ??
-      (selectedReport
+      selectedReport
         ? getReportDisplayTitle({
             title: selectedReport.title,
             scenarioName:
@@ -999,7 +998,7 @@ export const ReportsPageV2: React.FC<Props> = ({
             createdAt: selectedReport.createdAt,
             t,
           })
-        : null),
+        : selectedListReportTitle,
     [selectedListReportTitle, selectedReport, t],
   );
   const requiredAnnualResultPriceLabel = React.useMemo(
@@ -1192,7 +1191,32 @@ export const ReportsPageV2: React.FC<Props> = ({
     selectedReportHasPdf &&
     downloadMatchesPreview &&
     !downloadingPdf;
-
+  const selectedReportScenarioName =
+    selectedReport?.ennuste.nimi ?? selectedReport?.ennuste.id ?? '-';
+  const selectedReportGeneratedAt = selectedReport
+    ? formatDateTime(selectedReport.snapshot.generatedAt ?? selectedReport.createdAt)
+    : '-';
+  const selectedReportExportHint = React.useMemo(() => {
+    if (downloadingPdf) {
+      return null;
+    }
+    if (!selectedReportHasPdf) {
+      return t(
+        'v2Reports.errorDownloadPdfUnavailable',
+        'PDF export is temporarily unavailable. Please try again later.',
+      );
+    }
+    if (!downloadMatchesPreview) {
+      return t(
+        'v2Reports.downloadUsesSavedVariant',
+        'PDF download still uses the saved report variant. Switch back to that variant to export.',
+      );
+    }
+    return t(
+      'v2Reports.exportReady',
+      'Saved report is available for export.',
+    );
+  }, [downloadMatchesPreview, downloadingPdf, selectedReportHasPdf, t]);
   return (
     <div className="v2-page">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
@@ -1432,171 +1456,128 @@ export const ReportsPageV2: React.FC<Props> = ({
 
             {selectedReport ? (
               <>
-                <article className="v2-kpi-strip v2-reports-secondary-kpis">
-                  <div>
-                    <h3>
-                      {t(
-                        'v2Forecast.requiredPriceCumulativeCash',
-                        'Required price today (cumulative cash >= 0)',
-                      )}
-                    </h3>
-                    <p>
-                      {formatPrice(
-                        selectedReport.snapshot.scenario
-                          .requiredPriceTodayCombinedCumulativeCash ??
-                          selectedReport.requiredPriceToday,
-                      )}
-                    </p>
+                <article className="v2-reports-document-header">
+                  <div className="v2-reports-document-header-top">
+                    <div className="v2-reports-document-copy">
+                      <h3>{selectedPreviewTitle}</h3>
+                      <p className="v2-muted">{selectedReportScenarioName}</p>
+                    </div>
+                    <div className="v2-badge-row">
+                      <span className="v2-badge v2-status-info">
+                        {reportVariantLabel(selectedReport.variant)}
+                      </span>
+                      <span className="v2-badge v2-status-neutral">
+                        {selectedReportGeneratedAt}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <h3>
-                      {t(
-                        'v2Forecast.requiredIncreaseCumulativeCash',
-                        'Required increase vs comparator (cumulative cash)',
-                      )}
-                    </h3>
-                    <p>
-                      {formatPercent(
-                        selectedReport.snapshot.scenario
-                          .requiredAnnualIncreasePctCumulativeCash ??
-                          selectedReport.requiredAnnualIncreasePct,
-                      )}
-                    </p>
+
+                  <div className="v2-reports-document-meta">
+                    <article>
+                      <span>{t('v2Reports.generatedAtLabel', 'Generated')}</span>
+                      <strong>{selectedReportGeneratedAt}</strong>
+                    </article>
+                    <article>
+                      <span>{t('projection.scenario', 'Scenario')}</span>
+                      <strong>{selectedReportScenarioName}</strong>
+                    </article>
+                    <article>
+                      <span>
+                        {t(
+                          'v2Reports.acceptedBaselineYears',
+                          'Accepted baseline years',
+                        )}
+                      </span>
+                      <strong>{selectedAcceptedBaselineYearsLabel}</strong>
+                    </article>
+                    <article>
+                      <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
+                      <strong>{selectedScenarioHorizonLabel}</strong>
+                    </article>
                   </div>
-                  <div>
-                    <h3>
-                      {t(
-                        'v2Forecast.latestComparatorPrice',
-                        'Latest full-year comparator price',
-                      )}
-                    </h3>
-                    <p>
-                      {formatPrice(
-                        selectedReport.snapshot.scenario
-                          .baselinePriceTodayCombined ??
-                          selectedReport.requiredPriceToday,
-                      )}
-                    </p>
-                    <small>
-                      {t('projection.v2.baselineYearLabel', 'Baseline year')}:{' '}
-                      {selectedReport.snapshot.scenario.baselineYear ??
-                        selectedReport.baselineYear}
-                    </small>
+
+                  <div className="v2-actions-row v2-reports-document-actions">
+                    <div className="v2-reports-document-status">
+                      <strong>{reportVariantLabel(selectedReport.variant)}</strong>
+                      {selectedReportExportHint ? (
+                        <p className="v2-muted">{selectedReportExportHint}</p>
+                      ) : null}
+                    </div>
+                    <div className="v2-reports-document-action-buttons">
+                      <button
+                        className="v2-btn v2-btn-primary"
+                        type="button"
+                        onClick={handleDownloadPdf}
+                        disabled={!canDownloadPdf}
+                      >
+                        {downloadingPdf
+                          ? t('v2Reports.downloadingPdf', 'Downloading PDF...')
+                          : t('v2Reports.downloadPdf')}
+                      </button>
+                      <button
+                        className="v2-btn"
+                        type="button"
+                        onClick={() => onGoToForecast(selectedReport.ennuste.id)}
+                      >
+                        {t('v2Reports.openForecast')}
+                      </button>
+                    </div>
                   </div>
                 </article>
 
-                <div className="v2-actions-row v2-reports-toolbar">
-                  {downloadMatchesPreview || !selectedReportHasPdf ? <span /> : (
-                    <p className="v2-muted">
-                      {t(
-                        'v2Reports.downloadUsesSavedVariant',
-                        'PDF download still uses the saved report variant. Switch back to that variant to export.',
-                      )}
-                    </p>
-                  )}
-                  <div className="v2-report-export-panel">
-                    <button
-                      className="v2-btn v2-btn-primary"
-                      type="button"
-                      onClick={handleDownloadPdf}
-                      disabled={!canDownloadPdf}
-                    >
-                      {downloadingPdf
-                        ? t('v2Reports.downloadingPdf', 'Downloading PDF...')
-                        : t('v2Reports.downloadPdf')}
-                    </button>
-                    <span className="v2-muted">
-                      {downloadingPdf
-                        ? null
-                        : !selectedReportHasPdf
-                        ? t(
-                            'v2Reports.errorDownloadPdfUnavailable',
-                            'PDF export is temporarily unavailable. Please try again later.',
-                          )
-                        : !downloadMatchesPreview
-                        ? null
-                        : selectedReportHasPdf
-                        ? t(
-                            'v2Reports.exportReady',
-                            'Saved report is available for export.',
-                          )
-                        : null}
-                    </span>
-                  </div>
-                </div>
-
                 <div className="v2-grid v2-grid-two v2-reports-preview-grid">
                   <article className="v2-subcard v2-reports-panel-card v2-reports-meta-card">
-                    <h3>{t('v2Reports.generatedAtLabel', 'Generated')}</h3>
-                      <div className="v2-keyvalue-list">
+                    <div className="v2-keyvalue-list">
+                      {selectedReport.snapshot.vesinvestPlan ? (
+                        <div className="v2-keyvalue-row">
+                          <span>{t('v2Vesinvest.planSelector', 'Plan revision')}</span>
+                          <strong>{`${selectedReport.snapshot.vesinvestPlan.name} / v${selectedReport.snapshot.vesinvestPlan.versionNumber}`}</strong>
+                        </div>
+                      ) : null}
                       <div className="v2-keyvalue-row">
-                        <span>{t('v2Reports.generatedAtLabel', 'Generated')}</span>
-                        <strong>
-                          {formatDateTime(
-                            selectedReport.snapshot.generatedAt ??
-                              selectedReport.createdAt,
-                          )}
-                        </strong>
+                        <span>{t('v2Forecast.scenarioTypeLabel', 'Branch type')}</span>
+                        <strong>{selectedScenarioBranchLabel}</strong>
                       </div>
-                        {selectedReport.snapshot.vesinvestPlan ? (
-                          <div className="v2-keyvalue-row">
-                            <span>{t('v2Vesinvest.planSelector', 'Plan revision')}</span>
-                            <strong>{`${selectedReport.snapshot.vesinvestPlan.name} / v${selectedReport.snapshot.vesinvestPlan.versionNumber}`}</strong>
-                          </div>
-                        ) : null}
+                      <div className="v2-keyvalue-row">
+                        <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
+                        <strong>{selectedScenarioHorizonLabel}</strong>
+                      </div>
+                      {selectedPrimaryBaselineSourceSummary ? (
                         <div className="v2-keyvalue-row">
                           <span>
                             {t(
-                              'v2Reports.acceptedBaselineYears',
-                              'Accepted baseline years',
+                              'v2Reports.previewBaselineStatus',
+                              'Baseline source',
                             )}
                           </span>
-                          <strong>{selectedAcceptedBaselineYearsLabel}</strong>
+                          <strong>
+                            {baselineStatusLabel(
+                              selectedPrimaryBaselineSourceSummary.sourceStatus,
+                              selectedPrimaryBaselineSourceSummary.planningRole,
+                            )}
+                          </strong>
                         </div>
+                      ) : null}
+                      {selectedPrimaryBaselineSourceSummary ? (
                         <div className="v2-keyvalue-row">
-                          <span>{t('v2Forecast.scenarioTypeLabel', 'Branch type')}</span>
-                          <strong>{selectedScenarioBranchLabel}</strong>
+                          <span>
+                            {t(
+                              'v2Reports.previewFinancialSource',
+                              'Financials source',
+                            )}
+                          </span>
+                          <strong>
+                            {baselineDatasetSourceLabel(
+                              selectedPrimaryBaselineSourceSummary.financials
+                                .source,
+                              selectedPrimaryBaselineSourceSummary.financials
+                                .provenance,
+                            )}
+                          </strong>
                         </div>
-                        <div className="v2-keyvalue-row">
-                          <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
-                          <strong>{selectedScenarioHorizonLabel}</strong>
-                        </div>
-                        {selectedPrimaryBaselineSourceSummary ? (
-                          <div className="v2-keyvalue-row">
-                            <span>
-                              {t(
-                                'v2Reports.previewBaselineStatus',
-                                'Baseline source',
-                              )}
-                            </span>
-                            <strong>
-                              {baselineStatusLabel(
-                                selectedPrimaryBaselineSourceSummary.sourceStatus,
-                                selectedPrimaryBaselineSourceSummary.planningRole,
-                              )}
-                            </strong>
-                          </div>
-                        ) : null}
-                        {selectedPrimaryBaselineSourceSummary ? (
-                          <div className="v2-keyvalue-row">
-                            <span>
-                              {t(
-                                'v2Reports.previewFinancialSource',
-                                'Financials source',
-                              )}
-                            </span>
-                            <strong>
-                              {baselineDatasetSourceLabel(
-                                selectedPrimaryBaselineSourceSummary.financials
-                                  .source,
-                                selectedPrimaryBaselineSourceSummary.financials
-                                  .provenance,
-                              )}
-                            </strong>
-                          </div>
-                        ) : null}
-                      </div>
-                    </article>
+                      ) : null}
+                    </div>
+                  </article>
 
                   <section className="v2-subcard v2-report-variant-card">
                     <div className="v2-section-header">
@@ -1708,6 +1689,59 @@ export const ReportsPageV2: React.FC<Props> = ({
                       ))}
                     </div>
                   </section>
+
+                  <article className="v2-kpi-strip v2-reports-secondary-kpis">
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.requiredPriceCumulativeCash',
+                          'Required price today (cumulative cash >= 0)',
+                        )}
+                      </h3>
+                      <p>
+                        {formatPrice(
+                          selectedReport.snapshot.scenario
+                            .requiredPriceTodayCombinedCumulativeCash ??
+                            selectedReport.requiredPriceToday,
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.requiredIncreaseCumulativeCash',
+                          'Required increase vs comparator (cumulative cash)',
+                        )}
+                      </h3>
+                      <p>
+                        {formatPercent(
+                          selectedReport.snapshot.scenario
+                            .requiredAnnualIncreasePctCumulativeCash ??
+                            selectedReport.requiredAnnualIncreasePct,
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.latestComparatorPrice',
+                          'Latest full-year comparator price',
+                        )}
+                      </h3>
+                      <p>
+                        {formatPrice(
+                          selectedReport.snapshot.scenario
+                            .baselinePriceTodayCombined ??
+                            selectedReport.requiredPriceToday,
+                        )}
+                      </p>
+                      <small>
+                        {t('projection.v2.baselineYearLabel', 'Baseline year')}:{' '}
+                        {selectedReport.snapshot.scenario.baselineYear ??
+                          selectedReport.baselineYear}
+                      </small>
+                    </div>
+                  </article>
 
                   {activeVariant.sections.baselineSources &&
                   selectedBaselineSourceSummaries.length > 0 ? (

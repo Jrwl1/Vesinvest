@@ -349,8 +349,8 @@ describe('ReportsPageV2', () => {
     });
 
     expect(await screen.findByText('Water Utility Vesinvest / v2')).toBeTruthy();
-    expect(await screen.findByText('Hyväksytyt pohjavuodet')).toBeTruthy();
-    expect(await screen.findByText('2022, 2023, 2024')).toBeTruthy();
+    expect((await screen.findAllByText('Hyväksytyt pohjavuodet')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('2022, 2023, 2024')).length).toBeGreaterThan(0);
     expect((await screen.findAllByText('2026-2030')).length).toBeGreaterThan(0);
     expect(await screen.findByText('Mistä hinta muodostuu')).toBeTruthy();
     expect((await screen.findAllByText('Perusmaksun muutos')).length).toBeGreaterThan(0);
@@ -730,7 +730,7 @@ describe('ReportsPageV2', () => {
     });
   });
 
-  it('keeps the saved report title in the preview header', async () => {
+  it('keeps the saved report title in the document header', async () => {
     const { container } = render(
       <ReportsPageV2
         refreshToken={0}
@@ -744,10 +744,48 @@ describe('ReportsPageV2', () => {
       expect(getReportV2).toHaveBeenCalledWith('report-1');
     });
 
-    const previewHead = container.querySelector('.v2-reports-preview-head');
-    expect(previewHead?.textContent).toContain(
+    const documentHeader = container.querySelector('.v2-reports-document-header');
+    expect(documentHeader?.textContent).toContain(
       'Ennusteraportti Water Utility Vesinvest v2 2026-04-09',
     );
+    expect(documentHeader?.textContent).toContain('Luotu esikatselu');
+  });
+
+  it('prefers the fetched saved report title over the list summary title in the document header', async () => {
+    listReportsV2.mockResolvedValueOnce([
+      {
+        id: 'report-1',
+        title: 'Outdated list title',
+        createdAt: '2026-04-09T08:00:00.000Z',
+        ennuste: { id: 'scenario-1', nimi: 'Water Utility Vesinvest v2' },
+        baselineYear: 2024,
+        requiredPriceToday: 3.2,
+        requiredAnnualIncreasePct: 4.1,
+        totalInvestments: 100000,
+        baselineSourceSummary: null,
+        variant: 'confidential_appendix',
+        pdfUrl: '/v2/reports/report-1/pdf',
+      },
+    ]);
+
+    const { container } = render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={() => undefined}
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getReportV2).toHaveBeenCalledWith('report-1');
+    });
+
+    const documentHeader = container.querySelector('.v2-reports-document-header');
+    expect(documentHeader?.textContent).toContain(
+      'Ennusteraportti Water Utility Vesinvest v2 2026-04-09',
+    );
+    expect(documentHeader?.textContent).not.toContain('Outdated list title');
   });
 
   it('disables export when the saved report has no PDF available', async () => {
@@ -1085,7 +1123,7 @@ describe('ReportsPageV2', () => {
       />,
     );
 
-    expect(await screen.findByText('2022, 2024')).toBeTruthy();
+    expect((await screen.findAllByText('2022, 2024')).length).toBeGreaterThan(0);
   });
 
   it('uses the readiness-derived empty-state hint when a computed scenario is ready but no reports exist', async () => {

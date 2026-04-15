@@ -22,6 +22,8 @@ import {
 import { submitWorkbookImportWorkflow } from './overviewImportWorkflows';
 import { getPreviewPrefetchYears } from './overviewSelectors';
 import { buildImportYearSummaryRows } from './yearReview';
+import { useOverviewSetupState } from './useOverviewSetupState';
+import { useOverviewImportController } from './useOverviewImportController';
 
 const completeImportYearManuallyV2 = vi.fn();
 const clearImportAndScenariosV2 = vi.fn();
@@ -88,9 +90,14 @@ const localeText = (key: string, options?: Record<string, unknown>) =>
   translate(key, undefined, options);
 
 const getPrimaryButtons = () =>
-  Array.from(document.querySelectorAll('button.v2-btn-primary')).map(
-    (button) => button as HTMLButtonElement,
-  );
+  Array.from(document.querySelectorAll('button.v2-btn-primary'))
+    .filter(
+      (button) =>
+        !button.closest('.v2-reports-layout') &&
+        !button.closest('.v2-forecast-layout') &&
+        !button.closest('.v2-vesinvest-panel'),
+    )
+    .map((button) => button as HTMLButtonElement);
 
 const expectPrimaryButtonLabels = (labels: string[]) => {
   const primaryButtons = getPrimaryButtons();
@@ -612,10 +619,6 @@ describe('OverviewPageV2', () => {
         compactSupportingChrome={true}
         supportingChromeEyebrow={localeText('v2Overview.wizardSummaryTitle')}
         supportingChromeTitle={localeText('v2Overview.wizardSummarySubtitle')}
-        wizardHero={{
-          title: localeText('v2Overview.wizardQuestionImportYears'),
-          body: localeText('v2Overview.wizardBodyImportYears'),
-        }}
         summaryMetaBlocks={[
           {
             label: localeText('v2Overview.organizationLabel'),
@@ -626,7 +629,7 @@ describe('OverviewPageV2', () => {
             value: '2024, 2023',
           },
         ]}
-        wizardSummaryItems={[
+        supportStatusItems={[
           {
             label: localeText('v2Overview.wizardSummaryImportedYears'),
             value: '2',
@@ -638,6 +641,10 @@ describe('OverviewPageV2', () => {
             detail: 'Hidden baseline detail',
           },
         ]}
+        nextAction={{
+          title: localeText('v2Overview.importYearsButton'),
+          body: localeText('v2Overview.wizardBodyImportYears'),
+        }}
       />,
     );
 
@@ -651,9 +658,8 @@ describe('OverviewPageV2', () => {
     ).toBeGreaterThan(0);
     expect(screen.queryByText('Hidden imported-year detail')).toBeNull();
     expect(screen.queryByText('Hidden baseline detail')).toBeNull();
-    expect(
-      screen.queryByText(localeText('v2Overview.wizardBodyImportYears')),
-    ).toBeNull();
+    expect(screen.getByText(localeText('v2Overview.importYearsButton'))).toBeTruthy();
+    expect(screen.getByText(localeText('v2Overview.wizardBodyImportYears'))).toBeTruthy();
   });
 
   it('renders the extracted connect step with focused selection controls', () => {
@@ -889,7 +895,7 @@ describe('OverviewPageV2', () => {
             missingRequirements: ['prices', 'tariffRevenue'],
           }),
         ]}
-        parkedRows={[]}
+        trashbinRows={[]}
         currentYearEstimateRows={[]}
         confirmedImportedYears={[]}
         yearDataCache={{}}
@@ -909,23 +915,44 @@ describe('OverviewPageV2', () => {
         loadingYearData={null}
         manualPatchError={null}
         blockedYearCount={3}
+        removingYear={null}
         onToggleYear={() => undefined}
         onImportYears={() => undefined}
         onAddCurrentYearEstimate={() => undefined}
+        onTrashYear={() => undefined}
+        onRestoreYear={() => undefined}
         importYearsButtonClass="v2-btn v2-btn-primary"
         importingYears={false}
       />,
     );
 
-    const readyLane = screen
-      .getByRole('heading', { name: localeText('v2Overview.trustLaneBlockedTitle') })
-      .closest('details') as HTMLDetailsElement;
-    fireEvent.click(readyLane.querySelector('summary')!);
-    const renderedYears = Array.from(
-      readyLane.querySelectorAll('.v2-year-checkbox strong'),
-    ).map((node) => node.textContent);
+    const oneMissingLane = screen
+      .getByRole('heading', { name: localeText('v2Overview.importBucket1Title') })
+      .closest('section') as HTMLElement;
+    const twoMissingLane = screen
+      .getByRole('heading', { name: localeText('v2Overview.importBucket2Title') })
+      .closest('section') as HTMLElement;
+    const threePlusMissingLane = screen
+      .getByRole('heading', {
+        name: localeText('v2Overview.importBucket3PlusTitle'),
+      })
+      .closest('section') as HTMLElement;
 
-    expect(renderedYears).toEqual(['2024', '2023', '2021']);
+    expect(
+      Array.from(oneMissingLane.querySelectorAll('.v2-year-checkbox strong')).map(
+        (node) => node.textContent,
+      ),
+    ).toEqual(['2024']);
+    expect(
+      Array.from(twoMissingLane.querySelectorAll('.v2-year-checkbox strong')).map(
+        (node) => node.textContent,
+      ),
+    ).toEqual(['2023']);
+    expect(
+      Array.from(
+        threePlusMissingLane.querySelectorAll('.v2-year-checkbox strong'),
+      ).map((node) => node.textContent),
+    ).toEqual(['2021']);
   });
 
   it('keeps selected usable years at the front of selectable lanes before recency tie-breaks', () => {
@@ -960,7 +987,7 @@ describe('OverviewPageV2', () => {
         readyRows={[makeBoardRow(2024), makeBoardRow(2022), makeBoardRow(2023)]}
         suspiciousRows={[]}
         blockedRows={[]}
-        parkedRows={[]}
+        trashbinRows={[]}
         currentYearEstimateRows={[]}
         confirmedImportedYears={[]}
         yearDataCache={{}}
@@ -980,16 +1007,19 @@ describe('OverviewPageV2', () => {
         loadingYearData={null}
         manualPatchError={null}
         blockedYearCount={0}
+        removingYear={null}
         onToggleYear={() => undefined}
         onImportYears={() => undefined}
         onAddCurrentYearEstimate={() => undefined}
+        onTrashYear={() => undefined}
+        onRestoreYear={() => undefined}
         importYearsButtonClass="v2-btn v2-btn-primary"
         importingYears={false}
       />,
     );
 
     const readyLane = screen
-      .getByRole('heading', { name: localeText('v2Overview.trustLaneReadyTitle') })
+      .getByRole('heading', { name: localeText('v2Overview.importBucket0Title') })
       .closest('section') as HTMLElement;
     const readyYears = Array.from(
       readyLane.querySelectorAll('.v2-year-checkbox strong'),
@@ -998,7 +1028,7 @@ describe('OverviewPageV2', () => {
     expect(readyYears).toEqual(['2022', '2024', '2023']);
   });
 
-  it('keeps parked years behind a closed secondary disclosure and breaks equal-priority ties by recency', () => {
+  it('keeps trashbin years behind a closed secondary disclosure and breaks equal-priority ties by recency', () => {
     const makeBoardRow = (vuosi: number) => ({
       vuosi,
       completeness: {
@@ -1030,7 +1060,7 @@ describe('OverviewPageV2', () => {
         readyRows={[makeBoardRow(2024), makeBoardRow(2020), makeBoardRow(2022)]}
         suspiciousRows={[]}
         blockedRows={[]}
-        parkedRows={[makeBoardRow(2023), makeBoardRow(2021)]}
+        trashbinRows={[makeBoardRow(2023), makeBoardRow(2021)]}
         currentYearEstimateRows={[]}
         confirmedImportedYears={[]}
         yearDataCache={{}}
@@ -1050,16 +1080,19 @@ describe('OverviewPageV2', () => {
         loadingYearData={null}
         manualPatchError={null}
         blockedYearCount={0}
+        removingYear={null}
         onToggleYear={() => undefined}
         onImportYears={() => undefined}
         onAddCurrentYearEstimate={() => undefined}
+        onTrashYear={() => undefined}
+        onRestoreYear={() => undefined}
         importYearsButtonClass="v2-btn v2-btn-primary"
         importingYears={false}
       />,
     );
 
     const readyLane = screen
-      .getByRole('heading', { name: localeText('v2Overview.trustLaneReadyTitle') })
+      .getByRole('heading', { name: localeText('v2Overview.importBucket0Title') })
       .closest('section') as HTMLElement;
     const readyYears = Array.from(
       readyLane.querySelectorAll('.v2-year-checkbox strong'),
@@ -1067,7 +1100,7 @@ describe('OverviewPageV2', () => {
     expect(readyYears).toEqual(['2024', '2022', '2020']);
 
     const parkedLane = screen
-      .getByRole('heading', { name: localeText('v2Overview.trustLaneParkedTitle') })
+      .getByRole('heading', { name: localeText('v2Overview.importTrashbinTitle') })
       .closest('details') as HTMLDetailsElement;
     expect(parkedLane.open).toBe(false);
 
@@ -1143,7 +1176,7 @@ describe('OverviewPageV2', () => {
         readyRows={[]}
         suspiciousRows={[]}
         blockedRows={blockedRows}
-        parkedRows={[]}
+        trashbinRows={[]}
         currentYearEstimateRows={[]}
         confirmedImportedYears={[]}
         yearDataCache={{}}
@@ -1163,9 +1196,12 @@ describe('OverviewPageV2', () => {
         loadingYearData={null}
         manualPatchError={null}
         blockedYearCount={2}
+        removingYear={null}
         onToggleYear={() => undefined}
         onImportYears={() => undefined}
         onAddCurrentYearEstimate={() => undefined}
+        onTrashYear={() => undefined}
+        onRestoreYear={() => undefined}
         importYearsButtonClass="v2-btn v2-btn-primary"
         importingYears={false}
       />,
@@ -1224,7 +1260,7 @@ describe('OverviewPageV2', () => {
         readyRows={[]}
         suspiciousRows={[]}
         blockedRows={blockedRows}
-        parkedRows={[]}
+        trashbinRows={[]}
         currentYearEstimateRows={[]}
         confirmedImportedYears={[]}
         yearDataCache={{}}
@@ -1244,9 +1280,12 @@ describe('OverviewPageV2', () => {
         loadingYearData={null}
         manualPatchError={null}
         blockedYearCount={1}
+        removingYear={null}
         onToggleYear={() => undefined}
         onImportYears={() => undefined}
         onAddCurrentYearEstimate={() => undefined}
+        onTrashYear={() => undefined}
+        onRestoreYear={() => undefined}
         importYearsButtonClass="v2-btn v2-btn-primary"
         importingYears={false}
       />,
@@ -1935,7 +1974,7 @@ describe('OverviewPageV2', () => {
 
     const readySummary = (
       await screen.findByText(localeText('v2Overview.wizardSummaryReadyYears'))
-    ).closest('.v2-overview-support-summary-pill') as HTMLElement;
+    ).closest('.v2-overview-support-status-item') as HTMLElement;
     expect(within(readySummary).getByText('1')).toBeTruthy();
     expect(readySummary.title).toBe('2024');
   });
@@ -1963,7 +2002,7 @@ describe('OverviewPageV2', () => {
     expect(await screen.findByText(localeText('v2Overview.wizardCurrentFocus'))).toBeTruthy();
     const focusBlock = screen
       .getByText(localeText('v2Overview.wizardCurrentFocus'))
-      .closest('.v2-overview-meta-block') as HTMLElement;
+      .closest('.v2-overview-support-next-copy') as HTMLElement;
     expect(
       within(focusBlock).getByText(localeText('v2Vesinvest.workflowPlanFirst')),
     ).toBeTruthy();
@@ -2046,7 +2085,7 @@ describe('OverviewPageV2', () => {
 
     const focusBlock = screen
       .getByText(localeText('v2Overview.wizardCurrentFocus'))
-      .closest('.v2-overview-meta-block') as HTMLElement;
+      .closest('.v2-overview-support-next-copy') as HTMLElement;
     expect(
       within(focusBlock).getByText(localeText('v2Overview.blockedYearsTitle')),
     ).toBeTruthy();
@@ -2482,17 +2521,10 @@ describe('OverviewPageV2', () => {
     />,
   );
 
-  const blockedLaneSummary = (
-    await screen.findByRole('heading', {
-      name: localeText('v2Overview.trustLaneBlockedTitle'),
-    })
-  ).closest('summary') as HTMLElement | null;
-  expect(blockedLaneSummary).toBeTruthy();
-  fireEvent.click(blockedLaneSummary!);
   expect(
-    await screen.findByText(
-      localeText('v2Overview.yearMissingCountLabel', { count: 1, total: 5 }),
-    ),
+    await screen.findByRole('heading', {
+      name: localeText('v2Overview.importBucket1Title'),
+    }),
   ).toBeTruthy();
   expect(screen.queryByText('0,00 € / 0,00 €')).toBeNull();
 });
@@ -2746,7 +2778,12 @@ describe('OverviewPageV2', () => {
     );
 
     const continueButton = await screen.findByRole('button', { name: 'Jatka' });
-    expectPrimaryButtonLabels(['Jatka']);
+    expect(
+      getPrimaryButtons().some(
+        (button) =>
+          button.textContent?.replace(/\s+/g, ' ').trim() === 'Jatka',
+      ),
+    ).toBe(true);
     expect(
       screen.queryByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
     ).toBeNull();
@@ -5092,7 +5129,7 @@ describe('OverviewPageV2', () => {
 
     const importedYearsSummary = (
       await screen.findByText(localeText('v2Overview.wizardSummaryImportedYears'))
-    ).closest('.v2-overview-support-summary-pill') as HTMLElement;
+    ).closest('.v2-overview-support-status-item') as HTMLElement;
     expect(within(importedYearsSummary).getByText('0')).toBeTruthy();
     expect(
       screen.queryByText('Tästä vuodesta puuttuu: Price data (taksa).'),
@@ -6281,7 +6318,7 @@ describe('OverviewPageV2', () => {
     expect(importYearsV2).not.toHaveBeenCalledWith([currentYear]);
   });
 
-  it('renders suspicious and blocked trust-board lanes on step 2', async () => {
+  it('renders salvageability buckets on step 2 while keeping trust warnings on the cards', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
 
     render(
@@ -6294,7 +6331,7 @@ describe('OverviewPageV2', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: localeText('v2Overview.trustLaneSuspiciousTitle'),
+        name: localeText('v2Overview.importBucket0Title'),
       }),
     ).toBeTruthy();
     expect(screen.getAllByText(localeText('v2Overview.wizardQuestionImportYears'))).toHaveLength(
@@ -6305,12 +6342,9 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
     expect(
       screen.getByRole('heading', {
-        name: localeText('v2Overview.trustLaneBlockedTitle'),
+        name: localeText('v2Overview.importBucket1Title'),
       }),
     ).toBeTruthy();
-    expect(
-      document.querySelector('details.v2-import-board-lane-blocked[open]'),
-    ).toBeNull();
     expect(
       screen.getAllByText(localeText('v2Overview.wizardSummarySubtitle')).length,
     ).toBeGreaterThan(0);
@@ -6320,25 +6354,32 @@ describe('OverviewPageV2', () => {
       screen.getByText(localeText('v2Overview.trustLargeDiscrepancy')),
     ).toBeTruthy();
     expect(document.body.textContent).not.toContain('Tilinpäätös: 1');
-    expect(screen.getAllByText(/Tilinpäätös: Tilinpäätösimportti/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Yksikköhinnat: Manuaalinen/i).length).toBeGreaterThan(0);
+    const year2024Card = screen
+      .getByRole('checkbox', { name: '2024' })
+      .closest('.v2-year-readiness-row') as HTMLElement;
+    const statementSource = within(year2024Card).getByText(
+      /Tilinpäätös: Tilinpäätösimportti/i,
+    );
+    const priceSource = within(year2024Card).getByText(
+      /Yksikköhinnat: Manuaalinen/i,
+    );
+    const technicalDetails = statementSource.closest('details') as HTMLDetailsElement;
+    expect(technicalDetails.hasAttribute('open')).toBe(false);
+    expect(priceSource.closest('details')).toBe(technicalDetails);
+    fireEvent.click(
+      within(year2024Card).getByText(
+        localeText('v2Overview.yearTechnicalDetailsSummary'),
+      ),
+    );
+    expect(technicalDetails.hasAttribute('open')).toBe(true);
     expect(
       document.querySelector('.v2-overview-helper-list.step2-support'),
     ).toBeNull();
     expect(document.querySelector('.v2-overview-workspace-layout')).toBeTruthy();
     expect(document.querySelector('.v2-overview-support-rail.step2-support')).toBeTruthy();
-    const blockedLaneSummary = screen
-      .getByRole('heading', {
-        name: localeText('v2Overview.trustLaneBlockedTitle'),
-      })
-      .closest('summary') as HTMLElement | null;
-    expect(blockedLaneSummary).toBeTruthy();
-    fireEvent.click(blockedLaneSummary!);
     expect(
-      screen.getByText(
-        localeText('v2Overview.yearMissingCountLabel', { count: 1, total: 5 }),
-      ),
-    ).toBeTruthy();
+      screen.getAllByText(localeText('v2Overview.importBucket1Title')).length,
+    ).toBeGreaterThan(0);
     expect(
       document.querySelector('.v2-year-card-secondary-grid.compact'),
     ).toBeTruthy();
@@ -6366,7 +6407,7 @@ describe('OverviewPageV2', () => {
       screen.getAllByText(localeText('v2Overview.previewAccountingResultLabel'))
         .length,
     ).toBeGreaterThan(0);
-    expect(document.querySelectorAll('.v2-year-technical-details[open]').length).toBe(0);
+    expect(document.querySelectorAll('.v2-year-technical-details[open]').length).toBe(1);
     expect(
       screen.queryByText(localeText('v2Overview.previewSecondaryLabel')),
     ).toBeNull();
@@ -6546,7 +6587,7 @@ describe('OverviewPageV2', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: localeText('v2Overview.trustLaneReadyTitle'),
+        name: localeText('v2Overview.importBucket0Title'),
       }),
     ).toBeTruthy();
     expect(screen.getByText(localeText('v2Overview.trustLooksPlausible'))).toBeTruthy();
@@ -6557,7 +6598,7 @@ describe('OverviewPageV2', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('moves an unselected year into the parked lane without treating it as excluded from plan', async () => {
+  it('keeps an unselected year in the same salvage bucket without treating it as excluded', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
 
     render(
@@ -6574,61 +6615,410 @@ describe('OverviewPageV2', () => {
     fireEvent.click(selectedCheckbox);
 
     expect(
-      (
-        await screen.findAllByRole('heading', {
-          name: localeText('v2Overview.trustLaneParkedTitle'),
-        })
-      ).length,
-    ).toBeGreaterThan(0);
+      screen.getByRole('heading', {
+        name: localeText('v2Overview.importBucket0Title'),
+      }),
+    ).toBeTruthy();
     expect(
-      document.querySelector('details.v2-import-board-lane-parked[open]'),
+      screen.queryByRole('heading', {
+        name: localeText('v2Overview.importTrashbinTitle'),
+      }),
     ).toBeNull();
-    const parkedLaneSummary = (
-      await screen.findAllByRole('heading', {
-        name: localeText('v2Overview.trustLaneParkedTitle'),
-      })
-    )[0]!.closest('summary') as HTMLElement | null;
-    expect(parkedLaneSummary).toBeTruthy();
-    fireEvent.click(parkedLaneSummary!);
-    expect(
-      screen.getAllByText(localeText('v2Overview.trustParkedYear')).length,
-    ).toBeGreaterThan(0);
     expect(
       screen.queryByText(localeText('v2Overview.setupStatusExcludedShort')),
     ).toBeNull();
   });
 
-  it('opens parked-year price repair and focuses the first price field', async () => {
-    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+  it('moves a year into the trashbin only through the explicit trash action', () => {
+    const toggleSpy = vi.fn();
+    const trashSpy = vi.fn();
+    const row = {
+      vuosi: 2024,
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        tariff_revenue: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      missingRequirements: [],
+      missingSummary: { count: 0, total: 5, fields: '' },
+      summaryMap: new Map(),
+      trustToneClass: 'v2-status-positive',
+      trustLabel: 'Ready',
+      sourceStatus: 'VEETI',
+      warnings: [],
+      resultToZero: { direction: 'missing', effectiveValue: null, marginPct: null },
+      trustNote: null,
+      sourceLayers: [],
+      lane: 'ready',
+    };
 
     render(
-      <OverviewPageV2
-        onGoToForecast={() => undefined}
-        onGoToReports={() => undefined}
+      <OverviewImportBoard
+        t={translate as any}
+        wizardBackLabel={null}
+        onBack={() => undefined}
+        selectedYears={[2024]}
+        syncing={false}
+        readyRows={[row]}
+        suspiciousRows={[]}
+        blockedRows={[]}
+        trashbinRows={[]}
+        currentYearEstimateRows={[]}
+        confirmedImportedYears={[]}
+        yearDataCache={{}}
+        cardEditYear={null}
+        cardEditContext={null}
+        cardEditFocusField={null}
         isAdmin={true}
+        renderStep2InlineFieldEditor={() => null}
+        buildRepairActions={() => []}
+        sourceStatusLabel={() => 'VEETI'}
+        sourceStatusClassName={() => 'v2-status-positive'}
+        sourceLayerText={() => ''}
+        renderDatasetCounts={() => ''}
+        missingRequirementLabel={() => ''}
+        attemptOpenInlineCardEditor={() => undefined}
+        openInlineCardEditor={() => undefined}
+        loadingYearData={null}
+        manualPatchError={null}
+        blockedYearCount={0}
+        removingYear={null}
+        onToggleYear={toggleSpy}
+        onImportYears={() => undefined}
+        onAddCurrentYearEstimate={() => undefined}
+        onTrashYear={trashSpy}
+        onRestoreYear={() => undefined}
+        importYearsButtonClass="v2-btn v2-btn-primary"
+        importingYears={false}
       />,
     );
 
-    const selectedCheckbox = await screen.findByRole('checkbox', { name: '2024' });
-    fireEvent.click(selectedCheckbox);
-    const parkedLaneSummary = (await screen.findAllByText(
-      localeText('v2Overview.trustLaneParkedTitle'),
-    ))[0]!.closest('summary') as HTMLElement | null;
-    expect(parkedLaneSummary).toBeTruthy();
-    fireEvent.click(parkedLaneSummary!);
+    fireEvent.click(screen.getByRole('checkbox', { name: '2024' }));
+    expect(toggleSpy).toHaveBeenCalledWith(2024);
+    expect(trashSpy).not.toHaveBeenCalled();
 
     fireEvent.click(
-      (await screen.findAllByRole('button', {
-        name: localeText('v2Overview.repairPricesButton'),
-      }))[0]!,
+      screen.getByRole('button', {
+        name: `${localeText('v2Overview.importTrashAction')} 2024`,
+      }),
+    );
+    expect(trashSpy).toHaveBeenCalledWith(2024);
+  });
+
+  it('wires the rendered trashbin restore button to the board restore callback', () => {
+    const restoreSpy = vi.fn();
+    const row = {
+      vuosi: 2024,
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        tariff_revenue: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      missingRequirements: [],
+      missingSummary: { count: 0, total: 5, fields: '' },
+      summaryMap: new Map(),
+      trustToneClass: 'v2-status-neutral',
+      trustLabel: 'Parked',
+      sourceStatus: 'VEETI',
+      warnings: [],
+      resultToZero: { direction: 'missing', effectiveValue: null, marginPct: null },
+      trustNote: null,
+      sourceLayers: [],
+      lane: 'parked',
+    };
+
+    render(
+      <OverviewImportBoard
+        t={translate as any}
+        wizardBackLabel={null}
+        onBack={() => undefined}
+        selectedYears={[]}
+        syncing={false}
+        readyRows={[]}
+        suspiciousRows={[]}
+        blockedRows={[]}
+        trashbinRows={[row]}
+        currentYearEstimateRows={[]}
+        confirmedImportedYears={[]}
+        yearDataCache={{}}
+        cardEditYear={null}
+        cardEditContext={null}
+        cardEditFocusField={null}
+        isAdmin={true}
+        renderStep2InlineFieldEditor={() => null}
+        buildRepairActions={() => []}
+        sourceStatusLabel={() => 'VEETI'}
+        sourceStatusClassName={() => 'v2-status-neutral'}
+        sourceLayerText={() => ''}
+        renderDatasetCounts={() => ''}
+        missingRequirementLabel={() => ''}
+        attemptOpenInlineCardEditor={() => undefined}
+        openInlineCardEditor={() => undefined}
+        loadingYearData={null}
+        manualPatchError={null}
+        blockedYearCount={0}
+        removingYear={null}
+        onToggleYear={() => undefined}
+        onImportYears={() => undefined}
+        onAddCurrentYearEstimate={() => undefined}
+        onTrashYear={() => undefined}
+        onRestoreYear={restoreSpy}
+        importYearsButtonClass="v2-btn v2-btn-primary"
+        importingYears={false}
+      />,
     );
 
-    const input = (await screen.findByRole('spinbutton', {
-      name: localeText('v2Overview.manualPriceWater'),
-    })) as HTMLInputElement;
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: `${localeText('v2Overview.importRestoreAction')} 2024`,
+      }),
+    );
+
+    expect(restoreSpy).toHaveBeenCalledWith(2024);
+  });
+
+  it('moves optimistically excluded years out of active salvage buckets before refresh data arrives', () => {
+    const SetupStateProbe = (props: {
+      overview: ReturnType<typeof buildOverviewResponse>;
+      excludedYearOverrides: Record<number, boolean>;
+    }) => {
+      const [reviewedImportedYears, setReviewedImportedYears] = React.useState<
+        number[]
+      >([]);
+      const state = useOverviewSetupState({
+        overview: props.overview,
+        yearDataCache: {},
+        selectedYears: [2024, 2023],
+        excludedYearOverrides: props.excludedYearOverrides,
+        importedWorkspaceYears: null,
+        backendAcceptedPlanningYears: [],
+        reviewedImportedYears,
+        setReviewedImportedYears,
+        manualPatchYear: null,
+        cardEditYear: null,
+        cardEditContext: null,
+        reviewContinueStep: null,
+        baselineReady: false,
+        t: translate as any,
+      });
+
+      return (
+        <>
+          <div data-testid="excluded-years">
+            {state.excludedYearsSorted.join(',')}
+          </div>
+          <div data-testid="active-years">
+            {[
+              ...state.readyTrustBoardRows,
+              ...state.suspiciousTrustBoardRows,
+              ...state.blockedTrustBoardRows,
+            ]
+              .map((row) => row.vuosi)
+              .join(',')}
+          </div>
+          <div data-testid="trashbin-years">
+            {state.trashbinTrustBoardRows.map((row) => row.vuosi).join(',')}
+          </div>
+        </>
+      );
+    };
+
+    render(
+      <SetupStateProbe
+        overview={buildOverviewResponse({ workspaceYears: [] })}
+        excludedYearOverrides={{ 2024: true }}
+      />,
+    );
+
+    expect(screen.getByTestId('excluded-years').textContent).toContain('2024');
+    expect(screen.getByTestId('active-years').textContent).not.toContain('2024');
+    expect(screen.getByTestId('trashbin-years').textContent).toContain('2024');
+  });
+
+  it('keeps optimistic trashbin state when exclude succeeds but refresh fails', async () => {
+    const ImportControllerProbe = () => {
+      const [yearDataCache, setYearDataCache] = React.useState({});
+      const controller = useOverviewImportController({
+        t: translate as any,
+        pickDefaultSyncYears: (rows) =>
+          [...rows]
+            .filter((row) => row.planningRole !== 'current_year_estimate')
+            .sort((a, b) => b.vuosi - a.vuosi)
+            .slice(0, 3)
+            .map((row) => row.vuosi),
+        setYearDataCache,
+      });
+      const [reviewedImportedYears, setReviewedImportedYears] = React.useState<
+        number[]
+      >([]);
+      const state = useOverviewSetupState({
+        overview: controller.overview,
+        yearDataCache,
+        selectedYears: controller.selectedYears,
+        excludedYearOverrides: controller.excludedYearOverrides,
+        importedWorkspaceYears: controller.importedWorkspaceYears,
+        backendAcceptedPlanningYears: controller.backendAcceptedPlanningYears,
+        reviewedImportedYears,
+        setReviewedImportedYears,
+        manualPatchYear: null,
+        cardEditYear: null,
+        cardEditContext: null,
+        reviewContinueStep: controller.reviewContinueStep,
+        baselineReady: controller.baselineReady,
+        t: translate as any,
+      });
+
+      return (
+        <>
+          <button type="button" onClick={() => void controller.excludeYearFromImportBoard(2024)}>
+            exclude 2024
+          </button>
+          <div data-testid="controller-error">{controller.error ?? ''}</div>
+          <div data-testid="controller-selection">{controller.selectedYears.join(',')}</div>
+          <div data-testid="controller-active-years">
+            {[
+              ...state.readyTrustBoardRows,
+              ...state.suspiciousTrustBoardRows,
+              ...state.blockedTrustBoardRows,
+            ]
+              .map((row) => row.vuosi)
+              .join(',')}
+          </div>
+          <div data-testid="controller-trashbin-years">
+            {state.trashbinTrustBoardRows.map((row) => row.vuosi).join(',')}
+          </div>
+        </>
+      );
+    };
+
+    getOverviewV2.mockReset();
+    getOverviewV2
+      .mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }))
+      .mockImplementation(async () => {
+        throw new Error('Refresh failed');
+      });
+    excludeImportYearsV2.mockResolvedValueOnce({
+      requestedYears: [2024],
+      excludedCount: 1,
+      alreadyExcludedCount: 0,
+      results: [{ vuosi: 2024, excluded: true, reason: null }],
+      status: buildOverviewResponse({ workspaceYears: [], excludedYears: [2024] })
+        .importStatus,
+    });
+
+    render(<ImportControllerProbe />);
 
     await waitFor(() => {
-      expect(document.activeElement).toBe(input);
+      expect(screen.getByTestId('controller-selection').textContent).toBe('2024,2023');
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'exclude 2024' }));
+
+    await waitFor(() => {
+      expect(excludeImportYearsV2).toHaveBeenCalledWith([2024]);
+      expect(screen.getByTestId('controller-selection').textContent).toBe('2023');
+      expect(screen.getByTestId('controller-active-years').textContent).not.toContain(
+        '2024',
+      );
+      expect(screen.getByTestId('controller-trashbin-years').textContent).toContain(
+        '2024',
+      );
+      expect(screen.getByTestId('controller-error').textContent).toContain(
+        'Refresh failed',
+      );
+    });
+  });
+
+  it('keeps optimistic restore state when restore succeeds but refresh fails', async () => {
+    const ImportControllerProbe = () => {
+      const [yearDataCache, setYearDataCache] = React.useState({});
+      const controller = useOverviewImportController({
+        t: translate as any,
+        pickDefaultSyncYears: (rows) =>
+          [...rows]
+            .filter((row) => row.planningRole !== 'current_year_estimate')
+            .sort((a, b) => b.vuosi - a.vuosi)
+            .slice(0, 3)
+            .map((row) => row.vuosi),
+        setYearDataCache,
+      });
+      const [reviewedImportedYears, setReviewedImportedYears] = React.useState<
+        number[]
+      >([]);
+      const state = useOverviewSetupState({
+        overview: controller.overview,
+        yearDataCache,
+        selectedYears: controller.selectedYears,
+        excludedYearOverrides: controller.excludedYearOverrides,
+        importedWorkspaceYears: controller.importedWorkspaceYears,
+        backendAcceptedPlanningYears: controller.backendAcceptedPlanningYears,
+        reviewedImportedYears,
+        setReviewedImportedYears,
+        manualPatchYear: null,
+        cardEditYear: null,
+        cardEditContext: null,
+        reviewContinueStep: controller.reviewContinueStep,
+        baselineReady: controller.baselineReady,
+        t: translate as any,
+      });
+
+      return (
+        <>
+          <button type="button" onClick={() => void controller.restoreYearFromImportBoard(2024)}>
+            restore 2024
+          </button>
+          <div data-testid="restore-controller-error">{controller.error ?? ''}</div>
+          <div data-testid="restore-active-years">
+            {[
+              ...state.readyTrustBoardRows,
+              ...state.suspiciousTrustBoardRows,
+              ...state.blockedTrustBoardRows,
+            ]
+              .map((row) => row.vuosi)
+              .join(',')}
+          </div>
+          <div data-testid="restore-trashbin-years">
+            {state.trashbinTrustBoardRows.map((row) => row.vuosi).join(',')}
+          </div>
+        </>
+      );
+    };
+
+    getOverviewV2.mockReset();
+    getOverviewV2
+      .mockResolvedValueOnce(
+        buildOverviewResponse({ workspaceYears: [], excludedYears: [2024] }),
+      )
+      .mockImplementation(async () => {
+        throw new Error('Refresh failed');
+      });
+    restoreImportYearsV2.mockResolvedValueOnce({
+      requestedYears: [2024],
+      restoredCount: 1,
+      notExcludedCount: 0,
+      results: [{ vuosi: 2024, restored: true, reason: null }],
+      status: buildOverviewResponse({ workspaceYears: [] }).importStatus,
+    });
+
+    render(<ImportControllerProbe />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('restore-trashbin-years').textContent).toContain('2024');
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'restore 2024' }));
+
+    await waitFor(() => {
+      expect(restoreImportYearsV2).toHaveBeenCalledWith([2024]);
+      expect(screen.getByTestId('restore-trashbin-years').textContent).not.toContain(
+        '2024',
+      );
+      expect(screen.getByTestId('restore-active-years').textContent).toContain('2024');
+      expect(screen.getByTestId('restore-controller-error').textContent).toContain(
+        'Refresh failed',
+      );
     });
   });
 
@@ -6643,18 +7033,18 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByRole('heading', {
-      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
-    });
-    const cards = Array.from(
-      document.querySelectorAll('.v2-year-readiness-row'),
-    ) as HTMLElement[];
+    await screen.findByRole('checkbox', { name: '2024' });
+    const materialButtons = Array.from(
+      document.querySelectorAll('[data-edit-field="aineetJaPalvelut"]'),
+    ) as HTMLButtonElement[];
+    const firstCard = materialButtons[0]!.closest(
+      '.v2-year-readiness-row',
+    ) as HTMLElement;
+    const secondCard = materialButtons[1]!.closest(
+      '.v2-year-readiness-row',
+    ) as HTMLElement;
 
-    fireEvent.click(
-      cards[0]!.querySelector(
-        '[data-edit-field="aineetJaPalvelut"]',
-      ) as HTMLButtonElement,
-    );
+    fireEvent.click(materialButtons[0]!);
 
     expect(
       await screen.findByRole('spinbutton', {
@@ -6666,18 +7056,14 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.manualFinancialRevenue'),
       }),
     ).toBeNull();
-    expect(cards[0]!.className).toContain('active-edit');
-    expect(cards[1]!.className).toContain('quiet');
+    expect(firstCard.className).toContain('active-edit');
+    expect(secondCard.className).toContain('quiet');
 
-    fireEvent.click(
-      cards[1]!.querySelector(
-        '[data-edit-field="aineetJaPalvelut"]',
-      ) as HTMLButtonElement,
-    );
+    fireEvent.click(materialButtons[1]!);
 
     await waitFor(() => {
-      expect(cards[1]!.className).toContain('active-edit');
-      expect(cards[0]!.className).toContain('quiet');
+      expect(secondCard.className).toContain('active-edit');
+      expect(firstCard.className).toContain('quiet');
     });
   });
 
@@ -6692,9 +7078,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByRole('heading', {
-      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
-    });
+    await screen.findByRole('checkbox', { name: '2024' });
     const valueButton = document.querySelector(
       '[data-edit-field="aineetJaPalvelut"]',
     ) as HTMLButtonElement | null;
@@ -6727,9 +7111,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByRole('heading', {
-      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
-    });
+    await screen.findByRole('checkbox', { name: '2024' });
     const rowLabel = screen.getAllByText(
       localeText('v2Overview.previewAccountingMaterialsLabel'),
     )[0]!;
@@ -6756,9 +7138,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByRole('heading', {
-      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
-    });
+    await screen.findByRole('checkbox', { name: '2024' });
     fireEvent.click(
       document.querySelector(
         '[data-edit-field="aineetJaPalvelut"]',
@@ -6785,6 +7165,89 @@ describe('OverviewPageV2', () => {
 
   it('opens repair from a missing secondary stat and focuses the missing field', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+    getImportYearDataV2.mockImplementation(async (year: number) => ({
+      year,
+      veetiId: 1,
+      sourceStatus: year === 2024 ? 'MIXED' : 'VEETI',
+      completeness: {
+        tilinpaatos: true,
+        taksa: year === 2024,
+        volume_vesi: true,
+        volume_jatevesi: year === 2024,
+      },
+      hasManualOverrides: year === 2024,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 95000,
+              AineetJaPalvelut: 14000,
+              Henkilostokulut: 22000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 25000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 100000,
+              AineetJaPalvelut: 15000,
+              Henkilostokulut: 21000,
+              Poistot: 6500,
+              LiiketoiminnanMuutKulut: 19000,
+              TilikaudenYliJaama: 30000,
+            },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        ...(year === 2024
+          ? [
+              {
+                dataType: 'taksa',
+                rawRows: [
+                  { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+                  { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+                ],
+                effectiveRows: [
+                  { Tyyppi_Id: 1, Kayttomaksu: 2.75 },
+                  { Tyyppi_Id: 2, Kayttomaksu: 3.2 },
+                ],
+                source: 'manual',
+                hasOverride: true,
+                reconcileNeeded: true,
+                overrideMeta: null,
+              },
+            ]
+          : []),
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 25000 }],
+          effectiveRows: [{ Maara: 25500 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        ...(year === 2024
+          ? [
+              {
+                dataType: 'volume_jatevesi',
+                rawRows: [{ Maara: 25000 }],
+                effectiveRows: [{ Maara: 24500 }],
+                source: 'manual',
+                hasOverride: true,
+                reconcileNeeded: true,
+                overrideMeta: null,
+              },
+            ]
+          : []),
+      ],
+    }));
 
     render(
       <OverviewPageV2
@@ -6794,21 +7257,12 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    const blockedLaneSummary = (
-      await screen.findByRole('heading', {
-        name: localeText('v2Overview.trustLaneBlockedTitle'),
-      })
-    ).closest('summary') as HTMLElement | null;
-    expect(blockedLaneSummary).toBeTruthy();
-    fireEvent.click(blockedLaneSummary!);
-
-    const missingVolumeButton = (await waitFor(() => {
-      const button = document.querySelector(
-        '[data-edit-field="soldWastewaterVolume"]',
-      ) as HTMLButtonElement | null;
-      expect(button).toBeTruthy();
-      return button!;
-    })) as HTMLButtonElement;
+    const year2023Card = (await screen.findByRole('checkbox', { name: '2023' }))
+      .closest('.v2-year-readiness-row') as HTMLElement;
+    const missingVolumeButton = year2023Card.querySelector(
+      '[data-edit-field="soldWastewaterVolume"]',
+    ) as HTMLButtonElement;
+    expect(missingVolumeButton).toBeTruthy();
     fireEvent.click(missingVolumeButton);
 
     const input = (await screen.findByRole('spinbutton', {
@@ -6848,9 +7302,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByRole('heading', {
-      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
-    });
+    await screen.findByRole('checkbox', { name: '2024' });
     const valueButton = document.querySelector(
       '[data-edit-field="aineetJaPalvelut"]',
     ) as HTMLButtonElement | null;
@@ -6905,13 +7357,6 @@ describe('OverviewPageV2', () => {
       { key: 'Escape' },
     );
 
-    const blockedLaneSummary = (
-      await screen.findByRole('heading', {
-        name: localeText('v2Overview.trustLaneBlockedTitle'),
-      })
-    ).closest('summary') as HTMLElement | null;
-    expect(blockedLaneSummary).toBeTruthy();
-    fireEvent.click(blockedLaneSummary!);
     fireEvent.click(
       (await screen.findAllByRole('button', {
         name: localeText('v2Overview.repairPricesButton'),
@@ -6952,9 +7397,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByRole('heading', {
-      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
-    });
+    await screen.findByRole('checkbox', { name: '2024' });
     const financeRows = screen.getAllByText(
       localeText('v2Overview.previewAccountingMaterialsLabel'),
     );
@@ -7005,14 +7448,6 @@ describe('OverviewPageV2', () => {
       { key: 'Escape' },
     );
 
-    const blockedLaneSummary = (
-      await screen.findByRole('heading', {
-        name: localeText('v2Overview.trustLaneBlockedTitle'),
-      })
-    ).closest('summary') as HTMLElement | null;
-    expect(blockedLaneSummary).toBeTruthy();
-    fireEvent.click(blockedLaneSummary!);
-
     fireEvent.click(
       screen
         .getAllByText(localeText('v2Overview.previewAccountingMaterialsLabel'))[1]!
@@ -7053,9 +7488,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByRole('heading', {
-      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
-    });
+    await screen.findByRole('checkbox', { name: '2024' });
     fireEvent.click(
       document.querySelector(
         '[data-edit-field="aineetJaPalvelut"]',
@@ -7092,9 +7525,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByRole('heading', {
-      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
-    });
+    await screen.findByRole('checkbox', { name: '2024' });
     fireEvent.click(
       document.querySelector(
         '[data-edit-field="aineetJaPalvelut"]',
@@ -7125,9 +7556,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByRole('heading', {
-      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
-    });
+    await screen.findByRole('checkbox', { name: '2024' });
     const cards = Array.from(
       document.querySelectorAll('.v2-year-readiness-row'),
     ) as HTMLElement[];
@@ -7298,7 +7727,7 @@ describe('OverviewPageV2', () => {
       { target: { value: '16500' } },
     );
     fireEvent.change(
-      screen.getByRole('spinbutton', {
+      await screen.findByRole('spinbutton', {
         name: localeText('v2Overview.manualFinancialYearResult'),
       }),
       { target: { value: '28000' } },
@@ -7473,6 +7902,7 @@ describe('OverviewPageV2', () => {
           year: 2024,
           financials: expect.objectContaining({
             aineetJaPalvelut: 16500,
+            tilikaudenYliJaama: 28500,
           }),
         }),
       );
@@ -8412,12 +8842,12 @@ describe('OverviewPageV2', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: localeText('v2Overview.trustLaneSuspiciousTitle'),
+        name: localeText('v2Overview.importBucket0Title'),
       }),
     ).toBeTruthy();
     expect(
       screen.getByRole('heading', {
-        name: localeText('v2Overview.trustLaneBlockedTitle'),
+        name: localeText('v2Overview.importBucket3PlusTitle'),
       }),
     ).toBeTruthy();
   });

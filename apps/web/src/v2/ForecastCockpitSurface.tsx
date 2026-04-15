@@ -514,6 +514,8 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
                 <button
                   type="button"
                   className={`v2-planning-launcher ${
+                    pillar.id === 'investments' ? 'primary-recommended' : ''
+                  } ${
                     (pillar.id === 'investments' && activeWorkbench === 'investments') ||
                     (pillar.id === 'revenues' && activeWorkbench === 'revenue') ||
                     (pillar.id === 'materials' && activeWorkbench === 'materials') ||

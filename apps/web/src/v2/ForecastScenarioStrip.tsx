@@ -24,6 +24,10 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
     planningContextError,
     hasBaselineBudget,
     scenario,
+    forecastStateToneClass,
+    forecastStateLabel,
+    reportReadinessToneClass,
+    reportReadinessLabel,
     handleSave,
     hasUnsavedChanges,
     hasNearTermValidationErrors,
@@ -34,6 +38,7 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
     getScenarioDisplayName,
     scenarioTypeOptions,
     scenarioTypeLabel,
+    formatScenarioUpdatedAt,
   } = controller;
   const showCreationDraftControls =
     scenarios.length === 0 || !scenarios.some((item) => item.onOletus);
@@ -175,6 +180,35 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
               'Complete Overview import and sync first to create scenarios.',
             )}
           </p>
+        ) : null}
+
+        {scenario ? (
+          <div className="v2-forecast-strip-meta">
+            <div className="v2-forecast-strip-meta-active">
+              <span>{t('v2Forecast.selectedScenario', 'Selected scenario')}</span>
+              <strong>{getScenarioDisplayName(scenario.name, t)}</strong>
+              <small>{scenarioTypeLabel(scenario.scenarioType)}</small>
+            </div>
+            <div>
+              <span>{t('projection.v2.baselineYearLabel', 'Baseline year')}</span>
+              <strong>{scenario.baselineYear ?? '-'}</strong>
+            </div>
+            <div>
+              <span>{t('v2Forecast.updatedLabel', 'Updated')}</span>
+              <strong>{formatScenarioUpdatedAt(scenario.updatedAt)}</strong>
+            </div>
+            <div>
+              <span>{t('v2Forecast.reportReadinessTitle', 'Report state')}</span>
+              <strong>
+                <span className={`v2-badge ${forecastStateToneClass}`}>
+                  {forecastStateLabel}
+                </span>{' '}
+                <span className={`v2-badge ${reportReadinessToneClass}`}>
+                  {reportReadinessLabel}
+                </span>
+              </strong>
+            </div>
+          </div>
         ) : null}
 
         {loadingList ? (

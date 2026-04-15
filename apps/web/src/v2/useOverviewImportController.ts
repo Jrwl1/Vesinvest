@@ -125,6 +125,9 @@ export function useOverviewImportController({
   const [creatingPlanningBaseline, setCreatingPlanningBaseline] = React.useState(false);
   const [syncing, setSyncing] = React.useState(false);
   const [removingYear, setRemovingYear] = React.useState<number | null>(null);
+  const [excludedYearOverrides, setExcludedYearOverrides] = React.useState<
+    Record<number, boolean>
+  >({});
   const [bulkDeletingYears, setBulkDeletingYears] = React.useState(false);
   const [bulkRestoringYears, setBulkRestoringYears] = React.useState(false);
   const [selectedYearsForDelete, setSelectedYearsForDelete] = React.useState<
@@ -180,7 +183,7 @@ export function useOverviewImportController({
     selectedOrgRef.current = selectedOrg;
   }, [selectedOrg]);
 
-  const loadOverview = React.useCallback(
+  const loadOverviewInternal = React.useCallback(
     async (options?: {
       preserveVisibleState?: boolean;
       preserveSelectionState?: boolean;
@@ -241,8 +244,23 @@ export function useOverviewImportController({
           setLoading(false);
         }
       }
+      return mainOverviewLoaded;
     },
     [pickDefaultSyncYears, t],
+  );
+
+  const loadOverview = React.useCallback(
+    async (options?: {
+      preserveVisibleState?: boolean;
+      preserveSelectionState?: boolean;
+      preserveReviewContinueStep?: boolean;
+      deferSecondaryLoads?: boolean;
+      refreshPlanningContext?: boolean;
+      skipSecondaryLoads?: boolean;
+    }) => {
+      await loadOverviewInternal(options);
+    },
+    [loadOverviewInternal],
   );
 
   React.useEffect(() => {
@@ -453,7 +471,7 @@ export function useOverviewImportController({
         setImportingYears(false);
       }
     },
-    [loadOverview, t],
+    [loadOverviewInternal, t],
   );
 
   const handleImportYears = React.useCallback(async () => {
@@ -693,6 +711,149 @@ export function useOverviewImportController({
     }
   }, [loadOverview, selectedYearsForRestore, t]);
 
+  const excludeYearFromImportBoard = React.useCallback(
+    async (year: number) => {
+      const previousSelectedYears = selectedYearsRef.current;
+      const nextSelectedYears = previousSelectedYears.filter(
+        (item) => item !== year,
+      );
+
+      syncYearSelectionTouchedRef.current = true;
+      setSelectedYears(nextSelectedYears);
+      setSelectedYearsForDelete((prev) => prev.filter((item) => item !== year));
+      setSelectedYearsForRestore((prev) => prev.filter((item) => item !== year));
+      setExcludedYearOverrides((prev) => ({ ...prev, [year]: true }));
+      setRemovingYear(year);
+      setError(null);
+      setInfo(null);
+      try {
+        const result = await excludeImportYearsV2([year]);
+        const skippedYears = result.results
+          .filter((row) => row.reason !== null)
+          .map((row) => row.vuosi);
+        if (skippedYears.length > 0) {
+          setInfo(
+            t(
+              'v2Overview.excludeYearsBulkPartial',
+              'Rajattiin {{excluded}} vuosi/vuotta pois suunnitelmasta. {{skipped}} vuosi/vuotta oli jo rajattu: {{years}}.',
+              {
+                excluded: result.excludedCount,
+                skipped: result.alreadyExcludedCount,
+                years: skippedYears.join(', '),
+              },
+            ),
+          );
+        } else {
+          setInfo(
+            t(
+              'v2Overview.excludeYearsBulkDone',
+              'Vuodet rajattiin pois suunnitelmasta: {{count}}.',
+              { count: result.excludedCount },
+            ),
+          );
+        }
+        const refreshSucceeded = await loadOverviewInternal({
+          preserveVisibleState: true,
+          preserveSelectionState: true,
+          preserveReviewContinueStep: true,
+          deferSecondaryLoads: true,
+        });
+        if (refreshSucceeded) {
+          setExcludedYearOverrides((prev) => {
+            const next = { ...prev };
+            delete next[year];
+            return next;
+          });
+        }
+      } catch (err) {
+        setSelectedYears(previousSelectedYears);
+        setExcludedYearOverrides((prev) => {
+          const next = { ...prev };
+          delete next[year];
+          return next;
+        });
+        setError(
+          err instanceof Error
+            ? err.message
+            : t(
+                'v2Overview.excludeYearsBulkFailed',
+                'Valittujen vuosien rajaaminen pois suunnitelmasta epäonnistui.',
+              ),
+        );
+      } finally {
+        setRemovingYear(null);
+      }
+    },
+    [loadOverview, t],
+  );
+
+  const restoreYearFromImportBoard = React.useCallback(
+    async (year: number) => {
+      setSelectedYearsForDelete((prev) => prev.filter((item) => item !== year));
+      setSelectedYearsForRestore((prev) => prev.filter((item) => item !== year));
+      setExcludedYearOverrides((prev) => ({ ...prev, [year]: false }));
+      setRemovingYear(year);
+      setError(null);
+      setInfo(null);
+      try {
+        const result = await restoreImportYearsV2([year]);
+        const notRestored = result.results.filter((row) => !row.restored);
+        if (notRestored.length > 0) {
+          setInfo(
+            t(
+              'v2Overview.restoreYearsBulkPartial',
+              'Restored {{restored}} year(s). {{missing}} year(s) were not excluded.',
+              {
+                restored: result.restoredCount,
+                missing: result.notExcludedCount,
+              },
+            ),
+          );
+        } else {
+          setInfo(
+            t(
+              'v2Overview.restoreYearsBulkDone',
+              'Restored {{count}} year(s).',
+              {
+                count: result.restoredCount,
+              },
+            ),
+          );
+        }
+        const refreshSucceeded = await loadOverviewInternal({
+          preserveVisibleState: true,
+          preserveSelectionState: true,
+          preserveReviewContinueStep: true,
+          deferSecondaryLoads: true,
+        });
+        if (refreshSucceeded) {
+          setExcludedYearOverrides((prev) => {
+            const next = { ...prev };
+            delete next[year];
+            return next;
+          });
+        }
+      } catch (err) {
+        setExcludedYearOverrides((prev) => {
+          const next = { ...prev };
+          delete next[year];
+          return next;
+        });
+        setError(
+          err instanceof Error
+            ? err.message
+            : t(
+                'v2Overview.restoreYearsBulkFailed',
+                'Failed to restore selected years.',
+              ),
+        );
+      } finally {
+        setRemovingYear(null);
+      }
+    },
+    [loadOverviewInternal, t],
+  );
+
   const searchTerm = query.trim();
 
   const handleGuideBlockedYears = React.useCallback(() => {
@@ -746,6 +907,7 @@ export function useOverviewImportController({
     setSyncing,
     removingYear,
     setRemovingYear,
+    excludedYearOverrides,
     bulkDeletingYears,
     setBulkDeletingYears,
     bulkRestoringYears,
@@ -777,6 +939,8 @@ export function useOverviewImportController({
     toggleYearForRestore,
     handleBulkDeleteYears,
     handleBulkRestoreYears,
+    excludeYearFromImportBoard,
+    restoreYearFromImportBoard,
     searchTerm,
     handleGuideBlockedYears,
   };

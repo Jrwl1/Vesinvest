@@ -7,9 +7,11 @@ import {
   buildFinancialForm,
   buildPriceForm,
   buildVolumeForm,
+  deriveAdjustedYearResult,
   getEffectiveFirstRow,
   getEffectiveRows,
   getRawFirstRow,
+  numbersDiffer,
   type InlineCardField,
   type ManualFinancialForm,
   type ManualPriceForm,
@@ -170,6 +172,14 @@ const WORKSPACE_FIELDS: WorkspaceFieldConfig[] = [
     formatter: (value) => formatNumber(value, 0),
   },
 ];
+
+const RESULT_FIELD = WORKSPACE_FIELDS.find(
+  (field) => field.group === 'financials' && field.key === 'tilikaudenYliJaama',
+)!;
+
+const DEFAULT_WORKSPACE_FIELDS = WORKSPACE_FIELDS.filter(
+  (field) => !(field.group === 'financials' && field.key === 'tilikaudenYliJaama'),
+);
 
 function parseOptionalNumber(value: unknown): number | null {
   if (value == null || value === '') {
@@ -347,6 +357,9 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
   const [drafts, setDrafts] = React.useState<Record<number, WorkspaceDraft>>({});
   const [touchedFields, setTouchedFields] =
     React.useState<WorkspaceTouchedFields>({});
+  const [resultOverrideYears, setResultOverrideYears] = React.useState<
+    Record<number, boolean>
+  >({});
   const [saveState, setSaveState] = React.useState<Record<number, WorkspaceSaveState>>(
     {},
   );
@@ -655,7 +668,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
             );
           })}
 
-          {WORKSPACE_FIELDS.map((field) => (
+          {DEFAULT_WORKSPACE_FIELDS.map((field) => (
             <React.Fragment key={`${field.group}-${field.key}`}>
               <div className="v2-overview-year-workspace-field">
                 <strong>{t(field.labelKey, field.defaultLabel)}</strong>
@@ -736,6 +749,185 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
           ))}
 
           <div className="v2-overview-year-workspace-field">
+            <strong>{t(RESULT_FIELD.labelKey, RESULT_FIELD.defaultLabel)}</strong>
+            <small className="v2-muted">
+              {t(
+                'v2Overview.manualFinancialYearResultDerivedNote',
+                'Calculated from the saved financial basis for the year.',
+              )}
+            </small>
+          </div>
+          {pinnedRows.map((row) => {
+            const draft = drafts[row.year];
+            const yearData = yearDataCache[row.year];
+            const yearBusy = busy || saveState[row.year]?.saving === true;
+            const baseFinancials = buildFinancialForm(yearData);
+            const computedResult =
+              draft != null
+                ? deriveAdjustedYearResult(baseFinancials, draft.financials)
+                : null;
+            const storedResult = draft?.financials.tilikaudenYliJaama ?? null;
+            const hasStoredOverride =
+              computedResult != null &&
+              storedResult != null &&
+              numbersDiffer(storedResult, computedResult);
+            const showResultOverride =
+              resultOverrideYears[row.year] === true || hasStoredOverride;
+            const fieldId = getWorkspaceFieldId(RESULT_FIELD);
+            const fieldTouched = touchedFields[row.year]?.[fieldId] === true;
+            const displayValue =
+              storedResult == null &&
+              computedResult == null &&
+              !fieldTouched
+                ? ''
+                : storedResult ?? '';
+
+            return (
+              <div
+                key={`${row.year}-financials-derived-result`}
+                className="v2-overview-year-workspace-cell"
+              >
+                <div
+                  className={`v2-overview-year-result-block ${
+                    hasStoredOverride ? 'override-active' : ''
+                  }`.trim()}
+                >
+                  <strong>
+                    {computedResult == null
+                      ? t('v2Overview.previewMissingValue', 'Missing data')
+                      : formatEur(computedResult)}
+                  </strong>
+                  <small>
+                    {t(
+                      'v2Overview.manualFinancialYearResultDerivedNote',
+                      'Calculated from the saved financial basis for the year.',
+                    )}
+                  </small>
+                  {hasStoredOverride ? (
+                    <small className="v2-overview-year-result-warning">
+                      {t(
+                        'v2Overview.manualFinancialYearResultOverrideActive',
+                        'The stored result differs from the derived value.',
+                      )}
+                    </small>
+                  ) : null}
+                </div>
+
+                {showResultOverride ? (
+                  <label className="v2-overview-year-workspace-input">
+                    <input
+                      className="v2-input"
+                      type="number"
+                      step={RESULT_FIELD.step}
+                      value={displayValue}
+                      placeholder={t(
+                        'v2Overview.previewMissingValue',
+                        'Missing data',
+                      )}
+                      aria-label={`${t(
+                        RESULT_FIELD.labelKey,
+                        RESULT_FIELD.defaultLabel,
+                      )} ${row.year}`}
+                      onChange={(event) => {
+                        setTouchedFields((prev) => ({
+                          ...prev,
+                          [row.year]: {
+                            ...(prev[row.year] ?? {}),
+                            [fieldId]: true,
+                          },
+                        }));
+                        setResultOverrideYears((prev) => ({
+                          ...prev,
+                          [row.year]: true,
+                        }));
+                        updateDraft(
+                          row.year,
+                          'financials',
+                          'tilikaudenYliJaama',
+                          Number(event.target.value || 0),
+                        );
+                      }}
+                      disabled={yearBusy}
+                    />
+                  </label>
+                ) : null}
+
+                <div className="v2-overview-year-result-actions">
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={() => {
+                      if (hasStoredOverride && computedResult != null) {
+                        setTouchedFields((prev) => ({
+                          ...prev,
+                          [row.year]: {
+                            ...(prev[row.year] ?? {}),
+                            [fieldId]: true,
+                          },
+                        }));
+                        setResultOverrideYears((prev) => ({
+                          ...prev,
+                          [row.year]: false,
+                        }));
+                        updateDraft(
+                          row.year,
+                          'financials',
+                          'tilikaudenYliJaama',
+                          computedResult,
+                        );
+                        return;
+                      }
+
+                      setResultOverrideYears((prev) => ({
+                        ...prev,
+                        [row.year]: !showResultOverride,
+                      }));
+                    }}
+                    disabled={yearBusy}
+                    aria-label={`${showResultOverride && hasStoredOverride
+                      ? t(
+                          'v2Overview.manualFinancialYearResultResetToDerived',
+                          'Use derived result',
+                        )
+                      : showResultOverride
+                      ? t(
+                          'v2Overview.manualFinancialYearResultOverrideHide',
+                          'Hide result override',
+                        )
+                      : t(
+                          'v2Overview.manualFinancialYearResultOverrideShow',
+                          'Override derived result',
+                        )} ${row.year}`}
+                  >
+                    {showResultOverride && hasStoredOverride
+                      ? t(
+                          'v2Overview.manualFinancialYearResultResetToDerived',
+                          'Use derived result',
+                        )
+                      : showResultOverride
+                      ? t(
+                          'v2Overview.manualFinancialYearResultOverrideHide',
+                          'Hide result override',
+                        )
+                      : t(
+                          'v2Overview.manualFinancialYearResultOverrideShow',
+                          'Override derived result',
+                        )}
+                  </button>
+                  {showResultOverride ? (
+                    <small className="v2-muted">
+                      {t(
+                        'v2Overview.manualFinancialYearResultHint',
+                        'Update this saved result field directly if the year result must differ from the calculated value.',
+                      )}
+                    </small>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+
+          <div className="v2-overview-year-workspace-field">
             <strong>
               {t('v2Overview.yearDecisionAction', 'Review year decisions')}
             </strong>
@@ -768,7 +960,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                 </button>
                 <button
                   type="button"
-                  className="v2-btn"
+                  className="v2-btn v2-btn-primary"
                   aria-label={`${t(
                     'v2Overview.manualPatchSaveAndSync',
                     'Save and sync year',

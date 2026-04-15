@@ -603,6 +603,15 @@ describe('EnnustePageV2', () => {
     ).toBeNull();
     expect(screen.getByText('Planning areas')).toBeTruthy();
     expect(screen.getByText('Income statement overview')).toBeTruthy();
+    const scenarioPicker = screen.getByRole('combobox', {
+      name: 'Selected scenario',
+    }) as HTMLSelectElement;
+    expect(
+      document.querySelector('.v2-forecast-strip-meta-active')?.textContent,
+    ).toContain(scenarioPicker.options[scenarioPicker.selectedIndex]?.text ?? '');
+    expect(
+      document.querySelector('.v2-planning-launcher.primary-recommended')?.textContent,
+    ).toContain('Investment program');
   });
 
   it('renders tariff-answer cards with explicit driver labels instead of generic baseline rows', async () => {

@@ -160,6 +160,7 @@ export function useOverviewSetupState(params: {
   overview: V2OverviewResponse | null;
   yearDataCache: Record<number, V2ImportYearDataResponse>;
   selectedYears: number[];
+  excludedYearOverrides: Record<number, boolean>;
   importedWorkspaceYears: number[] | null;
   backendAcceptedPlanningYears: number[];
   reviewedImportedYears: number[];
@@ -175,6 +176,7 @@ export function useOverviewSetupState(params: {
     overview,
     yearDataCache,
     selectedYears,
+    excludedYearOverrides,
     importedWorkspaceYears,
     backendAcceptedPlanningYears,
     reviewedImportedYears,
@@ -251,6 +253,31 @@ export function useOverviewSetupState(params: {
   const blockedYearRows = React.useMemo(
     () => syncYearRows.filter((row) => row.syncBlockedReason),
     [syncYearRows],
+  );
+
+  const excludedYearsSorted = React.useMemo(
+    () => {
+      const years = new Set(
+        [...(overview?.importStatus.excludedYears ?? [])]
+          .map((year) => Number(year))
+          .filter((year) => Number.isFinite(year)),
+      );
+      for (const [year, excluded] of Object.entries(excludedYearOverrides)) {
+        const numericYear = Number(year);
+        if (!Number.isFinite(numericYear)) continue;
+        if (excluded) {
+          years.add(numericYear);
+        } else {
+          years.delete(numericYear);
+        }
+      }
+      return [...years].sort((a, b) => b - a);
+    },
+    [excludedYearOverrides, overview?.importStatus.excludedYears],
+  );
+  const excludedYearSet = React.useMemo(
+    () => new Set(excludedYearsSorted),
+    [excludedYearsSorted],
   );
 
   const readyAvailableYearRows = React.useMemo(
@@ -333,6 +360,7 @@ export function useOverviewSetupState(params: {
         (row.manualProvenance != null && !hasLargeDiscrepancy);
       const isCurrentYearEstimate =
         row.planningRole === 'current_year_estimate';
+      const isExcludedFromPlan = excludedYearSet.has(row.vuosi);
       const lane =
         row.syncBlockedReason != null
           ? 'blocked'
@@ -343,16 +371,8 @@ export function useOverviewSetupState(params: {
             needsHumanReview
           ? 'suspicious'
           : 'ready';
-      const boardLane =
-        isCurrentYearEstimate
-          ? lane
-          : lane !== 'blocked' && !isSelectedForImport
-            ? 'parked'
-            : lane;
       const trustLabel =
-        boardLane === 'parked'
-          ? t('v2Overview.trustParkedYear', 'Not in this import')
-          : lane === 'blocked'
+        lane === 'blocked'
           ? missingCoreCostStructure
             ? t('v2Overview.trustMissingKeyCosts', 'Missing key cost rows')
             : t('v2Overview.yearNeedsCompletion', 'Needs completion')
@@ -371,10 +391,8 @@ export function useOverviewSetupState(params: {
           ? t('v2Overview.trustNeedsReview', 'Needs human review')
           : t('v2Overview.trustLooksPlausible', 'Looks plausible');
       const trustToneClass =
-        boardLane === 'ready'
+        lane === 'ready'
           ? 'v2-status-positive'
-          : boardLane === 'parked'
-          ? 'v2-status-provenance'
           : 'v2-status-warning';
       const missingSummary =
         missingRequiredInputs.length > 0
@@ -398,12 +416,7 @@ export function useOverviewSetupState(params: {
         workbookImportFieldSources: trustSignal.workbookImport?.fieldSources,
       });
       const trustNote =
-        boardLane === 'parked'
-          ? t(
-              'v2Overview.trustParkedYearHint',
-              'This year stays available in the workspace, but it is not part of the current import selection.',
-            )
-          : missingSummary != null
+        missingSummary != null
           ? null
           : row.syncBlockedReason != null
           ? t('v2Overview.yearMissingLabel', 'Missing requirements: {{requirements}}', {
@@ -445,8 +458,8 @@ export function useOverviewSetupState(params: {
       return {
         ...row,
         lane,
-        boardLane,
         isSelectedForImport,
+        isExcludedFromPlan,
         summaryMap,
         trustLabel,
         trustToneClass,
@@ -454,17 +467,20 @@ export function useOverviewSetupState(params: {
         resultToZero,
         missingCoreCostStructure,
         missingSummary,
+        missingCount:
+          missingSummary?.count ?? row.missingRequirements.length ?? 0,
         sourceLayers,
       };
     });
-  }, [selectedYears, selectableImportYearRows, yearDataCache, t]);
+  }, [excludedYearSet, selectedYears, selectableImportYearRows, yearDataCache, t]);
 
   const readyTrustBoardRows = React.useMemo(
     () =>
       importBoardRows.filter(
         (row) =>
           row.planningRole !== 'current_year_estimate' &&
-          row.boardLane === 'ready',
+          !row.isExcludedFromPlan &&
+          row.lane === 'ready',
       ),
     [importBoardRows],
   );
@@ -473,16 +489,17 @@ export function useOverviewSetupState(params: {
       importBoardRows.filter(
         (row) =>
           row.planningRole !== 'current_year_estimate' &&
-          row.boardLane === 'suspicious',
+          !row.isExcludedFromPlan &&
+          row.lane === 'suspicious',
       ),
     [importBoardRows],
   );
-  const parkedTrustBoardRows = React.useMemo(
+  const trashbinTrustBoardRows = React.useMemo(
     () =>
       importBoardRows.filter(
         (row) =>
           row.planningRole !== 'current_year_estimate' &&
-          row.boardLane === 'parked',
+          row.isExcludedFromPlan,
       ),
     [importBoardRows],
   );
@@ -491,7 +508,8 @@ export function useOverviewSetupState(params: {
       importBoardRows.filter(
         (row) =>
           row.planningRole !== 'current_year_estimate' &&
-          row.boardLane === 'blocked',
+          !row.isExcludedFromPlan &&
+          row.lane === 'blocked',
       ),
     [importBoardRows],
   );
@@ -569,15 +587,6 @@ export function useOverviewSetupState(params: {
           };
         }),
     [confirmedImportedYears, syncYearRows, yearDataCache],
-  );
-
-  const excludedYearsSorted = React.useMemo(
-    () =>
-      [...(overview?.importStatus.excludedYears ?? [])]
-        .map((year) => Number(year))
-        .filter((year) => Number.isFinite(year))
-        .sort((a, b) => b - a),
-    [overview?.importStatus.excludedYears],
   );
 
   const reviewedImportedYearRows = React.useMemo(
@@ -846,7 +855,7 @@ export function useOverviewSetupState(params: {
     importBoardRows,
     readyTrustBoardRows,
     suspiciousTrustBoardRows,
-    parkedTrustBoardRows,
+    trashbinTrustBoardRows,
     blockedTrustBoardRows,
     currentYearEstimateBoardRows,
     confirmedImportedYears,

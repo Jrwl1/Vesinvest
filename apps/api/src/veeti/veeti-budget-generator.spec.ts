@@ -193,4 +193,109 @@ describe('VeetiBudgetGenerator', () => {
     expect(preview.completeness.required.tariffRevenueStructure).toBe(true);
     expect(preview.missing.tariffRevenueStructure).toBe(false);
   });
+
+  it('derives TilikaudenYliJaama for baseline payloads when the source row is missing it', async () => {
+    const effectiveRowsByType: Record<
+      string,
+      Array<Record<string, unknown>>
+    > = {
+      tilinpaatos: [
+        {
+          Vuosi: 2024,
+          Liikevaihto: 100000,
+          AineetJaPalvelut: 15000,
+          Henkilostokulut: 20000,
+          LiiketoiminnanMuutKulut: 18000,
+          Poistot: 5000,
+          TilikaudenYliJaama: null,
+        },
+      ],
+      taksa: [{ Vuosi: 2024, Tyyppi_Id: 1, Kayttomaksu: 1.5 }],
+      volume_vesi: [{ Vuosi: 2024, Maara: 174460 }],
+      volume_jatevesi: [],
+      investointi: [],
+    };
+    const customEffective = {
+      getEffectiveRows: jest.fn(
+        async (_orgId: string, _year: number, dataType: string) => ({
+          rows: effectiveRowsByType[dataType] ?? [],
+        }),
+      ),
+    };
+    const customGenerator = new VeetiBudgetGenerator(
+      prisma,
+      veetiService as any,
+      customEffective as any,
+    );
+
+    const preview = await customGenerator.previewBudget('org-1', 2024);
+    const resultRow = preview.valisummat.find(
+      (row) => row.categoryKey === 'tilikauden_tulos',
+    );
+
+    expect(resultRow?.summa).toBe(42000);
+    expect(
+      preview.completeness.fallbackToZero.fields,
+    ).not.toContain('tilinpaatos.TilikaudenYliJaama');
+  });
+
+  it('does not skip baseline generation when tariff revenue structure is only a warning', async () => {
+    const prismaMock: any = {
+      talousarvio: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'budget-2024' }),
+        update: jest.fn(),
+      },
+      talousarvioValisumma: {
+        createMany: jest.fn().mockResolvedValue({ count: 1 }),
+        deleteMany: jest.fn(),
+      },
+      tuloajuri: {
+        createMany: jest.fn().mockResolvedValue({ count: 1 }),
+        deleteMany: jest.fn(),
+      },
+    };
+    const effectiveRowsByType: Record<
+      string,
+      Array<Record<string, unknown>>
+    > = {
+      tilinpaatos: [
+        {
+          Vuosi: 2024,
+          Liikevaihto: 100000,
+          PerusmaksuYhteensa: 12000,
+          AineetJaPalvelut: 15000,
+          Henkilostokulut: 20000,
+          LiiketoiminnanMuutKulut: 18000,
+          Poistot: 5000,
+          TilikaudenYliJaama: 30000,
+        },
+      ],
+      taksa: [
+        { Vuosi: 2024, Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+        { Vuosi: 2024, Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+      ],
+      volume_vesi: [{ Vuosi: 2024, Maara: 25000 }],
+      volume_jatevesi: [{ Vuosi: 2024, Maara: 24000 }],
+      investointi: [],
+    };
+    const customEffective = {
+      getEffectiveRows: jest.fn(
+        async (_orgId: string, _year: number, dataType: string) => ({
+          rows: effectiveRowsByType[dataType] ?? [],
+        }),
+      ),
+    };
+    const customGenerator = new VeetiBudgetGenerator(
+      prismaMock,
+      veetiService as any,
+      customEffective as any,
+    );
+
+    const result = await customGenerator.generateBudgets('org-1', [2024]);
+
+    expect(result.count).toBe(1);
+    expect(result.skipped).toEqual([]);
+    expect(prismaMock.talousarvio.create).toHaveBeenCalled();
+  });
 });

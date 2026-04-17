@@ -126,6 +126,11 @@ describe('V2Service import exclusion behavior', () => {
     }>;
     linkedScenarios?: Array<{ id: string; nimi: string }>;
     scenarioBaselineYears?: number[];
+    scenarioBaselineBudgets?: Array<{
+      vuosi?: number;
+      veetiVuosi?: number | null;
+      lahde?: string | null;
+    }>;
     yearPolicies?: Array<{
       vuosi: number;
       excluded?: boolean;
@@ -143,6 +148,13 @@ describe('V2Service import exclusion behavior', () => {
       ...row,
     }));
     const scenarioBaselineYears = options?.scenarioBaselineYears ?? [];
+    const scenarioBaselineBudgets =
+      options?.scenarioBaselineBudgets ??
+      scenarioBaselineYears.map((year) => ({
+        vuosi: year,
+        veetiVuosi: year,
+        lahde: 'veeti',
+      }));
     const yearPolicyState = new Map<
       number,
       { excluded: boolean; includedInPlanningBaseline: boolean }
@@ -365,10 +377,11 @@ describe('V2Service import exclusion behavior', () => {
         return options?.linkedScenarios ?? [];
       }
       if (args?.select?.talousarvio) {
-        return scenarioBaselineYears.map((year) => ({
+        return scenarioBaselineBudgets.map((row) => ({
           talousarvio: {
-            vuosi: year,
-            veetiVuosi: year,
+            vuosi: row.vuosi ?? row.veetiVuosi ?? 0,
+            veetiVuosi: row.veetiVuosi ?? row.vuosi ?? null,
+            lahde: row.lahde ?? 'veeti',
           },
         }));
       }
@@ -587,6 +600,186 @@ describe('V2Service import exclusion behavior', () => {
         }),
       }),
     );
+  });
+
+  it('treats workbook-backed finance rows as baseline-ready even when the raw year row lacks tilinpaatos completeness', async () => {
+    const { service, mocks } = buildService({
+      excludedYears: [],
+      availableYears: [2024],
+      workspaceYears: [2024],
+    });
+    mocks.veetiSyncService.getAvailableYears.mockResolvedValue([
+      {
+        vuosi: 2024,
+        completeness: {
+          tilinpaatos: false,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: false,
+        },
+      },
+    ]);
+    mocks.veetiEffectiveDataService.getYearDataset.mockResolvedValue({
+      year: 2024,
+      veetiId: 1535,
+      sourceStatus: 'MANUAL',
+      completeness: {
+        tilinpaatos: false,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: false,
+      },
+      hasManualOverrides: true,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [],
+          effectiveRows: [
+            {
+              Vuosi: 2024,
+              Liikevaihto: 100000,
+              AineetJaPalvelut: 15000,
+              Henkilostokulut: 20000,
+              LiiketoiminnanMuutKulut: 18000,
+              Poistot: 5000,
+            },
+          ],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [],
+          effectiveRows: [{ Tyyppi_Id: 1, Kayttomaksu: 2.5 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [],
+          effectiveRows: [{ Maara: 25000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [],
+          effectiveRows: [],
+          source: 'none',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    });
+
+    const result = await service.createPlanningBaseline(ORG_ID, [2024]);
+
+    expect(mocks.veetiBudgetGenerator.generateBudgets).toHaveBeenCalledWith(
+      ORG_ID,
+      [2024],
+    );
+    expect(result.includedYears).toEqual([2024]);
+  });
+
+  it('marks workbook-backed accepted baseline years as complete in planning context quality', async () => {
+    const { service, mocks } = buildService({
+      excludedYears: [],
+      availableYears: [2024],
+      workspaceYears: [2024],
+      veetiBudgets: [{ id: 'budget-2024', nimi: 'VEETI 2024', vuosi: 2024 }],
+      yearPolicies: [
+        { vuosi: 2024, excluded: false, includedInPlanningBaseline: true },
+      ],
+    });
+    mocks.veetiSyncService.getAvailableYears.mockResolvedValue([
+      {
+        vuosi: 2024,
+        completeness: {
+          tilinpaatos: false,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: false,
+        },
+        baselineReady: true,
+        baselineMissingRequirements: [],
+        baselineWarnings: [],
+      },
+    ]);
+    mocks.veetiEffectiveDataService.getYearDataset.mockResolvedValue({
+      year: 2024,
+      veetiId: 1535,
+      sourceStatus: 'MANUAL',
+      completeness: {
+        tilinpaatos: false,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: false,
+      },
+      hasManualOverrides: true,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [],
+          effectiveRows: [
+            {
+              Vuosi: 2024,
+              Liikevaihto: 100000,
+              AineetJaPalvelut: 15000,
+              Henkilostokulut: 20000,
+              LiiketoiminnanMuutKulut: 18000,
+              Poistot: 5000,
+            },
+          ],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [],
+          effectiveRows: [{ Tyyppi_Id: 1, Kayttomaksu: 2.5 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [],
+          effectiveRows: [{ Maara: 25000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [],
+          effectiveRows: [],
+          source: 'none',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    });
+
+    const context = await service.getPlanningContext(ORG_ID);
+
+    expect(context.baselineYears[0]).toMatchObject({
+      year: 2024,
+      quality: 'complete',
+    });
   });
 
   it('limits planning baseline years to persisted workspaceYears', async () => {
@@ -837,11 +1030,11 @@ describe('V2Service import exclusion behavior', () => {
     });
   });
 
-  it('backfills accepted planning baseline years from workspace VEETI budgets and scenario-linked baseline years', async () => {
+  it('backfills accepted planning baseline years from workspace VEETI budgets and workspace scenario-linked baseline years', async () => {
     const { service } = buildService({
       excludedYears: [],
       availableYears: [2015, 2024],
-      workspaceYears: [2024],
+      workspaceYears: [2015, 2024],
       veetiBudgets: [
         { id: 'budget-2015', nimi: 'VEETI 2015', vuosi: 2015 },
         { id: 'budget-2024', nimi: 'VEETI 2024', vuosi: 2024 },
@@ -853,6 +1046,21 @@ describe('V2Service import exclusion behavior', () => {
     const status = await service.getImportStatus(ORG_ID);
 
     expect(status.planningBaselineYears).toEqual([2015, 2024]);
+  });
+
+  it('does not backfill accepted planning baseline years from non-VEETI scenario budgets', async () => {
+    const { service } = buildService({
+      excludedYears: [],
+      availableYears: [2015, 2024],
+      workspaceYears: [2015, 2024],
+      veetiBudgets: [{ id: 'budget-2024', nimi: 'VEETI 2024', vuosi: 2024 }],
+      scenarioBaselineBudgets: [{ vuosi: 2015, veetiVuosi: null, lahde: 'manual' }],
+      yearPolicies: [],
+    });
+
+    const status = await service.getImportStatus(ORG_ID);
+
+    expect(status.planningBaselineYears).toEqual([2024]);
   });
 
   it('rejects scenario creation when explicit baseline budget is outside the accepted planning baseline', async () => {
@@ -2851,6 +3059,8 @@ describe('V2Service statement import manual-year regression', () => {
 
     expect(result.completeness.tariff_revenue).toBe(false);
     expect(result.tariffRevenueReason).toBe('missing_fixed_revenue');
+    expect(result.baselineReady).toBe(true);
+    expect(result.baselineWarnings).toEqual(['tariffRevenueMismatch']);
   });
 
   it('returns a mismatch tariff reason when revenue does not reconcile after fixed revenue is present', async () => {
@@ -2878,6 +3088,35 @@ describe('V2Service statement import manual-year regression', () => {
 
     expect(result.completeness.tariff_revenue).toBe(false);
     expect(result.tariffRevenueReason).toBe('mismatch');
+    expect(result.baselineReady).toBe(true);
+    expect(result.baselineWarnings).toEqual(['tariffRevenueMismatch']);
+  });
+
+  it('does not mark the financial baseline ready when Liikevaihto is zero', async () => {
+    const veetiEffectiveDataService = {
+      getYearDataset: jest.fn().mockResolvedValue(
+        buildTariffYearDataset({
+          revenue: 0,
+          fixedRevenue: 0,
+        }),
+      ),
+    } as any;
+
+    const service = buildFacadeFromArgs(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    const result = await service.getImportYearData(ORG_ID, YEAR);
+
+    expect(result.baselineReady).toBe(false);
+    expect(result.baselineMissingRequirements).toContain('financialBaseline');
   });
 
   it('treats explicit zero fixed revenue as a real value instead of a missing one', async () => {
@@ -2958,6 +3197,8 @@ describe('V2Service statement import manual-year regression', () => {
 
     expect(status.years[0]).toMatchObject({
       vuosi: YEAR,
+      baselineReady: true,
+      baselineWarnings: ['tariffRevenueMismatch'],
       tariffRevenueReason: 'mismatch',
     });
     expect(status.years[0].missingRequirements).toContain('tariffRevenue');
@@ -3716,6 +3957,110 @@ describe('V2Service report variant regression', () => {
     ],
   });
 
+  const buildReportCreateHarness = (
+    scenarioOverrides: Partial<ReturnType<typeof buildScenario>> = {},
+  ) => {
+    const prisma = {
+      ennusteReport: {
+        create: jest.fn().mockImplementation(async ({ data }: any) => ({
+          id: 'report-harness',
+          orgId: ORG_ID,
+          title: data.title,
+          createdAt: NOW,
+          baselineYear: data.baselineYear,
+          requiredPriceToday: data.requiredPriceToday,
+          requiredAnnualIncreasePct: data.requiredAnnualIncreasePct,
+          totalInvestments: data.totalInvestments,
+          snapshotJson: data.snapshotJson,
+        })),
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
+      vesinvestGroupDefinition: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      vesinvestPlan: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: '11111111-1111-4111-8111-111111111111',
+          seriesId: 'series-1',
+          name: 'Water Utility Vesinvest',
+          utilityName: 'Water Utility',
+          businessId: '1234567-8',
+          veetiId: 1535,
+          identitySource: 'veeti',
+          versionNumber: 1,
+          status: 'active',
+          selectedScenarioId: 'scenario-1',
+          baselineFingerprint: null,
+          scenarioFingerprint: null,
+          feeRecommendation: null,
+          baselineSourceState: {
+            source: 'accepted_planning_baseline',
+            acceptedYears: [2024],
+            latestAcceptedBudgetId: null,
+            veetiId: 1535,
+            utilityName: 'Water Utility',
+            businessId: '1234567-8',
+            identitySource: 'veeti',
+          },
+          projects: [],
+        }),
+      },
+    } as any;
+
+    const veetiEffectiveDataService = {
+      getYearDataset: jest.fn().mockResolvedValue(buildYearDataset()),
+    } as any;
+
+    const service = buildFacadeFromArgs(
+      prisma,
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest
+      .spyOn((service as any).reportService, 'getForecastScenario')
+      .mockResolvedValue({
+        ...buildScenario(),
+        ...scenarioOverrides,
+      } as any);
+    jest
+      .spyOn((service as any).reportService, 'getCurrentBaselineSnapshot')
+      .mockResolvedValue({
+        utilityIdentity: {
+          veetiId: 1535,
+          utilityName: 'Water Utility',
+          businessId: '1234567-8',
+          identitySource: 'veeti',
+        },
+        acceptedYears: [2024],
+        latestAcceptedBudgetId: null,
+        baselineYears: [],
+        hasTrustedBaseline: true,
+        fingerprint: 'baseline-1',
+      });
+    jest.spyOn((service as any).reportService, 'getImportStatus').mockResolvedValue({
+      years: [
+        {
+          vuosi: 2024,
+          sourceStatus: 'MIXED',
+          sourceBreakdown: {
+            veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+            manualDataTypes: ['tilinpaatos'],
+          },
+        },
+      ],
+      excludedYears: [],
+    } as any);
+
+    return { prisma, service };
+  };
+
   it('returns canonical summary rows and trust/result signals from getImportYearData', async () => {
     const veetiEffectiveDataService = {
       getYearDataset: jest.fn().mockResolvedValue({
@@ -4275,6 +4620,98 @@ describe('V2Service report variant regression', () => {
         fileName: 'bokslut-2024.pdf',
       },
     );
+  });
+
+  it('allows report creation when yearly investment placeholders add only zero-only years', async () => {
+    const { prisma, service } = buildReportCreateHarness({
+      yearlyInvestments: [
+        ...buildScenario().yearlyInvestments,
+        {
+          year: 2025,
+          amount: 0,
+          category: 'network',
+          investmentType: 'replacement',
+          confidence: 'high',
+          note: 'Zero placeholder',
+        },
+      ],
+    });
+
+    await service.createReport(ORG_ID, USER_ID, {
+      ennusteId: 'scenario-1',
+      vesinvestPlanId: '11111111-1111-4111-8111-111111111111',
+    });
+
+    expect(prisma.ennusteReport.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows report creation when computed series explicitly includes matching zero-only years', async () => {
+    const { prisma, service } = buildReportCreateHarness({
+      yearlyInvestments: [
+        ...buildScenario().yearlyInvestments,
+        {
+          year: 2025,
+          amount: 0,
+          category: 'network',
+          investmentType: 'replacement',
+          confidence: 'high',
+          note: 'Zero placeholder',
+        },
+      ],
+      investmentSeries: [
+        { year: 2024, amount: 150000 },
+        { year: 2025, amount: 0 },
+        { year: 2026, amount: 0 },
+      ],
+    });
+
+    await service.createReport(ORG_ID, USER_ID, {
+      ennusteId: 'scenario-1',
+      vesinvestPlanId: '11111111-1111-4111-8111-111111111111',
+    });
+
+    expect(prisma.ennusteReport.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('still blocks report creation when yearly investment inputs no longer match the computed series', async () => {
+    const { prisma, service } = buildReportCreateHarness({
+      yearlyInvestments: [
+        ...buildScenario().yearlyInvestments,
+        {
+          year: 2025,
+          amount: 50000,
+          category: 'network',
+          investmentType: 'replacement',
+          confidence: 'high',
+          note: 'Uncomputed addition',
+        },
+      ],
+    });
+
+    await expect(
+      service.createReport(ORG_ID, USER_ID, {
+        ennusteId: 'scenario-1',
+        vesinvestPlanId: '11111111-1111-4111-8111-111111111111',
+      }),
+    ).rejects.toThrow(/Scenario investment inputs changed after last compute/i);
+    expect(prisma.ennusteReport.create).not.toHaveBeenCalled();
+  });
+
+  it('still blocks report creation when computed investment series retains a positive year missing from inputs', async () => {
+    const { prisma, service } = buildReportCreateHarness({
+      investmentSeries: [
+        { year: 2024, amount: 150000 },
+        { year: 2025, amount: 50000 },
+      ],
+    });
+
+    await expect(
+      service.createReport(ORG_ID, USER_ID, {
+        ennusteId: 'scenario-1',
+        vesinvestPlanId: '11111111-1111-4111-8111-111111111111',
+      }),
+    ).rejects.toThrow(/Scenario investment inputs changed after last compute/i);
+    expect(prisma.ennusteReport.create).not.toHaveBeenCalled();
   });
 
   it('prefers the saved Vesinvest baseline snapshot when creating a report from a linked plan', async () => {

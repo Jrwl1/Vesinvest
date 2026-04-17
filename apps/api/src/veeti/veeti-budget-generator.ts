@@ -97,11 +97,13 @@ export class VeetiBudgetGenerator {
 
     if (tilinpaatosRows.length === 0) {
       throw new BadRequestException(
-        `No Tilinpaatos snapshot found for year ${vuosi}.`,
+        `No financial baseline found for year ${vuosi}.`,
       );
     }
 
-    const tilinpaatos = (tilinpaatosRows[0] ?? {}) as Record<string, unknown>;
+    const tilinpaatos = this.hydrateDerivedTilinpaatosFields(
+      (tilinpaatosRows[0] ?? {}) as Record<string, unknown>,
+    );
 
     const valisummat = this.mapTilinpaatosToValisummat(tilinpaatos, vuosi);
     const { drivers, missingFields: driverMissingFields } = this.buildDrivers(
@@ -188,14 +190,6 @@ export class VeetiBudgetGenerator {
         skipped.push({
           vuosi: year,
           reason: 'Required VEETI drivers are missing.',
-        });
-        continue;
-      }
-      if (preview.missing.tariffRevenueStructure) {
-        skipped.push({
-          vuosi: year,
-          reason:
-            'Fixed revenue is required to reconcile Liikevaihto with tariff drivers.',
         });
         continue;
       }
@@ -418,6 +412,52 @@ export class VeetiBudgetGenerator {
       missing.push(`tilinpaatos.${field}`);
     }
     return missing;
+  }
+
+  private hydrateDerivedTilinpaatosFields(
+    tilinpaatos: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const currentResult = this.veetiService.toNumber(
+      tilinpaatos['TilikaudenYliJaama'],
+    );
+    if (currentResult != null) {
+      return tilinpaatos;
+    }
+
+    return {
+      ...tilinpaatos,
+      TilikaudenYliJaama: this.round2(
+        (this.veetiService.toNumber(tilinpaatos['Liikevaihto']) ?? 0) +
+          (this.veetiService.toNumber(
+            tilinpaatos['OmistajanTukiKayttokustannuksiin'],
+          ) ?? 0) +
+          (this.veetiService.toNumber(
+            tilinpaatos['RahoitustuototJaKulut'],
+          ) ?? 0) -
+          Math.abs(
+            this.veetiService.toNumber(tilinpaatos['AineetJaPalvelut']) ?? 0,
+          ) -
+          Math.abs(
+            this.veetiService.toNumber(tilinpaatos['Henkilostokulut']) ?? 0,
+          ) -
+          Math.abs(
+            this.veetiService.toNumber(
+              tilinpaatos['LiiketoiminnanMuutKulut'],
+            ) ?? 0,
+          ) -
+          Math.abs(this.veetiService.toNumber(tilinpaatos['Poistot']) ?? 0) -
+          Math.abs(
+            this.veetiService.toNumber(tilinpaatos['Arvonalentumiset']) ?? 0,
+          ) -
+          Math.abs(
+            this.veetiService.toNumber(tilinpaatos['Omistajatuloutus']) ?? 0,
+          ),
+      ),
+    };
+  }
+
+  private round2(value: number): number {
+    return Math.round(value * 100) / 100;
   }
 
   private resolveDriverSourceMeta(rows: Record<string, unknown>[]) {

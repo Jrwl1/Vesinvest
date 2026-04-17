@@ -1219,7 +1219,10 @@ export class V2ReportService {
   ): boolean {
     const computedByYear = new Map<number, number>();
     for (const row of scenario.investmentSeries) {
-      computedByYear.set(row.year, this.toNumber(row.amount));
+      computedByYear.set(
+        row.year,
+        this.round2((computedByYear.get(row.year) ?? 0) + this.toNumber(row.amount)),
+      );
     }
 
     const inputByYear = new Map<number, number>();
@@ -1230,9 +1233,14 @@ export class V2ReportService {
       );
     }
 
-    for (const [year, amount] of inputByYear.entries()) {
-      const computed = computedByYear.get(year);
-      if (computed == null) return false;
+    const years = new Set<number>([
+      ...computedByYear.keys(),
+      ...inputByYear.keys(),
+    ]);
+
+    for (const year of years) {
+      const computed = computedByYear.get(year) ?? 0;
+      const amount = inputByYear.get(year) ?? 0;
       if (Math.abs(computed - amount) > 0.01) {
         return false;
       }

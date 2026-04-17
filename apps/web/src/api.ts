@@ -24,6 +24,7 @@ const API_BASE = envApiBase
 
 const TOKEN_KEY = 'access_token';
 export const AUTH_INVALIDATED_EVENT = 'vesipolku:auth-invalidated';
+export type AuthInvalidationReason = 'expired' | 'logout' | 'manual';
 
 const inFlightGetRequests = new Map<string, Promise<unknown>>();
 const cachedGetResponses = new Map<
@@ -245,11 +246,18 @@ export function setToken(token: string): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
-export function clearToken(): void {
+export function clearToken(
+  reason: AuthInvalidationReason = 'manual',
+  message?: string,
+): void {
   sessionStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(TOKEN_KEY);
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event(AUTH_INVALIDATED_EVENT));
+    window.dispatchEvent(
+      new CustomEvent(AUTH_INVALIDATED_EVENT, {
+        detail: { reason, message: message ?? null },
+      }),
+    );
   }
 }
 
@@ -297,8 +305,9 @@ export async function api<T = unknown>(
 
   // On 401: clear token and require re-login. No automatic dev-token or demo-login refresh.
   if (res.status === 401) {
-    clearToken();
-    throw new Error('Session expired. Please log in again.');
+    const message = 'Session expired. Please log in again.';
+    clearToken('expired', message);
+    throw new Error(message);
   }
 
   if (!res.ok) {
@@ -1142,6 +1151,11 @@ export interface VeetiYearInfo {
   missingRequirements?: Array<
     'financials' | 'prices' | 'volumes' | 'tariffRevenue'
   >;
+  baselineReady?: boolean;
+  baselineMissingRequirements?: Array<
+    'financialBaseline' | 'prices' | 'volumes'
+  >;
+  baselineWarnings?: Array<'tariffRevenueMismatch'>;
   tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
   warnings?: Array<
     | 'missing_financials'
@@ -1639,6 +1653,11 @@ export type V2ManualYearPatchResponse = {
   missingBefore: Array<'financials' | 'prices' | 'volumes' | 'tariffRevenue'>;
   missingAfter: Array<'financials' | 'prices' | 'volumes' | 'tariffRevenue'>;
   syncReady: boolean;
+  baselineReady?: boolean;
+  baselineMissingRequirements?: Array<
+    'financialBaseline' | 'prices' | 'volumes'
+  >;
+  baselineWarnings?: Array<'tariffRevenueMismatch'>;
   tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
   status: V2ImportStatus;
 };
@@ -1648,6 +1667,11 @@ export type V2ImportYearDataResponse = {
   veetiId: number;
   sourceStatus: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
   completeness: Record<string, boolean>;
+  baselineReady?: boolean;
+  baselineMissingRequirements?: Array<
+    'financialBaseline' | 'prices' | 'volumes'
+  >;
+  baselineWarnings?: Array<'tariffRevenueMismatch'>;
   tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
   hasManualOverrides: boolean;
   hasVeetiData: boolean;
@@ -2722,8 +2746,9 @@ export async function previewStatementImportV2(
   });
 
   if (res.status === 401) {
-    clearToken();
-    throw new Error('Session expired. Please log in again.');
+    const message = 'Session expired. Please log in again.';
+    clearToken('expired', message);
+    throw new Error(message);
   }
 
   if (!res.ok) {
@@ -2748,8 +2773,9 @@ export async function previewWorkbookImportV2(
   });
 
   if (res.status === 401) {
-    clearToken();
-    throw new Error('Session expired. Please log in again.');
+    const message = 'Session expired. Please log in again.';
+    clearToken('expired', message);
+    throw new Error(message);
   }
 
   if (!res.ok) {
@@ -3019,8 +3045,9 @@ export async function downloadReportPdfV2(id: string): Promise<{
   });
 
   if (res.status === 401) {
-    clearToken();
-    throw new Error('Session expired. Please log in again.');
+    const message = 'Session expired. Please log in again.';
+    clearToken('expired', message);
+    throw new Error(message);
   }
 
   if (!res.ok) {

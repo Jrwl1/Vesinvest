@@ -226,12 +226,9 @@ describe('ProjectionsService', () => {
       },
     };
 
-    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
-      BadRequestException,
-    );
-    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
-      'Baseline Tulot and driver-based revenue are inconsistent',
-    );
+    const result = await service.compute(ORG_ID, PROJECTION_ID);
+
+    expect((result.vuodet ?? []).length).toBeGreaterThan(0);
     expect(prisma.ennuste.update).not.toHaveBeenCalled();
   });
 
@@ -391,7 +388,7 @@ describe('ProjectionsService', () => {
     expect(Number(year2025?.poistoInvestoinneista ?? 0)).toBe(4000);
   });
 
-  it('blocks compute when manually-overridden baseline drivers are materially inconsistent with subtotal Tulot', async () => {
+  it('keeps compute available when manually-overridden baseline drivers are materially inconsistent with subtotal Tulot', async () => {
     projectionTemplate = {
       ...projectionTemplate,
       ajuriPolut: null,
@@ -418,12 +415,9 @@ describe('ProjectionsService', () => {
       },
     };
 
-    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
-      BadRequestException,
-    );
-    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
-      'Baseline Tulot and driver-based revenue are inconsistent',
-    );
+    const result = await service.compute(ORG_ID, PROJECTION_ID);
+
+    expect((result.vuodet ?? []).length).toBeGreaterThan(0);
     expect(prisma.ennuste.update).not.toHaveBeenCalled();
   });
 
@@ -474,12 +468,9 @@ describe('ProjectionsService', () => {
       },
     };
 
-    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
-      BadRequestException,
-    );
-    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
-      'Baseline Tulot and driver-based revenue are inconsistent',
-    );
+    const result = await service.compute(ORG_ID, PROJECTION_ID);
+
+    expect((result.vuodet ?? []).length).toBeGreaterThan(0);
   });
 
   it('throws a clear error for explicit ajuriPolut with invalid volume and does not overwrite paths', async () => {

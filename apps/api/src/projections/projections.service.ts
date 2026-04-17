@@ -661,18 +661,8 @@ export class ProjectionsService {
           Number(budget.perusmaksuYhteensa ?? 0),
         );
         if (Math.abs(subtotalSalesRevenue - baselineRevenue) > 1) {
-          {
-            throw new BadRequestException({
-              code: 'PROJECTION_BASELINE_REVENUE_MISMATCH',
-              message:
-                'Baseline Tulot and driver-based revenue are inconsistent. Update baseline prices, volumes, or fixed revenue in Talousarvio before computing projection.',
-              expectedRevenue: subtotalSalesRevenue,
-              derivedRevenue: baselineRevenue,
-              tolerance: { absoluteEur: 1 },
-              remediation:
-                'Check Vesi/Jätevesi unit prices and sold volumes in Talousarvio.',
-            });
-          }
+          // Revenue reconciliation stays warning-only here; the forecast should still
+          // open and compute from the effective driver baseline.
         }
       }
     }

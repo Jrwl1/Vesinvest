@@ -32,6 +32,11 @@ type SyncRequirement =
   | 'prices'
   | 'volumes'
   | 'tariffRevenue';
+type BaselineMissingRequirement =
+  | 'financialBaseline'
+  | 'prices'
+  | 'volumes';
+type BaselineWarning = 'tariffRevenueMismatch';
 type TariffRevenueReason = 'missing_fixed_revenue' | 'mismatch';
 type PlanningRole = 'historical' | 'current_year_estimate';
 type OverrideProvenanceCore = Omit<OverrideProvenance, 'fieldSources'>;
@@ -742,7 +747,7 @@ export class V2ImportOverviewService {
     const defaultYears = [...yearRows]
       .filter((row) => row.planningRole === 'historical')
       .filter((row) => workspaceYearSet.has(row.vuosi))
-      .filter((row) => this.resolveSyncBlockReason(row.completeness) === null)
+      .filter((row) => this.resolveBaselineBlockReason(row) === null)
       .sort((a, b) => b.vuosi - a.vuosi)
       .slice(0, 3)
       .map((row) => row.vuosi);
@@ -789,7 +794,7 @@ export class V2ImportOverviewService {
         continue;
       }
 
-      const blockedReason = this.resolveSyncBlockReason(row.completeness);
+      const blockedReason = this.resolveBaselineBlockReason(row);
       if (blockedReason) {
         skippedYears.push({ vuosi: year, reason: blockedReason });
         continue;
@@ -854,7 +859,7 @@ export class V2ImportOverviewService {
     const requestedYears = this.normalizeYears(years);
     const defaultYears = [...yearRows]
       .filter((row) => row.planningRole === 'historical')
-      .filter((row) => this.resolveSyncBlockReason(row.completeness) === null)
+      .filter((row) => this.resolveBaselineBlockReason(row) === null)
       .sort((a, b) => b.vuosi - a.vuosi)
       .slice(0, 3)
       .map((row) => row.vuosi);
@@ -894,7 +899,7 @@ export class V2ImportOverviewService {
 
       importedYears.push(year);
 
-      const blockedReason = this.resolveSyncBlockReason(row.completeness);
+      const blockedReason = this.resolveBaselineBlockReason(row);
       if (blockedReason) {
         preSkipped.push({ vuosi: year, reason: blockedReason });
         continue;
@@ -1253,13 +1258,20 @@ export class V2ImportOverviewService {
     const summaryRows = this.buildImportYearSummaryRows(yearDataset);
     const { completeness, tariffRevenueReason } =
       this.augmentCompletenessWithTariffRevenue(
-      yearDataset.completeness ?? this.emptyCompleteness(),
+        yearDataset.completeness ?? this.emptyCompleteness(),
+        yearDataset,
+      );
+    const baselineReadiness = this.evaluateBaselineReadiness(
+      completeness,
       yearDataset,
+      summaryRows,
+      tariffRevenueReason,
     );
     return {
       ...yearDataset,
       completeness,
       tariffRevenueReason,
+      ...baselineReadiness,
       summaryRows,
       trustSignal: this.buildImportYearTrustSignal(yearDataset, summaryRows),
       resultToZero: this.buildImportYearResultToZeroSignal(summaryRows),
@@ -1901,8 +1913,11 @@ export class V2ImportOverviewService {
       patchedDataTypes: [...patchedDataTypes].sort(),
       missingBefore,
       missingAfter,
-      syncReady: missingAfter.length === 0,
+      syncReady: afterRow?.baselineReady ?? missingAfter.length === 0,
       tariffRevenueReason: afterRow?.tariffRevenueReason ?? null,
+      baselineReady: afterRow?.baselineReady ?? missingAfter.length === 0,
+      baselineMissingRequirements: afterRow?.baselineMissingRequirements ?? [],
+      baselineWarnings: afterRow?.baselineWarnings ?? [],
       status,
     };
   }
@@ -2144,10 +2159,10 @@ export class V2ImportOverviewService {
         connected: Boolean(link),
         importedYearCount: yearRows.length,
         syncReadyYearCount: yearRows.filter(
-          (row) => this.resolveSyncBlockReason(row.completeness) === null,
+          (row) => this.resolveBaselineBlockReason(row) === null,
         ).length,
         blockedYearCount: yearRows.filter(
-          (row) => this.resolveSyncBlockReason(row.completeness) !== null,
+          (row) => this.resolveBaselineBlockReason(row) !== null,
         ).length,
         latestFetchedAt: link?.lastFetchedAt?.toISOString() ?? null,
         veetiBudgetCount,
@@ -2460,11 +2475,23 @@ export class V2ImportOverviewService {
     const baselineYears = acceptedBaselineYears.map((year) => {
       const yearStatus = importStatus.years.find((row) => row.vuosi === year);
       const sourceSummary = baselineSourceSummaryByYear.get(year) ?? null;
-      const hasFinancials = yearStatus?.completeness.tilinpaatos === true;
-      const hasPrices = yearStatus?.completeness.taksa === true;
-      const hasVolume =
-        yearStatus?.completeness.volume_vesi === true ||
-        yearStatus?.completeness.volume_jatevesi === true;
+      const useBaselineReadiness =
+        typeof yearStatus?.baselineReady === 'boolean' ||
+        Array.isArray(yearStatus?.baselineMissingRequirements);
+      const baselineMissing = new Set(yearStatus?.baselineMissingRequirements ?? []);
+      const hasFinancials = useBaselineReadiness
+        ? !baselineMissing.has('financialBaseline')
+        : sourceSummary?.financials?.source !== 'none' ||
+          yearStatus?.completeness.tilinpaatos === true;
+      const hasPrices = useBaselineReadiness
+        ? !baselineMissing.has('prices')
+        : sourceSummary?.prices?.source !== 'none' ||
+          yearStatus?.completeness.taksa === true;
+      const hasVolume = useBaselineReadiness
+        ? !baselineMissing.has('volumes')
+        : sourceSummary?.volumes?.source !== 'none' ||
+          yearStatus?.completeness.volume_vesi === true ||
+          yearStatus?.completeness.volume_jatevesi === true;
       const quality: 'complete' | 'partial' | 'missing' =
         hasFinancials && hasPrices && hasVolume
           ? 'complete'
@@ -3038,7 +3065,16 @@ export class V2ImportOverviewService {
   >(
     orgId: string,
     yearRows: T[],
-  ): Promise<Array<T & { tariffRevenueReason: TariffRevenueReason | null }>> {
+  ): Promise<
+    Array<
+      T & {
+        tariffRevenueReason: TariffRevenueReason | null;
+        baselineReady: boolean;
+        baselineMissingRequirements: BaselineMissingRequirement[];
+        baselineWarnings: BaselineWarning[];
+      }
+    >
+  > {
     const getYearDataset =
       typeof this.veetiEffectiveDataService.getYearDataset === 'function'
         ? this.veetiEffectiveDataService.getYearDataset.bind(
@@ -3055,15 +3091,120 @@ export class V2ImportOverviewService {
             row.completeness ?? this.emptyCompleteness(),
             yearDataset,
           );
+        const summaryRows = yearDataset
+          ? this.buildImportYearSummaryRows(yearDataset)
+          : [];
+        const baselineReadiness = this.evaluateBaselineReadiness(
+          completeness,
+          yearDataset,
+          summaryRows,
+          tariffRevenueReason,
+        );
         return {
           ...row,
           completeness,
           missingRequirements: this.resolveMissingSyncRequirements(completeness),
           tariffRevenueReason,
+          ...baselineReadiness,
         };
       }),
     );
     return hydrated;
+  }
+
+  private evaluateBaselineReadiness(
+    completeness: Record<string, boolean>,
+    yearDataset:
+      | Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>
+      | null
+      | undefined,
+    summaryRows: ImportYearSummaryRow[],
+    tariffRevenueReason: TariffRevenueReason | null,
+  ): {
+    baselineReady: boolean;
+    baselineMissingRequirements: BaselineMissingRequirement[];
+    baselineWarnings: BaselineWarning[];
+  } {
+    const summaryByField = new Map(
+      summaryRows.map((row) => [row.sourceField, row]),
+    );
+    const revenueValue =
+      summaryByField.get('Liikevaihto')?.effectiveValue ?? null;
+    const financialBaselineReady =
+      summaryRows.length > 0
+        ? (
+            [
+              'Liikevaihto',
+              'AineetJaPalvelut',
+              'Henkilostokulut',
+              'Poistot',
+              'LiiketoiminnanMuutKulut',
+            ] as const
+          ).every(
+            (field) => summaryByField.get(field)?.effectiveValue != null,
+          ) && revenueValue != null && revenueValue > 0
+        : completeness.tilinpaatos === true;
+
+    const taksaRows =
+      yearDataset?.datasets.find((row) => row.dataType === 'taksa')
+        ?.effectiveRows ?? [];
+    const waterVolumeRows =
+      yearDataset?.datasets.find((row) => row.dataType === 'volume_vesi')
+        ?.effectiveRows ?? [];
+    const wastewaterVolumeRows =
+      yearDataset?.datasets.find((row) => row.dataType === 'volume_jatevesi')
+        ?.effectiveRows ?? [];
+    const waterPrice = this.resolveLatestPrice(taksaRows, 1);
+    const wastewaterPrice = this.resolveLatestPrice(taksaRows, 2);
+    const soldWaterVolume = waterVolumeRows.reduce(
+      (sum, row) => sum + this.toNumber(row.Maara),
+      0,
+    );
+    const soldWastewaterVolume = wastewaterVolumeRows.reduce(
+      (sum, row) => sum + this.toNumber(row.Maara),
+      0,
+    );
+    const hasDetailedDriverRows =
+      taksaRows.length > 0 ||
+      waterVolumeRows.length > 0 ||
+      wastewaterVolumeRows.length > 0;
+
+    const waterDriverReady = hasDetailedDriverRows
+      ? waterPrice > 0 && soldWaterVolume > 0
+      : completeness.taksa === true && completeness.volume_vesi === true;
+    const wastewaterDriverReady = hasDetailedDriverRows
+      ? wastewaterPrice > 0 && soldWastewaterVolume > 0
+      : completeness.taksa === true && completeness.volume_jatevesi === true;
+    const hasAnyPrice = hasDetailedDriverRows
+      ? waterPrice > 0 || wastewaterPrice > 0
+      : completeness.taksa === true;
+    const hasAnyVolume = hasDetailedDriverRows
+      ? soldWaterVolume > 0 || soldWastewaterVolume > 0
+      : completeness.volume_vesi === true ||
+        completeness.volume_jatevesi === true;
+
+    const baselineMissingRequirements: BaselineMissingRequirement[] = [];
+    if (!financialBaselineReady) {
+      baselineMissingRequirements.push('financialBaseline');
+    }
+    if (!waterDriverReady && !wastewaterDriverReady) {
+      if (!hasAnyPrice) {
+        baselineMissingRequirements.push('prices');
+      }
+      if (!hasAnyVolume) {
+        baselineMissingRequirements.push('volumes');
+      }
+      if (hasAnyPrice && hasAnyVolume) {
+        baselineMissingRequirements.push('prices', 'volumes');
+      }
+    }
+
+    return {
+      baselineReady: baselineMissingRequirements.length === 0,
+      baselineMissingRequirements,
+      baselineWarnings:
+        tariffRevenueReason != null ? ['tariffRevenueMismatch'] : [],
+    };
   }
 
   private augmentCompletenessWithTariffRevenue(
@@ -3274,6 +3415,7 @@ export class V2ImportOverviewService {
         select: {
           talousarvio: {
             select: {
+              lahde: true,
               vuosi: true,
               veetiVuosi: true,
             },
@@ -3293,7 +3435,11 @@ export class V2ImportOverviewService {
       const year = Number(
         scenario.talousarvio?.veetiVuosi ?? scenario.talousarvio?.vuosi,
       );
-      if (Number.isFinite(year)) {
+      if (
+        scenario.talousarvio?.lahde === 'veeti' &&
+        Number.isFinite(year) &&
+        workspaceYearSet.has(year)
+      ) {
         acceptedYears.add(year);
       }
     }
@@ -3511,6 +3657,30 @@ export class V2ImportOverviewService {
       return 'Fixed revenue is needed to reconcile tariff revenue for this year.';
     }
     return null;
+  }
+
+  private resolveBaselineBlockReason(params: {
+    completeness: Record<string, boolean>;
+    baselineReady?: boolean;
+    baselineMissingRequirements?: BaselineMissingRequirement[];
+  }): string | null {
+    if (typeof params.baselineReady !== 'boolean') {
+      return this.resolveSyncBlockReason(params.completeness);
+    }
+    if (params.baselineReady) {
+      return null;
+    }
+    const missing = params.baselineMissingRequirements ?? [];
+    if (missing.includes('financialBaseline')) {
+      return 'Financial baseline data is missing for this year.';
+    }
+    if (missing.includes('prices')) {
+      return 'Price data (taksa) is missing for this year.';
+    }
+    if (missing.includes('volumes')) {
+      return 'Sold volume data is missing for this year.';
+    }
+    return 'Year is missing baseline inputs.';
   }
 
   private toNumber(value: unknown): number {

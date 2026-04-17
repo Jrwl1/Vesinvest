@@ -64,6 +64,8 @@ vi.mock('./OverviewPageV2', () => ({
   OverviewPageV2: (props: {
     onGoToForecast: (scenarioId?: string | null) => void;
     onGoToReports: () => void;
+    overviewFocusTarget?: { kind: 'saved_fee_path'; planId: string } | null;
+    onOverviewFocusTargetConsumed?: () => void;
     setupBackSignal?: number;
     onSetupWizardStateChange?: (state: {
       totalSteps: 6;
@@ -86,9 +88,53 @@ vi.mock('./OverviewPageV2', () => ({
         baselineReady: boolean;
       };
     }) => void;
+    onSetupPlanStateChange?: (state: {
+      activePlanId: string | null;
+      linkedScenarioId: string | null;
+      classificationReviewRequired: boolean;
+      pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
+      baselineChangedSinceAcceptedRevision: boolean;
+      investmentPlanChangedSinceFeeRecommendation: boolean;
+    } | null) => void;
     onSetupOrgNameChange?: (name: string | null) => void;
-  }) => (
-    <div>
+  }) => {
+    const handledBackSignal = React.useRef(0);
+
+    React.useEffect(() => {
+      if ((props.setupBackSignal ?? 0) <= handledBackSignal.current) {
+        return;
+      }
+      handledBackSignal.current = props.setupBackSignal ?? 0;
+      props.onSetupOrgNameChange?.(null);
+      props.onSetupWizardStateChange?.({
+        totalSteps: 6,
+        currentStep: 1,
+        recommendedStep: 1,
+        activeStep: 1,
+        selectedProblemYear: null,
+        transitions: {
+          reviewContinue: 5,
+          selectProblemYear: 4,
+        },
+        wizardComplete: false,
+        forecastUnlocked: false,
+        reportsUnlocked: false,
+        summary: {
+          importedYearCount: 0,
+          readyYearCount: 0,
+          blockedYearCount: 0,
+          excludedYearCount: 0,
+          baselineReady: false,
+        },
+      });
+    }, [
+      props.onSetupOrgNameChange,
+      props.onSetupWizardStateChange,
+      props.setupBackSignal,
+    ]);
+
+    return (
+      <div>
       <button type="button" onClick={() => props.onGoToForecast()}>
         overview-content
       </button>
@@ -272,9 +318,34 @@ vi.mock('./OverviewPageV2', () => ({
       >
         set-org-name
       </button>
-      <div>setup-back-signal:{props.setupBackSignal ?? 0}</div>
-    </div>
-  ),
+        <button
+          type="button"
+          onClick={() =>
+            props.onSetupPlanStateChange?.({
+              activePlanId: 'plan-1',
+              linkedScenarioId: 'scenario-1',
+              classificationReviewRequired: false,
+              pricingStatus: 'verified',
+              baselineChangedSinceAcceptedRevision: false,
+              investmentPlanChangedSinceFeeRecommendation: false,
+            })
+          }
+        >
+          set-plan-verified
+        </button>
+        <button
+          type="button"
+          onClick={() => props.onOverviewFocusTargetConsumed?.()}
+        >
+          consume-focus-target
+        </button>
+        <div>
+          overview-focus-target:{props.overviewFocusTarget?.planId ?? '-'}
+        </div>
+        <div>setup-back-signal:{props.setupBackSignal ?? 0}</div>
+      </div>
+    );
+  },
 }));
 
 vi.mock('./EnnustePageV2', () => ({
@@ -282,15 +353,36 @@ vi.mock('./EnnustePageV2', () => ({
     onReportCreated,
     initialScenarioId,
     onScenarioSelectionChange,
+    onGoToOverviewFeePath,
+    onComputedVersionChange,
   }: {
     onReportCreated: (id: string) => void;
     initialScenarioId?: string | null;
     onScenarioSelectionChange?: (scenarioId: string | null) => void;
+    onGoToOverviewFeePath?: (planId?: string | null) => void;
+    onComputedVersionChange?: (
+      scenarioId: string,
+      computedFromUpdatedAt: string | null,
+    ) => void;
   }) => (
     <div>
       <div>ennuste-content:{initialScenarioId ?? '-'}</div>
       <button type="button" onClick={() => onScenarioSelectionChange?.('stress-1')}>
         select-stress
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onComputedVersionChange?.(initialScenarioId ?? 'scenario-1', '2026-03-25T12:00:00.000Z')
+        }
+      >
+        compute-scenario
+      </button>
+      <button
+        type="button"
+        onClick={() => onGoToOverviewFeePath?.('plan-1')}
+      >
+        stale-report-hit
       </button>
       <button type="button" onClick={() => onReportCreated('report-123')}>
         create-report
@@ -303,11 +395,15 @@ vi.mock('./ReportsPageV2', () => ({
   ReportsPageV2: ({
     focusedReportId,
     onGoToForecast,
+    onGoToOverviewFeePath,
+    savedFeePathScenarioId,
     onFocusedReportChange,
   }: {
     refreshToken: number;
     focusedReportId: string | null;
     onGoToForecast: (scenarioId?: string | null) => void;
+    onGoToOverviewFeePath?: (planId?: string | null) => void;
+    savedFeePathScenarioId?: string | null;
     onFocusedReportChange?: (
       reportId: string | null,
       scenarioId: string | null,
@@ -324,6 +420,10 @@ vi.mock('./ReportsPageV2', () => ({
       <button type="button" onClick={() => onGoToForecast('stress-1')}>
         report-to-forecast
       </button>
+      <button type="button" onClick={() => onGoToOverviewFeePath?.('plan-1')}>
+        report-to-fee-path
+      </button>
+      <div>report-saved-fee-path-scenario:{savedFeePathScenarioId ?? '-'}</div>
     </div>
   ),
 }));
@@ -358,13 +458,20 @@ describe('AppShellV2', () => {
     canCreateScenario?: boolean;
     baselineYears?: any[];
     activePlan?: Record<string, unknown> | null;
+    selectedPlan?: Record<string, unknown> | null;
   }) => ({
     canCreateScenario: options?.canCreateScenario ?? false,
     vesinvest: {
-      hasPlan: options?.activePlan != null,
-      planCount: options?.activePlan != null ? 1 : 0,
+      hasPlan:
+        options?.activePlan != null || options?.selectedPlan != null,
+      planCount:
+        options?.activePlan != null || options?.selectedPlan != null ? 1 : 0,
       activePlan:
         options?.activePlan != null ? buildActivePlan(options.activePlan) : null,
+      selectedPlan:
+        options?.selectedPlan != null
+          ? buildActivePlan(options.selectedPlan)
+          : null,
     },
     baselineYears: options?.baselineYears ?? [],
     operations: {
@@ -577,6 +684,120 @@ describe('AppShellV2', () => {
     ).not.toContain('active');
   });
 
+  it('hydrates the saved fee-path shell state on the overview route before Overview reports it', async () => {
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1,
+        nimi: 'Wizard Utility',
+        ytunnus: '1234567-8',
+        uiLanguage: 'fi',
+      },
+      years: [],
+      availableYears: [],
+      workspaceYears: [2024],
+      excludedYears: [],
+      planningBaselineYears: [2024],
+    });
+    getPlanningContextV2Mock.mockResolvedValueOnce(
+      buildPlanningContext({
+        canCreateScenario: true,
+        activePlan: {
+          status: 'active',
+          baselineStatus: 'verified',
+          pricingStatus: 'verified',
+          selectedScenarioId: 'scenario-1',
+        },
+        baselineYears: [{ year: 2024 }],
+      }),
+    );
+    getForecastScenarioV2Mock.mockResolvedValueOnce(buildReadyScenario());
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Report-ready scenario')).toBeTruthy();
+      expect(screen.getByText('Active workspace')).toBeTruthy();
+      expect(
+        (screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+    });
+  });
+
+  it('falls back to the forecast scenario list when direct scenario bootstrap fetch misses', async () => {
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1,
+        nimi: 'Wizard Utility',
+        ytunnus: '1234567-8',
+        uiLanguage: 'fi',
+      },
+      years: [],
+      availableYears: [],
+      workspaceYears: [2024],
+      excludedYears: [],
+      planningBaselineYears: [2024],
+    });
+    getPlanningContextV2Mock.mockResolvedValueOnce(
+      buildPlanningContext({
+        canCreateScenario: true,
+        activePlan: {
+          status: 'active',
+          baselineStatus: 'verified',
+          pricingStatus: 'verified',
+          selectedScenarioId: 'scenario-1',
+        },
+        baselineYears: [{ year: 2024 }],
+      }),
+    );
+    getForecastScenarioV2Mock.mockRejectedValueOnce(new Error('miss'));
+    listForecastScenariosV2Mock.mockResolvedValueOnce([
+      {
+        id: 'scenario-1',
+        name: 'Saved fee path',
+        updatedAt: '2026-03-25T12:00:00.000Z',
+        computedFromUpdatedAt: '2026-03-25T12:00:00.000Z',
+        computedYears: 1,
+      } as any,
+    ]);
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Report-ready scenario')).toBeTruthy();
+    });
+  });
+
   it('hydrates the selected utility and opens Forecast directly when a Vesinvest plan has a verified baseline and linked scenario', async () => {
     window.history.replaceState({}, '', '/forecast');
     getImportStatusV2Mock.mockResolvedValueOnce({
@@ -644,7 +865,7 @@ describe('AppShellV2', () => {
 
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
     expect(screen.getByText('Kronoby vatten och avlopp ab')).toBeTruthy();
-    expect(screen.getByText('Fee path ready')).toBeTruthy();
+    expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
     expect(screen.queryByText('No utility selected')).toBeNull();
     expect(screen.queryByText('Setup required')).toBeNull();
     expect(container.firstElementChild?.className).toContain(
@@ -722,6 +943,81 @@ describe('AppShellV2', () => {
     expect(screen.getByText('Report-ready scenario')).toBeTruthy();
     expect(screen.queryByText('No utility selected')).toBeNull();
     expect(screen.queryByText('Setup required')).toBeNull();
+    expect(container.firstElementChild?.className).toContain(
+      'v2-app-shell-reports',
+    );
+  });
+
+  it('hydrates report-ready shell truth on direct /reports entry when only selectedPlan is available during bootstrap', async () => {
+    window.history.replaceState({}, '', '/reports');
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1,
+        nimi: 'Kronoby vatten och avlopp ab',
+        ytunnus: '1234567-8',
+        uiLanguage: 'sv',
+      },
+      years: [],
+      availableYears: [],
+      workspaceYears: [2024],
+      excludedYears: [],
+      planningBaselineYears: [2024],
+    });
+    getPlanningContextV2Mock.mockResolvedValueOnce(
+      buildPlanningContext({
+        canCreateScenario: true,
+        activePlan: null,
+        selectedPlan: {
+          id: 'plan-1',
+          utilityName: 'Kronoby vatten och avlopp ab',
+          baselineStatus: 'verified',
+          pricingStatus: 'verified',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+        },
+        baselineYears: [
+          {
+            year: 2024,
+            quality: 'complete',
+            sourceStatus: 'MIXED',
+            sourceBreakdown: { veetiDataTypes: [], manualDataTypes: [] },
+            financials: { dataType: 'tilinpaatos', source: 'manual' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: { dataType: 'volume_vesi', source: 'veeti' },
+            investmentAmount: 0,
+            soldWaterVolume: 0,
+            soldWastewaterVolume: 0,
+            combinedSoldVolume: 0,
+            processElectricity: 0,
+            pumpedWaterVolume: 0,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 0,
+            netWaterTradeVolume: 0,
+          },
+        ],
+      }),
+    );
+
+    const { container } = render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('reports-content:-')).toBeTruthy();
+    expect(screen.getByText('Kronoby vatten och avlopp ab')).toBeTruthy();
+    expect(screen.getByText('Report-ready scenario')).toBeTruthy();
     expect(container.firstElementChild?.className).toContain(
       'v2-app-shell-reports',
     );
@@ -822,6 +1118,209 @@ describe('AppShellV2', () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe('/');
     });
+  });
+
+  it('shows a report-stage blocker message instead of startup copy when direct /reports is blocked after forecast unlock', async () => {
+    window.history.replaceState({}, '', '/reports');
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1535,
+        nimi: 'Kronoby vatten och avlopp ab',
+        ytunnus: '0180030-9',
+        uiLanguage: 'sv',
+      },
+      years: [],
+      availableYears: [],
+      workspaceYears: [2024],
+      excludedYears: [],
+      planningBaselineYears: [2024],
+    });
+    getPlanningContextV2Mock.mockResolvedValueOnce(
+      buildPlanningContext({
+        canCreateScenario: true,
+        baselineYears: [
+          {
+            year: 2024,
+            quality: 'complete',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: { veetiDataTypes: [], manualDataTypes: [] },
+            financials: { dataType: 'tilinpaatos', source: 'veeti' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: { dataType: 'volume_vesi', source: 'veeti' },
+            investmentAmount: 0,
+            soldWaterVolume: 0,
+            soldWastewaterVolume: 0,
+            combinedSoldVolume: 0,
+            processElectricity: 0,
+            pumpedWaterVolume: 0,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 0,
+            netWaterTradeVolume: 0,
+          },
+        ],
+        activePlan: {
+          utilityName: 'Kronoby vatten och avlopp ab',
+          businessId: '0180030-9',
+          veetiId: 1535,
+          identitySource: 'veeti',
+          baselineStatus: 'verified',
+          pricingStatus: 'provisional',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+        },
+      }),
+    );
+    getForecastScenarioV2Mock.mockResolvedValueOnce(buildReadyScenario());
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('overview-content')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain(
+      'Create the report after the fee path is saved and the linked scenario is up to date.',
+    );
+    expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+    });
+  });
+
+  it('keeps the locked Reports tab clickable so the later-stage blocker message is reachable from nav', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-forecast-only' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reports' }));
+
+    expect(screen.getByRole('status').textContent).toContain(
+      'Create the report after the fee path is saved and the linked scenario is up to date.',
+    );
+    expect(window.location.pathname).toBe('/');
+  });
+
+  it('shows the classification-review blocker when Reports is locked by class-plan work', async () => {
+    window.history.replaceState({}, '', '/reports');
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1535,
+        nimi: 'Kronoby vatten och avlopp ab',
+        ytunnus: '0180030-9',
+        uiLanguage: 'sv',
+      },
+      years: [],
+      availableYears: [],
+      workspaceYears: [2024],
+      excludedYears: [],
+      planningBaselineYears: [2024],
+    });
+    getPlanningContextV2Mock.mockResolvedValueOnce(
+      buildPlanningContext({
+        canCreateScenario: true,
+        baselineYears: [
+          {
+            year: 2024,
+            quality: 'complete',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: { veetiDataTypes: [], manualDataTypes: [] },
+            financials: { dataType: 'tilinpaatos', source: 'veeti' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: { dataType: 'volume_vesi', source: 'veeti' },
+            investmentAmount: 0,
+            soldWaterVolume: 0,
+            soldWastewaterVolume: 0,
+            combinedSoldVolume: 0,
+            processElectricity: 0,
+            pumpedWaterVolume: 0,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 0,
+            netWaterTradeVolume: 0,
+          },
+        ],
+        activePlan: {
+          utilityName: 'Kronoby vatten och avlopp ab',
+          businessId: '0180030-9',
+          veetiId: 1535,
+          identitySource: 'veeti',
+          baselineStatus: 'verified',
+          pricingStatus: 'blocked',
+          classificationReviewRequired: true,
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+        },
+      }),
+    );
+    getForecastScenarioV2Mock.mockResolvedValueOnce(buildReadyScenario());
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('overview-content')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain(
+      'Review and save the Vesinvest class plan before creating a report.',
+    );
+  });
+
+  it('keeps the shell in workflow-step mode while Forecast is unlocked but Reports are still locked', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-forecast-only' }));
+
+    expect(screen.getByText('Step 5 / 5')).toBeTruthy();
+    expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
+    expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
   });
 
   it('redirects direct /forecast entry back to overview with a visible locked-workspace notice and keeps step-1 shell truth when no utility is connected', async () => {
@@ -1011,7 +1510,7 @@ describe('AppShellV2', () => {
     );
 
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
-    expect(screen.getByText('Fee path ready')).toBeTruthy();
+    expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
     await waitFor(() => {
       expect(window.location.pathname).toBe('/forecast');
     });
@@ -1153,17 +1652,17 @@ describe('AppShellV2', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
     fireEvent.click(screen.getByRole('button', { name: 'unlock-forecast-only' }));
-    expect(
-      (screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement).disabled,
-    ).toBe(true);
+    expect(screen.getByRole('button', { name: 'Reports' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
 
     expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
     await waitFor(() => {
       expect(
-        (screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement).disabled,
-      ).toBe(false);
+        screen.getByRole('button', { name: 'Reports' }).getAttribute('aria-disabled'),
+      ).toBeNull();
     });
   });
 
@@ -1186,21 +1685,21 @@ describe('AppShellV2', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
     fireEvent.click(screen.getByRole('button', { name: 'unlock-forecast-only' }));
-    expect(
-      (screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement).disabled,
-    ).toBe(true);
+    expect(screen.getByRole('button', { name: 'Reports' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
 
     expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
     await waitFor(() => {
       expect(
-        (screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement).disabled,
-      ).toBe(true);
+        screen.getByRole('button', { name: 'Reports' }).getAttribute('aria-disabled'),
+      ).toBe('true');
     });
   });
 
-  it('keeps direct /forecast entry locked when the saved plan has a verified baseline but no investment rows', async () => {
+  it('allows direct /forecast entry once the saved baseline is verified even without investment rows', async () => {
     window.history.replaceState({}, '', '/forecast');
     getImportStatusV2Mock.mockResolvedValueOnce({
       connected: true,
@@ -1266,9 +1765,9 @@ describe('AppShellV2', () => {
       />,
     );
 
-    expect(await screen.findByText('overview-content')).toBeTruthy();
+    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
     await waitFor(() => {
-      expect(window.location.pathname).toBe('/');
+      expect(window.location.pathname).toBe('/forecast');
     });
   });
 
@@ -1323,8 +1822,8 @@ describe('AppShellV2', () => {
     const reportsTab = screen.getByRole('button', { name: 'Reports' });
 
     await waitFor(() => {
-      expect((forecastTab as HTMLButtonElement).disabled).toBe(false);
-      expect((reportsTab as HTMLButtonElement).disabled).toBe(false);
+      expect(forecastTab.getAttribute('aria-disabled')).toBeNull();
+      expect(reportsTab.getAttribute('aria-disabled')).toBeNull();
     });
 
     fireEvent.click(forecastTab);
@@ -1643,22 +2142,18 @@ describe('AppShellV2', () => {
     expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
     expect(screen.getByText('Step 1 / 5')).toBeTruthy();
     expect(screen.queryByText('ennuste-content:starter-1')).toBeNull();
-    expect(
-      (
-        screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
-    expect(
-      (
-        screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
+    expect(screen.getByRole('button', { name: 'Forecast' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Reports' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
     expect(
       window.sessionStorage.getItem('v2_forecast_runtime_state'),
     ).toContain('"selectedScenarioId":null');
   });
 
-  it('formats the org chip as company plus short hash and keeps locked tabs disabled', async () => {
+  it('formats the org chip as company plus short hash and keeps locked tabs marked locked', async () => {
     render(
       <AppShellV2
         tokenInfo={{
@@ -1677,16 +2172,12 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
 
     expect(screen.getByTitle('Wizard Utility / C9032CDE')).toBeTruthy();
-    expect(
-      (
-        screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
-    expect(
-      (
-        screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
+    expect(screen.getByRole('button', { name: 'Forecast' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Reports' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
     expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
   });
 
@@ -1801,6 +2292,301 @@ describe('AppShellV2', () => {
     expect(await screen.findByText('setup-back-signal:1')).toBeTruthy();
   });
 
+  it('clears the shell org identity when back-navigation returns setup to step 1', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
+    expect(screen.getByTitle('Wizard Utility / C9032CDE')).toBeTruthy();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Back to utility identity' }),
+    );
+
+    expect(await screen.findByText('setup-back-signal:1')).toBeTruthy();
+    expect(screen.queryByTitle('Wizard Utility / C9032CDE')).toBeNull();
+    expect(screen.getByTitle('No utility selected')).toBeTruthy();
+    expect(screen.getByText('Step 1 / 5')).toBeTruthy();
+  });
+
+  it('returns stale report flow to Overview and stores a saved fee-path focus target', async () => {
+    getPlanningContextV2Mock.mockResolvedValue(
+      buildPlanningContext({
+        canCreateScenario: true,
+        baselineYears: [{ year: 2024 }],
+        activePlan: {
+          id: 'plan-1',
+          utilityName: 'Wizard Utility',
+          businessId: '1234567-8',
+          pricingStatus: 'verified',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+        },
+      }),
+    );
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
+    expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'stale-report-hit' }));
+
+    expect(await screen.findByText('overview-content')).toBeTruthy();
+    expect(screen.getByText('overview-focus-target:plan-1')).toBeTruthy();
+    expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
+    expect(screen.queryByText('Report-ready scenario')).toBeNull();
+    expect(
+      window.sessionStorage.getItem('v2_forecast_runtime_state'),
+    ).toContain('"selectedScenarioId":"scenario-1"');
+  });
+
+  it('clears the shell stale-report demotion once the same saved fee path is opened cleanly again', async () => {
+    getPlanningContextV2Mock.mockResolvedValue(
+      buildPlanningContext({
+        canCreateScenario: true,
+        baselineYears: [{ year: 2024 }],
+        activePlan: {
+          id: 'plan-1',
+          utilityName: 'Wizard Utility',
+          businessId: '1234567-8',
+          pricingStatus: 'verified',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+        },
+      }),
+    );
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
+    expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'stale-report-hit' }));
+    expect(await screen.findByText('overview-content')).toBeTruthy();
+    expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
+
+    expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
+    expect(screen.getByText('Report-ready scenario')).toBeTruthy();
+  });
+
+  it('clears the shell stale-report demotion when Overview reports the saved fee path as verified again', async () => {
+    getPlanningContextV2Mock.mockResolvedValue(
+      buildPlanningContext({
+        canCreateScenario: true,
+        baselineYears: [{ year: 2024 }],
+        activePlan: {
+          id: 'plan-1',
+          utilityName: 'Wizard Utility',
+          businessId: '1234567-8',
+          pricingStatus: 'verified',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+        },
+      }),
+    );
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
+    expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'stale-report-hit' }));
+    expect(await screen.findByText('overview-content')).toBeTruthy();
+    expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-plan-verified' }));
+
+    expect(await screen.findByText('Report-ready scenario')).toBeTruthy();
+  });
+
+  it('demotes the shell ready badge when the visible scenario drifts away from the linked saved fee path', async () => {
+    getPlanningContextV2Mock.mockResolvedValue(
+      buildPlanningContext({
+        canCreateScenario: true,
+        baselineYears: [{ year: 2024 }],
+        activePlan: {
+          id: 'plan-1',
+          utilityName: 'Wizard Utility',
+          businessId: '1234567-8',
+          pricingStatus: 'verified',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+        },
+      }),
+    );
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
+    expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
+    expect(screen.getByText('Report-ready scenario')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'select-stress' }));
+
+    expect(await screen.findByText('Vesinvest in progress')).toBeTruthy();
+    expect(screen.queryByText('Report-ready scenario')).toBeNull();
+  });
+
+  it('keeps the shell ready badge on Reports when a saved report focuses another scenario, then demotes after opening that scenario in Forecast', async () => {
+    getPlanningContextV2Mock.mockResolvedValue(
+      buildPlanningContext({
+        canCreateScenario: true,
+        baselineYears: [{ year: 2024 }],
+        activePlan: {
+          id: 'plan-1',
+          utilityName: 'Wizard Utility',
+          businessId: '1234567-8',
+          pricingStatus: 'verified',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+        },
+      }),
+    );
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reports' }));
+    expect(await screen.findByText('reports-content:-')).toBeTruthy();
+    expect(screen.getByText('Report-ready scenario')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'focus-stress-report' }));
+
+    expect(await screen.findByText('reports-content:report-123')).toBeTruthy();
+    expect(screen.getByText('Report-ready scenario')).toBeTruthy();
+    expect(screen.queryByText('Vesinvest in progress')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'report-to-forecast' }));
+
+    expect(await screen.findByText('ennuste-content:stress-1')).toBeTruthy();
+    expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
+    expect(screen.queryByText('Report-ready scenario')).toBeNull();
+  });
+
+  it('demotes the shell ready badge when the saved fee path itself is stale', async () => {
+    getPlanningContextV2Mock.mockResolvedValue(
+      buildPlanningContext({
+        canCreateScenario: true,
+        baselineYears: [{ year: 2024 }],
+        activePlan: {
+          id: 'plan-1',
+          utilityName: 'Wizard Utility',
+          businessId: '1234567-8',
+          pricingStatus: 'verified',
+          baselineChangedSinceAcceptedRevision: true,
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+        },
+      }),
+    );
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
+
+    expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
+    expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
+    expect(screen.queryByText('Report-ready scenario')).toBeNull();
+  });
+
   it('uses the active step from Overview when a problem year is selected', async () => {
     render(
       <AppShellV2
@@ -1872,10 +2658,9 @@ describe('AppShellV2', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
-    expect(
-      (screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
+    expect(screen.getByRole('button', { name: 'Forecast' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
     fireEvent.click(screen.getByRole('button', { name: 'Forecast' }));
@@ -1927,8 +2712,8 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'review-ready' }));
 
     expect(screen.getByText('Step 4 / 5')).toBeTruthy();
-    expect((forecastTab as HTMLButtonElement).disabled).toBe(true);
-    expect((reportsTab as HTMLButtonElement).disabled).toBe(true);
+    expect(forecastTab.getAttribute('aria-disabled')).toBe('true');
+    expect(reportsTab.getAttribute('aria-disabled')).toBe('true');
 
     fireEvent.click(
       screen.getByRole('button', { name: 'open-forecast-handoff' }),
@@ -1974,8 +2759,8 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'focus-problem-year' }));
 
     expect(screen.getByText('Step 3 / 5')).toBeTruthy();
-    expect((forecastTab as HTMLButtonElement).disabled).toBe(true);
-    expect((reportsTab as HTMLButtonElement).disabled).toBe(true);
+    expect(forecastTab.getAttribute('aria-disabled')).toBe('true');
+    expect(reportsTab.getAttribute('aria-disabled')).toBe('true');
     expect(screen.getByText('overview-content')).toBeTruthy();
   });
 });

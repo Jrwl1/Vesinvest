@@ -122,6 +122,7 @@ type RenderStep2InlineFieldEditorParams = {
   setManualPrices: React.Dispatch<React.SetStateAction<ManualPriceForm>>;
   manualVolumes: ManualVolumeForm;
   setManualVolumes: React.Dispatch<React.SetStateAction<ManualVolumeForm>>;
+  markManualFieldTouched: (field: InlineCardField) => void;
   setInlineCardFieldRef: (
     field: InlineCardField,
   ) => (element: HTMLInputElement | null) => void;
@@ -142,6 +143,7 @@ export function renderOverviewStep2InlineFieldEditor({
   setManualPrices,
   manualVolumes,
   setManualVolumes,
+  markManualFieldTouched,
   setInlineCardFieldRef,
   handleInlineCardKeyDown,
   isInlineCardDirty,
@@ -205,12 +207,13 @@ export function renderOverviewStep2InlineFieldEditor({
             min={0}
             step="0.01"
             value={manualFinancials.liikevaihto}
-            onChange={(event) =>
+            onChange={(event) => {
+              markManualFieldTouched('liikevaihto');
               setManualFinancials((prev) => ({
                 ...prev,
                 liikevaihto: Number(event.target.value || 0),
-              }))
-            }
+              }));
+            }}
           />
         </label>,
       );
@@ -231,12 +234,13 @@ export function renderOverviewStep2InlineFieldEditor({
             min={0}
             step="0.01"
             value={manualFinancials.perusmaksuYhteensa}
-            onChange={(event) =>
+            onChange={(event) => {
+              markManualFieldTouched('perusmaksuYhteensa');
               setManualFinancials((prev) => ({
                 ...prev,
                 perusmaksuYhteensa: Number(event.target.value || 0),
-              }))
-            }
+              }));
+            }}
           />
         </label>,
       );
@@ -254,12 +258,13 @@ export function renderOverviewStep2InlineFieldEditor({
             min={0}
             step="0.01"
             value={manualFinancials.aineetJaPalvelut}
-            onChange={(event) =>
+            onChange={(event) => {
+              markManualFieldTouched('aineetJaPalvelut');
               setManualFinancials((prev) => ({
                 ...prev,
                 aineetJaPalvelut: Number(event.target.value || 0),
-              }))
-            }
+              }));
+            }}
           />
         </label>,
       );
@@ -277,12 +282,13 @@ export function renderOverviewStep2InlineFieldEditor({
             min={0}
             step="0.01"
             value={manualFinancials.henkilostokulut}
-            onChange={(event) =>
+            onChange={(event) => {
+              markManualFieldTouched('henkilostokulut');
               setManualFinancials((prev) => ({
                 ...prev,
                 henkilostokulut: Number(event.target.value || 0),
-              }))
-            }
+              }));
+            }}
           />
         </label>,
       );
@@ -300,12 +306,13 @@ export function renderOverviewStep2InlineFieldEditor({
             min={0}
             step="0.01"
             value={manualFinancials.poistot}
-            onChange={(event) =>
+            onChange={(event) => {
+              markManualFieldTouched('poistot');
               setManualFinancials((prev) => ({
                 ...prev,
                 poistot: Number(event.target.value || 0),
-              }))
-            }
+              }));
+            }}
           />
         </label>,
       );
@@ -323,12 +330,13 @@ export function renderOverviewStep2InlineFieldEditor({
             min={0}
             step="0.01"
             value={manualFinancials.liiketoiminnanMuutKulut}
-            onChange={(event) =>
+            onChange={(event) => {
+              markManualFieldTouched('liiketoiminnanMuutKulut');
               setManualFinancials((prev) => ({
                 ...prev,
                 liiketoiminnanMuutKulut: Number(event.target.value || 0),
-              }))
-            }
+              }));
+            }}
           />
         </label>,
       );
@@ -348,12 +356,13 @@ export function renderOverviewStep2InlineFieldEditor({
             type="number"
             step="0.01"
             value={manualFinancials.tilikaudenYliJaama}
-            onChange={(event) =>
+            onChange={(event) => {
+              markManualFieldTouched('tilikaudenYliJaama');
               setManualFinancials((prev) => ({
                 ...prev,
                 tilikaudenYliJaama: Number(event.target.value || 0),
-              }))
-            }
+              }));
+            }}
           />
         </label>,
       );
@@ -371,12 +380,13 @@ export function renderOverviewStep2InlineFieldEditor({
             min={0}
             step="0.001"
             value={manualPrices.waterUnitPrice}
-            onChange={(event) =>
+            onChange={(event) => {
+              markManualFieldTouched('waterUnitPrice');
               setManualPrices((prev) => ({
                 ...prev,
                 waterUnitPrice: Number(event.target.value || 0),
-              }))
-            }
+              }));
+            }}
           />
         </label>,
       );
@@ -394,12 +404,13 @@ export function renderOverviewStep2InlineFieldEditor({
             min={0}
             step="0.001"
             value={manualPrices.wastewaterUnitPrice}
-            onChange={(event) =>
+            onChange={(event) => {
+              markManualFieldTouched('wastewaterUnitPrice');
               setManualPrices((prev) => ({
                 ...prev,
                 wastewaterUnitPrice: Number(event.target.value || 0),
-              }))
-            }
+              }));
+            }}
           />
         </label>,
       );
@@ -417,12 +428,13 @@ export function renderOverviewStep2InlineFieldEditor({
             min={0}
             step="1"
             value={manualVolumes.soldWaterVolume}
-            onChange={(event) =>
+            onChange={(event) => {
+              markManualFieldTouched('soldWaterVolume');
               setManualVolumes((prev) => ({
                 ...prev,
                 soldWaterVolume: Number(event.target.value || 0),
-              }))
-            }
+              }));
+            }}
           />
         </label>,
       );
@@ -440,12 +452,13 @@ export function renderOverviewStep2InlineFieldEditor({
             min={0}
             step="1"
             value={manualVolumes.soldWastewaterVolume}
-            onChange={(event) =>
+            onChange={(event) => {
+              markManualFieldTouched('soldWastewaterVolume');
               setManualVolumes((prev) => ({
                 ...prev,
                 soldWastewaterVolume: Number(event.target.value || 0),
-              }))
-            }
+              }));
+            }}
           />
         </label>,
       );

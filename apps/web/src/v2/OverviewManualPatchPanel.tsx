@@ -86,6 +86,7 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
     setManualNetwork,
     manualReason,
     setManualReason,
+    markManualFieldTouched,
     handleModalApplyVeetiFinancials,
     handleModalApplyVeetiPrices,
     handleModalApplyVeetiVolumes,
@@ -124,7 +125,7 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
   } = manualPatchViewModel;
 
   if (
-    wizardDisplayStep !== 4 ||
+    (wizardDisplayStep !== 4 && wizardDisplayStep !== 6) ||
     manualPatchYear == null ||
     cardEditContext === 'step3'
   ) {
@@ -487,15 +488,16 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   className="v2-input"
                   type="number"
                   min={0}
-                  step="0.01"
-                  value={manualFinancials.liikevaihto}
-                  onChange={(event) =>
-                    setManualFinancials((prev) => ({
-                      ...prev,
-                      liikevaihto: Number(event.target.value || 0),
-                    }))
-                  }
-                />
+                    step="0.01"
+                    value={manualFinancials.liikevaihto}
+                    onChange={(event) => {
+                      markManualFieldTouched('liikevaihto');
+                      setManualFinancials((prev) => ({
+                        ...prev,
+                        liikevaihto: Number(event.target.value || 0),
+                      }));
+                    }}
+                  />
               </label>
               <label>
                 {t(
@@ -507,15 +509,16 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   className="v2-input"
                   type="number"
                   min={0}
-                  step="0.01"
-                  value={manualFinancials.perusmaksuYhteensa}
-                  onChange={(event) =>
-                    setManualFinancials((prev) => ({
-                      ...prev,
-                      perusmaksuYhteensa: Number(event.target.value || 0),
-                    }))
-                  }
-                />
+                    step="0.01"
+                    value={manualFinancials.perusmaksuYhteensa}
+                    onChange={(event) => {
+                      markManualFieldTouched('perusmaksuYhteensa');
+                      setManualFinancials((prev) => ({
+                        ...prev,
+                        perusmaksuYhteensa: Number(event.target.value || 0),
+                      }));
+                    }}
+                  />
               </label>
               <label>
                 {t(
@@ -527,15 +530,16 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   className="v2-input"
                   type="number"
                   min={0}
-                  step="0.01"
-                  value={manualFinancials.aineetJaPalvelut}
-                  onChange={(event) =>
-                    setManualFinancials((prev) => ({
-                      ...prev,
-                      aineetJaPalvelut: Number(event.target.value || 0),
-                    }))
-                  }
-                />
+                    step="0.01"
+                    value={manualFinancials.aineetJaPalvelut}
+                    onChange={(event) => {
+                      markManualFieldTouched('aineetJaPalvelut');
+                      setManualFinancials((prev) => ({
+                        ...prev,
+                        aineetJaPalvelut: Number(event.target.value || 0),
+                      }));
+                    }}
+                  />
               </label>
               <label>
                 {t('v2Overview.manualFinancialPersonnel', 'Personnel costs')}
@@ -544,15 +548,16 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   className="v2-input"
                   type="number"
                   min={0}
-                  step="0.01"
-                  value={manualFinancials.henkilostokulut}
-                  onChange={(event) =>
-                    setManualFinancials((prev) => ({
-                      ...prev,
-                      henkilostokulut: Number(event.target.value || 0),
-                    }))
-                  }
-                />
+                    step="0.01"
+                    value={manualFinancials.henkilostokulut}
+                    onChange={(event) => {
+                      markManualFieldTouched('henkilostokulut');
+                      setManualFinancials((prev) => ({
+                        ...prev,
+                        henkilostokulut: Number(event.target.value || 0),
+                      }));
+                    }}
+                  />
               </label>
               <label>
                 {t(
@@ -564,15 +569,16 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   className="v2-input"
                   type="number"
                   min={0}
-                  step="0.01"
-                  value={manualFinancials.liiketoiminnanMuutKulut}
-                  onChange={(event) =>
-                    setManualFinancials((prev) => ({
-                      ...prev,
-                      liiketoiminnanMuutKulut: Number(event.target.value || 0),
-                    }))
-                  }
-                />
+                    step="0.01"
+                    value={manualFinancials.liiketoiminnanMuutKulut}
+                    onChange={(event) => {
+                      markManualFieldTouched('liiketoiminnanMuutKulut');
+                      setManualFinancials((prev) => ({
+                        ...prev,
+                        liiketoiminnanMuutKulut: Number(event.target.value || 0),
+                      }));
+                    }}
+                  />
               </label>
               <label>
                 {t('v2Overview.manualFinancialDepreciation', 'Depreciation')}
@@ -581,15 +587,16 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   className="v2-input"
                   type="number"
                   min={0}
-                  step="0.01"
-                  value={manualFinancials.poistot}
-                  onChange={(event) =>
-                    setManualFinancials((prev) => ({
-                      ...prev,
-                      poistot: Number(event.target.value || 0),
-                    }))
-                  }
-                />
+                    step="0.01"
+                    value={manualFinancials.poistot}
+                    onChange={(event) => {
+                      markManualFieldTouched('poistot');
+                      setManualFinancials((prev) => ({
+                        ...prev,
+                        poistot: Number(event.target.value || 0),
+                      }));
+                    }}
+                  />
               </label>
               <label>
                 {t(
@@ -600,15 +607,16 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   ref={setInlineCardFieldRef('tilikaudenYliJaama')}
                   className="v2-input"
                   type="number"
-                  step="0.01"
-                  value={manualFinancials.tilikaudenYliJaama}
-                  onChange={(event) =>
-                    setManualFinancials((prev) => ({
-                      ...prev,
-                      tilikaudenYliJaama: Number(event.target.value || 0),
-                    }))
-                  }
-                />
+                    step="0.01"
+                    value={manualFinancials.tilikaudenYliJaama}
+                    onChange={(event) => {
+                      markManualFieldTouched('tilikaudenYliJaama');
+                      setManualFinancials((prev) => ({
+                        ...prev,
+                        tilikaudenYliJaama: Number(event.target.value || 0),
+                      }));
+                    }}
+                  />
               </label>
             </div>
           </section>
@@ -627,15 +635,16 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   className="v2-input"
                   type="number"
                   min={0}
-                  step="0.001"
-                  value={manualPrices.waterUnitPrice}
-                  onChange={(event) =>
-                    setManualPrices((prev) => ({
-                      ...prev,
-                      waterUnitPrice: Number(event.target.value || 0),
-                    }))
-                  }
-                />
+                    step="0.001"
+                    value={manualPrices.waterUnitPrice}
+                    onChange={(event) => {
+                      markManualFieldTouched('waterUnitPrice');
+                      setManualPrices((prev) => ({
+                        ...prev,
+                        waterUnitPrice: Number(event.target.value || 0),
+                      }));
+                    }}
+                  />
               </label>
               <label>
                 {t(
@@ -647,15 +656,16 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   className="v2-input"
                   type="number"
                   min={0}
-                  step="0.001"
-                  value={manualPrices.wastewaterUnitPrice}
-                  onChange={(event) =>
-                    setManualPrices((prev) => ({
-                      ...prev,
-                      wastewaterUnitPrice: Number(event.target.value || 0),
-                    }))
-                  }
-                />
+                    step="0.001"
+                    value={manualPrices.wastewaterUnitPrice}
+                    onChange={(event) => {
+                      markManualFieldTouched('wastewaterUnitPrice');
+                      setManualPrices((prev) => ({
+                        ...prev,
+                        wastewaterUnitPrice: Number(event.target.value || 0),
+                      }));
+                    }}
+                  />
               </label>
             </div>
           </section>
@@ -674,15 +684,16 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   className="v2-input"
                   type="number"
                   min={0}
-                  step="1"
-                  value={manualVolumes.soldWaterVolume}
-                  onChange={(event) =>
-                    setManualVolumes((prev) => ({
-                      ...prev,
-                      soldWaterVolume: Number(event.target.value || 0),
-                    }))
-                  }
-                />
+                    step="1"
+                    value={manualVolumes.soldWaterVolume}
+                    onChange={(event) => {
+                      markManualFieldTouched('soldWaterVolume');
+                      setManualVolumes((prev) => ({
+                        ...prev,
+                        soldWaterVolume: Number(event.target.value || 0),
+                      }));
+                    }}
+                  />
               </label>
               <label>
                 {t(
@@ -694,15 +705,16 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   className="v2-input"
                   type="number"
                   min={0}
-                  step="1"
-                  value={manualVolumes.soldWastewaterVolume}
-                  onChange={(event) =>
-                    setManualVolumes((prev) => ({
-                      ...prev,
-                      soldWastewaterVolume: Number(event.target.value || 0),
-                    }))
-                  }
-                />
+                    step="1"
+                    value={manualVolumes.soldWastewaterVolume}
+                    onChange={(event) => {
+                      markManualFieldTouched('soldWastewaterVolume');
+                      setManualVolumes((prev) => ({
+                        ...prev,
+                        soldWastewaterVolume: Number(event.target.value || 0),
+                      }));
+                    }}
+                  />
               </label>
             </div>
           </section>
@@ -723,15 +735,16 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   className="v2-input"
                   type="number"
                   min={0}
-                  step="0.01"
-                  value={manualInvestments.investoinninMaara}
-                  onChange={(event) =>
-                    setManualInvestments((prev) => ({
-                      ...prev,
-                      investoinninMaara: Number(event.target.value || 0),
-                    }))
-                  }
-                />
+                    step="0.01"
+                    value={manualInvestments.investoinninMaara}
+                    onChange={(event) => {
+                      markManualFieldTouched('investoinninMaara');
+                      setManualInvestments((prev) => ({
+                        ...prev,
+                        investoinninMaara: Number(event.target.value || 0),
+                      }));
+                    }}
+                  />
               </label>
               <label>
                 {t(
@@ -742,15 +755,16 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   className="v2-input"
                   type="number"
                   min={0}
-                  step="0.01"
-                  value={manualInvestments.korvausInvestoinninMaara}
-                  onChange={(event) =>
-                    setManualInvestments((prev) => ({
-                      ...prev,
-                      korvausInvestoinninMaara: Number(event.target.value || 0),
-                    }))
-                  }
-                />
+                    step="0.01"
+                    value={manualInvestments.korvausInvestoinninMaara}
+                    onChange={(event) => {
+                      markManualFieldTouched('korvausInvestoinninMaara');
+                      setManualInvestments((prev) => ({
+                        ...prev,
+                        korvausInvestoinninMaara: Number(event.target.value || 0),
+                      }));
+                    }}
+                  />
               </label>
               <label>
                 {t(
@@ -761,14 +775,15 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   className="v2-input"
                   type="number"
                   min={0}
-                  step="0.01"
-                  value={manualEnergy.prosessinKayttamaSahko}
-                  onChange={(event) =>
-                    setManualEnergy({
-                      prosessinKayttamaSahko: Number(event.target.value || 0),
-                    })
-                  }
-                />
+                    step="0.01"
+                    value={manualEnergy.prosessinKayttamaSahko}
+                    onChange={(event) => {
+                      markManualFieldTouched('prosessinKayttamaSahko');
+                      setManualEnergy({
+                        prosessinKayttamaSahko: Number(event.target.value || 0),
+                      });
+                    }}
+                  />
               </label>
               <label>
                 {t('v2Overview.manualNetworkLength', 'Network length')}
@@ -776,14 +791,15 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   className="v2-input"
                   type="number"
                   min={0}
-                  step="0.01"
-                  value={manualNetwork.verkostonPituus}
-                  onChange={(event) =>
-                    setManualNetwork({
-                      verkostonPituus: Number(event.target.value || 0),
-                    })
-                  }
-                />
+                    step="0.01"
+                    value={manualNetwork.verkostonPituus}
+                    onChange={(event) => {
+                      markManualFieldTouched('verkostonPituus');
+                      setManualNetwork({
+                        verkostonPituus: Number(event.target.value || 0),
+                      });
+                    }}
+                  />
               </label>
             </div>
             <label>

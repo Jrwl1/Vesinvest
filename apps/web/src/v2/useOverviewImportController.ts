@@ -36,6 +36,7 @@ const AUTO_SEARCH_MIN_QUERY_LENGTH = 3;
 const AUTO_SEARCH_BUSINESS_ID_MIN_LENGTH = 4;
 const AUTO_SEARCH_DELAY_MS = 320;
 const AUTO_SEARCH_BUSINESS_ID_DELAY_MS = 120;
+const OVERVIEW_RUNTIME_STORAGE_KEY = 'v2_overview_runtime_state';
 
 const normalizeOrganizationSearchQuery = (value: string): string =>
   value.trim().replace(/\s+/g, ' ');
@@ -56,6 +57,51 @@ const getAutoSearchDelayMs = (value: string): number =>
   isBusinessIdLikeQuery(value)
     ? AUTO_SEARCH_BUSINESS_ID_DELAY_MS
     : AUTO_SEARCH_DELAY_MS;
+
+function readOverviewRuntimeState(workspaceKey: string | null): {
+  selectedYears: number[];
+} {
+  if (typeof window === 'undefined') {
+    return {
+      selectedYears: [],
+    };
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(OVERVIEW_RUNTIME_STORAGE_KEY);
+    if (!raw) {
+      return {
+        selectedYears: [],
+      };
+    }
+    const parsed = JSON.parse(raw) as {
+      workspaceKey?: unknown;
+      selectedYears?: unknown;
+    };
+    const storedWorkspaceKey =
+      typeof parsed.workspaceKey === 'string' && parsed.workspaceKey.trim().length > 0
+        ? parsed.workspaceKey.trim()
+        : null;
+    if (storedWorkspaceKey == null || storedWorkspaceKey !== workspaceKey) {
+      return {
+        selectedYears: [],
+      };
+    }
+    const parseYears = (value: unknown): number[] =>
+      Array.isArray(value)
+        ? value
+            .map((item) => Number(item))
+            .filter((item) => Number.isFinite(item))
+        : [];
+    return {
+      selectedYears: parseYears(parsed.selectedYears),
+    };
+  } catch {
+    return {
+      selectedYears: [],
+    };
+  }
+}
 
 export type UseOverviewImportControllerParams = {
   t: TFunction;
@@ -144,6 +190,31 @@ export function useOverviewImportController({
   const searchRequestSeq = React.useRef(0);
   const previewFetchYearsRef = React.useRef<Set<number>>(new Set());
   const handledSetupBackSignalRef = React.useRef(0);
+  const hydratedRuntimeWorkspaceKeyRef = React.useRef<string | null>(null);
+
+  const runtimeWorkspaceKey = React.useMemo(() => {
+    const linkedBusinessId =
+      typeof overview?.importStatus.link?.ytunnus === 'string' &&
+      overview.importStatus.link.ytunnus.trim().length > 0
+        ? overview.importStatus.link.ytunnus.trim()
+        : null;
+    if (linkedBusinessId) {
+      return `org:${linkedBusinessId}`;
+    }
+    const linkedVeetiId = Number(overview?.importStatus.link?.veetiId);
+    if (Number.isFinite(linkedVeetiId)) {
+      return `veeti:${linkedVeetiId}`;
+    }
+    const selectedBusinessId =
+      typeof selectedOrg?.YTunnus === 'string' && selectedOrg.YTunnus.trim().length > 0
+        ? selectedOrg.YTunnus.trim()
+        : null;
+    if (selectedBusinessId) {
+      return `org:${selectedBusinessId}`;
+    }
+    const selectedVeetiId = Number((selectedOrg as { Id?: unknown } | null)?.Id);
+    return Number.isFinite(selectedVeetiId) ? `veeti:${selectedVeetiId}` : null;
+  }, [overview?.importStatus.link?.veetiId, overview?.importStatus.link?.ytunnus, selectedOrg]);
 
   const baselineReady = React.useMemo(
     () =>
@@ -170,6 +241,19 @@ export function useOverviewImportController({
     [overview?.importStatus.planningBaselineYears, planningContext?.baselineYears],
   );
 
+  const pruneYearFromSelections = React.useCallback((year: number) => {
+    setSelectedYears((prev) => prev.filter((item) => item !== year));
+    setSelectedYearsForDelete((prev) => prev.filter((item) => item !== year));
+    setSelectedYearsForRestore((prev) => prev.filter((item) => item !== year));
+    selectedYearsRef.current = selectedYearsRef.current.filter((item) => item !== year);
+    selectedYearsForDeleteRef.current = selectedYearsForDeleteRef.current.filter(
+      (item) => item !== year,
+    );
+    selectedYearsForRestoreRef.current = selectedYearsForRestoreRef.current.filter(
+      (item) => item !== year,
+    );
+  }, []);
+
   React.useEffect(() => {
     selectedYearsRef.current = selectedYears;
   }, [selectedYears]);
@@ -182,6 +266,53 @@ export function useOverviewImportController({
   React.useEffect(() => {
     selectedOrgRef.current = selectedOrg;
   }, [selectedOrg]);
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!runtimeWorkspaceKey) return;
+    if (hydratedRuntimeWorkspaceKeyRef.current !== runtimeWorkspaceKey) return;
+    window.sessionStorage.setItem(
+      OVERVIEW_RUNTIME_STORAGE_KEY,
+      JSON.stringify({
+        workspaceKey: runtimeWorkspaceKey,
+        selectedYears,
+      }),
+    );
+  }, [runtimeWorkspaceKey, selectedYears]);
+
+  React.useEffect(() => {
+    if (!overview || !runtimeWorkspaceKey) {
+      return;
+    }
+    if (hydratedRuntimeWorkspaceKeyRef.current === runtimeWorkspaceKey) {
+      return;
+    }
+    hydratedRuntimeWorkspaceKeyRef.current = runtimeWorkspaceKey;
+
+    const availableYears = new Set(
+      (overview.importStatus.years ?? [])
+        .map((row) => Number(row.vuosi))
+        .filter((year) => Number.isFinite(year)),
+    );
+    const restoredYears = readOverviewRuntimeState(
+      runtimeWorkspaceKey,
+    ).selectedYears.filter((year) => availableYears.has(year));
+    const persistedYears =
+      restoredYears.length > 0 ? restoredYears : selectedYearsRef.current;
+    if (restoredYears.length > 0) {
+      syncYearSelectionTouchedRef.current = true;
+      selectedYearsRef.current = restoredYears;
+      setSelectedYears(restoredYears);
+    }
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(
+        OVERVIEW_RUNTIME_STORAGE_KEY,
+        JSON.stringify({
+          workspaceKey: runtimeWorkspaceKey,
+          selectedYears: persistedYears,
+        }),
+      );
+    }
+  }, [overview, runtimeWorkspaceKey]);
 
   const loadOverviewInternal = React.useCallback(
     async (options?: {
@@ -220,11 +351,16 @@ export function useOverviewImportController({
           });
         }
         if (result.selectionState) {
+          setImportedWorkspaceYears(result.selectionState.importedWorkspaceYears);
           if (!options?.preserveSelectionState) {
+            selectedYearsRef.current = result.selectionState.selectedYears;
+            selectedYearsForDeleteRef.current =
+              result.selectionState.selectedYearsForDelete;
+            selectedYearsForRestoreRef.current =
+              result.selectionState.selectedYearsForRestore;
             setSelectedYears(result.selectionState.selectedYears);
             setSelectedYearsForDelete(result.selectionState.selectedYearsForDelete);
             setSelectedYearsForRestore(result.selectionState.selectedYearsForRestore);
-            setImportedWorkspaceYears(result.selectionState.importedWorkspaceYears);
           }
           if (!options?.preserveReviewContinueStep) {
             setReviewContinueStep(null);
@@ -376,6 +512,9 @@ export function useOverviewImportController({
           onOrgLanguageNoticeChange?.(null);
         }
         syncYearSelectionTouchedRef.current = false;
+        selectedYearsRef.current = result.defaultSelectedYears;
+        selectedYearsForDeleteRef.current = [];
+        selectedYearsForRestoreRef.current = [];
         setSelectedYears(result.defaultSelectedYears);
         setSelectedYearsForDelete([]);
         setSelectedYearsForRestore([]);
@@ -401,8 +540,11 @@ export function useOverviewImportController({
           setReviewContinueStep(preservePlanSetupStep ? 3 : null);
           setInfo(
             ensuredPlan.createdPlan
-              ? t('v2Vesinvest.infoCreated', 'Vesinvest plan created.')
-              : result.info,
+              ? i18n.t('v2Vesinvest.infoCreated', 'Vesinvest plan created.')
+              : i18n.t(
+                  'v2Overview.infoConnected',
+                  'Organization connected. Select years and continue setup.',
+                ),
           );
           void loadOverview({
             preserveVisibleState: true,
@@ -720,8 +862,15 @@ export function useOverviewImportController({
 
       syncYearSelectionTouchedRef.current = true;
       setSelectedYears(nextSelectedYears);
+      selectedYearsRef.current = nextSelectedYears;
       setSelectedYearsForDelete((prev) => prev.filter((item) => item !== year));
       setSelectedYearsForRestore((prev) => prev.filter((item) => item !== year));
+      selectedYearsForDeleteRef.current = selectedYearsForDeleteRef.current.filter(
+        (item) => item !== year,
+      );
+      selectedYearsForRestoreRef.current = selectedYearsForRestoreRef.current.filter(
+        (item) => item !== year,
+      );
       setExcludedYearOverrides((prev) => ({ ...prev, [year]: true }));
       setRemovingYear(year);
       setError(null);
@@ -767,6 +916,7 @@ export function useOverviewImportController({
         }
       } catch (err) {
         setSelectedYears(previousSelectedYears);
+        selectedYearsRef.current = previousSelectedYears;
         setExcludedYearOverrides((prev) => {
           const next = { ...prev };
           delete next[year];
@@ -791,6 +941,12 @@ export function useOverviewImportController({
     async (year: number) => {
       setSelectedYearsForDelete((prev) => prev.filter((item) => item !== year));
       setSelectedYearsForRestore((prev) => prev.filter((item) => item !== year));
+      selectedYearsForDeleteRef.current = selectedYearsForDeleteRef.current.filter(
+        (item) => item !== year,
+      );
+      selectedYearsForRestoreRef.current = selectedYearsForRestoreRef.current.filter(
+        (item) => item !== year,
+      );
       setExcludedYearOverrides((prev) => ({ ...prev, [year]: false }));
       setRemovingYear(year);
       setError(null);
@@ -924,6 +1080,7 @@ export function useOverviewImportController({
     searchRequestSeq,
     previewFetchYearsRef,
     handledSetupBackSignalRef,
+    pruneYearFromSelections,
     baselineReady,
     backendAcceptedPlanningYears,
     loadOverview,

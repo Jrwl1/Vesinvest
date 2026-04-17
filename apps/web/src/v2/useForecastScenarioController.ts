@@ -97,6 +97,7 @@ export function useForecastScenarioController({
     React.useState<'cashflow' | 'price'>('price');
   const [denseAnalystMode, setDenseAnalystMode] = React.useState(false);
   const scenarioLoadSeqRef = React.useRef(0);
+  const initialScenarioRefreshAttemptRef = React.useRef<string | null>(null);
 
   const mapKnownForecastError = React.useCallback(
     (err: unknown, fallbackKey: string, fallbackText: string) => {
@@ -142,6 +143,9 @@ export function useForecastScenarioController({
         setSelectedScenarioId((current) => {
           if (preferredId && rows.some((row) => row.id === preferredId)) {
             return preferredId;
+          }
+          if (preferredId && current === preferredId) {
+            return current;
           }
           if (current && rows.some((row) => row.id === current)) {
             return current;
@@ -246,8 +250,55 @@ export function useForecastScenarioController({
   );
 
   React.useEffect(() => {
-    void loadScenarioList();
-  }, [loadScenarioList]);
+    void loadScenarioList(initialScenarioId ?? undefined);
+  }, [initialScenarioId, loadScenarioList]);
+
+  React.useEffect(() => {
+    if (
+      typeof initialScenarioId === 'string' &&
+      initialScenarioId.length > 0
+    ) {
+      const exhaustedInitialScenarioId = `exhausted:${initialScenarioId}`;
+      if (loadingList) {
+        return;
+      }
+      if (!scenarios.some((item) => item.id === initialScenarioId)) {
+        if (initialScenarioRefreshAttemptRef.current === exhaustedInitialScenarioId) {
+          return;
+        }
+        if (initialScenarioRefreshAttemptRef.current !== initialScenarioId) {
+          if (selectedScenarioId !== initialScenarioId) {
+            setSelectedScenarioId(initialScenarioId);
+          }
+          initialScenarioRefreshAttemptRef.current = initialScenarioId;
+          void loadScenarioList(initialScenarioId, true);
+          return;
+        }
+        if (selectedScenarioId === initialScenarioId) {
+          const fallbackScenarioId = scenarios[0]?.id ?? null;
+          setSelectedScenarioId(fallbackScenarioId);
+          if (fallbackScenarioId) {
+            void loadScenario(fallbackScenarioId);
+          }
+        }
+        initialScenarioRefreshAttemptRef.current = exhaustedInitialScenarioId;
+        return;
+      }
+      if (selectedScenarioId !== initialScenarioId) {
+        setSelectedScenarioId(initialScenarioId);
+      }
+      initialScenarioRefreshAttemptRef.current = null;
+      return;
+    }
+    initialScenarioRefreshAttemptRef.current = null;
+  }, [
+    initialScenarioId,
+    loadScenario,
+    loadScenarioList,
+    loadingList,
+    scenarios,
+    selectedScenarioId,
+  ]);
 
   React.useEffect(() => {
     let active = true;
@@ -282,7 +333,7 @@ export function useForecastScenarioController({
   }, []);
 
   const hasBaselineBudget =
-    planningContext?.canCreateScenario ??
+    planningContext?.canCreateScenario === true ||
     (planningContext?.baselineYears?.length ?? 0) > 0;
   const hasBaseScenario = React.useMemo(
     () => scenarios.some((item) => item.onOletus),
@@ -323,6 +374,15 @@ export function useForecastScenarioController({
       setDenseAnalystMode(false);
       return;
     }
+    const preservingPreferredSelection =
+      typeof initialScenarioId === 'string' &&
+      initialScenarioId.length > 0 &&
+      selectedScenarioId === initialScenarioId &&
+      initialScenarioRefreshAttemptRef.current === initialScenarioId &&
+      !scenarios.some((item) => item.id === selectedScenarioId);
+    if (preservingPreferredSelection) {
+      return;
+    }
     if (!scenarios.some((item) => item.id === selectedScenarioId)) {
       setSelectedScenarioId(scenarios[0]?.id ?? null);
       return;
@@ -334,7 +394,7 @@ export function useForecastScenarioController({
       return;
     }
     void loadScenario(selectedScenarioId);
-  }, [loadingList, loadScenario, scenario?.id, scenarios, selectedScenarioId]);
+  }, [initialScenarioId, loadingList, loadScenario, scenario?.id, scenarios, selectedScenarioId]);
 
   React.useEffect(() => {
     if (!hasBaseScenario) {

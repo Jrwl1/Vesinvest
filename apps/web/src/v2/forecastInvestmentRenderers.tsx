@@ -138,25 +138,39 @@ export function renderForecastInvestmentProgramRows({
     const rowKey = row.rowId ?? String(row.year);
     const isVesinvestLinked = isVesinvestLinkedForecastRow(row);
     const classLabel = resolveVesinvestGroupLabel(t, row.groupKey, row.category ?? null);
+    const rowHasPlannedInvestment =
+      resolveInvestmentProgramTotal(row) > 0;
     const snapshotDepreciationSummary = formatDepreciationSnapshotSummary(
       t,
       row.depreciationRuleSnapshot,
     );
-    const depreciationSummary = depreciationRulesUnavailable
-      ? t(
-          'v2Forecast.depreciationRulesUnavailableShort',
-          'Depreciation rules unavailable',
-        )
-      : snapshotDepreciationSummary ??
-        formatDepreciationRuleSummary(effectiveInvestmentDepreciationClassByYear[row.year]) ??
-        t('v2Vesinvest.none', 'None');
-    const linkedDepreciationSummary = snapshotDepreciationSummary
-      ?? (depreciationRulesUnavailable
-        ? t(
-            'v2Forecast.depreciationRulesUnavailableShort',
-            'Depreciation rules unavailable',
+    const editableDepreciationSummary =
+      effectiveInvestmentDepreciationClassByYear[row.year] != null
+        ? formatDepreciationRuleSummary(
+            effectiveInvestmentDepreciationClassByYear[row.year],
           )
-        : t('v2Forecast.unmapped', 'Unmapped'));
+        : rowHasPlannedInvestment
+        ? formatDepreciationRuleSummary(null)
+        : t('v2Vesinvest.none', 'None');
+    const depreciationSummary = snapshotDepreciationSummary ??
+      (rowHasPlannedInvestment
+        ? depreciationRulesUnavailable
+          ? t(
+              'v2Forecast.depreciationRulesUnavailableShort',
+              'Depreciation rules unavailable',
+            )
+          : editableDepreciationSummary
+        : t('v2Vesinvest.none', 'None')) ??
+      t('v2Vesinvest.none', 'None');
+    const linkedDepreciationSummary = snapshotDepreciationSummary ??
+      (rowHasPlannedInvestment
+        ? depreciationRulesUnavailable
+          ? t(
+              'v2Forecast.depreciationRulesUnavailableShort',
+              'Depreciation rules unavailable',
+            )
+          : t('v2Forecast.unmapped', 'Unmapped')
+        : t('v2Vesinvest.none', 'None'));
 
     return (
       <div key={`program-${rowKey}`} className="v2-investment-program-row">

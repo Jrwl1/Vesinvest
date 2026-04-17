@@ -374,6 +374,22 @@ describe('ReportsPageV2', () => {
   });
 
   it('keeps the left rail as a lightweight report chooser', async () => {
+    listReportsV2.mockResolvedValueOnce([
+      {
+        id: 'report-1',
+        title: 'Forecast report Board review 2026-04-09',
+        createdAt: '2026-04-09T08:00:00.000Z',
+        ennuste: { id: 'scenario-1', nimi: 'Water Utility Vesinvest v2' },
+        baselineYear: 2024,
+        requiredPriceToday: 3.2,
+        requiredAnnualIncreasePct: 4.1,
+        totalInvestments: 100000,
+        baselineSourceSummary: null,
+        variant: 'confidential_appendix',
+        pdfUrl: '/v2/reports/report-1/pdf',
+      },
+    ]);
+
     render(
       <ReportsPageV2
         refreshToken={0}
@@ -383,17 +399,44 @@ describe('ReportsPageV2', () => {
       />,
     );
 
-    const reportRow = (await screen.findByRole('button', {
-      name: /Water Utility Vesinvest v2/i,
-    })).closest('.v2-report-row') as HTMLElement;
+    const reportRow = (await screen.findByText(
+      /Forecast report Board review 2026-04-09/i,
+    )).closest('.v2-report-row') as HTMLElement;
     const railSummary = document.querySelector('.v2-reports-list-summary') as HTMLElement;
+    const rowMeta = reportRow.querySelector('.v2-report-row-meta') as HTMLElement;
 
+    expect(within(reportRow).getByText('Forecast report Board review 2026-04-09')).toBeTruthy();
+    expect(rowMeta.textContent).toContain('Water Utility Vesinvest v2');
     expect(within(reportRow).getByText(/2024/)).toBeTruthy();
     expect(
       within(reportRow).queryByText('Required price today (annual result = 0)'),
     ).toBeNull();
     expect(within(reportRow).queryByText('Investments')).toBeNull();
     expect(within(railSummary).queryByText('Selected report')).toBeNull();
+  });
+
+  it('keeps the reports list hint anchored to saved reports when reports already exist', async () => {
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={() => undefined}
+        onFocusedReportChange={() => undefined}
+        savedFeePathReportConflictActive={true}
+        savedFeePathPlanId="plan-1"
+      />,
+    );
+
+    expect(
+      await screen.findByText(
+        'Tarkista tallennetut raportit, variantit ja PDF-viennin tila.',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(
+        'Avaa Ennuste, laske skenaario ja luo ensimmäinen raportti.',
+      ),
+    ).toBeNull();
   });
 
   it('keeps detailed assumption and investment rows out of the public summary preview', async () => {
@@ -1181,5 +1224,180 @@ describe('ReportsPageV2', () => {
     expect(
       screen.getByRole('button', { name: 'Avaa Ennuste luodaksesi raportin' }),
     ).toBeTruthy();
+  });
+
+  it('prefers the saved fee-path scenario over stale runtime session state in the empty-state CTA', async () => {
+    window.sessionStorage.setItem(
+      'v2_forecast_runtime_state',
+      JSON.stringify({ selectedScenarioId: 'stress-1' }),
+    );
+    listReportsV2.mockResolvedValueOnce([]);
+    listForecastScenariosV2.mockResolvedValueOnce([
+      { id: 'base-1', name: 'Saved fee path scenario' },
+      { id: 'stress-1', name: 'Runtime hypothesis' },
+    ]);
+    getForecastScenarioV2.mockResolvedValueOnce({
+      id: 'base-1',
+      name: 'Saved fee path scenario',
+      baselineYear: 2024,
+      updatedAt: '2026-04-09T08:00:00.000Z',
+      computedAt: '2026-04-09T08:00:00.000Z',
+      computedFromUpdatedAt: '2026-04-09T08:00:00.000Z',
+      years: [{ year: 2026 }],
+      yearlyInvestments: [],
+    });
+    const onGoToForecast = vi.fn();
+
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={onGoToForecast}
+        savedFeePathPlanId="plan-1"
+        savedFeePathScenarioId="base-1"
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    expect((await screen.findAllByText('Saved fee path scenario')).length).toBeGreaterThan(0);
+    expect(getForecastScenarioV2).toHaveBeenCalledWith('base-1');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Avaa Ennuste luodaksesi raportin' }),
+    );
+
+    expect(onGoToForecast).toHaveBeenCalledWith('base-1');
+  });
+
+  it('returns stale saved fee-path report flows back to Overview instead of opening Forecast', async () => {
+    window.sessionStorage.setItem(
+      'v2_forecast_runtime_state',
+      JSON.stringify({ selectedScenarioId: 'stress-1' }),
+    );
+    listReportsV2.mockResolvedValueOnce([]);
+    listForecastScenariosV2.mockResolvedValueOnce([
+      { id: 'base-1', name: 'Saved fee path scenario' },
+      { id: 'stress-1', name: 'Runtime hypothesis' },
+    ]);
+    getForecastScenarioV2.mockResolvedValueOnce({
+      id: 'base-1',
+      name: 'Saved fee path scenario',
+      baselineYear: 2024,
+      updatedAt: '2026-04-09T08:00:00.000Z',
+      computedAt: '2026-04-09T08:00:00.000Z',
+      computedFromUpdatedAt: '2026-04-09T08:00:00.000Z',
+      years: [{ year: 2026 }],
+      yearlyInvestments: [],
+    });
+    const onGoToForecast = vi.fn();
+    const onGoToOverviewFeePath = vi.fn();
+
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={onGoToForecast}
+        onGoToOverviewFeePath={onGoToOverviewFeePath}
+        savedFeePathPlanId="plan-1"
+        savedFeePathScenarioId="base-1"
+        savedFeePathPricingStatus="verified"
+        savedFeePathReportConflictActive
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    expect((await screen.findAllByText('Saved fee path scenario')).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Avaa maksupolku' })[0]!);
+
+    expect(onGoToOverviewFeePath).toHaveBeenCalledWith('plan-1');
+    expect(onGoToForecast).not.toHaveBeenCalled();
+  });
+
+  it('keeps the saved fee-path reopen affordance visible above an existing report list when the fee path is stale', async () => {
+    listReportsV2.mockResolvedValueOnce([
+      {
+        id: 'report-1',
+        title: 'Saved report',
+        variant: 'confidential_appendix',
+        createdAt: '2026-04-09T08:00:00.000Z',
+        ennuste: { id: 'base-1', nimi: 'Saved fee path scenario' },
+        baselineYear: 2024,
+        baselineSourceSummary: null,
+        acceptedBaselineYears: [2024],
+        requiredPriceToday: 3.2,
+        requiredAnnualIncreasePct: 4.1,
+        hasPdf: true,
+      },
+    ]);
+    const onGoToOverviewFeePath = vi.fn();
+
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={vi.fn()}
+        onGoToOverviewFeePath={onGoToOverviewFeePath}
+        savedFeePathPlanId="plan-1"
+        savedFeePathScenarioId="base-1"
+        savedFeePathPricingStatus="verified"
+        savedFeePathReportConflictActive
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    expect(
+      (await screen.findAllByText('Saved fee path scenario')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByText(
+        'Tarkista tallennetut raportit, variantit ja PDF-viennin tila.',
+      ),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Avaa maksupolku' }));
+
+    expect(onGoToOverviewFeePath).toHaveBeenCalledWith('plan-1');
+  });
+
+  it('falls back to runtime scenario state when there is no saved fee-path scenario', async () => {
+    window.sessionStorage.setItem(
+      'v2_forecast_runtime_state',
+      JSON.stringify({ selectedScenarioId: 'stress-1' }),
+    );
+    listReportsV2.mockResolvedValueOnce([]);
+    listForecastScenariosV2.mockResolvedValueOnce([
+      { id: 'base-1', name: 'Saved fee path scenario' },
+      { id: 'stress-1', name: 'Runtime hypothesis' },
+    ]);
+    getForecastScenarioV2.mockResolvedValueOnce({
+      id: 'stress-1',
+      name: 'Runtime hypothesis',
+      baselineYear: 2024,
+      updatedAt: '2026-04-09T08:00:00.000Z',
+      computedAt: '2026-04-09T08:00:00.000Z',
+      computedFromUpdatedAt: '2026-04-09T08:00:00.000Z',
+      years: [{ year: 2026 }],
+      yearlyInvestments: [],
+    });
+    const onGoToForecast = vi.fn();
+
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={onGoToForecast}
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('Runtime hypothesis')).toBeTruthy();
+    expect(getForecastScenarioV2).toHaveBeenCalledWith('stress-1');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Avaa Ennuste luodaksesi raportin' }),
+    );
+
+    expect(onGoToForecast).toHaveBeenCalledWith('stress-1');
   });
 });

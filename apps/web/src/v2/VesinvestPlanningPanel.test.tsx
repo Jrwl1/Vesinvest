@@ -512,6 +512,46 @@ describe('VesinvestPlanningPanel', () => {
     expect(screen.getByRole('dialog')).toBeTruthy();
   });
 
+  it('focuses the first yearly allocation after adding a new project', async () => {
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      });
+    const cancelAnimationFrameSpy = vi
+      .spyOn(window, 'cancelAnimationFrame')
+      .mockImplementation(() => undefined);
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: true, baselineYears: [baselineYear] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add project' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Code' }), {
+      target: { value: 'P-002' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Project' }), {
+      target: { value: 'Pump station' },
+    });
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Add project' }));
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(
+        screen.getByLabelText('P-002 2026 Total'),
+      );
+    });
+
+    requestAnimationFrameSpy.mockRestore();
+    cancelAnimationFrameSpy.mockRestore();
+  });
+
   it('saves an org-scoped group override from the admin editor', async () => {
     updateVesinvestGroupV2.mockResolvedValue({
       ...group,
@@ -1151,11 +1191,97 @@ describe('VesinvestPlanningPanel', () => {
     const feePathTitle = await screen.findByText('Saved fee-path recommendation');
     expect(screen.queryByText('Linked accepted budget budget-2024')).toBeNull();
     expect(screen.getByText('Statement import (bokslut-2024.pdf)')).toBeTruthy();
-    expect(screen.getByText('Accepted baseline years')).toBeTruthy();
+    expect(screen.getAllByText('Accepted baseline years').length).toBeGreaterThan(0);
     expect(
       screen.queryByText('Current report snapshot follows VEETI for this dataset.'),
     ).toBeNull();
     expect(within(feePathTitle.closest('section')!).getByText('Verified')).toBeTruthy();
+    expect(
+      screen.getByText('Saved fee-path result still matches this revision.'),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText('Sync the plan to open fee-path and financing results.'),
+    ).toBeNull();
+  });
+
+  it('keeps the pricing hint truthful when a saved fee path exists but the revision has gone provisional', async () => {
+    listVesinvestPlansV2.mockResolvedValue([
+      makeSummary({
+        baselineStatus: 'verified',
+        pricingStatus: 'provisional',
+        investmentPlanChangedSinceFeeRecommendation: true,
+        selectedScenarioId: 'scenario-1',
+      }),
+    ]);
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        pricingStatus: 'provisional',
+        investmentPlanChangedSinceFeeRecommendation: true,
+        selectedScenarioId: 'scenario-1',
+        veetiId: 1535,
+        businessId: '1234567-8',
+        feeRecommendationStatus: 'verified',
+        feeRecommendation: {
+          savedAt: '2026-04-09T08:00:00.000Z',
+          linkedScenarioId: 'scenario-1',
+          baselineFingerprint: 'baseline-fingerprint',
+          scenarioFingerprint: 'scenario-fingerprint',
+          baselineCombinedPrice: 2.8,
+          totalInvestments: 100,
+          combined: {
+            baselinePriceToday: 2.8,
+            annualResult: {
+              requiredPriceToday: 3.2,
+              requiredAnnualIncreasePct: 4.1,
+              peakDeficit: 0,
+              underfundingStartYear: null,
+            },
+            cumulativeCash: {
+              requiredPriceToday: 3.4,
+              requiredAnnualIncreasePct: 4.7,
+              peakGap: 150000,
+              underfundingStartYear: null,
+            },
+          },
+          water: {
+            currentPrice: 1.5,
+            forecastPath: [],
+          },
+          wastewater: {
+            currentPrice: 1.3,
+            forecastPath: [],
+          },
+          baseFee: {
+            currentRevenue: 25000,
+            connectionCount: 1200,
+          },
+          annualResults: [],
+          plan: {
+            id: 'plan-1',
+            seriesId: 'series-1',
+            versionNumber: 1,
+          },
+        },
+      }),
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    await screen.findByText('Saved fee-path recommendation');
+    expect(
+      screen.getByText('Investment plan changed since the last fee-path result.'),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText('Sync the plan to open fee-path and financing results.'),
+    ).toBeNull();
   });
 
   it('shows all accepted baseline years in the evidence section', async () => {
@@ -1577,5 +1703,313 @@ describe('VesinvestPlanningPanel', () => {
       );
     });
     expect(onGoToReports).toHaveBeenCalled();
+  });
+
+  it('maps stale report-create conflicts back to the saved fee-path hint instead of showing the raw API error', async () => {
+    listVesinvestPlansV2.mockResolvedValue([
+      makeSummary({
+        selectedScenarioId: 'scenario-1',
+        pricingStatus: 'verified',
+        baselineStatus: 'verified',
+        investmentPlanChangedSinceFeeRecommendation: false,
+      }),
+    ]);
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        selectedScenarioId: 'scenario-1',
+        feeRecommendationStatus: 'verified',
+      }),
+    );
+    createReportV2.mockRejectedValue(
+      Object.assign(
+        new Error(
+          'Scenario investment inputs changed after last compute. Recompute scenario before creating report.',
+        ),
+        { code: 'FORECAST_RECOMPUTE_REQUIRED' },
+      ),
+    );
+    const onPlansChanged = vi.fn();
+    const onSavedFeePathReportConflict = vi.fn();
+    const onGoToReports = vi.fn();
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: true, baselineYears: [baselineYear] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={onGoToReports}
+        onSavedFeePathReportConflict={onSavedFeePathReportConflict}
+        onPlansChanged={onPlansChanged}
+      />,
+    );
+
+    const createReportButton = await screen.findByRole('button', {
+      name: 'Create report',
+    });
+    await waitFor(() => {
+      expect((createReportButton as HTMLButtonElement).disabled).toBe(false);
+    });
+    fireEvent.click(createReportButton);
+
+    expect(
+      await screen.findByText(
+        'Saved inputs changed after the last calculation. Recompute results before creating report.',
+      ),
+    ).toBeTruthy();
+    await waitFor(() => {
+      expect((createReportButton as HTMLButtonElement).disabled).toBe(true);
+    });
+    expect(
+      screen.queryByText(
+        'Scenario investment inputs changed after last compute. Recompute scenario before creating report.',
+      ),
+    ).toBeNull();
+    expect(onPlansChanged).toHaveBeenCalled();
+    expect(onSavedFeePathReportConflict).toHaveBeenCalledWith('plan-1');
+    expect(onGoToReports).not.toHaveBeenCalled();
+  });
+
+  it('surfaces baseline-stale report conflicts with the saved fee-path baseline message', async () => {
+    listVesinvestPlansV2.mockResolvedValue([
+      makeSummary({
+        selectedScenarioId: 'scenario-1',
+        pricingStatus: 'verified',
+        baselineStatus: 'verified',
+        investmentPlanChangedSinceFeeRecommendation: false,
+      }),
+    ]);
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        selectedScenarioId: 'scenario-1',
+        feeRecommendationStatus: 'verified',
+      }),
+    );
+    createReportV2.mockRejectedValue(
+      Object.assign(
+        new Error('Re-verify baseline before creating report.'),
+        { code: 'VESINVEST_BASELINE_STALE' },
+      ),
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: true, baselineYears: [baselineYear] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    const createReportButton = await screen.findByRole('button', {
+      name: 'Create report',
+    });
+    await waitFor(() => {
+      expect((createReportButton as HTMLButtonElement).disabled).toBe(false);
+    });
+    fireEvent.click(createReportButton);
+
+    expect(
+      await screen.findByText(
+        'Accepted baseline changed after the saved fee-path result.',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText('Saved fee-path result still matches this revision.'),
+    ).toBeNull();
+  });
+
+  it('keeps accepted baseline years readable and separates revision actions from workflow actions', async () => {
+    listVesinvestPlansV2.mockResolvedValue([
+      makeSummary({
+        selectedScenarioId: 'scenario-1',
+        pricingStatus: 'verified',
+        baselineStatus: 'verified',
+        investmentPlanChangedSinceFeeRecommendation: false,
+      }),
+    ]);
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        selectedScenarioId: 'scenario-1',
+        feeRecommendationStatus: 'verified',
+      }),
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{
+          canCreateScenario: true,
+          baselineYears: [baselineYear, { ...baselineYear, year: 2023 }],
+        } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    expect(screen.getAllByText('Accepted baseline years').length).toBeGreaterThan(0);
+    expect(screen.getByText('2024')).toBeTruthy();
+    expect(screen.getByText('2023')).toBeTruthy();
+
+    const newRevisionButton = await screen.findByRole('button', { name: 'New revision' });
+    const openFeePathButton = await screen.findByRole('button', { name: 'Open fee path' });
+    expect(newRevisionButton.closest('.v2-vesinvest-maintenance-actions')).toBeTruthy();
+    expect(openFeePathButton.closest('.v2-vesinvest-workflow-actions')).toBeTruthy();
+  });
+
+  it('selects and focuses the targeted saved fee path once when Overview hands off a stale report flow', async () => {
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      });
+    const cancelAnimationFrameSpy = vi
+      .spyOn(window, 'cancelAnimationFrame')
+      .mockImplementation(() => undefined);
+    const scrollIntoViewMock = vi.fn();
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoViewMock,
+    });
+
+    listVesinvestPlansV2.mockResolvedValue([
+      makeSummary({
+        id: 'plan-1',
+        selectedScenarioId: 'scenario-1',
+        pricingStatus: 'verified',
+        baselineStatus: 'verified',
+        investmentPlanChangedSinceFeeRecommendation: false,
+      }),
+      makeSummary({
+        id: 'plan-2',
+        name: 'Water Utility Vesinvest v2',
+        versionNumber: 2,
+        selectedScenarioId: 'scenario-2',
+        pricingStatus: 'verified',
+        baselineStatus: 'verified',
+        investmentPlanChangedSinceFeeRecommendation: false,
+      }),
+    ]);
+    getVesinvestPlanV2.mockImplementation(async (planId: string) =>
+      planId === 'plan-2'
+        ? makePlan({
+            id: 'plan-2',
+            name: 'Water Utility Vesinvest v2',
+            versionNumber: 2,
+            selectedScenarioId: 'scenario-2',
+            pricingStatus: 'verified',
+            feeRecommendationStatus: 'verified',
+            feeRecommendation: {
+              savedAt: '2026-04-09T08:00:00.000Z',
+              linkedScenarioId: 'scenario-2',
+              baselineFingerprint: 'baseline-fingerprint',
+              scenarioFingerprint: 'scenario-fingerprint',
+              baselineCombinedPrice: 2.8,
+              totalInvestments: 100,
+              combined: {
+                baselinePriceToday: 2.8,
+                annualResult: {
+                  requiredPriceToday: 3.2,
+                  requiredAnnualIncreasePct: 4.1,
+                  peakDeficit: 0,
+                  underfundingStartYear: null,
+                },
+                cumulativeCash: {
+                  requiredPriceToday: 3.4,
+                  requiredAnnualIncreasePct: 4.7,
+                  peakGap: 150000,
+                  underfundingStartYear: null,
+                },
+              },
+              water: {
+                currentPrice: 1.5,
+                forecastPath: [],
+              },
+              wastewater: {
+                currentPrice: 1.3,
+                forecastPath: [],
+              },
+              baseFee: {
+                currentRevenue: 25000,
+                connectionCount: 1200,
+              },
+              annualResults: [],
+              plan: {
+                id: 'plan-2',
+                seriesId: 'series-1',
+                versionNumber: 2,
+              },
+            },
+          })
+        : makePlan(),
+    );
+    const onOverviewFocusTargetConsumed = vi.fn();
+    const focusTarget = { kind: 'saved_fee_path' as const, planId: 'plan-2' };
+
+    const { rerender } = render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{
+          canCreateScenario: true,
+          baselineYears: [baselineYear],
+          vesinvest: {
+            hasPlan: true,
+            planCount: 2,
+            activePlan: makeSummary({ id: 'plan-1' }),
+            selectedPlan: makeSummary({ id: 'plan-1' }),
+          },
+        } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        overviewFocusTarget={focusTarget}
+        onOverviewFocusTargetConsumed={onOverviewFocusTargetConsumed}
+      />,
+    );
+
+    const feePathHeading = await screen.findByRole('heading', {
+      name: 'Saved fee-path recommendation',
+    });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(feePathHeading);
+    });
+    expect(scrollIntoViewMock).toHaveBeenCalled();
+    expect(onOverviewFocusTargetConsumed).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{
+          canCreateScenario: true,
+          baselineYears: [baselineYear],
+          vesinvest: {
+            hasPlan: true,
+            planCount: 2,
+            activePlan: makeSummary({ id: 'plan-1' }),
+            selectedPlan: makeSummary({ id: 'plan-1' }),
+          },
+        } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        overviewFocusTarget={focusTarget}
+        onOverviewFocusTargetConsumed={onOverviewFocusTargetConsumed}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(onOverviewFocusTargetConsumed).toHaveBeenCalledTimes(1);
+    });
+
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: originalScrollIntoView,
+    });
+    requestAnimationFrameSpy.mockRestore();
+    cancelAnimationFrameSpy.mockRestore();
   });
 });

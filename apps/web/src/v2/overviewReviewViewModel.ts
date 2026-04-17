@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import {
   buildPriceForm,
   buildVolumeForm,
@@ -5,6 +6,7 @@ import {
   getRawFirstRow,
   parseManualNumber,
 } from './overviewManualForms';
+import { getFinancialSourceFieldLabel } from './overviewLabels';
 import { buildFinancialComparisonRows, buildImportYearSummaryRows, buildPriceComparisonRows, buildVolumeComparisonRows } from './yearReview';
 import { buildStatementOcrComparisonRows } from './statementOcrParse';
 import type { V2ImportYearDataResponse, V2WorkbookPreviewResponse } from '../api';
@@ -64,13 +66,13 @@ export function buildOverviewWorkbookImportComparisonYears(params: {
   workbookImportPreview: V2WorkbookPreviewResponse | null;
   workbookImportSelections: Record<number, Partial<Record<string, 'keep_veeti' | 'apply_workbook'>>>;
   yearDataCache: Record<number, V2ImportYearDataResponse>;
-  financialComparisonLabel: (key: string) => string;
+  t: TFunction;
 }) {
   const {
     workbookImportPreview,
     workbookImportSelections,
     yearDataCache,
-    financialComparisonLabel,
+    t,
   } = params;
   if (!workbookImportPreview) {
     return [];
@@ -81,7 +83,7 @@ export function buildOverviewWorkbookImportComparisonYears(params: {
       ...year,
       rows: year.rows.map((row) => ({
         ...row,
-        label: financialComparisonLabel(row.key),
+        label: getFinancialSourceFieldLabel(t, row.sourceField),
         veetiValue:
           summaryRows.find((summaryRow) => summaryRow.sourceField === row.sourceField)
             ?.rawValue ?? null,

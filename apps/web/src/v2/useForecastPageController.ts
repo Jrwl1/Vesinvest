@@ -38,6 +38,7 @@ export type ForecastPageControllerProps = {
   initialScenarioId?: string | null;
   computedFromUpdatedAtByScenario?: Record<string, string>;
   onScenarioSelectionChange?: (scenarioId: string | null) => void;
+  onGoToOverviewFeePath?: (planId?: string | null) => void;
   onComputedVersionChange?: (
     scenarioId: string,
     computedFromUpdatedAt: string | null,
@@ -49,6 +50,7 @@ export function useForecastPageController({
   initialScenarioId = null,
   computedFromUpdatedAtByScenario,
   onScenarioSelectionChange,
+  onGoToOverviewFeePath,
   onComputedVersionChange,
 }: ForecastPageControllerProps) {
   const { t } = useTranslation();
@@ -500,6 +502,22 @@ export function useForecastPageController({
       scenarioController.setInfo(t('v2Forecast.infoReportCreated', 'Report created.'));
       onReportCreated(report.reportId);
     } catch (err) {
+      const code =
+        typeof err === 'object' &&
+        err !== null &&
+        'code' in err &&
+        typeof (err as { code?: unknown }).code === 'string'
+          ? (err as { code: string }).code
+          : null;
+      const activePlan = scenarioController.planningContext?.vesinvest?.activePlan ?? null;
+      if (
+        (code === 'VESINVEST_SCENARIO_STALE' ||
+          code === 'VESINVEST_BASELINE_STALE') &&
+        activePlan?.id
+      ) {
+        onGoToOverviewFeePath?.(activePlan.id);
+        return;
+      }
       scenarioController.setError(
         scenarioController.mapKnownForecastError(
           err,
@@ -510,7 +528,14 @@ export function useForecastPageController({
     } finally {
       scenarioController.setActiveOperation('idle');
     }
-  }, [canCreateReport, onReportCreated, reportReadinessHint, scenarioController, t]);
+  }, [
+    canCreateReport,
+    onGoToOverviewFeePath,
+    onReportCreated,
+    reportReadinessHint,
+    scenarioController,
+    t,
+  ]);
 
   const handleApplyRiskPreset = React.useCallback(
     async (preset: RiskPresetDefinition) => {

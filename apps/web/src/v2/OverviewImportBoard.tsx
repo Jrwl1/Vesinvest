@@ -21,9 +21,14 @@ import { buildImportYearSourceLayers } from './yearReview';
 
 type BoardRow = any;
 
+const STEP2_STANDALONE_INLINE_FIELDS = new Set<InlineCardField>([
+  'perusmaksuYhteensa',
+]);
+
 type Props = {
   t: TFunction;
   workflowStep?: number;
+  mode?: 'import' | 'manage';
   wizardBackLabel: string | null;
   onBack: () => void;
   selectedYears: number[];
@@ -99,6 +104,7 @@ type LaneKey =
 export const OverviewImportBoard: React.FC<Props> = ({
   t,
   workflowStep = 2,
+  mode = 'import',
   selectedYears,
   syncing,
   readyRows,
@@ -133,6 +139,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
   importYearsButtonClass,
   importingYears,
 }) => {
+  const isManageMode = mode === 'manage';
   const getMissingCount = React.useCallback(
     (row: BoardRow) =>
       row.missingSummary?.count ??
@@ -216,6 +223,9 @@ export const OverviewImportBoard: React.FC<Props> = ({
       ).length,
     [selectedYears, sortedHistoricalRows],
   );
+  const displayedYearCount = isManageMode
+    ? sortedHistoricalRows.length
+    : selectedSelectableYearsCount;
   const noSelectableYearsRemain = !hasSelectableImportRows;
   const shouldLeadWithRepair =
     isAdmin && noSelectableYearsRemain && primaryRepairRow != null;
@@ -293,16 +303,25 @@ export const OverviewImportBoard: React.FC<Props> = ({
                 total: PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
               })}
             </p>
-            <h2>{t('v2Overview.wizardQuestionImportYears')}</h2>
+            <h2>
+              {isManageMode
+                ? t('v2Overview.wizardQuestionReviewYears')
+                : t('v2Overview.wizardQuestionImportYears')}
+            </h2>
           </div>
           <span className="v2-chip">
-            {t('v2Overview.selectedYearsLabel', 'Selected years')}:{' '}
-            {selectedSelectableYearsCount}
+            {isManageMode
+              ? t('v2Overview.wizardSummaryImportedYears')
+              : t('v2Overview.selectedYearsLabel', 'Selected years')}
+            :{' '}
+            {displayedYearCount}
           </span>
         </div>
 
         <p className="v2-muted v2-overview-review-body">
-          {t('v2Overview.wizardBodyImportYears')}
+          {isManageMode
+            ? t('v2Overview.wizardBodyReviewYears')
+            : t('v2Overview.wizardBodyImportYears')}
         </p>
 
         {lanes.length === 0 ? (
@@ -470,11 +489,12 @@ export const OverviewImportBoard: React.FC<Props> = ({
                     const canSelectRow =
                       !isCurrentEstimateLane && !isTrashbinLane;
                     const isSelected = selectedYears.includes(row.vuosi);
-                    const selectionStateLabel = canSelectRow
-                      ? isSelected
+                    const selectionStateLabel =
+                      isManageMode || !canSelectRow
+                        ? null
+                        : isSelected
                         ? t('v2Overview.importIncludedState', 'Included')
-                        : t('v2Overview.importExcludedState', 'Not included')
-                      : null;
+                        : t('v2Overview.importExcludedState', 'Not included');
                     const blockerSummaryText =
                       row.missingSummary != null
                         ? t(
@@ -728,6 +748,10 @@ export const OverviewImportBoard: React.FC<Props> = ({
                                       },
                                     )}
                                   </p>
+                                ) : null}
+                                {activeStep2Field != null &&
+                                STEP2_STANDALONE_INLINE_FIELDS.has(activeStep2Field) ? (
+                                  renderStep2InlineFieldEditor(activeStep2Field)
                                 ) : null}
                               </>
                             )}
@@ -1024,7 +1048,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
                 {t('v2Overview.workbookImportAction', 'Import KVA workbook')}
               </button>
             </>
-          ) : (
+          ) : !isManageMode ? (
             <button
               type="button"
               className={importYearsButtonClass}
@@ -1033,11 +1057,13 @@ export const OverviewImportBoard: React.FC<Props> = ({
                 syncing || importingYears || selectedSelectableYearsCount === 0
               }
             >
-              {importingYears
+              {importingYears && !isManageMode
                 ? t('v2Overview.importingYearsButton')
-                : t('v2Overview.importYearsButton')}
+                : isManageMode
+                  ? t('v2Overview.manageYears')
+                  : t('v2Overview.importYearsButton')}
             </button>
-          )}
+          ) : null}
         </div>
       </article>
     </section>

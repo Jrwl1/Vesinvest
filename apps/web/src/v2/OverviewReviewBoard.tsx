@@ -35,6 +35,7 @@ type ReadinessState = {
 type ReviewStatusRow = {
   year: number;
   sourceStatus: string | undefined;
+  baselineWarnings?: Array<'tariffRevenueMismatch'>;
   tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
   readinessChecks: Array<{
     key: keyof ReadinessState;
@@ -295,6 +296,7 @@ type OverviewReviewCardBodyProps = {
   setManualPrices: React.Dispatch<React.SetStateAction<ManualPriceForm>>;
   manualVolumes: ManualVolumeForm;
   setManualVolumes: React.Dispatch<React.SetStateAction<ManualVolumeForm>>;
+  markManualFieldTouched: (field: InlineCardField) => void;
   missingRequirementLabel: (
     requirement: MissingRequirement,
     options?: {
@@ -330,6 +332,7 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
   setManualPrices,
   manualVolumes,
   setManualVolumes,
+  markManualFieldTouched,
   missingRequirementLabel,
   saveInlineCardEdit,
   closeInlineCardEditor,
@@ -515,12 +518,13 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
                 min={0}
                 step="0.01"
                 value={manualFinancials.liikevaihto}
-                onChange={(event) =>
+                onChange={(event) => {
+                  markManualFieldTouched('liikevaihto');
                   setManualFinancials((prev) => ({
                     ...prev,
                     liikevaihto: Number(event.target.value || 0),
-                  }))
-                }
+                  }));
+                }}
               />
             </label>
             <label>
@@ -532,12 +536,13 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
                 min={0}
                 step="0.01"
                 value={manualFinancials.perusmaksuYhteensa}
-                onChange={(event) =>
+                onChange={(event) => {
+                  markManualFieldTouched('perusmaksuYhteensa');
                   setManualFinancials((prev) => ({
                     ...prev,
                     perusmaksuYhteensa: Number(event.target.value || 0),
-                  }))
-                }
+                  }));
+                }}
               />
             </label>
             <label>
@@ -549,12 +554,13 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
                 min={0}
                 step="0.01"
                 value={manualFinancials.aineetJaPalvelut}
-                onChange={(event) =>
+                onChange={(event) => {
+                  markManualFieldTouched('aineetJaPalvelut');
                   setManualFinancials((prev) => ({
                     ...prev,
                     aineetJaPalvelut: Number(event.target.value || 0),
-                  }))
-                }
+                  }));
+                }}
               />
             </label>
             <label>
@@ -566,12 +572,13 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
                 min={0}
                 step="0.01"
                 value={manualFinancials.henkilostokulut}
-                onChange={(event) =>
+                onChange={(event) => {
+                  markManualFieldTouched('henkilostokulut');
                   setManualFinancials((prev) => ({
                     ...prev,
                     henkilostokulut: Number(event.target.value || 0),
-                  }))
-                }
+                  }));
+                }}
               />
             </label>
             <label>
@@ -583,12 +590,13 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
                 min={0}
                 step="0.01"
                 value={manualFinancials.poistot}
-                onChange={(event) =>
+                onChange={(event) => {
+                  markManualFieldTouched('poistot');
                   setManualFinancials((prev) => ({
                     ...prev,
                     poistot: Number(event.target.value || 0),
-                  }))
-                }
+                  }));
+                }}
               />
             </label>
             <label>
@@ -603,12 +611,13 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
                 min={0}
                 step="0.01"
                 value={manualFinancials.liiketoiminnanMuutKulut}
-                onChange={(event) =>
+                onChange={(event) => {
+                  markManualFieldTouched('liiketoiminnanMuutKulut');
                   setManualFinancials((prev) => ({
                     ...prev,
                     liiketoiminnanMuutKulut: Number(event.target.value || 0),
-                  }))
-                }
+                  }));
+                }}
               />
             </label>
             <label>
@@ -622,12 +631,13 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
                 type="number"
                 step="0.01"
                 value={manualFinancials.tilikaudenYliJaama}
-                onChange={(event) =>
+                onChange={(event) => {
+                  markManualFieldTouched('tilikaudenYliJaama');
                   setManualFinancials((prev) => ({
                     ...prev,
                     tilikaudenYliJaama: Number(event.target.value || 0),
-                  }))
-                }
+                  }));
+                }}
               />
             </label>
             <label>
@@ -639,12 +649,13 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
                 min={0}
                 step="0.001"
                 value={manualPrices.waterUnitPrice}
-                onChange={(event) =>
+                onChange={(event) => {
+                  markManualFieldTouched('waterUnitPrice');
                   setManualPrices((prev) => ({
                     ...prev,
                     waterUnitPrice: Number(event.target.value || 0),
-                  }))
-                }
+                  }));
+                }}
               />
             </label>
             <label>
@@ -659,12 +670,13 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
                 min={0}
                 step="0.001"
                 value={manualPrices.wastewaterUnitPrice}
-                onChange={(event) =>
+                onChange={(event) => {
+                  markManualFieldTouched('wastewaterUnitPrice');
                   setManualPrices((prev) => ({
                     ...prev,
                     wastewaterUnitPrice: Number(event.target.value || 0),
-                  }))
-                }
+                  }));
+                }}
               />
             </label>
             <label>
@@ -676,12 +688,13 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
                 min={0}
                 step="1"
                 value={manualVolumes.soldWaterVolume}
-                onChange={(event) =>
+                onChange={(event) => {
+                  markManualFieldTouched('soldWaterVolume');
                   setManualVolumes((prev) => ({
                     ...prev,
                     soldWaterVolume: Number(event.target.value || 0),
-                  }))
-                }
+                  }));
+                }}
               />
             </label>
             <label>
@@ -696,12 +709,13 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
                 min={0}
                 step="1"
                 value={manualVolumes.soldWastewaterVolume}
-                onChange={(event) =>
+                onChange={(event) => {
+                  markManualFieldTouched('soldWastewaterVolume');
                   setManualVolumes((prev) => ({
                     ...prev,
                     soldWastewaterVolume: Number(event.target.value || 0),
-                  }))
-                }
+                  }));
+                }}
               />
             </label>
           </div>
@@ -800,6 +814,11 @@ type Props = {
     financials: ManualFinancialForm;
     prices: ManualPriceForm;
     volumes: ManualVolumeForm;
+    explicitMissing?: {
+      financials: boolean;
+      prices: boolean;
+      volumes: boolean;
+    };
     syncAfterSave?: boolean;
   }) => Promise<{ yearData: V2ImportYearDataResponse }>;
   manualPatchMode: ManualPatchMode;
@@ -844,6 +863,7 @@ type Props = {
   setManualPrices: React.Dispatch<React.SetStateAction<ManualPriceForm>>;
   manualVolumes: ManualVolumeForm;
   setManualVolumes: React.Dispatch<React.SetStateAction<ManualVolumeForm>>;
+  markManualFieldTouched: (field: InlineCardField) => void;
   saveInlineCardEdit: (syncAfterSave?: boolean) => Promise<void> | void;
   workbookImportWorkflowProps: Omit<OverviewWorkbookImportWorkflowProps, 'yearLabel'>;
   reviewContinueButtonClass: string;
@@ -972,6 +992,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
   setManualPrices,
   manualVolumes,
   setManualVolumes,
+  markManualFieldTouched,
   saveInlineCardEdit,
   workbookImportWorkflowProps,
   reviewContinueButtonClass,
@@ -1006,10 +1027,25 @@ export const OverviewReviewBoard: React.FC<Props> = ({
     () => reviewStatusRows.filter((row) => pinnedYears.includes(row.year)),
     [pinnedYears, reviewStatusRows],
   );
+  const includedPlanningYearCount = React.useMemo(
+    () => reviewStatusRows.filter((row) => row.setupStatus === 'reviewed').length,
+    [reviewStatusRows],
+  );
+  const actionableReviewRowCount = React.useMemo(
+    () =>
+      reviewStatusRows.filter(
+        (row) => row.setupStatus !== 'excluded_from_plan',
+      ).length,
+    [reviewStatusRows],
+  );
   const baselineGateReady =
-    importedBlockedYearCount === 0 && pendingReviewYearCount === 0;
+    includedPlanningYearCount > 0 &&
+    importedBlockedYearCount === 0 &&
+    pendingReviewYearCount === 0;
   const baselineGatePendingReview =
-    importedBlockedYearCount === 0 && pendingReviewYearCount > 0;
+    includedPlanningYearCount > 0 &&
+    importedBlockedYearCount === 0 &&
+    pendingReviewYearCount > 0;
   const baselineGateStatusLabel = baselineGateReady
     ? t('v2Overview.wizardSummaryYes')
     : t('v2Overview.wizardSummaryNo');
@@ -1023,6 +1059,8 @@ export const OverviewReviewBoard: React.FC<Props> = ({
       ? t('v2Overview.reviewContinueTechnicalReadyBody', {
           years: technicalReadyYearsLabel,
         })
+      : actionableReviewRowCount === 0
+      ? t('v2Overview.noYearsSelected', 'None selected')
       : t('v2Overview.reviewContinueReadyBody');
   const nextReviewFocusYear = React.useMemo(
     () => resolvePrimaryReviewYear(reviewStatusRows),
@@ -1046,6 +1084,9 @@ export const OverviewReviewBoard: React.FC<Props> = ({
       ),
     [missingRequirementLabel, t],
   );
+  const activeReviewYearCount = reviewStatusRows.filter(
+    (row) => row.setupStatus !== 'excluded_from_plan',
+  ).length;
 
   React.useEffect(() => {
     const availableYears = new Set(reviewStatusRows.map((row) => row.year));
@@ -1109,7 +1150,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
         <h2>{t('v2Overview.wizardQuestionReviewYears')}</h2>
       </div>
       <span className="v2-badge v2-status-provenance">
-        {t('v2Overview.reviewYearsCount', { count: reviewStatusRows.length })}
+        {t('v2Overview.reviewYearsCount', { count: activeReviewYearCount })}
       </span>
     </div>
 
@@ -1223,6 +1264,12 @@ export const OverviewReviewBoard: React.FC<Props> = ({
                           .join(', ')
                       : t('v2Overview.setupStatusNeedsAttention'),
                 });
+          const baselineWarningNote =
+            row.baselineWarnings?.includes('tariffRevenueMismatch')
+              ? visibleMissingRequirementLabel('tariffRevenue', {
+                  tariffRevenueReason: row.tariffRevenueReason,
+                })
+              : null;
 
           return (
             <article
@@ -1252,6 +1299,12 @@ export const OverviewReviewBoard: React.FC<Props> = ({
               {renderYearValuePreview(row.year, readiness)}
 
               <p className="v2-year-status-note">{helperText}</p>
+
+              {baselineWarningNote ? (
+                <p className="v2-muted v2-year-status-note">
+                  {baselineWarningNote}
+                </p>
+              ) : null}
 
               {row.warnings.length > 0 ? (
                 <p className="v2-muted v2-year-status-note">
@@ -1313,6 +1366,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
                   setManualPrices={setManualPrices}
                   manualVolumes={manualVolumes}
                   setManualVolumes={setManualVolumes}
+                  markManualFieldTouched={markManualFieldTouched}
                   missingRequirementLabel={visibleMissingRequirementLabel}
                   saveInlineCardEdit={saveInlineCardEdit}
                   closeInlineCardEditor={closeInlineCardEditor}
@@ -1340,7 +1394,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
           }
           onContinueFromReview();
         }}
-        disabled={reviewStatusRows.length === 0}
+        disabled={actionableReviewRowCount === 0}
       >
         {t('v2Overview.reviewContinue')}
       </button>

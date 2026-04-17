@@ -724,10 +724,14 @@ describe('EnnustePageV2', () => {
 
     await screen.findByRole('heading', { name: 'Planning scenarios' });
 
-    await waitFor(() => {
-      expect(getForecastScenarioV2).not.toHaveBeenCalledWith('missing-scenario');
-      expect(getForecastScenarioV2).toHaveBeenCalledWith('stress-1');
-    });
+    expect(getForecastScenarioV2).not.toHaveBeenCalledWith('missing-scenario');
+    expect(
+      (
+        screen.getByRole('combobox', {
+          name: 'Selected scenario',
+        }) as HTMLSelectElement
+      ).value,
+    ).toBe('stress-1');
   });
 
   it('saves investment program target and service split fields from the start surface', async () => {
@@ -886,6 +890,133 @@ describe('EnnustePageV2', () => {
     ).toBeNull();
   });
 
+  it('keeps empty investment rows neutral until they actually contain an investment', async () => {
+    getForecastScenarioV2.mockImplementation(async (id: string) => {
+      if (id === 'base-1') {
+        return {
+          ...buildBaseScenario(),
+          yearlyInvestments: [
+            ...buildBaseScenario().yearlyInvestments,
+            {
+              year: 2026,
+              amount: 0,
+              target: '',
+              category: '',
+              vesinvestPlanId: null,
+              vesinvestProjectId: null,
+              allocationId: null,
+              projectCode: null,
+              groupKey: null,
+              accountKey: null,
+              reportGroupKey: null,
+              depreciationClassKey: null,
+              depreciationRuleSnapshot: null,
+              investmentType: null,
+              confidence: null,
+              waterAmount: 0,
+              wastewaterAmount: 0,
+              note: '',
+            },
+          ],
+        };
+      }
+      return buildStressScenario();
+    });
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    const investmentProgramSection = await openInvestmentWorkbench();
+
+    expect(
+      within(investmentProgramSection).queryByText(
+        'Select a depreciation rule before saving this investment.',
+      ),
+    ).toBeNull();
+
+    const totalInput = investmentProgramSection.querySelector(
+      'input[name="investmentProgramTotal-2026"]',
+    ) as HTMLInputElement | null;
+    expect(totalInput).toBeTruthy();
+
+    fireEvent.change(totalInput!, {
+      target: { value: '1000' },
+    });
+    fireEvent.blur(totalInput!);
+
+    expect(
+      await within(investmentProgramSection).findByText(
+        'Select a depreciation rule before saving this investment.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('keeps empty investment rows neutral even when depreciation rules are unavailable', async () => {
+    listDepreciationRulesV2.mockResolvedValue([]);
+    listScenarioDepreciationRulesV2.mockResolvedValue([]);
+    getForecastScenarioV2.mockImplementation(async (id: string) => {
+      if (id === 'base-1') {
+        return {
+          ...buildBaseScenario(),
+          yearlyInvestments: [
+            ...buildBaseScenario().yearlyInvestments,
+            {
+              year: 2026,
+              amount: 0,
+              target: '',
+              category: '',
+              vesinvestPlanId: null,
+              vesinvestProjectId: null,
+              allocationId: null,
+              projectCode: null,
+              groupKey: null,
+              accountKey: null,
+              reportGroupKey: null,
+              depreciationClassKey: null,
+              depreciationRuleSnapshot: null,
+              investmentType: null,
+              confidence: null,
+              waterAmount: 0,
+              wastewaterAmount: 0,
+              note: '',
+            },
+          ],
+        };
+      }
+      return buildStressScenario();
+    });
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    const investmentProgramSection = await openInvestmentWorkbench();
+    const investmentProgramWithin = within(investmentProgramSection);
+
+    expect(
+      await screen.findByText(
+        'Depreciation rules are missing for this scenario. Refresh the scenario before saving investment years.',
+      ),
+    ).toBeTruthy();
+    expect(
+      investmentProgramWithin.queryByText('Depreciation rules unavailable'),
+    ).toBeNull();
+    expect(investmentProgramWithin.getAllByText('None').length).toBeGreaterThan(0);
+  });
+
   it('keeps linked depreciation snapshots visible even when editable rules are unavailable', async () => {
     listDepreciationRulesV2.mockResolvedValue([]);
     listScenarioDepreciationRulesV2.mockResolvedValue([]);
@@ -914,6 +1045,65 @@ describe('EnnustePageV2', () => {
     ).toBeTruthy();
     expect(investmentProgramWithin.getAllByText('Straight-line 40 years').length).toBeGreaterThan(0);
     expect(investmentProgramWithin.queryByText('Depreciation rules unavailable')).toBeNull();
+  });
+
+  it('keeps empty Vesinvest-linked rows neutral when depreciation rules are unavailable', async () => {
+    listDepreciationRulesV2.mockResolvedValue([]);
+    listScenarioDepreciationRulesV2.mockResolvedValue([]);
+    getForecastScenarioV2.mockImplementation(async (id: string) => {
+      if (id === 'base-1') {
+        return {
+          ...buildBaseScenario(),
+          yearlyInvestments: [
+            ...buildBaseScenario().yearlyInvestments,
+            {
+              year: 2027,
+              amount: 0,
+              target: 'Carry-over project',
+              category: 'Water network rehabilitation',
+              vesinvestPlanId: 'vesinvest-plan-1',
+              vesinvestProjectId: 'vesinvest-project-2',
+              allocationId: 'allocation-2',
+              projectCode: 'P-002',
+              groupKey: 'water_network_rehabilitation',
+              accountKey: null,
+              reportGroupKey: null,
+              depreciationClassKey: null,
+              depreciationRuleSnapshot: null,
+              investmentType: null,
+              confidence: null,
+              waterAmount: 0,
+              wastewaterAmount: 0,
+              note: '',
+            },
+          ],
+        };
+      }
+      return buildStressScenario();
+    });
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    const investmentProgramSection = await openInvestmentWorkbench();
+    const investmentProgramWithin = within(investmentProgramSection);
+
+    expect(
+      await screen.findByText(
+        'Depreciation rules are missing for this scenario. Refresh the scenario before saving investment years.',
+      ),
+    ).toBeTruthy();
+    expect(
+      investmentProgramWithin.queryByText('Depreciation rules unavailable'),
+    ).toBeNull();
+    expect(investmentProgramWithin.getAllByText('None').length).toBeGreaterThan(0);
   });
 
   it('keeps investment totals and depreciation impact visible in one stacked planning flow', async () => {
@@ -1584,6 +1774,82 @@ describe('EnnustePageV2', () => {
     ).not.toContain('v2-btn-primary');
   });
 
+  it('returns stale report creation to the saved fee path instead of showing the generic recompute blocker', async () => {
+    const onGoToOverviewFeePath = vi.fn();
+    createReportV2.mockRejectedValueOnce(
+      Object.assign(
+        new Error('Vesinvest pricing snapshot is out of date. Re-open fee path before creating report.'),
+        { code: 'VESINVEST_SCENARIO_STALE' },
+      ),
+    );
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        onGoToOverviewFeePath={onGoToOverviewFeePath}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    const createReportButton = await screen.findByRole('button', {
+      name: 'Create report',
+    });
+    await waitFor(() => {
+      expect((createReportButton as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    fireEvent.click(createReportButton);
+
+    await waitFor(() => {
+      expect(onGoToOverviewFeePath).toHaveBeenCalledWith('vesinvest-plan-1');
+    });
+    expect(
+      screen.queryByText(
+        'Report can only be created from the latest computed scenario. Recompute scenario and try again.',
+      ),
+    ).toBeNull();
+  });
+
+  it('keeps plain forecast recompute conflicts inside Forecast and shows the recompute blocker', async () => {
+    const onGoToOverviewFeePath = vi.fn();
+    createReportV2.mockRejectedValueOnce(
+      Object.assign(
+        new Error('Scenario changed after last compute. Recompute scenario before creating report.'),
+        { code: 'FORECAST_RECOMPUTE_REQUIRED' },
+      ),
+    );
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        onGoToOverviewFeePath={onGoToOverviewFeePath}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    const createReportButton = await screen.findByRole('button', {
+      name: 'Create report',
+    });
+    await waitFor(() => {
+      expect((createReportButton as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    fireEvent.click(createReportButton);
+
+    expect(
+      await screen.findByText(
+        'Report can only be created from the latest computed scenario. Recompute scenario and try again.',
+      ),
+    ).toBeTruthy();
+    expect(onGoToOverviewFeePath).not.toHaveBeenCalled();
+  });
+
   it('returns to the compact cockpit after drill-down edits are recomputed back to a report-ready state', async () => {
     computeForecastScenarioV2.mockResolvedValueOnce({
       ...buildStressScenario(),
@@ -1772,6 +2038,24 @@ describe('EnnustePageV2', () => {
     render(<EnnustePageV2 onReportCreated={() => undefined} />);
 
     expect(await screen.findByText('Planning context failed.')).toBeTruthy();
+    expect(
+      screen.queryByText(
+        'Complete Overview import and sync first to create scenarios.',
+      ),
+    ).toBeNull();
+  });
+
+  it('allows creating the first scenario when baseline years exist even if canCreateScenario is explicitly false', async () => {
+    listForecastScenariosV2.mockResolvedValueOnce([]);
+    getPlanningContextV2.mockResolvedValueOnce({
+      ...buildPlanningContext(),
+      canCreateScenario: false,
+      baselineYears: [buildBaselineYear()],
+    });
+
+    render(<EnnustePageV2 onReportCreated={() => undefined} />);
+
+    expect(await screen.findByText('Create your first scenario')).toBeTruthy();
     expect(
       screen.queryByText(
         'Complete Overview import and sync first to create scenarios.',

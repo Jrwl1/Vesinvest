@@ -35,6 +35,14 @@ type Props = {
   refreshToken: number;
   focusedReportId: string | null;
   onGoToForecast: (scenarioId?: string | null) => void;
+  onGoToOverviewFeePath?: (planId?: string | null) => void;
+  savedFeePathPlanId?: string | null;
+  savedFeePathScenarioId?: string | null;
+  savedFeePathPricingStatus?: 'blocked' | 'provisional' | 'verified' | null;
+  savedFeePathClassificationReviewRequired?: boolean;
+  savedFeePathBaselineChangedSinceAcceptedRevision?: boolean;
+  savedFeePathInvestmentPlanChangedSinceFeeRecommendation?: boolean;
+  savedFeePathReportConflictActive?: boolean;
   onFocusedReportChange?: (
     reportId: string | null,
     scenarioId: string | null,
@@ -54,7 +62,9 @@ type ReportReadinessReason =
   | 'unsavedChanges'
   | 'missingComputeResults'
   | 'missingDepreciationSnapshots'
-  | 'staleComputeResults';
+  | 'staleComputeResults'
+  | 'classificationReviewRequired'
+  | 'staleSavedFeePath';
 
 type ForecastRuntimeState = {
   selectedScenarioId: string | null;
@@ -290,6 +300,14 @@ export const ReportsPageV2: React.FC<Props> = ({
   refreshToken,
   focusedReportId,
   onGoToForecast,
+  onGoToOverviewFeePath,
+  savedFeePathPlanId,
+  savedFeePathScenarioId,
+  savedFeePathPricingStatus,
+  savedFeePathClassificationReviewRequired = false,
+  savedFeePathBaselineChangedSinceAcceptedRevision = false,
+  savedFeePathInvestmentPlanChangedSinceFeeRecommendation = false,
+  savedFeePathReportConflictActive = false,
   onFocusedReportChange,
 }) => {
   const { t } = useTranslation();
@@ -395,21 +413,37 @@ export const ReportsPageV2: React.FC<Props> = ({
           return;
         }
 
-        const preferredScenarioId =
+        const candidateScenarioIds = [
+          savedFeePathScenarioId,
           runtimeState.selectedScenarioId &&
           scenarioRows.some((row) => row.id === runtimeState.selectedScenarioId)
             ? runtimeState.selectedScenarioId
-            : scenarioRows[0]?.id ?? null;
+            : null,
+          scenarioRows[0]?.id ?? null,
+        ].filter(
+          (value, index, all): value is string =>
+            typeof value === 'string' &&
+            value.length > 0 &&
+            all.indexOf(value) === index,
+        );
 
-        if (!preferredScenarioId) {
+        if (candidateScenarioIds.length === 0) {
           setEmptyStateScenario(null);
           return;
         }
 
-        const scenario = await getForecastScenarioV2(preferredScenarioId);
-        if (cancelled) return;
+        for (const scenarioId of candidateScenarioIds) {
+          try {
+            const scenario = await getForecastScenarioV2(scenarioId);
+            if (cancelled) return;
+            setEmptyStateScenario(scenario);
+            return;
+          } catch {
+            if (cancelled) return;
+          }
+        }
 
-        setEmptyStateScenario(scenario);
+        setEmptyStateScenario(null);
       } catch {
         if (cancelled) return;
         setEmptyStateScenario(null);
@@ -420,7 +454,7 @@ export const ReportsPageV2: React.FC<Props> = ({
     return () => {
       cancelled = true;
     };
-  }, [loadingList, reports]);
+  }, [loadingList, reports, savedFeePathScenarioId]);
 
   React.useEffect(() => {
     if (!selectedReport) return;
@@ -464,8 +498,36 @@ export const ReportsPageV2: React.FC<Props> = ({
     [emptyStateScenario],
   );
 
+  const savedFeePathReportReadinessReason = React.useMemo(() => {
+    if (!savedFeePathPlanId) {
+      return null;
+    }
+    if (savedFeePathReportConflictActive) {
+      return 'staleSavedFeePath' as const;
+    }
+    if (savedFeePathClassificationReviewRequired) {
+      return 'classificationReviewRequired' as const;
+    }
+    if (
+      (savedFeePathPricingStatus != null && savedFeePathPricingStatus !== 'verified') ||
+      savedFeePathBaselineChangedSinceAcceptedRevision ||
+      savedFeePathInvestmentPlanChangedSinceFeeRecommendation
+    ) {
+      return 'staleSavedFeePath' as const;
+    }
+    return null;
+  }, [
+    savedFeePathBaselineChangedSinceAcceptedRevision,
+    savedFeePathClassificationReviewRequired,
+    savedFeePathReportConflictActive,
+    savedFeePathInvestmentPlanChangedSinceFeeRecommendation,
+    savedFeePathPlanId,
+    savedFeePathPricingStatus,
+  ]);
+
   const emptyStateReportReadinessReason = React.useMemo(
     () =>
+      savedFeePathReportReadinessReason ??
       deriveReportReadinessReason({
         scenario: emptyStateScenario,
         forecastFreshnessState: emptyStateForecastFreshnessState,
@@ -473,6 +535,7 @@ export const ReportsPageV2: React.FC<Props> = ({
     [
       emptyStateScenario,
       emptyStateForecastFreshnessState,
+      savedFeePathReportReadinessReason,
     ],
   );
 
@@ -516,6 +579,7 @@ export const ReportsPageV2: React.FC<Props> = ({
   const emptyStateReportReadinessToneClass = React.useMemo(() => {
     if (emptyStateCanCreateReport) return 'v2-status-positive';
     if (
+      emptyStateReportReadinessReason === 'staleSavedFeePath' ||
       emptyStateReportReadinessReason === 'staleComputeResults' ||
       emptyStateReportReadinessReason === 'unsavedChanges'
     ) {
@@ -546,7 +610,19 @@ export const ReportsPageV2: React.FC<Props> = ({
           'v2Forecast.depreciationSnapshotsMissingHint',
           'Refresh the synced Vesinvest class plan and recompute results before creating report.',
         );
+      case 'classificationReviewRequired':
+        return t(
+          'v2Forecast.classificationReviewRequired',
+          'Review and save the Vesinvest class plan before creating a report.',
+        );
+      case 'staleSavedFeePath':
       case 'missingScenario':
+        if (emptyStateReportReadinessReason === 'staleSavedFeePath') {
+          return t(
+            'v2Forecast.staleComputeHint',
+            'Saved inputs changed after the last calculation. Recompute results before creating report.',
+          );
+        }
         return t(
           'v2Reports.emptyHint',
           'Open Forecast, compute a scenario, and create your first report.',
@@ -561,6 +637,9 @@ export const ReportsPageV2: React.FC<Props> = ({
 
   const emptyStateCtaLabel = React.useMemo(() => {
     switch (emptyStateReportReadinessReason) {
+      case 'classificationReviewRequired':
+      case 'staleSavedFeePath':
+        return t('v2Vesinvest.openPricing', 'Open fee path');
       case 'unsavedChanges':
         return t(
           'v2Reports.openForecastToSaveAndCompute',
@@ -583,6 +662,25 @@ export const ReportsPageV2: React.FC<Props> = ({
     }
   }, [emptyStateReportReadinessReason, t]);
 
+  const handleEmptyStateAction = React.useCallback(() => {
+    if (
+      (emptyStateReportReadinessReason === 'classificationReviewRequired' ||
+        emptyStateReportReadinessReason === 'staleSavedFeePath') &&
+      savedFeePathPlanId
+    ) {
+      onGoToOverviewFeePath?.(savedFeePathPlanId);
+      return;
+    }
+    onGoToForecast(savedFeePathScenarioId ?? emptyStateScenario?.id ?? null);
+  }, [
+    emptyStateReportReadinessReason,
+    emptyStateScenario?.id,
+    onGoToForecast,
+    onGoToOverviewFeePath,
+    savedFeePathPlanId,
+    savedFeePathScenarioId,
+  ]);
+
   const emptyStateComputedVersionLabel = React.useMemo(
     () =>
       emptyStateScenario?.computedFromUpdatedAt
@@ -592,14 +690,23 @@ export const ReportsPageV2: React.FC<Props> = ({
   );
 
   const reportsHeaderHint = React.useMemo(() => {
-    if (reports.length === 0) {
+    if (reports.length > 0) {
+      return t(
+        'v2Reports.listHint',
+        'Review saved reports, variants, and PDF export state.',
+      );
+    }
+    if (savedFeePathReportConflictActive) {
       return emptyStateReportReadinessHint;
     }
-    return t(
-      'v2Reports.listHint',
-      'Review saved reports, variants, and PDF export state.',
-    );
-  }, [emptyStateReportReadinessHint, reports.length, t]);
+    return emptyStateReportReadinessHint;
+  }, [emptyStateReportReadinessHint, reports.length, savedFeePathReportConflictActive, t]);
+
+  const handleSavedFeePathAction = React.useCallback(() => {
+    if (savedFeePathPlanId) {
+      onGoToOverviewFeePath?.(savedFeePathPlanId);
+    }
+  }, [onGoToOverviewFeePath, savedFeePathPlanId]);
 
   const reportVariantLabel = React.useCallback(
     (variant: ReportVariant) =>
@@ -1262,6 +1369,15 @@ export const ReportsPageV2: React.FC<Props> = ({
                 >
                   {t('v2Reports.refreshList', 'Refresh list')}
                 </button>
+                {savedFeePathReportConflictActive && savedFeePathPlanId ? (
+                  <button
+                    type="button"
+                    className="v2-btn"
+                    onClick={handleSavedFeePathAction}
+                  >
+                    {t('v2Vesinvest.openPricing', 'Open fee path')}
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -1350,7 +1466,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                 <button
                   type="button"
                   className="v2-btn v2-btn-primary"
-                  onClick={() => onGoToForecast(emptyStateScenario?.id)}
+                  onClick={handleEmptyStateAction}
                 >
                   {emptyStateCtaLabel}
                 </button>
@@ -1359,7 +1475,20 @@ export const ReportsPageV2: React.FC<Props> = ({
 
             {reports.length > 0 ? (
               <div className="v2-report-table v2-report-list">
-                {reports.map((row) => (
+                {reports.map((row) => {
+                  const rowTitle =
+                    row.title?.trim() ||
+                    getReportDisplayTitle({
+                      title: row.title,
+                      scenarioName: row.ennuste.nimi ?? row.ennuste.id,
+                      createdAt: row.createdAt,
+                      t,
+                    });
+                  const rowScenarioLabel = getScenarioDisplayName(
+                    row.ennuste.nimi ?? row.ennuste.id,
+                    t,
+                  );
+                  return (
                   <button
                     key={row.id}
                     type="button"
@@ -1371,12 +1500,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                   >
                     <div className="v2-report-row-top">
                       <div className="v2-report-row-main">
-                        <strong>
-                          {getScenarioDisplayName(
-                            row.ennuste.nimi ?? row.ennuste.id,
-                            t,
-                          )}
-                        </strong>
+                        <strong>{rowTitle}</strong>
                         <span>{formatDateTime(row.createdAt)}</span>
                       </div>
                       <div className="v2-badge-row">
@@ -1392,6 +1516,9 @@ export const ReportsPageV2: React.FC<Props> = ({
                     </div>
                     <div className="v2-report-row-meta">
                       <span>
+                        {t('projection.scenario', 'Scenario')}: {rowScenarioLabel}
+                      </span>
+                      <span>
                         {t(
                           'projection.v2.baselineYearLabel',
                           'Baseline year',
@@ -1400,7 +1527,8 @@ export const ReportsPageV2: React.FC<Props> = ({
                       </span>
                     </div>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             ) : null}
           </section>

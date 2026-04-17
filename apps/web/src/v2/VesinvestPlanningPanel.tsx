@@ -57,7 +57,15 @@ type Props = {
     | undefined;
   onGoToForecast: (scenarioId?: string | null) => void;
   onGoToReports: () => void;
+  overviewFocusTarget?: VesinvestOverviewFocusTarget | null;
+  onOverviewFocusTargetConsumed?: () => void;
+  onSavedFeePathReportConflict?: (planId?: string | null) => void;
   onPlansChanged?: () => Promise<void> | void;
+};
+
+export type VesinvestOverviewFocusTarget = {
+  kind: 'saved_fee_path';
+  planId: string;
 };
 
 const appendDetailSuffix = (
@@ -715,6 +723,9 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
   linkedOrg,
   onGoToForecast,
   onGoToReports,
+  overviewFocusTarget,
+  onOverviewFocusTargetConsumed,
+  onSavedFeePathReportConflict,
   onPlansChanged,
 }) => {
   const [groups, setGroups] = React.useState<V2VesinvestGroupDefinition[]>([]);
@@ -740,6 +751,9 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [info, setInfo] = React.useState<string | null>(null);
+  const [reportConflictCode, setReportConflictCode] = React.useState<string | null>(
+    null,
+  );
   const [veetiSearchQuery, setVeetiSearchQuery] = React.useState('');
   const [veetiSearchResults, setVeetiSearchResults] = React.useState<
     Array<{
@@ -750,6 +764,13 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     }>
   >([]);
   const [searchingVeeti, setSearchingVeeti] = React.useState(false);
+  const pendingAllocationFocusRef = React.useRef<{
+    projectIndex: number;
+    year: number;
+  } | null>(null);
+  const pendingOverviewFocusPlanIdRef = React.useRef<string | null>(null);
+  const feePathSectionRef = React.useRef<HTMLElement | null>(null);
+  const feePathHeadingRef = React.useRef<HTMLHeadingElement | null>(null);
   const [savingClassKey, setSavingClassKey] = React.useState<string | null>(null);
   const [linkedScenario, setLinkedScenario] =
     React.useState<V2ForecastScenario | null>(null);
@@ -875,6 +896,22 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
       active = false;
     };
   }, [plan?.selectedScenarioId]);
+
+  React.useEffect(() => {
+    setReportConflictCode(null);
+  }, [plan?.id, plan?.selectedScenarioId]);
+
+  React.useEffect(() => {
+    if (overviewFocusTarget?.kind !== 'saved_fee_path') {
+      pendingOverviewFocusPlanIdRef.current = null;
+      return;
+    }
+
+    pendingOverviewFocusPlanIdRef.current = overviewFocusTarget.planId;
+    if (selectedPlanId !== overviewFocusTarget.planId) {
+      setSelectedPlanId(overviewFocusTarget.planId);
+    }
+  }, [overviewFocusTarget, selectedPlanId]);
 
   const yearTotals = React.useMemo(
     () =>
@@ -1051,6 +1088,8 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     !!selectedSummary?.selectedScenarioId ||
     !!plan?.selectedScenarioId ||
     !!feeRecommendation;
+  const hasSavedPricingOutput =
+    !!feeRecommendation || !!selectedSummary?.selectedScenarioId;
   const revisionStatusMessage = React.useMemo(() => {
     if (!plan?.id || !selectedSummary) {
       return t(
@@ -1076,6 +1115,24 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         'Fee-path has not been opened from this revision yet.',
       );
     }
+    if (reportConflictCode === 'VESINVEST_BASELINE_STALE') {
+      return t(
+        'v2Vesinvest.baselineChangedSincePricing',
+        'Accepted baseline changed after the saved fee-path result.',
+      );
+    }
+    if (reportConflictCode === 'VESINVEST_SCENARIO_STALE') {
+      return t(
+        'v2Vesinvest.workflowOpenFeePathBody',
+        'When the baseline is verified, sync the plan to forecast to review price pressure, financing gaps, and the saved recommendation.',
+      );
+    }
+    if (selectedSummary.classificationReviewRequired) {
+      return t(
+        'v2Forecast.classificationReviewRequired',
+        'Review and save the Vesinvest class plan before creating a report.',
+      );
+    }
     if (selectedSummary.baselineChangedSinceAcceptedRevision) {
       return t(
         'v2Vesinvest.baselineChangedSincePricing',
@@ -1088,6 +1145,12 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         'Investment plan changed since the last fee-path result.',
       );
     }
+    if (selectedSummary.pricingStatus !== 'verified') {
+      return t(
+        'v2Vesinvest.pricingBlockedHint',
+        'Fee-path and financing output stay blocked until the baseline is verified.',
+      );
+    }
     return t(
       'v2Vesinvest.planAlignedWithPricing',
       'Saved fee-path result still matches this revision.',
@@ -1095,6 +1158,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
   }, [
     feeRecommendation,
     plan?.id,
+    reportConflictCode,
     selectedSummary,
     t,
     utilityBindingMismatch,
@@ -1104,8 +1168,17 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     if (!plan?.selectedScenarioId || !linkedScenario) {
       return 'missingScenario' as const;
     }
+    if (reportConflictCode) {
+      return 'staleComputeToken' as const;
+    }
     if (selectedSummary?.classificationReviewRequired) {
       return 'classificationReviewRequired' as const;
+    }
+    if (
+      selectedSummary?.baselineChangedSinceAcceptedRevision ||
+      selectedSummary?.investmentPlanChangedSinceFeeRecommendation
+    ) {
+      return 'staleComputeToken' as const;
     }
     if (selectedSummary?.pricingStatus !== 'verified') {
       return 'staleComputeToken' as const;
@@ -1134,11 +1207,55 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     hasUnsavedChanges,
     linkedScenario,
     plan?.selectedScenarioId,
+    reportConflictCode,
+    selectedSummary?.baselineChangedSinceAcceptedRevision,
     selectedSummary?.classificationReviewRequired,
+    selectedSummary?.investmentPlanChangedSinceFeeRecommendation,
     selectedSummary?.pricingStatus,
   ]);
   const canCreateReport =
     reportReadinessReason == null && !loadingLinkedScenario && !!plan?.id;
+
+  React.useEffect(() => {
+    const targetPlanId = pendingOverviewFocusPlanIdRef.current;
+    if (!targetPlanId) {
+      return;
+    }
+    if (loading || loadingPlan) {
+      return;
+    }
+    if (selectedPlanId !== targetPlanId || plan?.id !== targetPlanId) {
+      if (!plans.some((item) => item.id === targetPlanId)) {
+        pendingOverviewFocusPlanIdRef.current = null;
+        onOverviewFocusTargetConsumed?.();
+      }
+      return;
+    }
+    if (!feePathSectionRef.current || !feePathHeadingRef.current) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      feePathSectionRef.current?.scrollIntoView?.({
+        block: 'start',
+        inline: 'nearest',
+      });
+      feePathHeadingRef.current?.focus();
+      pendingOverviewFocusPlanIdRef.current = null;
+      onOverviewFocusTargetConsumed?.();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [
+    loading,
+    loadingPlan,
+    onOverviewFocusTargetConsumed,
+    plan?.id,
+    plans,
+    selectedPlanId,
+  ]);
 
   const updateProject = React.useCallback(
     (index: number, updater: (project: V2VesinvestProject) => V2VesinvestProject) => {
@@ -1462,6 +1579,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
           baselineSourceState: baselineSnapshot,
         });
         setPlan(synced.plan);
+        setReportConflictCode(null);
         setDraft(buildDraftFromPlan(synced.plan, linkedOrg));
         await refreshSummaries(synced.plan.id);
         await onPlansChanged?.();
@@ -1535,9 +1653,44 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         ennusteId: plan.selectedScenarioId,
         title: buildDefaultReportTitle(t, linkedScenario.name),
       });
+      setReportConflictCode(null);
       setInfo(t('v2Forecast.infoReportCreated', 'Report created.'));
       onGoToReports();
     } catch (err) {
+      const code =
+        typeof err === 'object' && err != null && 'code' in err
+          ? (err as { code?: string }).code
+          : undefined;
+      if (
+        code === 'VESINVEST_SCENARIO_STALE' ||
+        code === 'VESINVEST_BASELINE_STALE' ||
+        code === 'FORECAST_RECOMPUTE_REQUIRED'
+      ) {
+        setReportConflictCode(code);
+        await Promise.all([
+          refreshSummaries(plan.id),
+          Promise.resolve(onPlansChanged?.()),
+        ]);
+        onSavedFeePathReportConflict?.(plan.id);
+        setError(
+          code === 'VESINVEST_BASELINE_STALE'
+            ? t(
+                'v2Vesinvest.baselineChangedSincePricing',
+                'Accepted baseline changed after the saved fee-path result.',
+              )
+            : code === 'VESINVEST_SCENARIO_STALE'
+            ? t(
+                'v2Vesinvest.workflowOpenFeePathBody',
+                'When the baseline is verified, sync the plan to forecast to review price pressure, financing gaps, and the saved recommendation.',
+              )
+            : t(
+                'v2Forecast.staleComputeHint',
+                'Saved inputs changed after the last calculation. Recompute results before creating report.',
+              ),
+        );
+        setInfo(null);
+        return;
+      }
       setError(
         err instanceof Error
           ? err.message
@@ -1550,8 +1703,11 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     canCreateReport,
     linkedScenario,
     onGoToReports,
+    onSavedFeePathReportConflict,
     plan?.id,
     plan?.selectedScenarioId,
+    onPlansChanged,
+    refreshSummaries,
     reportReadinessReason,
     t,
   ]);
@@ -1594,17 +1750,23 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     if (!projectCode || !projectName || resolvedGroup == null) {
       return;
     }
-    setDraft((current) => ({
-      ...current,
-      projects: [
-        ...current.projects,
-        createProject(current.horizonYearsRange, groups, current.projects.length, {
-          code: projectCode,
-          name: projectName,
-          groupKey: resolvedGroup.key,
-        }),
-      ],
-    }));
+    setDraft((current) => {
+      pendingAllocationFocusRef.current = {
+        projectIndex: current.projects.length,
+        year: current.horizonYearsRange[0] ?? new Date().getFullYear(),
+      };
+      return {
+        ...current,
+        projects: [
+          ...current.projects,
+          createProject(current.horizonYearsRange, groups, current.projects.length, {
+            code: projectCode,
+            name: projectName,
+            groupKey: resolvedGroup.key,
+          }),
+        ],
+      };
+    });
     setProjectComposer({
       open: false,
       code: '',
@@ -1612,6 +1774,34 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
       name: '',
     });
   }, [groups, projectComposer.code, projectComposer.name, projectComposerGroupKey]);
+
+  React.useEffect(() => {
+    const pendingFocus = pendingAllocationFocusRef.current;
+    if (!pendingFocus || typeof document === 'undefined') {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const projectSection = document.querySelector<HTMLElement>(
+        `[data-vesinvest-project-index="${pendingFocus.projectIndex}"]`,
+      );
+      projectSection?.scrollIntoView?.({ block: 'center', inline: 'nearest' });
+
+      const allocationInput = document.querySelector<HTMLInputElement>(
+        `input[name="vesinvest-allocation-${pendingFocus.projectIndex}-totalAmount-${pendingFocus.year}"]`,
+      );
+      if (!allocationInput) {
+        return;
+      }
+      allocationInput.focus();
+      allocationInput.select?.();
+      pendingAllocationFocusRef.current = null;
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [draft.horizonYearsRange, draft.projects]);
 
   const shouldLeadAddProject =
     activeWorkspaceView === 'investment' && draft.projects.length === 0;
@@ -1964,11 +2154,13 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
   ) : null;
 
   const feePathSection = feeRecommendation ? (
-    <section className="v2-vesinvest-section">
+    <section className="v2-vesinvest-section" ref={feePathSectionRef}>
       <div className="v2-section-header">
         <div>
           <p className="v2-overview-eyebrow">{t('v2Vesinvest.feePathEyebrow', 'Fee path')}</p>
-          <h3>{t('v2Vesinvest.feePathTitle', 'Saved fee-path recommendation')}</h3>
+          <h3 ref={feePathHeadingRef} tabIndex={-1}>
+            {t('v2Vesinvest.feePathTitle', 'Saved fee-path recommendation')}
+          </h3>
         </div>
         <span className={`v2-badge ${toneClass(selectedSummary?.pricingStatus ?? 'blocked')}`}>
           {selectedSummary?.pricingStatus === 'verified'
@@ -1978,6 +2170,14 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             : t('v2Vesinvest.pricingBlocked', 'Blocked')}
         </span>
       </div>
+      {baselineYears.length > 0 ? (
+        <div className="v2-overview-year-summary-grid">
+          <div>
+            <span>{t('v2Vesinvest.evidenceTitle', 'Accepted baseline years')}</span>
+            <strong>{baselineYears.map((yearRow) => yearRow.year).join(', ')}</strong>
+          </div>
+        </div>
+      ) : null}
       <div className="v2-overview-year-summary-grid">
         <div>
           <span>{t('projection.v2.kpiCombinedWeighted', 'Combined price')}</span>
@@ -2095,7 +2295,9 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             </span>
           </p>
           <small>
-            {pricingReady
+            {hasSavedPricingOutput
+              ? revisionStatusMessage
+              : pricingReady
               ? t(
                   'v2Vesinvest.pricingReadyHint',
                   'Sync the plan to open fee-path and financing results.',
@@ -2743,6 +2945,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             <section
               key={project.id ?? `draft-project-details-${projectIndex}`}
               className="v2-vesinvest-project-card"
+              data-vesinvest-project-index={projectIndex}
             >
               <div className="v2-section-header">
                 <div>

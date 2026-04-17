@@ -133,10 +133,10 @@ export function useOverviewReviewSelectors({
         workbookImportPreview: manualController.workbookImportPreview,
         workbookImportSelections: manualController.workbookImportSelections,
         yearDataCache: manualController.yearDataCache,
-        financialComparisonLabel,
+        t,
       }),
     [
-      financialComparisonLabel,
+      t,
       manualController.workbookImportPreview,
       manualController.workbookImportSelections,
       manualController.yearDataCache,

@@ -336,6 +336,11 @@ type Props = {
     financials: ManualFinancialForm;
     prices: ManualPriceForm;
     volumes: ManualVolumeForm;
+    explicitMissing?: {
+      financials: boolean;
+      prices: boolean;
+      volumes: boolean;
+    };
     syncAfterSave?: boolean;
   }) => Promise<{ yearData: V2ImportYearDataResponse }>;
   busy?: boolean;
@@ -430,6 +435,43 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
     [],
   );
 
+  const getExplicitMissingGroups = React.useCallback(
+    (year: number, draft: WorkspaceDraft | undefined) => {
+      const emptyGroups = {
+        financials: false,
+        prices: false,
+        volumes: false,
+      };
+      if (!draft) {
+        return emptyGroups;
+      }
+      const yearTouchedFields = touchedFields[year];
+      if (!yearTouchedFields) {
+        return emptyGroups;
+      }
+      const yearData = yearDataCache[year];
+      const rawValues = buildRawValueLookup(yearData);
+      const effectiveValues = buildEffectiveValueLookup(yearData);
+      const explicitMissing = { ...emptyGroups };
+      for (const field of WORKSPACE_FIELDS) {
+        const fieldId = getWorkspaceFieldId(field);
+        if (yearTouchedFields[fieldId] !== true) {
+          continue;
+        }
+        const fieldKey = field.key as keyof typeof rawValues;
+        if (
+          rawValues[fieldKey] == null &&
+          effectiveValues[fieldKey] == null &&
+          getWorkspaceDraftFieldValue(draft, field) === 0
+        ) {
+          explicitMissing[field.group] = true;
+        }
+      }
+      return explicitMissing;
+    },
+    [touchedFields, yearDataCache],
+  );
+
   const handleSave = React.useCallback(
     async (year: number, syncAfterSave: boolean) => {
       const draft = drafts[year];
@@ -441,11 +483,13 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
         [year]: { saving: true, error: null },
       }));
       try {
+        const explicitMissing = getExplicitMissingGroups(year, draft);
         const result = await saveYear({
           year,
           financials: draft.financials,
           prices: draft.prices,
           volumes: draft.volumes,
+          explicitMissing,
           syncAfterSave,
         });
         setDrafts((prev) => ({
@@ -480,36 +524,19 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
         }));
       }
     },
-    [drafts, saveYear, t],
+    [drafts, getExplicitMissingGroups, saveYear, t],
   );
 
   const hasExplicitMissingEntry = React.useCallback(
     (year: number, draft: WorkspaceDraft | undefined) => {
-      if (!draft) {
-        return false;
-      }
-      const yearTouchedFields = touchedFields[year];
-      if (!yearTouchedFields) {
-        return false;
-      }
-      const yearData = yearDataCache[year];
-      const rawValues = buildRawValueLookup(yearData);
-      const effectiveValues = buildEffectiveValueLookup(yearData);
-
-      return WORKSPACE_FIELDS.some((field) => {
-        const fieldId = getWorkspaceFieldId(field);
-        if (yearTouchedFields[fieldId] !== true) {
-          return false;
-        }
-        const fieldKey = field.key as keyof typeof rawValues;
-        return (
-          rawValues[fieldKey] == null &&
-          effectiveValues[fieldKey] == null &&
-          getWorkspaceDraftFieldValue(draft, field) === 0
-        );
-      });
+      const explicitMissing = getExplicitMissingGroups(year, draft);
+      return (
+        explicitMissing.financials ||
+        explicitMissing.prices ||
+        explicitMissing.volumes
+      );
     },
-    [touchedFields, yearDataCache],
+    [getExplicitMissingGroups],
   );
 
   if (reviewStatusRows.length === 0) {

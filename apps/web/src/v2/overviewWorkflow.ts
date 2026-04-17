@@ -9,6 +9,11 @@ export type ImportYearLike = {
   vuosi: number;
   planningRole?: 'historical' | 'current_year_estimate';
   completeness: Record<string, boolean>;
+  baselineReady?: boolean;
+  baselineMissingRequirements?: Array<
+    'financialBaseline' | 'prices' | 'volumes'
+  >;
+  baselineWarnings?: Array<'tariffRevenueMismatch'>;
   tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
   reviewState?: 'pending_review' | 'reviewed';
 };
@@ -18,6 +23,10 @@ export type MissingRequirement =
   | 'prices'
   | 'volumes'
   | 'tariffRevenue';
+export type BaselineMissingRequirement =
+  | 'financialBaseline'
+  | 'prices'
+  | 'volumes';
 export type SetupReadinessCheck = {
   key: MissingRequirement;
   labelKey:
@@ -38,7 +47,17 @@ export type SetupYearReviewStatus =
   | 'needs_attention'
   | 'excluded_from_plan';
 
+function usesBaselineReadiness(row: ImportYearLike): boolean {
+  return (
+    typeof row.baselineReady === 'boolean' ||
+    Array.isArray(row.baselineMissingRequirements)
+  );
+}
+
 export function isSyncReadyYear(row: ImportYearLike): boolean {
+  if (typeof row.baselineReady === 'boolean') {
+    return row.baselineReady;
+  }
   return (
     row.completeness.tilinpaatos === true &&
     row.completeness.taksa === true &&
@@ -51,6 +70,22 @@ export function isSyncReadyYear(row: ImportYearLike): boolean {
 export function getMissingSyncRequirements(
   row: ImportYearLike,
 ): MissingRequirement[] {
+  if (usesBaselineReadiness(row)) {
+    if (row.baselineReady) {
+      return [];
+    }
+    const missing: MissingRequirement[] = [];
+    if (row.baselineMissingRequirements?.includes('financialBaseline')) {
+      missing.push('financials');
+    }
+    if (row.baselineMissingRequirements?.includes('prices')) {
+      missing.push('prices');
+    }
+    if (row.baselineMissingRequirements?.includes('volumes')) {
+      missing.push('volumes');
+    }
+    return missing;
+  }
   const missing: MissingRequirement[] = [];
   if (!row.completeness.tilinpaatos) missing.push('financials');
   if (!row.completeness.taksa) missing.push('prices');
@@ -77,6 +112,21 @@ export function getSyncBlockReasonKey(
   | 'v2Overview.yearReasonMissingTariffRevenue'
   | 'v2Overview.yearReasonTariffRevenueMismatch'
   | null {
+  if (usesBaselineReadiness(row)) {
+    if (row.baselineReady) {
+      return null;
+    }
+    if (row.baselineMissingRequirements?.includes('financialBaseline')) {
+      return 'v2Overview.yearReasonMissingFinancials';
+    }
+    if (row.baselineMissingRequirements?.includes('prices')) {
+      return 'v2Overview.yearReasonMissingPrices';
+    }
+    if (row.baselineMissingRequirements?.includes('volumes')) {
+      return 'v2Overview.yearReasonMissingVolumes';
+    }
+    return null;
+  }
   if (!row.completeness.tilinpaatos) {
     return 'v2Overview.yearReasonMissingFinancials';
   }
@@ -98,28 +148,35 @@ export function getSyncBlockReasonKey(
 export function getSetupReadinessChecks(
   row: ImportYearLike,
 ): SetupReadinessCheck[] {
+  const baselineMissing = new Set(row.baselineMissingRequirements ?? []);
+  const useBaseline = usesBaselineReadiness(row);
   return [
     {
       key: 'financials',
       labelKey: 'v2Overview.datasetFinancials',
-      ready: row.completeness.tilinpaatos === true,
+      ready: useBaseline
+        ? !baselineMissing.has('financialBaseline')
+        : row.completeness.tilinpaatos === true,
     },
     {
       key: 'prices',
       labelKey: 'v2Overview.datasetPrices',
-      ready: row.completeness.taksa === true,
+      ready: useBaseline
+        ? !baselineMissing.has('prices')
+        : row.completeness.taksa === true,
     },
     {
       key: 'volumes',
       labelKey: 'v2Overview.datasetWaterVolume',
-      ready:
-        row.completeness.volume_vesi === true ||
-        row.completeness.volume_jatevesi === true,
+      ready: useBaseline
+        ? !baselineMissing.has('volumes')
+        : row.completeness.volume_vesi === true ||
+          row.completeness.volume_jatevesi === true,
     },
     {
       key: 'tariffRevenue',
       labelKey: 'v2Overview.datasetTariffRevenue',
-      ready: row.completeness.tariff_revenue !== false,
+      ready: useBaseline ? true : row.completeness.tariff_revenue !== false,
     },
   ];
 }
@@ -287,8 +344,9 @@ export function resolveVesinvestWorkflowState(
     workflowPlan?.baselineStatus === 'verified' ||
     planningContext?.canCreateScenario === true ||
     getAcceptedPlanningBaselineYears(importStatus, planningContext).length > 0;
+  const forecastEntryReady = baselineVerified === true;
   const forecastReady =
-    baselineVerified === true &&
+    forecastEntryReady &&
     hasPlan === true &&
     typeof workflowPlan?.selectedScenarioId === 'string' &&
     workflowPlan.selectedScenarioId.length > 0;
@@ -307,17 +365,16 @@ export function resolveVesinvestWorkflowState(
     currentStep = 1;
   } else if (!hasPlan && !hasImportedWorkspaceYears && !baselineVerified) {
     currentStep = 2;
-  } else if (!hasPlan) {
+  } else if (!baselineVerified && !hasPlan) {
     currentStep = 3;
-  } else if (hasPlan && !investmentPlanReady) {
+  } else if (hasPlan && !investmentPlanReady && !baselineVerified) {
     currentStep = 3;
-  } else if (hasPlan && !baselineVerified) {
+  } else if (!baselineVerified) {
     currentStep = 4;
   } else if (
-    hasPlan &&
-    (!forecastReady ||
-      workflowPlan?.pricingStatus !== 'verified' ||
-      !classificationReviewComplete)
+    !forecastReady ||
+    workflowPlan?.pricingStatus !== 'verified' ||
+    !classificationReviewComplete
   ) {
     currentStep = 5;
   } else {
@@ -471,10 +528,7 @@ export function resolveSetupWizardStateFromImportStatus(
         ? (options?.selectedProblemYear ?? null)
         : null,
     wizardComplete: vesinvestWorkflow.reportsReady,
-    forecastUnlocked:
-      vesinvestWorkflow.baselineVerified &&
-      vesinvestWorkflow.hasPlan &&
-      vesinvestWorkflow.investmentPlanReady,
+    forecastUnlocked: vesinvestWorkflow.baselineVerified,
     reportsUnlocked: vesinvestWorkflow.reportsReady,
     summary: {
       ...legacyState.summary,

@@ -299,6 +299,10 @@
   box-shadow: 0 10px 22px rgba(35, 71, 166, 0.22);
 }
 
+.v2-nav-btn[aria-disabled='true'] {
+  opacity: 0.58;
+}
+
 .v2-nav-btn:focus-visible,
 .v2-account-btn:focus-visible,
 .v2-account-drawer-close:focus-visible {

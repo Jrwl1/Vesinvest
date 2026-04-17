@@ -97,7 +97,7 @@ export async function loadOverviewOrchestration(params: {
   const availableYearSet = new Set(availableYears.map((row) => row.vuosi));
   const excludedYearSet = new Set(getExcludedYears(overview.importStatus));
   const filteredSelectedYears = previousSelectedYears
-    .filter((year) => availableYearSet.has(year))
+    .filter((year) => availableYearSet.has(year) && !excludedYearSet.has(year))
     .sort((a, b) => a - b);
 
   const selectionState = {

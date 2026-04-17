@@ -73,7 +73,7 @@ export function getRequirementDatasetLabel(
   requirement: MissingRequirement,
 ): string {
   if (requirement === 'financials') {
-    return t('v2Overview.datasetFinancials', 'Tilinpaatos');
+    return t('v2Overview.datasetFinancials', 'Baseline economics');
   }
   if (requirement === 'prices') {
     return t('v2Overview.datasetPrices', 'Taksa');
@@ -100,7 +100,7 @@ export function getMissingRequirementLabel(
   },
 ): string {
   if (requirement === 'financials') {
-    return t('v2Overview.requirementFinancials', 'Financial statement data');
+    return t('v2Overview.requirementFinancials', 'Baseline economics');
   }
   if (requirement === 'prices') {
     return t('v2Overview.requirementPrices', 'Price data (taksa)');
@@ -129,7 +129,7 @@ export function getSyncBlockReasonLabel(
     return null;
   }
   if (key === 'v2Overview.yearReasonMissingFinancials') {
-    return t(key, 'Missing financial statement data.');
+    return t(key, 'Baseline economics are missing.');
   }
   if (key === 'v2Overview.yearReasonMissingPrices') {
     return t(key, 'Missing price data (taksa).');
@@ -307,7 +307,7 @@ export function getDatasetTypeLabel(
   datasetType: string,
 ): string {
   if (datasetType === 'tilinpaatos') {
-    return t('v2Overview.datasetFinancials', 'Financial statement');
+    return t('v2Overview.datasetFinancials', 'Baseline economics');
   }
   if (datasetType === 'taksa') {
     return t('v2Overview.datasetPrices', 'Unit prices');
@@ -345,7 +345,7 @@ export function getImportWarningLabel(
   if (warning === 'missing_financials') {
     return t(
       'v2Overview.yearWarningMissingFinancials',
-      'Financial statement data is missing.',
+      'Baseline economics are missing.',
     );
   }
   if (warning === 'missing_prices') {
@@ -390,7 +390,7 @@ export function getSourceLayerText(
 ): string {
   const datasetLabel =
     layer.key === 'financials'
-      ? t('v2Overview.datasetFinancials', 'Financial statement')
+      ? t('v2Overview.datasetFinancials', 'Baseline economics')
       : layer.key === 'prices'
       ? t('v2Overview.datasetPrices', 'Unit prices')
       : t('v2Overview.datasetWaterVolume', 'Sold volumes');

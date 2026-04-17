@@ -11,17 +11,21 @@ import {
 } from './overviewWorkflow';
 
 describe('overviewWorkflow sync readiness', () => {
-  it('marks year as sync-ready only with financials, prices, and any sold volume', () => {
+  it('marks year as sync-ready when baseline-ready fields say the year is ready', () => {
     expect(
       isSyncReadyYear({
         vuosi: 2024,
         completeness: {
           tilinpaatos: true,
           taksa: true,
-          tariff_revenue: true,
+          tariff_revenue: false,
           volume_vesi: false,
           volume_jatevesi: true,
         },
+        baselineReady: true,
+        baselineMissingRequirements: [],
+        baselineWarnings: ['tariffRevenueMismatch'],
+        tariffRevenueReason: 'mismatch',
       }),
     ).toBe(true);
 
@@ -75,9 +79,12 @@ describe('overviewWorkflow sync readiness', () => {
           volume_vesi: true,
           volume_jatevesi: false,
         },
+        baselineReady: true,
+        baselineMissingRequirements: [],
+        baselineWarnings: ['tariffRevenueMismatch'],
         tariffRevenueReason: 'mismatch',
       }),
-    ).toBe('v2Overview.yearReasonTariffRevenueMismatch');
+    ).toBeNull();
   });
 
   it('derives the setup readiness checks and overall setup status', () => {
@@ -85,11 +92,15 @@ describe('overviewWorkflow sync readiness', () => {
       vuosi: 2024,
       completeness: {
         tilinpaatos: true,
-        taksa: false,
+        taksa: true,
         tariff_revenue: false,
         volume_vesi: false,
         volume_jatevesi: true,
       },
+      baselineReady: true,
+      baselineMissingRequirements: [],
+      baselineWarnings: ['tariffRevenueMismatch'],
+      tariffRevenueReason: 'mismatch',
     });
 
     expect(checks).toEqual([
@@ -101,7 +112,7 @@ describe('overviewWorkflow sync readiness', () => {
       {
         key: 'prices',
         labelKey: 'v2Overview.datasetPrices',
-        ready: false,
+        ready: true,
       },
       {
         key: 'volumes',
@@ -111,7 +122,7 @@ describe('overviewWorkflow sync readiness', () => {
       {
         key: 'tariffRevenue',
         labelKey: 'v2Overview.datasetTariffRevenue',
-        ready: false,
+        ready: true,
       },
     ]);
 
@@ -120,13 +131,17 @@ describe('overviewWorkflow sync readiness', () => {
         vuosi: 2024,
         completeness: {
           tilinpaatos: true,
-          taksa: false,
+          taksa: true,
           tariff_revenue: false,
           volume_vesi: false,
           volume_jatevesi: true,
         },
+        baselineReady: true,
+        baselineMissingRequirements: [],
+        baselineWarnings: ['tariffRevenueMismatch'],
+        tariffRevenueReason: 'mismatch',
       }),
-    ).toBe('needs_attention');
+    ).toBe('ready_for_review');
 
     expect(
       getSetupYearStatus(
@@ -229,7 +244,7 @@ describe('overviewWorkflow setup wizard state', () => {
     ).toMatchObject({
       utilityIdentified: true,
       hasPlan: true,
-      currentStep: 3,
+      currentStep: 5,
       baselineVerified: true,
       forecastReady: false,
     });
@@ -320,7 +335,7 @@ describe('overviewWorkflow setup wizard state', () => {
     ).toMatchObject({
       hasPlan: false,
       baselineVerified: true,
-      currentStep: 3,
+      currentStep: 5,
       forecastReady: false,
       reportsReady: false,
     });
@@ -636,7 +651,7 @@ describe('overviewWorkflow setup wizard state', () => {
     });
   });
 
-  it('keeps operators in plan creation until a Vesinvest plan exists even when planning baseline years are accepted', () => {
+  it('unlocks Forecast once an accepted planning baseline exists even without a saved Vesinvest plan', () => {
     expect(
       resolveSetupWizardStateFromImportStatus(
         {
@@ -688,11 +703,11 @@ describe('overviewWorkflow setup wizard state', () => {
         },
       ),
     ).toMatchObject({
-      currentStep: 3,
-      recommendedStep: 3,
-      activeStep: 3,
+      currentStep: 5,
+      recommendedStep: 5,
+      activeStep: 5,
       wizardComplete: false,
-      forecastUnlocked: false,
+      forecastUnlocked: true,
       reportsUnlocked: false,
       summary: {
         importedYearCount: 1,

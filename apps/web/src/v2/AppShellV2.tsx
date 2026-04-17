@@ -5,6 +5,7 @@ import {
   getForecastScenarioV2,
   getImportStatusV2,
   getPlanningContextV2,
+  listForecastScenariosV2,
   type DecodedToken,
 } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
@@ -69,6 +70,19 @@ type ForecastRuntimeState = {
 type WorkspaceBootstrapSnapshot = {
   orgName: string | null;
   wizardState: SetupWizardState;
+  planState: {
+    activePlanId: string | null;
+    linkedScenarioId: string | null;
+    classificationReviewRequired: boolean;
+    pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
+    baselineChangedSinceAcceptedRevision: boolean;
+    investmentPlanChangedSinceFeeRecommendation: boolean;
+  } | null;
+};
+
+type OverviewFocusTarget = {
+  kind: 'saved_fee_path';
+  planId: string;
 };
 
 type OrgLanguageNotice = {
@@ -180,11 +194,20 @@ export const AppShellV2: React.FC<Props> = ({
   const [setupBackSignal, setSetupBackSignal] = React.useState(0);
   const [setupWizardState, setSetupWizardState] =
     React.useState<SetupWizardState | null>(null);
+  const [setupPlanState, setSetupPlanState] =
+    React.useState<WorkspaceBootstrapSnapshot['planState']>(null);
+  const [savedFeePathReportConflictPlanId, setSavedFeePathReportConflictPlanId] =
+    React.useState<string | null>(null);
+  const [overviewFocusTarget, setOverviewFocusTarget] =
+    React.useState<OverviewFocusTarget | null>(null);
   const [setupOrgName, setSetupOrgName] = React.useState<string | null>(null);
   const [orgLanguageNotice, setOrgLanguageNotice] =
     React.useState<OrgLanguageNotice | null>(null);
   const [blockedTabNotice, setBlockedTabNotice] = React.useState<TabId | null>(
     null,
+  );
+  const initialOverviewBootstrapPendingRef = React.useRef(
+    getInitialTabFromLocation() === 'overview',
   );
 
   const tabLabels: Record<TabId, string> = {
@@ -201,11 +224,29 @@ export const AppShellV2: React.FC<Props> = ({
   const bootstrappingTargetLabel = tabLabels[bootstrappingTargetTab];
   const hasSelectedUtility =
     typeof setupOrgName === 'string' && setupOrgName.trim().length > 0;
+  const linkedSavedFeePathScenarioId = setupPlanState?.linkedScenarioId ?? null;
+  const runtimeScenarioOffLinkedFeePath =
+    activeTab === 'ennuste' &&
+    setupWizardState?.reportsUnlocked === true &&
+    typeof linkedSavedFeePathScenarioId === 'string' &&
+    linkedSavedFeePathScenarioId.length > 0 &&
+    typeof forecastRuntimeState.selectedScenarioId === 'string' &&
+    forecastRuntimeState.selectedScenarioId.length > 0 &&
+    forecastRuntimeState.selectedScenarioId !== linkedSavedFeePathScenarioId;
+  const savedFeePathReportReady =
+    setupWizardState?.reportsUnlocked === true &&
+    !runtimeScenarioOffLinkedFeePath &&
+    savedFeePathReportConflictPlanId !== setupPlanState?.activePlanId &&
+    (setupPlanState == null ||
+      (setupPlanState.classificationReviewRequired !== true &&
+        setupPlanState.pricingStatus === 'verified' &&
+        setupPlanState.baselineChangedSinceAcceptedRevision !== true &&
+        setupPlanState.investmentPlanChangedSinceFeeRecommendation !== true));
   const shellSetupStep = setupWizardState?.currentStep ?? 1;
   const shellPresentedStep = getPresentedOverviewWorkflowStep(shellSetupStep);
   const showCompletedOverviewWorkspace =
     activeTab === 'overview' &&
-    !!setupWizardState?.forecastUnlocked &&
+    !!setupWizardState?.reportsUnlocked &&
     hasSelectedUtility;
   const connectionChipToneClass = isBootstrappingPathTruth
     ? 'v2-status-neutral'
@@ -213,7 +254,7 @@ export const AppShellV2: React.FC<Props> = ({
     ? 'v2-status-info'
     : !hasSelectedUtility
       ? 'v2-status-warning'
-      : setupWizardState?.forecastUnlocked
+      : setupWizardState?.reportsUnlocked && !runtimeScenarioOffLinkedFeePath
         ? 'v2-status-positive'
         : 'v2-status-info';
   const connectionChipLabel = isBootstrappingPathTruth
@@ -222,11 +263,9 @@ export const AppShellV2: React.FC<Props> = ({
     ? t('v2Shell.demoMode', 'Demo mode')
     : !hasSelectedUtility
       ? t('v2Shell.planRequired', 'Create Vesinvest plan')
-      : setupWizardState?.reportsUnlocked
-        ? t('v2Shell.reportReady', 'Report-ready scenario')
-        : setupWizardState?.forecastUnlocked
-          ? t('v2Shell.feePathReady', 'Fee path ready')
-          : t('v2Shell.planInProgress', 'Vesinvest in progress');
+    : savedFeePathReportReady
+      ? t('v2Shell.reportReady', 'Report-ready scenario')
+      : t('v2Shell.planInProgress', 'Vesinvest in progress');
   const pageIndicatorLabel = isBootstrappingPathTruth
     ? bootstrappingTargetLabel
     : showCompletedOverviewWorkspace
@@ -298,6 +337,53 @@ export const AppShellV2: React.FC<Props> = ({
     });
   }, []);
 
+  const applySetupPlanState = React.useCallback(
+    (nextState: WorkspaceBootstrapSnapshot['planState']) => {
+      setSetupPlanState((prev) => {
+        setSavedFeePathReportConflictPlanId((current) => {
+          if (!current) {
+            return current;
+          }
+          if (!nextState?.activePlanId || nextState.activePlanId !== current) {
+            return null;
+          }
+          if (
+            nextState.pricingStatus === 'verified' &&
+            nextState.classificationReviewRequired !== true &&
+            nextState.baselineChangedSinceAcceptedRevision !== true &&
+            nextState.investmentPlanChangedSinceFeeRecommendation !== true
+          ) {
+            return null;
+          }
+          if (
+            prev?.activePlanId === nextState.activePlanId &&
+            prev.linkedScenarioId &&
+            nextState.linkedScenarioId &&
+            nextState.linkedScenarioId !== prev.linkedScenarioId
+          ) {
+            return null;
+          }
+          return current;
+        });
+        if (
+          prev?.activePlanId === nextState?.activePlanId &&
+          prev?.linkedScenarioId === nextState?.linkedScenarioId &&
+          prev?.classificationReviewRequired ===
+            nextState?.classificationReviewRequired &&
+          prev?.pricingStatus === nextState?.pricingStatus &&
+          prev?.baselineChangedSinceAcceptedRevision ===
+            nextState?.baselineChangedSinceAcceptedRevision &&
+          prev?.investmentPlanChangedSinceFeeRecommendation ===
+            nextState?.investmentPlanChangedSinceFeeRecommendation
+        ) {
+          return prev;
+        }
+        return nextState;
+      });
+    },
+    [],
+  );
+
   const applySetupOrgName = React.useCallback((name: string | null) => {
     setSetupOrgName((prev) => (prev === name ? prev : name));
   }, []);
@@ -308,19 +394,27 @@ export const AppShellV2: React.FC<Props> = ({
       getPlanningContextV2().catch(() => null),
     ]);
     const activePlan = planningContext?.vesinvest?.activePlan ?? null;
-    const selectedScenario =
-      activePlan?.selectedScenarioId != null
-        ? await getForecastScenarioV2(activePlan.selectedScenarioId).catch(
-            () => null,
-          )
-        : null;
+    const selectedPlan = planningContext?.vesinvest?.selectedPlan ?? null;
+    const workflowPlan = activePlan ?? selectedPlan;
+    let selectedScenario = null;
+    if (workflowPlan?.selectedScenarioId != null) {
+      selectedScenario = await getForecastScenarioV2(
+        workflowPlan.selectedScenarioId,
+      ).catch(() => null);
+      if (selectedScenario == null) {
+        const scenarioList = await listForecastScenariosV2().catch(() => null);
+        selectedScenario =
+          scenarioList?.find((item) => item.id === workflowPlan.selectedScenarioId) ??
+          null;
+      }
+    }
 
     if (importStatus.link?.uiLanguage) {
       void applyOrganizationDefaultLanguage(importStatus.link.uiLanguage);
     }
 
     return {
-      orgName: activePlan?.utilityName ?? importStatus.link?.nimi ?? null,
+      orgName: workflowPlan?.utilityName ?? importStatus.link?.nimi ?? null,
       wizardState: resolveSetupWizardStateFromImportStatus(
         importStatus,
         planningContext,
@@ -328,16 +422,30 @@ export const AppShellV2: React.FC<Props> = ({
           selectedScenario,
         },
       ),
+      planState: workflowPlan
+        ? {
+            activePlanId: workflowPlan.id ?? null,
+            linkedScenarioId: workflowPlan.selectedScenarioId ?? null,
+            classificationReviewRequired:
+              workflowPlan.classificationReviewRequired === true,
+            pricingStatus: workflowPlan.pricingStatus ?? null,
+            baselineChangedSinceAcceptedRevision:
+              workflowPlan.baselineChangedSinceAcceptedRevision === true,
+            investmentPlanChangedSinceFeeRecommendation:
+              workflowPlan.investmentPlanChangedSinceFeeRecommendation === true,
+          }
+        : null,
     } satisfies WorkspaceBootstrapSnapshot;
   }, []);
 
   const refreshWorkspaceTruth = React.useCallback(async () => {
     const snapshot = await loadWorkspaceBootstrapSnapshot();
     applySetupWizardState(snapshot.wizardState);
+    applySetupPlanState(snapshot.planState);
     applySetupOrgName(snapshot.orgName);
     setSetupTruthBootstrapped(true);
     return snapshot;
-  }, [applySetupOrgName, applySetupWizardState, loadWorkspaceBootstrapSnapshot]);
+  }, [applySetupOrgName, applySetupPlanState, applySetupWizardState, loadWorkspaceBootstrapSnapshot]);
 
   const isTabLockedForState = React.useCallback(
     (tab: TabId, state: SetupWizardState | null) => {
@@ -374,14 +482,42 @@ export const AppShellV2: React.FC<Props> = ({
     [setupWizardState],
   );
 
+  const lockedTabMessage = React.useCallback(
+    (tab: TabId) => {
+      if (
+        tab === 'reports' &&
+        setupWizardState?.forecastUnlocked &&
+        setupPlanState?.classificationReviewRequired
+      ) {
+        return t(
+          'v2Forecast.classificationReviewRequired',
+          'Review and save the Vesinvest class plan before creating a report.',
+        );
+      }
+      if (tab === 'reports' && setupWizardState?.forecastUnlocked) {
+        return t(
+          'v2Vesinvest.workflowCreateReportBody',
+          'Create the report after the fee path is saved and the linked scenario is up to date.',
+        );
+      }
+      return t(
+        'v2Shell.tabLockedHint',
+        'Complete the setup steps before opening this workspace.',
+      );
+    },
+    [setupPlanState?.classificationReviewRequired, setupWizardState?.forecastUnlocked, t],
+  );
+
   const handleGoToForecast = React.useCallback((scenarioId?: string | null) => {
-    if (isTabLocked('ennuste')) {
+    const hasScenarioTarget =
+      typeof scenarioId === 'string' && scenarioId.trim().length > 0;
+    if (!hasScenarioTarget && isTabLocked('ennuste')) {
       handleLockedTabAttempt('ennuste');
       return;
     }
     closeDrawer();
     setBlockedTabNotice(null);
-    if (typeof scenarioId === 'string' && scenarioId.length > 0) {
+    if (hasScenarioTarget) {
       setForecastRuntimeState((prev) =>
         prev.selectedScenarioId === scenarioId
           ? prev
@@ -390,7 +526,7 @@ export const AppShellV2: React.FC<Props> = ({
     }
     setActiveTab('ennuste');
     syncBrowserPath('ennuste');
-    if (typeof scenarioId === 'string' && scenarioId.length > 0) {
+    if (hasScenarioTarget) {
       void refreshWorkspaceTruth().catch(() => undefined);
     }
   }, [closeDrawer, handleLockedTabAttempt, isTabLocked, refreshWorkspaceTruth]);
@@ -426,6 +562,42 @@ export const AppShellV2: React.FC<Props> = ({
     setActiveTab('reports');
     syncBrowserPath('reports');
   }, [closeDrawer, handleLockedTabAttempt, isTabLocked]);
+
+  const handleGoToOverviewFeePath = React.useCallback(
+    (planId?: string | null) => {
+      closeDrawer();
+      setBlockedTabNotice(null);
+      const targetPlanId = planId ?? setupPlanState?.activePlanId ?? null;
+      setSavedFeePathReportConflictPlanId(targetPlanId);
+      const targetScenarioId = setupPlanState?.linkedScenarioId ?? null;
+      if (targetScenarioId) {
+        setForecastRuntimeState((prev) =>
+          prev.selectedScenarioId === targetScenarioId
+            ? prev
+            : { ...prev, selectedScenarioId: targetScenarioId },
+        );
+      }
+      setOverviewFocusTarget(
+        targetPlanId
+          ? {
+              kind: 'saved_fee_path',
+              planId: targetPlanId,
+            }
+          : null,
+      );
+      setActiveTab('overview');
+      syncBrowserPath('overview');
+    },
+    [closeDrawer, setupPlanState?.activePlanId, setupPlanState?.linkedScenarioId],
+  );
+
+  const handleSavedFeePathReportConflict = React.useCallback(
+    (planId?: string | null) => {
+      const targetPlanId = planId ?? setupPlanState?.activePlanId ?? null;
+      setSavedFeePathReportConflictPlanId(targetPlanId);
+    },
+    [setupPlanState?.activePlanId],
+  );
 
   const handleReportCreated = React.useCallback(
     (reportId: string) => {
@@ -468,6 +640,14 @@ export const AppShellV2: React.FC<Props> = ({
     [applySetupWizardState],
   );
 
+  const handleSetupPlanStateChange = React.useCallback(
+    (nextState: WorkspaceBootstrapSnapshot['planState']) => {
+      applySetupPlanState(nextState);
+      setSetupTruthBootstrapped(true);
+    },
+    [applySetupPlanState],
+  );
+
   const handleSetupOrgNameChange = React.useCallback((name: string | null) => {
     applySetupOrgName(name);
   }, [applySetupOrgName]);
@@ -486,6 +666,7 @@ export const AppShellV2: React.FC<Props> = ({
         const snapshot = await loadWorkspaceBootstrapSnapshot();
         if (cancelled) return;
         applySetupWizardState(snapshot.wizardState);
+        applySetupPlanState(snapshot.planState);
         applySetupOrgName(snapshot.orgName);
       } catch {
         // Ignore bootstrap fetch failure here; Overview will refresh truth once mounted.
@@ -503,6 +684,40 @@ export const AppShellV2: React.FC<Props> = ({
     };
   }, [
     applySetupOrgName,
+    applySetupPlanState,
+    applySetupWizardState,
+    loadWorkspaceBootstrapSnapshot,
+    pendingPathTab,
+  ]);
+
+  React.useEffect(() => {
+    if (pendingPathTab != null) return;
+    if (!initialOverviewBootstrapPendingRef.current) return;
+    initialOverviewBootstrapPendingRef.current = false;
+
+    let cancelled = false;
+
+    const bootstrapOverviewTruth = async () => {
+      try {
+        const snapshot = await loadWorkspaceBootstrapSnapshot();
+        if (cancelled) return;
+        if (!snapshot.wizardState.reportsUnlocked) return;
+        applySetupWizardState(snapshot.wizardState);
+        applySetupPlanState(snapshot.planState);
+        applySetupOrgName(snapshot.orgName);
+      } catch {
+        // Ignore bootstrap fetch failure here; Overview can still hydrate shell truth.
+      }
+    };
+
+    void bootstrapOverviewTruth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    applySetupOrgName,
+    applySetupPlanState,
     applySetupWizardState,
     loadWorkspaceBootstrapSnapshot,
     pendingPathTab,
@@ -521,6 +736,7 @@ export const AppShellV2: React.FC<Props> = ({
         const snapshot = await loadWorkspaceBootstrapSnapshot();
         if (cancelled) return;
         applySetupWizardState(snapshot.wizardState);
+        applySetupPlanState(snapshot.planState);
         applySetupOrgName(snapshot.orgName);
       } catch {
         // Keep the current shell state if the retry fails; the page surface can still render.
@@ -535,6 +751,7 @@ export const AppShellV2: React.FC<Props> = ({
   }, [
     activeTab,
     applySetupOrgName,
+    applySetupPlanState,
     applySetupWizardState,
     hasSelectedUtility,
     loadWorkspaceBootstrapSnapshot,
@@ -660,6 +877,8 @@ export const AppShellV2: React.FC<Props> = ({
         applySetupWizardState(
           resolveSetupWizardStateFromImportStatus(result.status, null),
         );
+        applySetupPlanState(null);
+        setOverviewFocusTarget(null);
         applySetupOrgName(result.status.link?.nimi ?? null);
         setSetupTruthBootstrapped(true);
         setPendingPathTab(null);
@@ -679,7 +898,7 @@ export const AppShellV2: React.FC<Props> = ({
         setClearBusy(false);
       }
     },
-    [applySetupOrgName, applySetupWizardState, clearOrgLanguageNotice],
+    [applySetupOrgName, applySetupPlanState, applySetupWizardState, clearOrgLanguageNotice],
   );
 
   const handleClearImportAndScenarios = React.useCallback(async () => {
@@ -805,15 +1024,7 @@ export const AppShellV2: React.FC<Props> = ({
                   onMouseEnter={() => preloadTab(tab)}
                   aria-current={activeTab === tab ? 'page' : undefined}
                   aria-disabled={locked || undefined}
-                  disabled={locked}
-                  title={
-                    locked
-                      ? t(
-                          'v2Shell.tabLockedHint',
-                          'Complete the setup steps before opening this workspace.',
-                        )
-                      : undefined
-                  }
+                  title={locked ? lockedTabMessage(tab) : undefined}
                 >
                   {tabLabels[tab]}
                 </button>
@@ -918,10 +1129,7 @@ export const AppShellV2: React.FC<Props> = ({
           <p>
             <strong>{tabLabels[blockedTabNotice]}</strong>
             {': '}
-            {t(
-              'v2Shell.tabLockedHint',
-              'Complete the setup steps before opening this workspace.',
-            )}
+            {lockedTabMessage(blockedTabNotice)}
           </p>
           <div className="v2-language-notice-actions">
             <button
@@ -1099,7 +1307,13 @@ export const AppShellV2: React.FC<Props> = ({
                     onGoToForecast={handleGoToForecast}
                     onGoToReports={handleGoToReports}
                     isAdmin={isAdmin}
+                    overviewFocusTarget={overviewFocusTarget}
+                    onOverviewFocusTargetConsumed={() =>
+                      setOverviewFocusTarget(null)
+                    }
+                    onSavedFeePathReportConflict={handleSavedFeePathReportConflict}
                     onSetupWizardStateChange={handleSetupWizardStateChange}
+                    onSetupPlanStateChange={handleSetupPlanStateChange}
                     onSetupOrgNameChange={handleSetupOrgNameChange}
                     onOrgLanguageNoticeChange={setOrgLanguageNotice}
                     setupBackSignal={setupBackSignal}
@@ -1110,6 +1324,10 @@ export const AppShellV2: React.FC<Props> = ({
                     onReportCreated={handleReportCreated}
                     initialScenarioId={forecastRuntimeState.selectedScenarioId}
                     onScenarioSelectionChange={handleForecastScenarioSelection}
+                    onGoToOverviewFeePath={handleGoToOverviewFeePath}
+                    onComputedVersionChange={() => {
+                      void refreshWorkspaceTruth().catch(() => undefined);
+                    }}
                   />
                 ) : null}
                 {activeTab === 'reports' ? (
@@ -1117,6 +1335,23 @@ export const AppShellV2: React.FC<Props> = ({
                     refreshToken={reportsRefreshTick}
                     focusedReportId={focusedReportId}
                     onGoToForecast={handleGoToForecastFromReport}
+                    onGoToOverviewFeePath={handleGoToOverviewFeePath}
+                    savedFeePathPlanId={setupPlanState?.activePlanId ?? null}
+                    savedFeePathScenarioId={setupPlanState?.linkedScenarioId ?? null}
+                    savedFeePathPricingStatus={setupPlanState?.pricingStatus ?? null}
+                    savedFeePathClassificationReviewRequired={
+                      setupPlanState?.classificationReviewRequired ?? false
+                    }
+                    savedFeePathBaselineChangedSinceAcceptedRevision={
+                      setupPlanState?.baselineChangedSinceAcceptedRevision ?? false
+                    }
+                    savedFeePathInvestmentPlanChangedSinceFeeRecommendation={
+                      setupPlanState?.investmentPlanChangedSinceFeeRecommendation ?? false
+                    }
+                    savedFeePathReportConflictActive={
+                      savedFeePathReportConflictPlanId ===
+                      (setupPlanState?.activePlanId ?? null)
+                    }
                     onFocusedReportChange={handleFocusedReportChange}
                   />
                 ) : null}

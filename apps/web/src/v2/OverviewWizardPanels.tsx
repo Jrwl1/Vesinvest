@@ -18,6 +18,8 @@ type AcceptedPlanningYearRow = {
   datasetCounts?: Record<string, number>;
   resultToZero?: V2ImportYearResultToZeroSignal;
   sourceLayers?: ImportYearSourceLayer[];
+  baselineReady?: boolean;
+  baselineMissingRequirements?: Array<'financialBaseline' | 'prices' | 'volumes'>;
   completeness?: {
     tilinpaatos?: boolean;
     taksa?: boolean;
@@ -25,6 +27,31 @@ type AcceptedPlanningYearRow = {
     volume_jatevesi?: boolean;
   };
 };
+
+function resolveAcceptedPlanningAvailability(row: AcceptedPlanningYearRow): {
+  financials: boolean;
+  prices: boolean;
+  volumes: boolean;
+} {
+  const useBaselineReadiness =
+    typeof row.baselineReady === 'boolean' ||
+    Array.isArray(row.baselineMissingRequirements);
+  const baselineMissing = new Set(row.baselineMissingRequirements ?? []);
+  if (useBaselineReadiness) {
+    return {
+      financials: !baselineMissing.has('financialBaseline'),
+      prices: !baselineMissing.has('prices'),
+      volumes: !baselineMissing.has('volumes'),
+    };
+  }
+  return {
+    financials: row.completeness?.tilinpaatos !== false,
+    prices: row.completeness?.taksa !== false,
+    volumes:
+      row.completeness?.volume_vesi !== false ||
+      row.completeness?.volume_jatevesi !== false,
+  };
+}
 
 type OverviewConnectStepProps = {
   t: TFunction;
@@ -395,7 +422,9 @@ export const OverviewPlanningBaselineStep: React.FC<
           : t('v2Overview.createPlanningBaseline')}
       </button>
       <p className="v2-muted">
-        {importedBlockedYearCount > 0
+        {includedPlanningYears.length === 0
+          ? t('v2Overview.wizardBaselinePendingHint')
+          : importedBlockedYearCount > 0
           ? t('v2Overview.baselineBlockedHint')
           : t('v2Overview.baselineReadyHint')}
       </p>
@@ -465,9 +494,6 @@ export const OverviewForecastHandoffStep: React.FC<
     </div>
 
     <div className="v2-actions-row v2-overview-handoff-management-row">
-      <button type="button" className="v2-btn" onClick={onManageYears}>
-        {t('v2Overview.manageYears', 'Manage years')}
-      </button>
       <button
         type="button"
         className={openForecastButtonClass}
@@ -502,13 +528,7 @@ export const OverviewForecastHandoffStep: React.FC<
             row.sourceLayers,
             row.sourceStatus,
           );
-          const availability = {
-            financials: row.completeness?.tilinpaatos !== false,
-            prices: row.completeness?.taksa !== false,
-            volumes:
-              row.completeness?.volume_vesi !== false ||
-              row.completeness?.volume_jatevesi !== false,
-          };
+          const availability = resolveAcceptedPlanningAvailability(row);
           return (
             <article key={`accepted-${row.vuosi}`} className="v2-year-status-row ready">
               <div className="v2-year-status-head">
@@ -544,16 +564,6 @@ export const OverviewForecastHandoffStep: React.FC<
                 </span>
               </div>
 
-              <div className="v2-actions-row v2-overview-handoff-year-primary-actions">
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-small"
-                  onClick={() => onReopenYearReview(row.vuosi)}
-                >
-                  {t('v2Overview.reopenReview', 'Reopen review')}
-                </button>
-              </div>
-
               {renderYearValuePreview(row.vuosi, availability, {
                 compact: true,
               })}
@@ -565,6 +575,13 @@ export const OverviewForecastHandoffStep: React.FC<
                 </span>
               </div>
               <div className="v2-actions-row v2-overview-handoff-year-actions">
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
+                  onClick={() => onReopenYearReview(row.vuosi)}
+                >
+                  {t('v2Overview.reopenReview', 'Reopen review')}
+                </button>
                 {corrected || row.sourceStatus !== 'VEETI' ? (
                   <button
                     type="button"

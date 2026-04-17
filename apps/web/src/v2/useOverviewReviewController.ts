@@ -594,9 +594,19 @@ export function useOverviewReviewController({
     async (year: number) => {
       importController.setError(null);
       importController.setInfo(null);
-      importController.setReviewContinueStep(null);
       const yearRow =
         reviewStatusRows.find((row) => row.year === year) ?? null;
+      const reopeningAcceptedOnlyYear = !confirmedImportedYears.includes(year);
+      if (reopeningAcceptedOnlyYear) {
+        importController.setReviewContinueStep(null);
+        await openManualPatchDialog(
+          year,
+          yearRow?.missingRequirements ?? [],
+          'review',
+        );
+        return;
+      }
+      importController.setReviewContinueStep(3);
       await manualController.openInlineCardEditor(
         year,
         null,
@@ -604,7 +614,13 @@ export function useOverviewReviewController({
         yearRow?.missingRequirements ?? [],
       );
     },
-    [importController, manualController, reviewStatusRows],
+    [
+      confirmedImportedYears,
+      importController,
+      manualController,
+      openManualPatchDialog,
+      reviewStatusRows,
+    ],
   );
 
   const handleManageYears = React.useCallback(() => {
@@ -645,10 +661,15 @@ export function useOverviewReviewController({
     importController.setInfo(null);
     try {
       await excludeImportYearsV2([manualController.manualPatchYear]);
+      importController.pruneYearFromSelections(manualController.manualPatchYear);
       importController.setInfo(
-        t('v2Overview.excludeYearDone', 'Vuosi {{year}} on nyt pois suunnitelmasta.', {
-          year: manualController.manualPatchYear,
-        }),
+        t(
+          'v2Overview.excludeYearDoneSingle',
+          'Year {{year}} is now excluded from the plan.',
+          {
+            year: manualController.manualPatchYear,
+          },
+        ),
       );
       resetManualPatchDialog();
       await importController.loadOverview({

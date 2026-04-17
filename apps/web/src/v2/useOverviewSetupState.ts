@@ -1,7 +1,11 @@
-import React from 'react';
+﻿import React from 'react';
 import type { TFunction } from 'i18next';
 
-import type { V2ImportYearDataResponse, V2OverviewResponse } from '../api';
+import type {
+  V2ImportYearDataResponse,
+  V2OverviewResponse,
+  V2PlanningContextResponse,
+} from '../api';
 import {
   getSyncBlockReasonLabel as buildSyncBlockReasonLabel,
   getImportYearSummaryLabel as buildImportYearSummaryLabel,
@@ -63,31 +67,41 @@ function getEditedFinancialFieldLabel(
 }
 
 function mergeYearDataSignals(
-  completeness: Record<string, boolean>,
-  tariffRevenueReason: 'missing_fixed_revenue' | 'mismatch' | null | undefined,
+  yearRow: {
+    completeness: Record<string, boolean>;
+    baselineReady?: boolean;
+    baselineMissingRequirements?: Array<
+      'financialBaseline' | 'prices' | 'volumes'
+    >;
+    baselineWarnings?: Array<'tariffRevenueMismatch'>;
+    tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
+  },
   yearData: V2ImportYearDataResponse | undefined,
 ): {
   completeness: Record<string, boolean>;
+  baselineReady?: boolean;
+  baselineMissingRequirements: Array<'financialBaseline' | 'prices' | 'volumes'>;
+  baselineWarnings: Array<'tariffRevenueMismatch'>;
   tariffRevenueReason: 'missing_fixed_revenue' | 'mismatch' | null;
 } {
+  const completeness = yearRow.completeness;
+  const tariffRevenueReason = yearRow.tariffRevenueReason;
   if (!yearData) {
     return {
       completeness,
+      baselineReady: yearRow.baselineReady,
+      baselineMissingRequirements: yearRow.baselineMissingRequirements ?? [],
+      baselineWarnings: yearRow.baselineWarnings ?? [],
       tariffRevenueReason: tariffRevenueReason ?? null,
     };
   }
 
-  const summaryRows = buildImportYearSummaryRows(yearData);
-  const summaryMap = new Map(summaryRows.map((row) => [row.key, row]));
-  const hasCanonicalFinancialRows = IMPORT_BOARD_CANON_ROWS.every((item) => {
-    const row = summaryMap.get(item.key);
-    return row?.effectiveValue != null;
-  });
-
   return {
     completeness: {
       ...completeness,
-      tilinpaatos: hasCanonicalFinancialRows,
+      tilinpaatos:
+        completeness.tilinpaatos === true ||
+        yearData.completeness.tilinpaatos === true,
       taksa:
         completeness.taksa === true || yearData.completeness.taksa === true,
       tariff_revenue:
@@ -102,12 +116,37 @@ function mergeYearDataSignals(
         completeness.volume_jatevesi === true ||
         yearData.completeness.volume_jatevesi === true,
     },
+    baselineReady: yearData.baselineReady ?? yearRow.baselineReady,
+    baselineMissingRequirements:
+      yearData.baselineMissingRequirements ??
+      yearRow.baselineMissingRequirements ??
+      [],
+    baselineWarnings:
+      yearData.baselineWarnings ?? yearRow.baselineWarnings ?? [],
     tariffRevenueReason:
       yearData.tariffRevenueReason ??
       (yearData.completeness.tariff_revenue === false
         ? tariffRevenueReason ?? null
         : null),
   };
+}
+
+function deriveDatasetCounts(
+  yearData: V2ImportYearDataResponse | undefined,
+): Record<string, number> | undefined {
+  const counts =
+    yearData?.datasets.reduce<Record<string, number>>((acc, dataset) => {
+      const count = Math.max(
+        dataset.effectiveRows?.length ?? 0,
+        dataset.rawRows?.length ?? 0,
+        dataset.source === 'none' ? 0 : 1,
+      );
+      if (count > 0) {
+        acc[dataset.dataType] = count;
+      }
+      return acc;
+    }, {}) ?? {};
+  return Object.keys(counts).length > 0 ? counts : undefined;
 }
 
 export function getExactEditedFieldLabels(params: {
@@ -158,6 +197,7 @@ export function getExactEditedFieldLabels(params: {
 
 export function useOverviewSetupState(params: {
   overview: V2OverviewResponse | null;
+  planningContext?: V2PlanningContextResponse | null;
   yearDataCache: Record<number, V2ImportYearDataResponse>;
   selectedYears: number[];
   excludedYearOverrides: Record<number, boolean>;
@@ -174,6 +214,7 @@ export function useOverviewSetupState(params: {
 }) {
   const {
     overview,
+    planningContext = null,
     yearDataCache,
     selectedYears,
     excludedYearOverrides,
@@ -192,6 +233,10 @@ export function useOverviewSetupState(params: {
   const resolveSyncBlockReason = React.useCallback(
     (row: {
       completeness: Record<string, boolean>;
+      baselineReady?: boolean;
+      baselineMissingRequirements?: Array<
+        'financialBaseline' | 'prices' | 'volumes'
+      >;
       tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
       vuosi: number;
     }) => buildSyncBlockReasonLabel(t, row),
@@ -206,14 +251,14 @@ export function useOverviewSetupState(params: {
   const syncYearRows = React.useMemo(
     () =>
       availableYearRows.map((row) => {
-        const mergedSignals = mergeYearDataSignals(
-          row.completeness,
-          row.tariffRevenueReason,
-          yearDataCache[row.vuosi],
-        );
+        const mergedSignals = mergeYearDataSignals(row, yearDataCache[row.vuosi]);
         const mergedRow = {
           ...row,
           completeness: mergedSignals.completeness,
+          baselineReady: mergedSignals.baselineReady,
+          baselineMissingRequirements:
+            mergedSignals.baselineMissingRequirements,
+          baselineWarnings: mergedSignals.baselineWarnings,
           tariffRevenueReason: mergedSignals.tariffRevenueReason,
         };
         return {
@@ -271,9 +316,16 @@ export function useOverviewSetupState(params: {
           years.delete(numericYear);
         }
       }
+      for (const year of backendAcceptedPlanningYears) {
+        years.delete(year);
+      }
       return [...years].sort((a, b) => b - a);
     },
-    [excludedYearOverrides, overview?.importStatus.excludedYears],
+    [
+      backendAcceptedPlanningYears,
+      excludedYearOverrides,
+      overview?.importStatus.excludedYears,
+    ],
   );
   const excludedYearSet = React.useMemo(
     () => new Set(excludedYearsSorted),
@@ -316,35 +368,40 @@ export function useOverviewSetupState(params: {
       const missingCanonRows = IMPORT_BOARD_CANON_ROWS.filter(
         (item) => summaryMap.get(item.key)?.effectiveValue == null,
       ).map((item) => buildImportYearSummaryLabel(t, item.key));
+      const baselineMissing = new Set(row.baselineMissingRequirements ?? []);
+      const usesBaselineReadiness =
+        typeof row.baselineReady === 'boolean' ||
+        baselineMissing.size > 0;
       const missingRequiredInputs = [
         {
-          present: row.completeness?.tilinpaatos,
-          label: t('v2Overview.datasetFinancials', 'Tilinpäätös'),
+          present: usesBaselineReadiness
+            ? !baselineMissing.has('financialBaseline')
+            : row.completeness?.tilinpaatos,
+          label: t('v2Overview.datasetFinancials', 'Baseline economics'),
         },
         {
-          present: row.completeness?.taksa,
+          present: usesBaselineReadiness
+            ? !baselineMissing.has('prices')
+            : row.completeness?.taksa,
           label: t('v2Overview.datasetPrices', 'Taksa'),
         },
         {
-          present: row.completeness?.tariff_revenue !== false,
-          label:
-            row.tariffRevenueReason === 'mismatch'
-              ? buildSyncBlockReasonLabel(t, row) ??
-                t(
-                  'v2Overview.requirementTariffRevenueMismatch',
-                  'Tariff revenue does not reconcile with prices, volumes, and base-fee revenue',
-                )
-              : buildRequirementDatasetLabel(t, 'tariffRevenue'),
-        },
-        {
-          present: row.completeness?.volume_vesi,
-          label: t('v2Overview.previewWaterVolumeLabel', 'Myyty vesi'),
-        },
-        {
-          present: row.completeness?.volume_jatevesi,
-          label: t('v2Overview.previewWastewaterVolumeLabel', 'Myyty jätevesi'),
+          present: usesBaselineReadiness
+            ? !baselineMissing.has('volumes')
+            : row.completeness?.volume_vesi || row.completeness?.volume_jatevesi,
+          label: t('v2Overview.datasetWaterVolume', 'Volyymit'),
         },
       ].filter((item) => !item.present);
+      const hasTariffBaselineWarning =
+        row.syncBlockedReason == null &&
+        row.baselineWarnings?.includes('tariffRevenueMismatch') === true;
+      const tariffBaselineWarningText = hasTariffBaselineWarning
+        ? buildSyncBlockReasonLabel(t, row) ??
+          t(
+            'v2Overview.requirementTariffRevenueMismatch',
+            'Tariff revenue does not reconcile with prices, volumes, and fixed revenue',
+          )
+        : null;
       const incompleteSource =
         row.sourceStatus === 'INCOMPLETE' ||
         trustSignal.reasons.includes('incomplete_source');
@@ -364,7 +421,8 @@ export function useOverviewSetupState(params: {
       const lane =
         row.syncBlockedReason != null
           ? 'blocked'
-          : missingCoreCostStructure ||
+          : hasTariffBaselineWarning ||
+            missingCoreCostStructure ||
             hasFallbackZero ||
             hasLargeDiscrepancy ||
             suspiciousMargin ||
@@ -376,6 +434,8 @@ export function useOverviewSetupState(params: {
           ? missingCoreCostStructure
             ? t('v2Overview.trustMissingKeyCosts', 'Missing key cost rows')
             : t('v2Overview.yearNeedsCompletion', 'Needs completion')
+          : hasTariffBaselineWarning
+          ? t('v2Overview.trustNeedsReview', 'Needs human review')
           : missingCoreCostStructure
           ? t('v2Overview.trustMissingKeyCosts', 'Missing key cost rows')
           : hasLargeDiscrepancy
@@ -398,7 +458,7 @@ export function useOverviewSetupState(params: {
         missingRequiredInputs.length > 0
           ? {
               count: missingRequiredInputs.length,
-              total: 5,
+              total: 3,
               fields: missingRequiredInputs.map((item) => item.label).join(', '),
             }
           : missingCoreCostStructure && missingCanonRows.length > 0
@@ -427,6 +487,8 @@ export function useOverviewSetupState(params: {
                       .join(', ')
                   : t('v2Overview.setupStatusNeedsAttention'),
             })
+          : tariffBaselineWarningText != null
+          ? tariffBaselineWarningText
           : missingCoreCostStructure
           ? t(
               'v2Overview.trustMissingKeyCostsHint',
@@ -568,14 +630,14 @@ export function useOverviewSetupState(params: {
         .filter((row) => confirmedImportedYears.includes(row.vuosi))
         .sort((a, b) => b.vuosi - a.vuosi)
         .map((row) => {
-          const mergedSignals = mergeYearDataSignals(
-            row.completeness,
-            row.tariffRevenueReason,
-            yearDataCache[row.vuosi],
-          );
+          const mergedSignals = mergeYearDataSignals(row, yearDataCache[row.vuosi]);
           const effectiveRow = {
             ...row,
             completeness: mergedSignals.completeness,
+            baselineReady: mergedSignals.baselineReady,
+            baselineMissingRequirements:
+              mergedSignals.baselineMissingRequirements,
+            baselineWarnings: mergedSignals.baselineWarnings,
             tariffRevenueReason: mergedSignals.tariffRevenueReason,
           };
           const missingRequirements = getMissingSyncRequirements(effectiveRow);
@@ -627,11 +689,14 @@ export function useOverviewSetupState(params: {
     [excludedYearsSorted, importYearRows, reviewedImportedYearSet],
   );
 
-  const reviewStatusRows = React.useMemo(() => {
+  const importReviewStatusRows = React.useMemo(() => {
     const rows = importYearRows.map((row) => ({
       year: row.vuosi,
       sourceStatus: row.sourceStatus,
       completeness: row.completeness,
+      baselineReady: row.baselineReady,
+      baselineMissingRequirements: row.baselineMissingRequirements ?? [],
+      baselineWarnings: row.baselineWarnings ?? [],
       tariffRevenueReason: row.tariffRevenueReason ?? null,
       readinessChecks: row.readinessChecks,
       missingRequirements: row.missingRequirements,
@@ -662,6 +727,13 @@ export function useOverviewSetupState(params: {
           volume_vesi: false,
           volume_jatevesi: false,
         },
+        baselineReady: false,
+        baselineMissingRequirements: [
+          'financialBaseline',
+          'prices',
+          'volumes',
+        ] as Array<'financialBaseline' | 'prices' | 'volumes'>,
+        baselineWarnings: [] as Array<'tariffRevenueMismatch'>,
         tariffRevenueReason: null,
         readinessChecks: [
           { key: 'financials', labelKey: 'v2Overview.datasetFinancials', ready: false },
@@ -677,6 +749,224 @@ export function useOverviewSetupState(params: {
 
     return rows.sort((a, b) => b.year - a.year);
   }, [excludedYearsSorted, importYearRows, reviewedImportedYearSet]);
+
+  const acceptedPlanningYearRows = React.useMemo(
+    () => {
+      const importBoardRowByYear = new Map(
+        importBoardRows.map((row) => [row.vuosi, row]),
+      );
+      const acceptedBaselineYears = Array.isArray(planningContext?.baselineYears)
+        ? planningContext.baselineYears
+        : [];
+      const importYearRowByYear = new Map(
+        importYearRows.map((row) => [row.vuosi, row]),
+      );
+      const syncRowByYear = new Map(syncYearRows.map((row) => [row.vuosi, row]));
+
+      const planningBaselineRows = acceptedBaselineYears
+        .map((baselineYear) => {
+          const boardRow = importBoardRowByYear.get(baselineYear.year);
+          if (boardRow) {
+            return {
+              ...boardRow,
+              sourceStatus: baselineYear.sourceStatus ?? boardRow.sourceStatus,
+              baselineReady: true,
+              baselineMissingRequirements: [],
+            };
+          }
+
+          const importYearRow = importYearRowByYear.get(baselineYear.year);
+          if (importYearRow) {
+            return {
+              vuosi: importYearRow.vuosi,
+              sourceStatus:
+                baselineYear.sourceStatus ?? importYearRow.sourceStatus,
+              datasetCounts:
+                importYearRow.datasetCounts ??
+                deriveDatasetCounts(yearDataCache[importYearRow.vuosi]),
+              baselineReady: true,
+              baselineMissingRequirements: [],
+              baselineWarnings: importYearRow.baselineWarnings ?? [],
+              tariffRevenueReason: importYearRow.tariffRevenueReason ?? null,
+              completeness: {
+                tilinpaatos: baselineYear.financials != null,
+                taksa: baselineYear.prices != null,
+                volume_vesi: baselineYear.volumes != null,
+                volume_jatevesi: baselineYear.volumes != null,
+              },
+              warnings: importYearRow.warnings ?? [],
+              sourceLayers: buildImportYearSourceLayers(
+                yearDataCache[importYearRow.vuosi],
+              ),
+            };
+          }
+
+          const syncRow = syncRowByYear.get(baselineYear.year);
+          if (!syncRow) {
+            return {
+              vuosi: baselineYear.year,
+              sourceStatus: baselineYear.sourceStatus,
+              datasetCounts: deriveDatasetCounts(yearDataCache[baselineYear.year]),
+              baselineReady: true,
+              baselineMissingRequirements: [],
+              baselineWarnings: [],
+              tariffRevenueReason: null,
+              completeness: {
+                tilinpaatos: baselineYear.financials != null,
+                taksa: baselineYear.prices != null,
+                volume_vesi: baselineYear.volumes != null,
+                volume_jatevesi: baselineYear.volumes != null,
+              },
+              warnings: [],
+              sourceLayers: buildImportYearSourceLayers(
+                yearDataCache[baselineYear.year],
+              ),
+            };
+          }
+
+          return {
+            vuosi: syncRow.vuosi,
+            sourceStatus: baselineYear.sourceStatus ?? syncRow.sourceStatus,
+            datasetCounts:
+              syncRow.datasetCounts ??
+              deriveDatasetCounts(yearDataCache[syncRow.vuosi]),
+            baselineReady: true,
+            baselineMissingRequirements: [],
+            baselineWarnings: syncRow.baselineWarnings ?? [],
+            tariffRevenueReason: syncRow.tariffRevenueReason ?? null,
+            completeness: {
+              tilinpaatos: baselineYear.financials != null,
+              taksa: baselineYear.prices != null,
+              volume_vesi: baselineYear.volumes != null,
+              volume_jatevesi: baselineYear.volumes != null,
+            },
+            warnings: syncRow.warnings ?? [],
+            sourceLayers: buildImportYearSourceLayers(yearDataCache[syncRow.vuosi]),
+          };
+        })
+        .sort((a, b) => b.vuosi - a.vuosi);
+
+      if (planningBaselineRows.length > 0) {
+        return planningBaselineRows;
+      }
+
+      return backendAcceptedPlanningYears
+        .map((year) => {
+          const boardRow = importBoardRowByYear.get(year);
+          if (boardRow) {
+            return boardRow;
+          }
+
+          const importYearRow = importYearRowByYear.get(year);
+          if (importYearRow) {
+            return {
+              vuosi: importYearRow.vuosi,
+              sourceStatus: importYearRow.sourceStatus,
+              datasetCounts:
+                importYearRow.datasetCounts ??
+                deriveDatasetCounts(yearDataCache[importYearRow.vuosi]),
+              baselineReady: importYearRow.baselineReady,
+              baselineMissingRequirements:
+                importYearRow.baselineMissingRequirements,
+              baselineWarnings: importYearRow.baselineWarnings ?? [],
+              tariffRevenueReason: importYearRow.tariffRevenueReason ?? null,
+              completeness: importYearRow.completeness,
+              warnings: importYearRow.warnings ?? [],
+              sourceLayers: buildImportYearSourceLayers(
+                yearDataCache[importYearRow.vuosi],
+              ),
+            };
+          }
+
+          const syncRow = syncRowByYear.get(year);
+          if (!syncRow) {
+            return null;
+          }
+
+          return {
+            vuosi: syncRow.vuosi,
+            sourceStatus: syncRow.sourceStatus,
+            datasetCounts:
+              syncRow.datasetCounts ??
+              deriveDatasetCounts(yearDataCache[syncRow.vuosi]),
+            baselineReady: syncRow.baselineReady,
+            baselineMissingRequirements: syncRow.baselineMissingRequirements,
+            baselineWarnings: syncRow.baselineWarnings ?? [],
+            tariffRevenueReason: syncRow.tariffRevenueReason ?? null,
+            completeness: syncRow.completeness,
+            warnings: syncRow.warnings ?? [],
+            sourceLayers: buildImportYearSourceLayers(yearDataCache[syncRow.vuosi]),
+          };
+        })
+        .filter((row): row is NonNullable<typeof row> => row != null)
+        .sort((a, b) => b.vuosi - a.vuosi);
+    },
+    [
+      planningContext?.baselineYears,
+      backendAcceptedPlanningYears,
+      importBoardRows,
+      importYearRows,
+      syncYearRows,
+      yearDataCache,
+    ],
+  );
+
+  const reviewStatusRows = React.useMemo(() => {
+    const rows = [...importReviewStatusRows];
+    const visibleYears = new Set(rows.map((row) => row.year));
+
+    for (const row of acceptedPlanningYearRows) {
+      if (visibleYears.has(row.vuosi)) {
+        continue;
+      }
+      rows.push({
+        year: row.vuosi,
+        sourceStatus: row.sourceStatus,
+        completeness: {
+          ...row.completeness,
+          tariff_revenue:
+            'tariff_revenue' in row.completeness
+              ? (row.completeness as Record<string, boolean>).tariff_revenue
+              : true,
+        },
+        baselineReady: true,
+        baselineMissingRequirements: [] as Array<
+          'financialBaseline' | 'prices' | 'volumes'
+        >,
+        baselineWarnings: row.baselineWarnings ?? [],
+        tariffRevenueReason: row.tariffRevenueReason ?? null,
+        readinessChecks: [
+          {
+            key: 'financials',
+            labelKey: 'v2Overview.datasetFinancials',
+            ready: row.completeness.tilinpaatos === true,
+          },
+          {
+            key: 'prices',
+            labelKey: 'v2Overview.datasetPrices',
+            ready: row.completeness.taksa === true,
+          },
+          {
+            key: 'tariffRevenue',
+            labelKey: 'v2Overview.datasetTariffRevenue',
+            ready: true,
+          },
+          {
+            key: 'volumes',
+            labelKey: 'v2Overview.datasetWaterVolume',
+            ready:
+              row.completeness.volume_vesi === true ||
+              row.completeness.volume_jatevesi === true,
+          },
+        ],
+        missingRequirements: [] as MissingRequirement[],
+        warnings: row.warnings ?? [],
+        setupStatus: 'reviewed' as const,
+      });
+    }
+
+    return rows.sort((a, b) => b.year - a.year);
+  }, [acceptedPlanningYearRows, importReviewStatusRows]);
 
   const importedBlockedYearCount = React.useMemo(
     () =>
@@ -699,14 +989,6 @@ export function useOverviewSetupState(params: {
         .map((row) => row.year)
         .sort((a, b) => b - a),
     [reviewStatusRows],
-  );
-
-  const acceptedPlanningYearRows = React.useMemo(
-    () =>
-      importBoardRows
-        .filter((row) => includedPlanningYears.includes(row.vuosi))
-        .sort((a, b) => b.vuosi - a.vuosi),
-    [importBoardRows, includedPlanningYears],
   );
 
   const correctedPlanningYears = React.useMemo(
@@ -785,12 +1067,20 @@ export function useOverviewSetupState(params: {
     reviewedImportedYearRows.length,
   ]);
 
+  const reopeningAcceptedBaselineYear =
+    baselineReady &&
+    manualPatchYear != null &&
+    cardEditContext !== 'step3' &&
+    !confirmedImportedYears.includes(manualPatchYear);
+
   const wizardDisplayStep: SetupWizardStep =
     cardEditContext === 'step3' && cardEditYear != null
       ? 3
+      : reopeningAcceptedBaselineYear
+      ? 6
       : manualPatchYear != null && cardEditContext !== 'step3'
       ? 4
-      : reviewContinueStep ??
+      : (baselineReady && reviewContinueStep === 5 ? 6 : reviewContinueStep) ??
         (setupWizardState?.activeStep === 5 &&
         correctedPlanningYears.length > 0 &&
         reviewedImportedYearRows.length > 0 &&
@@ -825,12 +1115,14 @@ export function useOverviewSetupState(params: {
         manualPatchYear,
         connected: overview?.importStatus.connected ?? false,
         importedWorkspaceYears,
-        wizardDisplayStep,
-        selectedYears,
-        selectableImportYearRows,
-        reviewStatusRows,
-      }),
+      wizardDisplayStep,
+      selectedYears,
+      selectableImportYearRows,
+      reviewStatusRows,
+      acceptedPlanningYears: acceptedPlanningYearRows.map((row) => row.vuosi),
+    }),
     [
+      acceptedPlanningYearRows,
       cardEditYear,
       importedWorkspaceYears,
       manualPatchYear,
@@ -881,3 +1173,4 @@ export function useOverviewSetupState(params: {
     previewPrefetchYears,
   };
 }
+

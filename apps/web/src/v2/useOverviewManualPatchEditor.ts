@@ -81,6 +81,48 @@ type ReviewStatusRowLike = {
   missingRequirements: MissingRequirement[];
 };
 
+type ManualTouchedFieldKey =
+  | keyof ManualFinancialForm
+  | keyof ManualPriceForm
+  | keyof ManualVolumeForm
+  | keyof ReturnType<typeof buildInvestmentForm>
+  | keyof ReturnType<typeof buildEnergyForm>
+  | keyof ReturnType<typeof buildNetworkForm>;
+
+const FINANCIAL_FIELD_SOURCE_KEYS: Record<
+  keyof ManualFinancialForm,
+  string
+> = {
+  liikevaihto: 'Liikevaihto',
+  perusmaksuYhteensa: 'PerusmaksuYhteensa',
+  aineetJaPalvelut: 'AineetJaPalvelut',
+  henkilostokulut: 'Henkilostokulut',
+  liiketoiminnanMuutKulut: 'LiiketoiminnanMuutKulut',
+  poistot: 'Poistot',
+  arvonalentumiset: 'Arvonalentumiset',
+  rahoitustuototJaKulut: 'RahoitustuototJaKulut',
+  tilikaudenYliJaama: 'TilikaudenYliJaama',
+  omistajatuloutus: 'Omistajatuloutus',
+  omistajanTukiKayttokustannuksiin: 'OmistajanTukiKayttokustannuksiin',
+};
+
+const hasOwnNonNullValue = (
+  row: Record<string, unknown>,
+  key: string,
+): boolean => {
+  if (!Object.prototype.hasOwnProperty.call(row, key)) {
+    return false;
+  }
+  const value = row[key];
+  if (value == null) {
+    return false;
+  }
+  if (typeof value === 'string' && value.trim().length === 0) {
+    return false;
+  }
+  return true;
+};
+
 function buildManualFinancialPayload(
   originalFinancials: ManualFinancialForm,
   manualFinancials: ManualFinancialForm,
@@ -311,6 +353,22 @@ export function useOverviewManualPatchEditor(params: {
     Record<number, V2ImportYearDataResponse>
   >({});
   const [loadingYearData, setLoadingYearData] = React.useState<number | null>(null);
+  const [touchedFields, setTouchedFields] = React.useState<
+    Partial<Record<ManualTouchedFieldKey, boolean>>
+  >({});
+
+  const resetTouchedFields = React.useCallback(() => {
+    setTouchedFields({});
+  }, []);
+
+  const markManualFieldTouched = React.useCallback(
+    (field: ManualTouchedFieldKey) => {
+      setTouchedFields((prev) =>
+        prev[field] === true ? prev : { ...prev, [field]: true },
+      );
+    },
+    [],
+  );
 
   const setInlineCardFieldRef = React.useCallback(
     (field: InlineCardField) => (node: HTMLInputElement | null) => {
@@ -321,6 +379,7 @@ export function useOverviewManualPatchEditor(params: {
 
   const populateManualEditorFromYearData = React.useCallback(
     (yearData: V2ImportYearDataResponse) => {
+      resetTouchedFields();
       setManualFinancials(buildFinancialForm(yearData));
       setManualPrices(buildPriceForm(yearData));
       setManualVolumes(buildVolumeForm(yearData));
@@ -333,7 +392,7 @@ export function useOverviewManualPatchEditor(params: {
         .find((reason) => reason.length > 0);
       setManualReason(latestReason ?? '');
     },
-    [],
+    [resetTouchedFields],
   );
 
   const loadYearIntoManualEditor = React.useCallback(
@@ -357,6 +416,87 @@ export function useOverviewManualPatchEditor(params: {
       }
     },
     [populateManualEditorFromYearData, t],
+  );
+
+  const hasExplicitMissingFinancialEntry = React.useCallback(
+    (yearData: V2ImportYearDataResponse | undefined) => {
+      if (!yearData) {
+        return false;
+      }
+      const rawFinancials = getRawFirstRow(yearData, 'tilinpaatos');
+      const effectiveFinancials = getEffectiveFirstRow(yearData, 'tilinpaatos');
+      return (Object.keys(FINANCIAL_FIELD_SOURCE_KEYS) as Array<
+        keyof ManualFinancialForm
+      >).some((field) => {
+        const hasExplicitIntent = touchedFields[field] === true;
+        if (!hasExplicitIntent || manualFinancials[field] !== 0) {
+          return false;
+        }
+        const sourceField = FINANCIAL_FIELD_SOURCE_KEYS[field];
+        return (
+          !hasOwnNonNullValue(rawFinancials, sourceField) &&
+          !hasOwnNonNullValue(effectiveFinancials, sourceField)
+        );
+      });
+    },
+    [manualFinancials, touchedFields],
+  );
+
+  const hasExplicitMissingPriceEntry = React.useCallback(
+    (yearData: V2ImportYearDataResponse | undefined) => {
+      if (!yearData) {
+        return false;
+      }
+      const rawPriceRows =
+        yearData.datasets.find((row) => row.dataType === 'taksa')?.rawRows ?? [];
+      const effectivePriceRows = getEffectiveRows(yearData, 'taksa');
+      const hasPrice = (
+        rows: Array<Record<string, unknown>>,
+        typeId: 1 | 2,
+      ): boolean =>
+        rows.some(
+          (row) =>
+            parseManualNumber((row as any).Tyyppi_Id) === typeId &&
+            hasOwnNonNullValue(row, 'Kayttomaksu'),
+        );
+      return (
+        (touchedFields.waterUnitPrice === true &&
+          manualPrices.waterUnitPrice === 0 &&
+          !hasPrice(rawPriceRows, 1) &&
+          !hasPrice(effectivePriceRows, 1)) ||
+        (touchedFields.wastewaterUnitPrice === true &&
+          manualPrices.wastewaterUnitPrice === 0 &&
+          !hasPrice(rawPriceRows, 2) &&
+          !hasPrice(effectivePriceRows, 2))
+      );
+    },
+    [manualPrices, touchedFields],
+  );
+
+  const hasExplicitMissingVolumeEntry = React.useCallback(
+    (yearData: V2ImportYearDataResponse | undefined) => {
+      if (!yearData) {
+        return false;
+      }
+      const rawWaterVolume = getRawFirstRow(yearData, 'volume_vesi');
+      const effectiveWaterVolume = getEffectiveFirstRow(yearData, 'volume_vesi');
+      const rawWastewaterVolume = getRawFirstRow(yearData, 'volume_jatevesi');
+      const effectiveWastewaterVolume = getEffectiveFirstRow(
+        yearData,
+        'volume_jatevesi',
+      );
+      return (
+        (touchedFields.soldWaterVolume === true &&
+          manualVolumes.soldWaterVolume === 0 &&
+          !hasOwnNonNullValue(rawWaterVolume, 'Maara') &&
+          !hasOwnNonNullValue(effectiveWaterVolume, 'Maara')) ||
+        (touchedFields.soldWastewaterVolume === true &&
+          manualVolumes.soldWastewaterVolume === 0 &&
+          !hasOwnNonNullValue(rawWastewaterVolume, 'Maara') &&
+          !hasOwnNonNullValue(effectiveWastewaterVolume, 'Maara'))
+      );
+    },
+    [manualVolumes, touchedFields],
   );
 
   const closeInlineCardEditor = React.useCallback(() => {
@@ -401,10 +541,16 @@ export function useOverviewManualPatchEditor(params: {
       formsDiffer(manualInvestments, buildInvestmentForm(originalYearData)) ||
       formsDiffer(manualEnergy, buildEnergyForm(originalYearData)) ||
       formsDiffer(manualNetwork, buildNetworkForm(originalYearData)) ||
+      hasExplicitMissingFinancialEntry(originalYearData) ||
+      hasExplicitMissingPriceEntry(originalYearData) ||
+      hasExplicitMissingVolumeEntry(originalYearData) ||
       manualReason.trim() !== originalReason.trim()
     );
   }, [
     cardEditYear,
+    hasExplicitMissingFinancialEntry,
+    hasExplicitMissingPriceEntry,
+    hasExplicitMissingVolumeEntry,
     manualEnergy,
     manualFinancials,
     manualInvestments,
@@ -566,23 +712,22 @@ export function useOverviewManualPatchEditor(params: {
     (year: number, missingRequirements: MissingRequirement[]) => {
       const yearData = yearDataCache[year];
       const priceRows = getEffectiveRows(yearData, 'taksa');
+      const hasAnyPrice = priceRows.some((entry) => {
+        const typeId = parseManualNumber((entry as any).Tyyppi_Id);
+        return typeId === 1 || typeId === 2;
+      });
       const hasMissingPrices =
-        missingRequirements.includes('prices') ||
-        !priceRows.some(
-          (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 1,
-        ) ||
-        !priceRows.some(
-          (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 2,
-        );
+        missingRequirements.includes('prices') || !hasAnyPrice;
       const waterVolumeRow = getEffectiveFirstRow(yearData, 'volume_vesi');
       const wastewaterVolumeRow = getEffectiveFirstRow(
         yearData,
         'volume_jatevesi',
       );
+      const hasAnyVolume =
+        Object.keys(waterVolumeRow).length > 0 ||
+        Object.keys(wastewaterVolumeRow).length > 0;
       const hasMissingVolumes =
-        missingRequirements.includes('volumes') ||
-        Object.keys(waterVolumeRow).length === 0 ||
-        Object.keys(wastewaterVolumeRow).length === 0;
+        missingRequirements.includes('volumes') || !hasAnyVolume;
       const actions: Array<{
         key: 'prices' | 'volumes' | 'tariffRevenue';
         label: string;
@@ -648,6 +793,12 @@ export function useOverviewManualPatchEditor(params: {
       const originalInvestments = buildInvestmentForm(originalYearData);
       const originalEnergy = buildEnergyForm(originalYearData);
       const originalNetwork = buildNetworkForm(originalYearData);
+      const explicitMissingFinancialEntry =
+        hasExplicitMissingFinancialEntry(originalYearData);
+      const explicitMissingPriceEntry =
+        hasExplicitMissingPriceEntry(originalYearData);
+      const explicitMissingVolumeEntry =
+        hasExplicitMissingVolumeEntry(originalYearData);
 
       const payload: V2ManualYearPatchPayload = {
         year,
@@ -683,6 +834,7 @@ export function useOverviewManualPatchEditor(params: {
 
       if (
         formsDiffer(manualFinancials, originalFinancials) ||
+        explicitMissingFinancialEntry ||
         documentFinancialOverrides != null
       ) {
         payload.financials =
@@ -690,12 +842,16 @@ export function useOverviewManualPatchEditor(params: {
           buildManualFinancialPayload(originalFinancials, manualFinancials);
       }
       if (
-        formsDiffer(manualPrices, originalPrices) || documentPriceOverrides != null
+        formsDiffer(manualPrices, originalPrices) ||
+        explicitMissingPriceEntry ||
+        documentPriceOverrides != null
       ) {
         payload.prices = documentPriceOverrides ?? { ...manualPrices };
       }
       if (
-        formsDiffer(manualVolumes, originalVolumes) || documentVolumeOverrides != null
+        formsDiffer(manualVolumes, originalVolumes) ||
+        explicitMissingVolumeEntry ||
+        documentVolumeOverrides != null
       ) {
         payload.volumes = documentVolumeOverrides ?? { ...manualVolumes };
       }
@@ -801,6 +957,9 @@ export function useOverviewManualPatchEditor(params: {
       manualPrices,
       manualReason,
       manualVolumes,
+      hasExplicitMissingFinancialEntry,
+      hasExplicitMissingPriceEntry,
+      hasExplicitMissingVolumeEntry,
       t,
       yearDataCache,
     ],
@@ -975,7 +1134,16 @@ export function useOverviewManualPatchEditor(params: {
   const handleSwitchToManualEditMode = React.useCallback(() => {
     setManualPatchMode('manualEdit');
     setManualPatchError(null);
-  }, []);
+    if (cardEditYear == null) {
+      return;
+    }
+    const cachedYearData = yearDataCache[cardEditYear];
+    if (cachedYearData) {
+      populateManualEditorFromYearData(cachedYearData);
+      return;
+    }
+    void loadYearIntoManualEditor(cardEditYear);
+  }, [cardEditYear, loadYearIntoManualEditor, populateManualEditorFromYearData, yearDataCache]);
 
   return {
     inlineCardFieldRefs,
@@ -1013,6 +1181,8 @@ export function useOverviewManualPatchEditor(params: {
     setManualNetwork,
     manualReason,
     setManualReason,
+    touchedFields,
+    markManualFieldTouched,
     populateManualEditorFromYearData,
     loadYearIntoManualEditor,
     closeInlineCardEditor,

@@ -38,6 +38,7 @@ export function getPreviewPrefetchYears(params: {
   selectedYears: number[];
   selectableImportYearRows: SelectableImportYearRowLike[];
   reviewStatusRows: ReviewStatusRowLike[];
+  acceptedPlanningYears?: number[];
   limit?: number;
 }): number[] {
   const {
@@ -49,6 +50,7 @@ export function getPreviewPrefetchYears(params: {
     selectedYears,
     selectableImportYearRows,
     reviewStatusRows,
+    acceptedPlanningYears,
     limit = YEAR_PREVIEW_PREFETCH_LIMIT,
   } = params;
   const prioritizedYears: number[] = [];
@@ -83,6 +85,9 @@ export function getPreviewPrefetchYears(params: {
   if (wizardDisplayStep === 5 || wizardDisplayStep === 6) {
     for (const row of getReviewPriorityRows(reviewStatusRows)) {
       pushYear(row.year);
+    }
+    for (const year of acceptedPlanningYears ?? []) {
+      pushYear(year);
     }
     return prioritizedYears;
   }

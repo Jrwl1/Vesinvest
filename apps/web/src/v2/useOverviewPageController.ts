@@ -57,6 +57,16 @@ export type OverviewPageControllerProps = {
   onGoToReports: () => void;
   isAdmin: boolean;
   onSetupWizardStateChange?: (state: SetupWizardState) => void;
+  onSetupPlanStateChange?: (
+    state: {
+      activePlanId: string | null;
+      linkedScenarioId: string | null;
+      classificationReviewRequired: boolean;
+      pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
+      baselineChangedSinceAcceptedRevision: boolean;
+      investmentPlanChangedSinceFeeRecommendation: boolean;
+    } | null,
+  ) => void;
   onSetupOrgNameChange?: (name: string | null) => void;
   onOrgLanguageNoticeChange?: (
     notice:
@@ -75,6 +85,11 @@ type ReviewWorkspaceYearSaveParams = {
   financials: ManualFinancialForm;
   prices: ManualPriceForm;
   volumes: ManualVolumeForm;
+  explicitMissing?: {
+    financials: boolean;
+    prices: boolean;
+    volumes: boolean;
+  };
   syncAfterSave?: boolean;
 };
 
@@ -98,6 +113,7 @@ export function useOverviewPageController({
   onGoToReports: _onGoToReports,
   isAdmin,
   onSetupWizardStateChange,
+  onSetupPlanStateChange,
   onSetupOrgNameChange,
   onOrgLanguageNoticeChange,
   setupBackSignal,
@@ -208,6 +224,7 @@ export function useOverviewPageController({
     selectableImportYearRows,
   } = useOverviewSetupState({
     overview: importController.overview,
+    planningContext: importController.planningContext,
     yearDataCache: manualController.yearDataCache,
     selectedYears: importController.selectedYears,
     excludedYearOverrides: importController.excludedYearOverrides,
@@ -235,14 +252,55 @@ export function useOverviewPageController({
   );
 
   const activeVesinvestScenario = React.useMemo(
-    () =>
-      activeVesinvestPlan?.selectedScenarioId != null
-        ? (importController.scenarioList ?? []).find(
-            (item) => item.id === activeVesinvestPlan.selectedScenarioId,
-          ) ?? null
-        : null,
-    [activeVesinvestPlan?.selectedScenarioId, importController.scenarioList],
+    () => {
+      if (activeVesinvestPlan?.selectedScenarioId == null) {
+        return null;
+      }
+      const listedScenario =
+        (importController.scenarioList ?? []).find(
+          (item) => item.id === activeVesinvestPlan.selectedScenarioId,
+        ) ?? null;
+      if (listedScenario) {
+        return listedScenario;
+      }
+      if (
+        activeVesinvestPlan.baselineStatus === 'verified' &&
+        activeVesinvestPlan.pricingStatus === 'verified' &&
+        importController.baselineReady
+      ) {
+        return {
+          id: activeVesinvestPlan.selectedScenarioId,
+          updatedAt: activeVesinvestPlan.updatedAt,
+          computedFromUpdatedAt: activeVesinvestPlan.updatedAt,
+          computedYears: 1,
+        };
+      }
+      return null;
+    },
+    [
+      activeVesinvestPlan?.baselineStatus,
+      activeVesinvestPlan?.pricingStatus,
+      activeVesinvestPlan?.selectedScenarioId,
+      activeVesinvestPlan?.updatedAt,
+      importController.baselineReady,
+      importController.scenarioList,
+    ],
   );
+  const hasSavedWorkspaceTruth =
+    activeVesinvestPlan?.baselineStatus === 'verified' &&
+    activeVesinvestPlan?.pricingStatus === 'verified' &&
+    typeof activeVesinvestPlan?.selectedScenarioId === 'string' &&
+    activeVesinvestPlan.selectedScenarioId.length > 0 &&
+    importController.baselineReady;
+  const isManageYearsMaintenanceMode =
+    importController.reviewContinueStep === 2 &&
+    (activeVesinvestPlan != null ||
+      importController.backendAcceptedPlanningYears.length > 0 ||
+      (importController.planningContext?.baselineYears?.length ?? 0) > 0 ||
+      (importController.overview?.importStatus.workspaceYears?.length ?? 0) > 0);
+  const shouldKeepSavedWorkspaceStep =
+    hasSavedWorkspaceTruth &&
+    (isManageYearsMaintenanceMode || importController.baselineReady);
 
   const shellSetupWizardState = React.useMemo(() => {
     if (!importController.overview) {
@@ -274,25 +332,39 @@ export function useOverviewPageController({
         selectedScenario: activeVesinvestScenario,
       },
     ).currentStep;
+    const effectiveWorkflowStep = shouldKeepSavedWorkspaceStep
+      ? 6
+      : workflowStep;
     const shouldRespectBackNavigation =
       importController.reviewContinueStep != null &&
-      wizardDisplayStep < workflowStep;
+      wizardDisplayStep < effectiveWorkflowStep &&
+      !isManageYearsMaintenanceMode;
     return (wizardDisplayStep === 4
       ? 4
       : activeVesinvestPlan &&
-          workflowStep > wizardDisplayStep &&
+          effectiveWorkflowStep > wizardDisplayStep &&
           !shouldRespectBackNavigation
-        ? workflowStep
+        ? effectiveWorkflowStep
         : wizardDisplayStep) as typeof shellSetupWizardState.currentStep;
   }, [
     activeVesinvestPlan,
     activeVesinvestScenario,
+    hasSavedWorkspaceTruth,
+    isManageYearsMaintenanceMode,
     importController.reviewContinueStep,
     importController.overview,
     importController.planningContext,
     shellSetupWizardState,
+    shouldKeepSavedWorkspaceStep,
     wizardDisplayStep,
   ]);
+
+  const summaryBaselineReady =
+    importController.baselineReady &&
+    reviewStatusRows.every(
+      (row) =>
+        row.setupStatus === 'reviewed' || row.setupStatus === 'excluded_from_plan',
+    );
 
   const presentedSetupWizardState = React.useMemo(() => {
     if (!shellSetupWizardState) {
@@ -321,7 +393,7 @@ export function useOverviewPageController({
       reportsUnlocked: shellSetupWizardState.reportsUnlocked,
       summary: {
         ...baseState.summary,
-        baselineReady: shellSetupWizardState.summary.baselineReady,
+        baselineReady: summaryBaselineReady,
       },
     };
   }, [
@@ -330,6 +402,7 @@ export function useOverviewPageController({
     displaySetupWizardState,
     displayedWorkflowStep,
     shellSetupWizardState,
+    summaryBaselineReady,
   ]);
 
   const saveInlineCardEdit = React.useCallback(
@@ -542,6 +615,7 @@ export function useOverviewPageController({
         setManualPrices: manualController.setManualPrices,
         manualVolumes: manualController.manualVolumes,
         setManualVolumes: manualController.setManualVolumes,
+        markManualFieldTouched: manualController.markManualFieldTouched,
         setInlineCardFieldRef: manualController.setInlineCardFieldRef,
         handleInlineCardKeyDown,
         isInlineCardDirty: manualController.isInlineCardDirty,
@@ -557,6 +631,7 @@ export function useOverviewPageController({
       financials,
       prices,
       volumes,
+      explicitMissing,
       syncAfterSave = false,
     }: ReviewWorkspaceYearSaveParams): Promise<ReviewWorkspaceYearSaveResult> => {
       if (financials.liikevaihto < 0) {
@@ -593,7 +668,7 @@ export function useOverviewPageController({
         volumes?: ManualVolumeForm;
       } = { ...payload };
 
-      if (formsDiffer(financials, originalFinancials)) {
+      if (formsDiffer(financials, originalFinancials) || explicitMissing?.financials) {
         const nextFinancials = { ...financials };
         const resultFieldChanged = numbersDiffer(
           financials.tilikaudenYliJaama,
@@ -641,11 +716,11 @@ export function useOverviewPageController({
         nextPayload.financials = nextFinancials;
       }
 
-      if (formsDiffer(prices, originalPrices)) {
+      if (formsDiffer(prices, originalPrices) || explicitMissing?.prices) {
         nextPayload.prices = { ...prices };
       }
 
-      if (formsDiffer(volumes, originalVolumes)) {
+      if (formsDiffer(volumes, originalVolumes) || explicitMissing?.volumes) {
         nextPayload.volumes = { ...volumes };
       }
 
@@ -809,6 +884,27 @@ export function useOverviewPageController({
     presentedSetupWizardState,
   ]);
 
+  const presentedPlanState = React.useMemo(() => {
+    if (!activeVesinvestPlan) {
+      return null;
+    }
+    return {
+      activePlanId: activeVesinvestPlan.id ?? null,
+      linkedScenarioId: activeVesinvestPlan.selectedScenarioId ?? null,
+      classificationReviewRequired:
+        activeVesinvestPlan.classificationReviewRequired === true,
+      pricingStatus: activeVesinvestPlan.pricingStatus ?? null,
+      baselineChangedSinceAcceptedRevision:
+        activeVesinvestPlan.baselineChangedSinceAcceptedRevision === true,
+      investmentPlanChangedSinceFeeRecommendation:
+        activeVesinvestPlan.investmentPlanChangedSinceFeeRecommendation === true,
+    };
+  }, [activeVesinvestPlan]);
+
+  React.useEffect(() => {
+    onSetupPlanStateChange?.(presentedPlanState);
+  }, [onSetupPlanStateChange, presentedPlanState]);
+
   React.useEffect(() => {
     if (!setupBackSignal) {
       return;
@@ -824,11 +920,15 @@ export function useOverviewPageController({
     if (importController.loading) {
       return;
     }
+    const shouldExposeSetupOrg =
+      presentedSetupWizardState == null || presentedSetupWizardState.currentStep > 1;
     onSetupOrgNameChange?.(
-      (importController.planningContext?.vesinvest?.activePlan?.utilityName ??
-        importController.planningContext?.vesinvest?.selectedPlan?.utilityName) ??
-        importController.overview?.importStatus.link?.nimi ??
-        null,
+      shouldExposeSetupOrg
+        ? (importController.planningContext?.vesinvest?.activePlan?.utilityName ??
+            importController.planningContext?.vesinvest?.selectedPlan?.utilityName) ??
+            importController.overview?.importStatus.link?.nimi ??
+            null
+        : null,
     );
   }, [
     importController.loading,
@@ -836,6 +936,7 @@ export function useOverviewPageController({
     importController.planningContext?.vesinvest?.selectedPlan?.utilityName,
     importController.overview?.importStatus.link?.nimi,
     onSetupOrgNameChange,
+    presentedSetupWizardState,
   ]);
 
   return {

@@ -15,11 +15,17 @@ describe('auth invalidation event', () => {
     window.localStorage.setItem('access_token', 'legacy-token');
 
     try {
-      clearToken();
+      clearToken('expired', 'Session expired. Please log in again.');
 
       expect(window.sessionStorage.getItem('access_token')).toBeNull();
       expect(window.localStorage.getItem('access_token')).toBeNull();
       expect(listener).toHaveBeenCalledTimes(1);
+      expect(
+        (listener.mock.calls[0]?.[0] as CustomEvent | undefined)?.detail,
+      ).toEqual({
+        reason: 'expired',
+        message: 'Session expired. Please log in again.',
+      });
     } finally {
       window.removeEventListener(AUTH_INVALIDATED_EVENT, listener);
     }

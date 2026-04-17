@@ -75,6 +75,20 @@ describe('LoginForm demo entry states', () => {
     expect(screen.queryByTestId('demo-login-btn')).toBeNull();
   });
 
+  it('shows the auth invalidation error when provided by the app shell', () => {
+    render(
+      <LoginForm
+        onSuccess={() => undefined}
+        authError="Session expired. Please log in again."
+        demoState="unavailable"
+      />,
+    );
+
+    expect(
+      screen.getByText('Session expired. Please log in again.'),
+    ).toBeTruthy();
+  });
+
   it('keeps the demo button visible but disabled while availability is loading', () => {
     render(
       <LoginForm

@@ -6,12 +6,14 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface LoginFormProps {
   onSuccess: () => void;
+  authError?: string | null;
   demoError?: string | null;
   demoState: DemoEntryState;
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({
   onSuccess,
+  authError,
   demoError,
   demoState,
 }) => {
@@ -54,6 +56,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         'Sign in to this environment with a normal user account.',
       );
   const showDemoStatusSummary = demoEnabled || demoStatusLoading || demoUnreachable;
+  const visibleError = error ?? authError ?? null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,7 +141,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         {demoError && <div className="demo-error-banner">{demoError}</div>}
 
         <form onSubmit={handleSubmit} className="login-form">
-          {error && <div className="login-error">{error}</div>}
+          {visibleError ? <div className="login-error">{visibleError}</div> : null}
 
           <div className="form-group">
             <label htmlFor="email">{t('auth.email', 'Email')}</label>

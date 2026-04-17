@@ -4,6 +4,7 @@ import './i18n';
 import {
   AUTH_INVALIDATED_EVENT,
   clearToken,
+  type AuthInvalidationReason,
   DecodedToken,
   getLegalStatus,
   getTokenInfo,
@@ -18,6 +19,8 @@ import {
   useDemoStatus,
 } from './context/DemoStatusContext';
 import './App.css';
+
+const OVERVIEW_RUNTIME_STORAGE_KEY = 'v2_overview_runtime_state';
 
 const AppShellV2 = React.lazy(async () => {
   await import('./v2/v2.css');
@@ -35,6 +38,8 @@ const AppContent: React.FC = () => {
   const [authState, setAuthState] = useState<AuthState>('loading');
   const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [authInvalidationReason, setAuthInvalidationReason] =
+    useState<AuthInvalidationReason | null>(null);
   const [demoError, setDemoError] = useState<string | null>(null);
   const [tokenInfo, setTokenInfo] = useState<DecodedToken | null>(null);
   const [legalGateState, setLegalGateState] = useState<
@@ -52,6 +57,7 @@ const AppContent: React.FC = () => {
     setAuthState('loading');
     setLoadingMessage(t('common.loading'));
     setError(null);
+    setAuthInvalidationReason(null);
     setDemoError(null);
 
     if (isAuthenticated()) {
@@ -70,10 +76,22 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const handleAuthInvalidated = () => {
+    const handleAuthInvalidated = (event: Event) => {
+      const detail =
+        event instanceof CustomEvent
+          ? (event.detail as
+              | {
+                  reason?: AuthInvalidationReason;
+                  message?: string | null;
+                }
+              | undefined)
+          : undefined;
       setTokenInfo(null);
       setLegalGateState('idle');
-      setError(null);
+      setAuthInvalidationReason(detail?.reason ?? null);
+      if (detail?.reason !== 'expired') {
+        window.sessionStorage.removeItem(OVERVIEW_RUNTIME_STORAGE_KEY);
+      }
       setDemoError(null);
       setAuthState('unauthenticated');
     };
@@ -85,7 +103,7 @@ const AppContent: React.FC = () => {
         handleAuthInvalidated,
       );
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (authState !== 'authenticated') {
@@ -126,11 +144,12 @@ const AppContent: React.FC = () => {
   const handleLoginSuccess = useCallback(() => {
     setLegalGateState('checking');
     setTokenInfo(getTokenInfo());
+    setAuthInvalidationReason(null);
     setAuthState('authenticated');
   }, []);
 
   const handleLogout = useCallback(() => {
-    clearToken();
+    clearToken('logout');
   }, []);
 
   const entryHero = (
@@ -180,6 +199,10 @@ const AppContent: React.FC = () => {
   }
 
   if (authState === 'unauthenticated') {
+    const authError =
+      authInvalidationReason === 'expired'
+        ? t('auth.sessionExpired', 'Session expired. Please sign in again.')
+        : null;
     if (isInviteAcceptPath) {
       return (
         <div className="app-layout">
@@ -192,6 +215,7 @@ const AppContent: React.FC = () => {
       <div className="app-layout">
         <LoginForm
           onSuccess={handleLoginSuccess}
+          authError={authError}
           demoError={demoError}
           demoState={demoEntryState}
         />

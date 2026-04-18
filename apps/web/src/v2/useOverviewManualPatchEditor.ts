@@ -124,10 +124,39 @@ const hasOwnNonNullValue = (
 };
 
 function buildManualFinancialPayload(
-  originalFinancials: ManualFinancialForm,
-  manualFinancials: ManualFinancialForm,
-): ManualFinancialForm {
-  const nextFinancials = { ...manualFinancials };
+  params: {
+    originalFinancials: ManualFinancialForm;
+    manualFinancials: ManualFinancialForm;
+    touchedFields: Partial<Record<ManualTouchedFieldKey, boolean>>;
+    yearData: V2ImportYearDataResponse | undefined;
+  },
+): NonNullable<V2ManualYearPatchPayload['financials']> {
+  const { originalFinancials, manualFinancials, touchedFields, yearData } = params;
+  const nextFinancials: NonNullable<V2ManualYearPatchPayload['financials']> = {};
+  const rawFinancials = getRawFirstRow(yearData, 'tilinpaatos');
+  const effectiveFinancials = getEffectiveFirstRow(yearData, 'tilinpaatos');
+  const hasExplicitZeroIntent = (field: keyof ManualFinancialForm) => {
+    if (touchedFields[field] !== true || manualFinancials[field] !== 0) {
+      return false;
+    }
+    const sourceField = FINANCIAL_FIELD_SOURCE_KEYS[field];
+    return (
+      !hasOwnNonNullValue(rawFinancials, sourceField) &&
+      !hasOwnNonNullValue(effectiveFinancials, sourceField)
+    );
+  };
+
+  (
+    Object.keys(FINANCIAL_FIELD_SOURCE_KEYS) as Array<keyof ManualFinancialForm>
+  ).forEach((field) => {
+    if (
+      numbersDiffer(manualFinancials[field], originalFinancials[field]) ||
+      hasExplicitZeroIntent(field)
+    ) {
+      nextFinancials[field] = manualFinancials[field];
+    }
+  });
+
   const resultFieldChanged = numbersDiffer(
     manualFinancials.tilikaudenYliJaama,
     originalFinancials.tilikaudenYliJaama,
@@ -839,7 +868,12 @@ export function useOverviewManualPatchEditor(params: {
       ) {
         payload.financials =
           documentFinancialOverrides ??
-          buildManualFinancialPayload(originalFinancials, manualFinancials);
+          buildManualFinancialPayload({
+            originalFinancials,
+            manualFinancials,
+            touchedFields,
+            yearData: originalYearData,
+          });
       }
       if (
         formsDiffer(manualPrices, originalPrices) ||

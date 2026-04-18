@@ -482,7 +482,12 @@ export const OverviewForecastHandoffStep: React.FC<
   onRestoreYear,
   onRestoreVeeti,
   onOpenForecast,
-}) => (
+}) => {
+  const correctedAcceptedYearCount = acceptedPlanningYearRows.filter((row) =>
+    correctedPlanningYears.includes(row.vuosi),
+  ).length;
+
+  return (
   <section className="v2-card v2-overview-handoff-card">
     <div className="v2-section-header">
       <div>
@@ -510,11 +515,7 @@ export const OverviewForecastHandoffStep: React.FC<
       </article>
       <article className="v2-overview-handoff-summary-item">
         <span>{t('v2Overview.baselineClosureChanged', 'Changed in review')}</span>
-        <strong>{correctedPlanningYears.length}</strong>
-      </article>
-      <article className="v2-overview-handoff-summary-item">
-        <span>{t('v2Overview.wizardSummaryBaselineReady')}</span>
-        <strong>{t('v2Overview.wizardSummaryYes')}</strong>
+        <strong>{correctedAcceptedYearCount}</strong>
       </article>
     </div>
 
@@ -529,38 +530,23 @@ export const OverviewForecastHandoffStep: React.FC<
             row.sourceStatus,
           );
           const availability = resolveAcceptedPlanningAvailability(row);
+          const compactSourceLabel =
+            row.sourceLayers != null && row.sourceLayers.length > 0
+              ? sourceChip.label
+              : row.sourceStatus != null
+              ? sourceStatusLabel(row.sourceStatus)
+              : sourceChip.label;
           return (
             <article key={`accepted-${row.vuosi}`} className="v2-year-status-row ready">
               <div className="v2-year-status-head">
                 <div className="v2-year-status-labels">
                   <strong>{row.vuosi}</strong>
-                  <span>
-                    {corrected
-                      ? t('v2Overview.baselineClosureChanged', 'Changed in review')
-                      : t(
-                          'v2Overview.baselineClosureStillVeeti',
-                          'Still from VEETI',
-                        )}
-                  </span>
-                </div>
-                <div className="v2-badge-row">
-                  <span className="v2-badge v2-status-positive">
-                    {t('v2Overview.wizardSummaryReadyYears', 'Ready years')}
-                  </span>
-                  <span
-                    className={`v2-badge ${sourceStatusClassName(row.sourceStatus)}`}
-                  >
-                    {sourceStatusLabel(row.sourceStatus)}
-                  </span>
                 </div>
               </div>
 
               <div className="v2-overview-year-chip-row">
                 <span className={`v2-badge ${targetChip.toneClass}`}>
                   {targetChip.label}
-                </span>
-                <span className={`v2-badge ${sourceChip.toneClass}`}>
-                  {sourceChip.label}
                 </span>
               </div>
 
@@ -569,12 +555,18 @@ export const OverviewForecastHandoffStep: React.FC<
               })}
 
               <div className="v2-year-card-meta">
+                <span className="v2-overview-handoff-year-source">
+                  {compactSourceLabel}
+                </span>
                 <span>
                   {t('v2Overview.datasetCountLabel', 'Datasets')}:{' '}
                   {renderDatasetCounts(row.datasetCounts)}
                 </span>
+                {corrected ? (
+                  <span>{t('v2Overview.baselineClosureChanged', 'Changed in review')}</span>
+                ) : null}
               </div>
-              <div className="v2-actions-row v2-overview-handoff-year-actions">
+              <div className="v2-actions-row v2-overview-handoff-year-primary-actions">
                 <button
                   type="button"
                   className="v2-btn v2-btn-small"
@@ -582,30 +574,35 @@ export const OverviewForecastHandoffStep: React.FC<
                 >
                   {t('v2Overview.reopenReview', 'Reopen review')}
                 </button>
-                {corrected || row.sourceStatus !== 'VEETI' ? (
+              </div>
+              <details className="v2-overview-handoff-year-actions-shell">
+                <summary>{t('common.actions', 'Actions')}</summary>
+                <div className="v2-actions-row v2-overview-handoff-year-actions">
+                  {corrected || row.sourceStatus !== 'VEETI' ? (
+                    <button
+                      type="button"
+                      className="v2-btn v2-btn-small"
+                      onClick={() => onRestoreVeeti(row.vuosi)}
+                    >
+                      {t('v2Overview.applyVeetiValues', 'Apply VEETI values')}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="v2-btn v2-btn-small"
-                    onClick={() => onRestoreVeeti(row.vuosi)}
+                    onClick={() => onExcludeYear(row.vuosi)}
                   >
-                    {t('v2Overview.applyVeetiValues', 'Apply VEETI values')}
+                    {t('v2Overview.excludeYearFromPlan', 'Exclude from plan')}
                   </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-small"
-                  onClick={() => onExcludeYear(row.vuosi)}
-                >
-                  {t('v2Overview.excludeYearFromPlan', 'Exclude from plan')}
-                </button>
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-small v2-btn-danger"
-                  onClick={() => onDeleteYear(row.vuosi)}
-                >
-                  {t('common.delete', 'Delete')}
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small v2-btn-danger"
+                    onClick={() => onDeleteYear(row.vuosi)}
+                  >
+                    {t('common.delete', 'Delete')}
+                  </button>
+                </div>
+              </details>
             </article>
           );
         })}
@@ -639,4 +636,5 @@ export const OverviewForecastHandoffStep: React.FC<
       </div>
     ) : null}
   </section>
-);
+  );
+};

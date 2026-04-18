@@ -12,7 +12,11 @@ import {
   getRequirementDatasetLabel as buildRequirementDatasetLabel,
 } from './overviewLabels';
 import { IMPORT_BOARD_CANON_ROWS } from './overviewManualForms';
-import { getPreviewPrefetchYears } from './overviewSelectors';
+import {
+  getPreviewPrefetchYears,
+  isHistoricalPlanningYear,
+  pickDefaultBaselineYears,
+} from './overviewSelectors';
 import {
   getMissingSyncRequirements,
   getSetupReadinessChecks,
@@ -47,6 +51,9 @@ function getEditedFinancialFieldLabel(
 ): string {
   if (sourceField === 'Liikevaihto') {
     return t('v2Overview.previewAccountingRevenueLabel', 'Revenue');
+  }
+  if (sourceField === 'PerusmaksuYhteensa') {
+    return t('v2Overview.manualFinancialFixedRevenue', 'Fixed revenue total');
   }
   if (sourceField === 'AineetJaPalvelut') {
     return t('v2Overview.previewAccountingMaterialsLabel', 'Materials and services');
@@ -153,13 +160,22 @@ export function getExactEditedFieldLabels(params: {
   t: TFunction;
   yearData: V2ImportYearDataResponse | undefined;
   changedSummaryKeys: string[];
+  manualFinancialFieldSources?: Array<{ sourceField: string }>;
   statementImportFieldSources?: Array<{ sourceField: string }>;
   workbookImportFieldSources?: Array<{ sourceField: string }>;
 }): string[] {
-  const { t, yearData, changedSummaryKeys, statementImportFieldSources, workbookImportFieldSources } =
+  const {
+    t,
+    yearData,
+    changedSummaryKeys,
+    manualFinancialFieldSources,
+    statementImportFieldSources,
+    workbookImportFieldSources,
+  } =
     params;
   const labels = new Set<string>();
   const financialFieldSources = [
+    ...(manualFinancialFieldSources ?? []),
     ...(statementImportFieldSources ?? []),
     ...(workbookImportFieldSources ?? []),
   ];
@@ -335,19 +351,18 @@ export function useOverviewSetupState(params: {
   const readyAvailableYearRows = React.useMemo(
     () =>
       syncYearRows.filter(
-        (row) =>
-          row.planningRole !== 'current_year_estimate' && !row.syncBlockedReason,
+        (row) => isHistoricalPlanningYear(row) && !row.syncBlockedReason,
       ),
     [syncYearRows],
   );
 
   const recommendedYears = React.useMemo(
-    () =>
-      [...readyAvailableYearRows]
-        .sort((a, b) => b.vuosi - a.vuosi)
-        .slice(0, 3)
-        .map((row) => row.vuosi),
+    () => pickDefaultBaselineYears(readyAvailableYearRows),
     [readyAvailableYearRows],
+  );
+  const defaultBaselineYearSet = React.useMemo(
+    () => new Set(pickDefaultBaselineYears(syncYearRows)),
+    [syncYearRows],
   );
 
   const importBoardRows = React.useMemo(() => {
@@ -417,7 +432,16 @@ export function useOverviewSetupState(params: {
         (row.manualProvenance != null && !hasLargeDiscrepancy);
       const isCurrentYearEstimate =
         row.planningRole === 'current_year_estimate';
+      const isHistoricalCompleted = isHistoricalPlanningYear(row);
       const isExcludedFromPlan = excludedYearSet.has(row.vuosi);
+      const isDefaultBaselineYear = defaultBaselineYearSet.has(row.vuosi);
+      const baselineGroup = isCurrentYearEstimate
+        ? 'current_estimate'
+        : row.syncBlockedReason != null
+        ? 'historical_incomplete'
+        : isSelectedForImport || isDefaultBaselineYear
+        ? 'historical_selected'
+        : 'historical_available';
       const lane =
         row.syncBlockedReason != null
           ? 'blocked'
@@ -472,6 +496,12 @@ export function useOverviewSetupState(params: {
         t,
         yearData,
         changedSummaryKeys: trustSignal.changedSummaryKeys,
+        manualFinancialFieldSources:
+          yearData?.datasets
+            .find((dataset) => dataset.dataType === 'tilinpaatos')
+            ?.overrideMeta?.provenance?.fieldSources?.filter(
+              (item) => item.provenance.kind === 'manual_edit',
+            ),
         statementImportFieldSources: trustSignal.statementImport?.fieldSources,
         workbookImportFieldSources: trustSignal.workbookImport?.fieldSources,
       });
@@ -520,6 +550,11 @@ export function useOverviewSetupState(params: {
       return {
         ...row,
         lane,
+        baselineGroup,
+        isCurrentEstimate: isCurrentYearEstimate,
+        isHistoricalCompleted,
+        isDefaultBaselineYear,
+        showCanonicalYearCard: true,
         isSelectedForImport,
         isExcludedFromPlan,
         summaryMap,
@@ -534,13 +569,20 @@ export function useOverviewSetupState(params: {
         sourceLayers,
       };
     });
-  }, [excludedYearSet, selectedYears, selectableImportYearRows, yearDataCache, t]);
+  }, [
+    defaultBaselineYearSet,
+    excludedYearSet,
+    selectedYears,
+    selectableImportYearRows,
+    yearDataCache,
+    t,
+  ]);
 
   const readyTrustBoardRows = React.useMemo(
     () =>
       importBoardRows.filter(
         (row) =>
-          row.planningRole !== 'current_year_estimate' &&
+          isHistoricalPlanningYear(row) &&
           !row.isExcludedFromPlan &&
           row.lane === 'ready',
       ),
@@ -550,7 +592,7 @@ export function useOverviewSetupState(params: {
     () =>
       importBoardRows.filter(
         (row) =>
-          row.planningRole !== 'current_year_estimate' &&
+          isHistoricalPlanningYear(row) &&
           !row.isExcludedFromPlan &&
           row.lane === 'suspicious',
       ),
@@ -560,7 +602,7 @@ export function useOverviewSetupState(params: {
     () =>
       importBoardRows.filter(
         (row) =>
-          row.planningRole !== 'current_year_estimate' &&
+          isHistoricalPlanningYear(row) &&
           row.isExcludedFromPlan,
       ),
     [importBoardRows],
@@ -569,7 +611,7 @@ export function useOverviewSetupState(params: {
     () =>
       importBoardRows.filter(
         (row) =>
-          row.planningRole !== 'current_year_estimate' &&
+          isHistoricalPlanningYear(row) &&
           !row.isExcludedFromPlan &&
           row.lane === 'blocked',
       ),

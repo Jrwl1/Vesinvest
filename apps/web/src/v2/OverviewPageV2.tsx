@@ -131,6 +131,8 @@ export const OverviewPageV2: React.FC<Props> = ({
     onOrgLanguageNoticeChange,
     setupBackSignal,
   });
+  const [collapsedPlanningPanelOpenStep, setCollapsedPlanningPanelOpenStep] =
+    React.useState<number | null>(null);
   const {
     t,
     overview,
@@ -411,6 +413,31 @@ export const OverviewPageV2: React.FC<Props> = ({
     readySummaryYearRows.length > 0
       ? readySummaryYearRows.map((row) => row.vuosi).join(', ')
       : t('v2Overview.noYearsSelected', 'None selected');
+  const selectedHistoricalYearSet = new Set(
+    selectableImportYearRows
+      .filter((row) => row.planningRole !== 'current_year_estimate')
+      .map((row) => row.vuosi),
+  );
+  const includedCurrentEstimateYears = currentYearEstimateBoardRows
+    .filter((row) => confirmedImportedYears.includes(row.vuosi))
+    .map((row) => row.vuosi)
+    .sort((left, right) => right - left);
+  const selectedBaselineYears = [
+    ...selectedYears.filter((year) => selectedHistoricalYearSet.has(year)),
+    ...includedCurrentEstimateYears,
+  ].sort((left, right) => right - left);
+  const selectedBaselineYearsLabel =
+    selectedBaselineYears.length > 0
+      ? selectedBaselineYears.join(', ')
+      : t('v2Overview.noYearsSelected', 'None selected');
+  const readyBaselineYears = readyTrustBoardRows
+    .map((row) => row.vuosi)
+    .filter((year) => selectedBaselineYears.includes(year))
+    .sort((left, right) => right - left);
+  const readyBaselineYearsLabel =
+    readyBaselineYears.length > 0
+      ? readyBaselineYears.join(', ')
+      : t('v2Overview.noYearsSelected', 'None selected');
   const technicalReadyYearsLabel =
     technicallyReadyImportedYearRows.length > 0
       ? technicallyReadyImportedYearRows.map((row) => row.vuosi).join(', ')
@@ -553,17 +580,17 @@ export const OverviewPageV2: React.FC<Props> = ({
       title: t('v2Vesinvest.workflowIdentifyUtility', 'Identify the utility'),
       body: t(
         'v2Vesinvest.workflowIdentifyUtilityBody',
-        'Search and connect the VEETI utility. The first Vesinvest plan is created automatically after the utility is linked.',
+        'Search and link the utility. Then build the baseline from historical years before pricing opens.',
       ),
       badge: t('v2Vesinvest.workflowPlanFirst', 'VEETI-first'),
     },
     2: {
-      title: t('v2Overview.wizardQuestionImportYears', 'Choose years for this workspace'),
+      title: t('v2Overview.wizardQuestionImportYears', 'Choose historical years for the baseline'),
       body: t(
         'v2Overview.wizardBodyImportYears',
-        'Select the years to import. Review them before the planning baseline.',
+        'Start with four consecutive historical years. Keep the current year as an optional estimate.',
       ),
-      badge: t('v2Overview.wizardFocusImportYears', 'Import years'),
+      badge: t('v2Overview.wizardFocusImportYears', 'Baseline years'),
     },
     3: {
       title: step3WizardHero.title,
@@ -607,6 +634,8 @@ export const OverviewPageV2: React.FC<Props> = ({
     supportWorkflowStep === 1 ||
     supportWorkflowStep === 2 ||
     supportWorkflowStep === 3;
+  const useCompactSetupSupportChrome =
+    compactSupportingChrome || overviewVisualStep === 4;
   const showConnectedSummaryMeta = supportWorkflowStep !== 1;
   const summaryMetaBlocks = [
     {
@@ -628,12 +657,26 @@ export const OverviewPageV2: React.FC<Props> = ({
         : '-',
     },
   ];
-  const compactSupportStatusItems = [
-    wizardSummaryItems[1],
-    wizardSummaryItems[2],
-  ].filter((item): item is (typeof wizardSummaryItems)[number] => item != null);
+  const compactSupportStatusItems =
+    supportWorkflowStep === 2
+      ? [
+          {
+            label: t('v2Overview.selectedYearsLabel', 'Selected years'),
+            value: String(selectedBaselineYears.length),
+            detail: selectedBaselineYearsLabel,
+          },
+          {
+            label: t('v2Overview.wizardSummaryReadyYears', 'Ready years'),
+            value: String(readyBaselineYears.length),
+            detail: readyBaselineYearsLabel,
+          },
+        ]
+      : [
+          wizardSummaryItems[1],
+          wizardSummaryItems[2],
+        ].filter((item): item is (typeof wizardSummaryItems)[number] => item != null);
   const supportStatusItems =
-    compactSupportingChrome ? compactSupportStatusItems : wizardSummaryItems;
+    useCompactSetupSupportChrome ? compactSupportStatusItems : wizardSummaryItems;
   const nextAction = (() => {
     if (isManageYearsMaintenanceMode) {
       return {
@@ -650,8 +693,8 @@ export const OverviewPageV2: React.FC<Props> = ({
         body:
           hasPostImportYearTruth
             ? `${t('v2Overview.wizardSummaryImportedYears')}: ${activeImportedReviewYearsLabel}`
-            : selectedYears.length > 0
-            ? `${t('v2Overview.selectedYearsLabel')}: ${selectedYears.join(', ')}`
+            : selectedBaselineYears.length > 0
+            ? `${t('v2Overview.selectedYearsLabel')}: ${selectedBaselineYears.join(', ')}`
             : t('v2Overview.noYearsSelected'),
       };
     }
@@ -827,52 +870,112 @@ export const OverviewPageV2: React.FC<Props> = ({
     (importStatus.connected === true || activeVesinvestPlan != null);
   const useSupportRail =
     overviewVisualStep !== PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS;
-  const supportingChromeEyebrow = compactSupportingChrome
+  const useReviewDominantLayout =
+    mountedWorkflowStep === 3 || mountedWorkflowStep === 4;
+  const supportingChromeEyebrow = useCompactSetupSupportChrome
     ? t('v2Overview.wizardSummaryTitle')
     : t('v2Overview.wizardLabel');
-  const supportingChromeTitle = compactSupportingChrome
+  const supportingChromeTitle = useCompactSetupSupportChrome
     ? t('v2Overview.wizardSummarySubtitle')
     : wizardHero.title;
+  const showSupportNextActionBlock =
+    !useReviewDominantLayout && overviewVisualStep !== 4;
 
   const heroGrid = useSupportRail ? (
     <OverviewSupportRail
       t={t}
       workflowStep={supportWorkflowStep}
       isStep2SupportChrome={isStep2SupportChrome}
-      compactSupportingChrome={compactSupportingChrome}
+      compactSupportingChrome={useCompactSetupSupportChrome}
       supportingChromeEyebrow={supportingChromeEyebrow}
       supportingChromeTitle={supportingChromeTitle}
       summaryMetaBlocks={summaryMetaBlocks}
       supportStatusItems={supportStatusItems}
       nextAction={nextAction}
+      showNextActionBlock={showSupportNextActionBlock}
     />
+  ) : null;
+
+  const demotePlanningPanelInSetup =
+    shouldShowVesinvestPanel &&
+    overviewVisualStep >= 2 &&
+    overviewVisualStep <= PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS;
+  const collapsePlanningPanelInSetup =
+    demotePlanningPanelInSetup && overviewVisualStep >= 4;
+  const planningPanelDisclosureOpen =
+    collapsedPlanningPanelOpenStep === overviewVisualStep ||
+    overviewFocusTarget != null;
+
+  const planningPanelContent = (
+    <VesinvestPlanningPanel
+      t={t}
+      isAdmin={isAdmin}
+      simplifiedSetup={showSimplifiedPostChoiceSetup}
+      compactReviewMode={shouldCompactPlanningPanel}
+      planningContext={planningContext}
+      linkedOrg={overview?.importStatus.link ?? null}
+      onGoToForecast={onGoToForecast}
+      onGoToReports={_onGoToReports}
+      overviewFocusTarget={overviewFocusTarget}
+      onOverviewFocusTargetConsumed={() => {
+        if (collapsePlanningPanelInSetup) {
+          setCollapsedPlanningPanelOpenStep(overviewVisualStep);
+        }
+        onOverviewFocusTargetConsumed?.();
+      }}
+      onSavedFeePathReportConflict={onSavedFeePathReportConflict}
+      onPlansChanged={() =>
+        loadOverview({
+          preserveVisibleState: true,
+          preserveSelectionState: true,
+          preserveReviewContinueStep: true,
+          refreshPlanningContext: true,
+        })
+      }
+    />
+  );
+  const planningPanel = shouldShowVesinvestPanel ? (
+    <div
+      className={`v2-overview-planning-shell${
+        demotePlanningPanelInSetup
+          ? ' v2-overview-planning-shell-secondary'
+          : ''
+      }`}
+    >
+      {collapsePlanningPanelInSetup ? (
+        <details
+          className="v2-overview-planning-shell-toggle"
+          open={planningPanelDisclosureOpen}
+          onToggle={(event) => {
+            setCollapsedPlanningPanelOpenStep(
+              event.currentTarget.open ? overviewVisualStep : null,
+            );
+          }}
+        >
+          <summary>
+            <div className="v2-overview-planning-shell-toggle-copy">
+              <span>{t('v2Vesinvest.eyebrow', 'Vesinvest')}</span>
+              <strong>
+                {activeVesinvestPlan?.name ??
+                  activeVesinvestPlan?.utilityName ??
+                  overview?.importStatus.link?.nimi ??
+                  t('v2Vesinvest.title', 'Vesinvest workspace')}
+              </strong>
+            </div>
+          </summary>
+          <div className="v2-overview-planning-shell-toggle-body">
+            {planningPanelContent}
+          </div>
+        </details>
+      ) : (
+        planningPanelContent
+      )}
+    </div>
   ) : null;
 
   const activeSurface = (
     <div className="v2-overview-active-surface">
-      {shouldShowVesinvestPanel ? (
-          <VesinvestPlanningPanel
-            t={t}
-            isAdmin={isAdmin}
-            simplifiedSetup={showSimplifiedPostChoiceSetup}
-            compactReviewMode={shouldCompactPlanningPanel}
-            planningContext={planningContext}
-            linkedOrg={overview?.importStatus.link ?? null}
-            onGoToForecast={onGoToForecast}
-            onGoToReports={_onGoToReports}
-            overviewFocusTarget={overviewFocusTarget}
-            onOverviewFocusTargetConsumed={onOverviewFocusTargetConsumed}
-            onSavedFeePathReportConflict={onSavedFeePathReportConflict}
-            onPlansChanged={() =>
-              loadOverview({
-                preserveVisibleState: true,
-                preserveSelectionState: true,
-                preserveReviewContinueStep: true,
-                refreshPlanningContext: true,
-              })
-            }
-          />
-        ) : null}
+      {demotePlanningPanelInSetup ? null : planningPanel}
 
         {connectSurface}
 
@@ -1023,11 +1126,13 @@ export const OverviewPageV2: React.FC<Props> = ({
         />
       ) : null}
 
+      {demotePlanningPanelInSetup ? planningPanel : null}
+
       </div>
   );
 
   const useCompactWorkspaceLayout =
-    useSupportRail && compactSupportingChrome;
+    useSupportRail && useCompactSetupSupportChrome;
 
   return (
     <div className="v2-page">
@@ -1035,7 +1140,11 @@ export const OverviewPageV2: React.FC<Props> = ({
       {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
       {useCompactWorkspaceLayout ? (
         heroGrid ? (
-          <div className="v2-overview-workspace-layout">
+          <div
+            className={`v2-overview-workspace-layout${
+              useReviewDominantLayout ? ' step3-review-layout' : ''
+            }`}
+          >
             {activeSurface}
             {heroGrid}
           </div>

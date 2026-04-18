@@ -229,7 +229,7 @@ export async function connectOverviewOrganization(params: {
       .sort((a, b) => b - a),
     info: t(
       'v2Overview.infoConnected',
-      'Organization connected. Select years and continue setup.',
+      'Utility linked. Select historical years and continue building the baseline.',
     ),
   };
 }

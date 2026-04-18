@@ -30,7 +30,10 @@ import {
   recordOverviewSearchFailure,
 } from './overviewOrchestration';
 import { sendV2OpsEvent } from './opsTelemetry';
-import type { SetupWizardStep } from './overviewWorkflow';
+import {
+  getConfirmedImportedYears,
+  type SetupWizardStep,
+} from './overviewWorkflow';
 
 const AUTO_SEARCH_MIN_QUERY_LENGTH = 3;
 const AUTO_SEARCH_BUSINESS_ID_MIN_LENGTH = 4;
@@ -217,12 +220,34 @@ export function useOverviewImportController({
   }, [overview?.importStatus.link?.veetiId, overview?.importStatus.link?.ytunnus, selectedOrg]);
 
   const baselineReady = React.useMemo(
-    () =>
-      (planningContext?.canCreateScenario ?? false) ||
-      (overview?.importStatus.planningBaselineYears?.length ?? 0) > 0 ||
-      (planningContext?.baselineYears?.length ?? 0) > 0,
+    () => {
+      const confirmedImportedYears = overview
+        ? getConfirmedImportedYears(overview.importStatus)
+        : [];
+      const acceptedPlanningYears = new Set<number>([
+        ...((overview?.importStatus.planningBaselineYears ?? []).map((year) =>
+          Number(year),
+        )),
+        ...((planningContext?.baselineYears ?? []).map((row) => Number(row.year))),
+      ]);
+      const baselineCoversImportedWorkspaceYears =
+        confirmedImportedYears.length === 0 ||
+        confirmedImportedYears.every((year) => acceptedPlanningYears.has(year));
+
+      return (
+        ((planningContext?.canCreateScenario ?? false) ||
+          (overview?.importStatus.planningBaselineYears?.length ?? 0) > 0 ||
+          (planningContext?.baselineYears?.length ?? 0) > 0) &&
+        baselineCoversImportedWorkspaceYears
+      );
+    },
     [
+      overview?.importStatus,
       overview?.importStatus.planningBaselineYears?.length,
+      overview?.importStatus.workspaceYears,
+      overview?.importStatus.availableYears,
+      overview?.importStatus.years,
+      planningContext?.baselineYears,
       planningContext?.baselineYears?.length,
       planningContext?.canCreateScenario,
     ],
@@ -539,12 +564,10 @@ export function useOverviewImportController({
           }
           setReviewContinueStep(preservePlanSetupStep ? 3 : null);
           setInfo(
-            ensuredPlan.createdPlan
-              ? i18n.t('v2Vesinvest.infoCreated', 'Vesinvest plan created.')
-              : i18n.t(
-                  'v2Overview.infoConnected',
-                  'Organization connected. Select years and continue setup.',
-                ),
+            i18n.t(
+              'v2Overview.infoConnected',
+              'Utility linked. Select historical years and continue building the baseline.',
+            ),
           );
           void loadOverview({
             preserveVisibleState: true,

@@ -29,6 +29,7 @@ type Props = {
   summaryMetaBlocks: readonly SummaryMetaBlock[];
   supportStatusItems: readonly SummaryItem[];
   nextAction: SupportAction;
+  showNextActionBlock?: boolean;
 };
 
 export const OverviewSupportRail: React.FC<Props> = ({
@@ -42,6 +43,7 @@ export const OverviewSupportRail: React.FC<Props> = ({
   summaryMetaBlocks,
   supportStatusItems,
   nextAction,
+  showNextActionBlock = true,
 }) => {
   const displayedStep = workflowStep ?? wizardDisplayStep ?? 1;
   return (
@@ -90,15 +92,17 @@ export const OverviewSupportRail: React.FC<Props> = ({
         ) : null}
       </div>
 
-      <div className="v2-overview-support-panel v2-overview-support-next">
-        <div className="v2-overview-support-next-copy">
-          <span className="v2-overview-eyebrow">
-            {t('v2Overview.wizardCurrentFocus')}
-          </span>
-          <strong>{nextAction.title}</strong>
-          <p>{nextAction.body}</p>
+      {showNextActionBlock ? (
+        <div className="v2-overview-support-panel v2-overview-support-next">
+          <div className="v2-overview-support-next-copy">
+            <span className="v2-overview-eyebrow">
+              {t('v2Overview.wizardCurrentFocus')}
+            </span>
+            <strong>{nextAction.title}</strong>
+            <p>{nextAction.body}</p>
+          </div>
         </div>
-      </div>
+      ) : null}
     </aside>
   );
 };

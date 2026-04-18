@@ -454,6 +454,9 @@ export function getFinancialSourceFieldLabel(
   if (sourceField === 'Liikevaihto') {
     return t('v2Overview.previewAccountingRevenueLabel', 'Revenue');
   }
+  if (sourceField === 'PerusmaksuYhteensa') {
+    return t('v2Overview.manualFinancialFixedRevenue', 'Fixed revenue total');
+  }
   if (sourceField === 'AineetJaPalvelut') {
     return t(
       'v2Overview.previewAccountingMaterialsLabel',

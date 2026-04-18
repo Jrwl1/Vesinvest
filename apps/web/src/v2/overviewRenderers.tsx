@@ -504,7 +504,8 @@ export function renderOverviewYearValuePreview({
   );
   const waterVolumeRow = getEffectiveFirstRow(yearData, 'volume_vesi');
   const wastewaterVolumeRow = getEffectiveFirstRow(yearData, 'volume_jatevesi');
-  const hasFinancials = availability?.financials ?? accountingSummaryMap.size > 0;
+  const hasFinancials =
+    accountingSummaryMap.size > 0 || availability?.financials === true;
   const trustSignal = buildImportYearTrustSignal(yearData);
   const sourceLayers = buildImportYearSourceLayers(yearData);
 
@@ -531,6 +532,12 @@ export function renderOverviewYearValuePreview({
     t,
     yearData,
     changedSummaryKeys: trustSignal.changedSummaryKeys,
+    manualFinancialFieldSources:
+      yearData?.datasets
+        .find((dataset) => dataset.dataType === 'tilinpaatos')
+        ?.overrideMeta?.provenance?.fieldSources?.filter(
+          (item) => item.provenance.kind === 'manual_edit',
+        ),
     statementImportFieldSources: trustSignal.statementImport?.fieldSources,
     workbookImportFieldSources: trustSignal.workbookImport?.fieldSources,
   });

@@ -16,15 +16,19 @@ import { OverviewImportBoard } from './OverviewImportBoard';
 import { OverviewPageV2 } from './OverviewPageV2';
 import { OverviewReviewBoard } from './OverviewReviewBoard';
 import { OverviewSupportRail } from './OverviewSupportRail';
+import { OverviewYearWorkspace } from './OverviewYearWorkspace';
 import {
   OverviewConnectStep,
   OverviewForecastHandoffStep,
   OverviewPlanningBaselineStep,
 } from './OverviewWizardPanels';
 import { submitWorkbookImportWorkflow } from './overviewImportWorkflows';
-import { getPreviewPrefetchYears } from './overviewSelectors';
+import {
+  getPreviewPrefetchYears,
+  pickDefaultBaselineYears,
+} from './overviewSelectors';
 import { buildImportYearSummaryRows } from './yearReview';
-import { useOverviewSetupState } from './useOverviewSetupState';
+import { getExactEditedFieldLabels, useOverviewSetupState } from './useOverviewSetupState';
 import { useOverviewImportController } from './useOverviewImportController';
 
 const completeImportYearManuallyV2 = vi.fn();
@@ -153,6 +157,17 @@ const openYearDecisionWorkspaceYear = async (year: number) => {
       name: localeText('v2Overview.openReviewYearButton'),
     }));
   fireEvent.click(actionButton);
+};
+
+const openCurrentYearEstimateLane = async () => {
+  const lane = (
+    await screen.findByText(localeText('v2Overview.currentYearEstimateTitle'))
+  ).closest('details') as HTMLDetailsElement | null;
+  expect(lane).toBeTruthy();
+  if (lane != null && !lane.open) {
+    fireEvent.click(lane.querySelector('summary')!);
+  }
+  return lane;
 };
 
 const getLatestSetupWizardState = (mock: ReturnType<typeof vi.fn>) =>
@@ -447,14 +462,75 @@ vi.mock('./documentPdfImport', async (importOriginal) => {
   };
 });
 
-vi.mock('./VesinvestPlanningPanel', () => ({
-  VesinvestPlanningPanel: (props: { simplifiedSetup?: boolean }) => (
-    <div
-      data-testid="vesinvest-panel"
-      data-simplified-setup={String(Boolean(props.simplifiedSetup))}
-    />
-  ),
-}));
+vi.mock('./VesinvestPlanningPanel', async () => {
+  const React = await import('react');
+
+  const VesinvestPlanningPanel = (props: {
+    simplifiedSetup?: boolean;
+    overviewFocusTarget?: { kind: 'saved_fee_path'; planId: string } | null;
+    onOverviewFocusTargetConsumed?: () => void;
+  }) => {
+    const handledFocusTargetRef = React.useRef<string | null>(null);
+
+    React.useEffect(() => {
+      const focusTarget =
+        props.overviewFocusTarget?.kind === 'saved_fee_path'
+          ? props.overviewFocusTarget
+          : null;
+
+      if (!focusTarget || !props.onOverviewFocusTargetConsumed) {
+        if (!focusTarget) {
+          handledFocusTargetRef.current = null;
+        }
+        return;
+      }
+
+      if (handledFocusTargetRef.current === focusTarget.planId) {
+        return;
+      }
+
+      handledFocusTargetRef.current = focusTarget.planId;
+      props.onOverviewFocusTargetConsumed();
+    }, [props.onOverviewFocusTargetConsumed, props.overviewFocusTarget]);
+
+    return (
+      <div
+        data-testid="vesinvest-panel"
+        data-simplified-setup={String(Boolean(props.simplifiedSetup))}
+      />
+    );
+  };
+
+  return { VesinvestPlanningPanel };
+});
+
+describe('pickDefaultBaselineYears', () => {
+  it('prefers the newest four-year consecutive historical run', () => {
+    expect(
+      pickDefaultBaselineYears([
+        { vuosi: 2026, planningRole: 'current_year_estimate' },
+        { vuosi: 2025, planningRole: 'historical' },
+        { vuosi: 2024, planningRole: 'historical' },
+        { vuosi: 2023, planningRole: 'historical' },
+        { vuosi: 2022, planningRole: 'historical' },
+        { vuosi: 2019, planningRole: 'historical' },
+      ]),
+    ).toEqual([2025, 2024, 2023, 2022]);
+  });
+
+  it('falls back to the longest available consecutive historical run when four years do not exist', () => {
+    expect(
+      pickDefaultBaselineYears([
+        { vuosi: 2026, planningRole: 'current_year_estimate' },
+        { vuosi: 2025, planningRole: 'historical' },
+        { vuosi: 2023, planningRole: 'historical' },
+        { vuosi: 2022, planningRole: 'historical' },
+        { vuosi: 2021, planningRole: 'historical' },
+        { vuosi: 2018, planningRole: 'historical' },
+      ]),
+    ).toEqual([2023, 2022, 2021]);
+  });
+});
 
 describe('OverviewPageV2', () => {
   beforeEach(() => {
@@ -649,11 +725,12 @@ describe('OverviewPageV2', () => {
             value: localeText('v2Overview.wizardSummaryNo'),
             detail: 'Hidden baseline detail',
           },
-        ]}
+      ]}
         nextAction={{
           title: localeText('v2Overview.importYearsButton'),
           body: localeText('v2Overview.wizardBodyImportYears'),
         }}
+        showNextActionBlock={true}
       />,
     );
 
@@ -669,6 +746,96 @@ describe('OverviewPageV2', () => {
     expect(screen.queryByText('Hidden baseline detail')).toBeNull();
     expect(screen.getByText(localeText('v2Overview.importYearsButton'))).toBeTruthy();
     expect(screen.getByText(localeText('v2Overview.wizardBodyImportYears'))).toBeTruthy();
+  });
+
+  it('hides the current-focus prose on the review-dominant support rail', () => {
+    render(
+      <OverviewSupportRail
+        t={translate as any}
+        workflowStep={3}
+        isStep2SupportChrome={false}
+        compactSupportingChrome={true}
+        supportingChromeEyebrow={localeText('v2Overview.wizardSummaryTitle')}
+        supportingChromeTitle={localeText('v2Overview.wizardSummarySubtitle')}
+        summaryMetaBlocks={[
+          {
+            label: localeText('v2Overview.organizationLabel'),
+            value: 'Water Utility',
+          },
+        ]}
+        supportStatusItems={[
+          {
+            label: localeText('v2Overview.wizardSummaryImportedYears'),
+            value: '2',
+            detail: 'Hidden imported-year detail',
+          },
+        ]}
+        nextAction={{
+          title: localeText('v2Overview.wizardQuestionReviewYears'),
+          body: localeText('v2Overview.wizardBodyReviewYears'),
+        }}
+        showNextActionBlock={false}
+      />,
+    );
+
+    expect(screen.getByText('Water Utility')).toBeTruthy();
+    expect(screen.queryByText(localeText('v2Overview.wizardCurrentFocus'))).toBeNull();
+    expect(screen.queryByText(localeText('v2Overview.wizardBodyReviewYears'))).toBeNull();
+  });
+
+  it('keeps baseline creation ahead of the support rail and Vesinvest workspace', async () => {
+    seedReviewedYears([2024]);
+    listForecastScenariosV2.mockResolvedValue([]);
+    listReportsV2.mockResolvedValue([]);
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [buildOverviewResponse().importStatus.years[0]],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
+
+    expect(
+      await screen.findByRole('heading', {
+        name: localeText('v2Overview.wizardQuestionBaseline'),
+      }),
+    ).toBeTruthy();
+
+    const activeSurface = document.querySelector('.v2-overview-active-surface');
+    const supportRail = document.querySelector('.v2-overview-support-rail');
+    const baselineCard = screen
+      .getByRole('heading', { name: localeText('v2Overview.wizardQuestionBaseline') })
+      .closest('.v2-card');
+    const planningPanel = screen.getByTestId('vesinvest-panel');
+
+    expect(activeSurface).toBeTruthy();
+    expect(supportRail).toBeTruthy();
+    expect(baselineCard).toBeTruthy();
+    expect(planningPanel).toBeTruthy();
+    expect(screen.queryByText(localeText('v2Overview.wizardCurrentFocus'))).toBeNull();
+    expect(
+      activeSurface!.compareDocumentPosition(supportRail!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      baselineCard!.compareDocumentPosition(planningPanel!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('renders the extracted connect step with focused selection controls', () => {
@@ -823,7 +990,7 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
   });
 
-  it('prioritizes the most repairable blocked years before sparse years', () => {
+  it('keeps selected blocked years pinned first, then orders the rest by repairability', () => {
     const makeBoardRow = (
       vuosi: number,
       options?: {
@@ -935,33 +1102,118 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    const oneMissingLane = screen
-      .getByRole('heading', { name: localeText('v2Overview.importBucket1Title') })
-      .closest('section') as HTMLElement;
-    const twoMissingLane = screen
-      .getByRole('heading', { name: localeText('v2Overview.importBucket2Title') })
-      .closest('section') as HTMLElement;
-    const threePlusMissingLane = screen
-      .getByRole('heading', {
-        name: localeText('v2Overview.importBucket3PlusTitle'),
-      })
-      .closest('section') as HTMLElement;
+    expect(
+      screen.getByRole('heading', { name: localeText('v2Overview.reviewBucketSparseTitle') }),
+    ).toBeTruthy();
+    const repairLane = document.querySelector(
+      '.v2-import-board-lane-blocked',
+    ) as HTMLElement;
 
     expect(
-      Array.from(oneMissingLane.querySelectorAll('.v2-year-checkbox strong')).map(
+      Array.from(repairLane.querySelectorAll('.v2-year-checkbox strong')).map(
         (node) => node.textContent,
       ),
-    ).toEqual(['2024']);
+    ).toEqual(['2021', '2024', '2023']);
+  });
+
+  it('puts the blocked step-2 primary action ahead of secondary repair and trash actions', () => {
+    const blockedRow = {
+      vuosi: 2024,
+      completeness: {
+        tilinpaatos: true,
+        taksa: false,
+        tariff_revenue: false,
+        volume_vesi: true,
+        volume_jatevesi: false,
+      },
+      missingRequirements: ['prices', 'tariffRevenue'],
+      summaryMap: new Map(),
+      trustToneClass: 'v2-status-warning',
+      trustLabel: 'Needs completion',
+      sourceStatus: 'VEETI',
+      warnings: [],
+      resultToZero: { direction: 'missing', effectiveValue: null, marginPct: null },
+      trustNote: null,
+      sourceLayers: [],
+      missingSummary: {
+        count: 2,
+        total: 5,
+        fields: 'Prices, tariff revenue',
+      },
+    };
+
+    render(
+      <OverviewImportBoard
+        t={translate as any}
+        wizardBackLabel={null}
+        onBack={() => undefined}
+        selectedYears={[2024]}
+        syncing={false}
+        readyRows={[]}
+        suspiciousRows={[]}
+        blockedRows={[blockedRow as any]}
+        trashbinRows={[]}
+        currentYearEstimateRows={[]}
+        confirmedImportedYears={[]}
+        yearDataCache={{}}
+        cardEditYear={null}
+        cardEditContext={null}
+        cardEditFocusField={null}
+        isAdmin={true}
+        renderStep2InlineFieldEditor={() => null}
+        buildRepairActions={() => [
+          {
+            key: 'prices',
+            label: localeText('v2Overview.repairPricesAction'),
+            focusField: 'waterUnitPrice',
+          },
+        ]}
+        sourceStatusLabel={() => 'VEETI'}
+        sourceStatusClassName={() => 'v2-status-positive'}
+        sourceLayerText={() => ''}
+        renderDatasetCounts={() => ''}
+        missingRequirementLabel={() => ''}
+        attemptOpenInlineCardEditor={() => undefined}
+        openInlineCardEditor={() => undefined}
+        loadingYearData={null}
+        manualPatchError={null}
+        blockedYearCount={1}
+        removingYear={null}
+        onToggleYear={() => undefined}
+        onImportYears={() => undefined}
+        onAddCurrentYearEstimate={() => undefined}
+        onTrashYear={() => undefined}
+        onRestoreYear={() => undefined}
+        importYearsButtonClass="v2-btn v2-btn-primary"
+        importingYears={false}
+      />,
+    );
+
+    const primaryActions = document.querySelector('.v2-year-card-actions-primary');
+    const secondaryActions = document.querySelectorAll('.v2-year-card-actions-secondary');
+    const tertiaryActions = document.querySelector('.v2-year-card-actions-tertiary');
+
+    expect(primaryActions).toBeTruthy();
+    expect(primaryActions?.textContent).toContain(localeText('v2Overview.manualPatchButton'));
+    expect(secondaryActions).toHaveLength(2);
+    expect(secondaryActions[0]?.textContent).toContain(
+      localeText('v2Overview.repairPricesAction'),
+    );
+    expect(secondaryActions[1]?.textContent).toContain(
+      localeText('v2Overview.documentImportAction'),
+    );
+    expect(tertiaryActions?.textContent).toContain(
+      localeText('v2Overview.importTrashAction'),
+    );
     expect(
-      Array.from(twoMissingLane.querySelectorAll('.v2-year-checkbox strong')).map(
-        (node) => node.textContent,
-      ),
-    ).toEqual(['2023']);
+      (primaryActions as Element).compareDocumentPosition(secondaryActions[0] as Element) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(
-      Array.from(
-        threePlusMissingLane.querySelectorAll('.v2-year-checkbox strong'),
-      ).map((node) => node.textContent),
-    ).toEqual(['2021']);
+      (secondaryActions[secondaryActions.length - 1] as Element).compareDocumentPosition(
+        tertiaryActions as Element,
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('keeps selected usable years at the front of selectable lanes before recency tie-breaks', () => {
@@ -1028,7 +1280,7 @@ describe('OverviewPageV2', () => {
     );
 
     const readyLane = screen
-      .getByRole('heading', { name: localeText('v2Overview.importBucket0Title') })
+      .getByRole('heading', { name: localeText('v2Overview.reviewBucketReadyTitle') })
       .closest('section') as HTMLElement;
     const readyYears = Array.from(
       readyLane.querySelectorAll('.v2-year-checkbox strong'),
@@ -1101,7 +1353,7 @@ describe('OverviewPageV2', () => {
     );
 
     const readyLane = screen
-      .getByRole('heading', { name: localeText('v2Overview.importBucket0Title') })
+      .getByRole('heading', { name: localeText('v2Overview.reviewBucketReadyTitle') })
       .closest('section') as HTMLElement;
     const readyYears = Array.from(
       readyLane.querySelectorAll('.v2-year-checkbox strong'),
@@ -1109,7 +1361,7 @@ describe('OverviewPageV2', () => {
     expect(readyYears).toEqual(['2024', '2022', '2020']);
 
     const parkedLane = screen
-      .getByRole('heading', { name: localeText('v2Overview.importTrashbinTitle') })
+      .getByRole('heading', { name: localeText('v2Overview.reviewBucketExcludedTitle') })
       .closest('details') as HTMLDetailsElement;
     expect(parkedLane.open).toBe(false);
 
@@ -1382,6 +1634,20 @@ describe('OverviewPageV2', () => {
             manualReason: null,
             manualProvenance: null,
           },
+          {
+            ...templateYear,
+            vuosi: currentYear - 4,
+            planningRole: 'historical',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: {
+              veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi'],
+              manualDataTypes: [],
+            },
+            manualEditedAt: null,
+            manualEditedBy: null,
+            manualReason: null,
+            manualProvenance: null,
+          },
         ],
       }),
     );
@@ -1396,7 +1662,10 @@ describe('OverviewPageV2', () => {
 
     const estimateSection = (
       await screen.findByText(localeText('v2Overview.currentYearEstimateTitle'))
-    ).closest('section') as HTMLElement;
+    ).closest('details') as HTMLDetailsElement;
+    expect(estimateSection.open).toBe(false);
+    fireEvent.click(estimateSection.querySelector('summary')!);
+    expect(estimateSection.open).toBe(true);
     expect(
       within(estimateSection).getByRole('button', {
         name: localeText('v2Overview.currentYearEstimateAction'),
@@ -1413,10 +1682,11 @@ describe('OverviewPageV2', () => {
       String(currentYear - 1),
       String(currentYear - 2),
       String(currentYear - 3),
+      String(currentYear - 4),
     ]);
     expect(
       screen.getByText(
-        `${localeText('v2Overview.selectedYearsLabel')}: 3`,
+        `${localeText('v2Overview.selectedYearsLabel')}: 4`,
       ),
     ).toBeTruthy();
   });
@@ -1484,6 +1754,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
+    await openCurrentYearEstimateLane();
     fireEvent.click(
       await screen.findByRole('button', {
         name: localeText('v2Overview.currentYearEstimateAction'),
@@ -1520,6 +1791,9 @@ describe('OverviewPageV2', () => {
     const onExcludeYear = vi.fn();
     const onRestoreYear = vi.fn();
     const onRestoreVeeti = vi.fn();
+    const renderYearValuePreview = vi.fn(() => (
+      <div>{localeText('v2Overview.previewAccountingRevenueLabel')}</div>
+    ));
 
     const { rerender } = render(
       <OverviewPlanningBaselineStep
@@ -1528,7 +1802,7 @@ describe('OverviewPageV2', () => {
         onBack={() => undefined}
         includedPlanningYears={[2024]}
         excludedYearsSorted={[2022]}
-        correctedPlanningYears={[2024]}
+        correctedPlanningYears={[2024, 2022]}
         correctedPlanningManualDataTypes={['tilinpaatos']}
         correctedPlanningVeetiDataTypes={['taksa']}
         correctedYearsLabel="2024"
@@ -1628,9 +1902,7 @@ describe('OverviewPageV2', () => {
         sourceStatusClassName={() => 'v2-status-provenance'}
         sourceStatusLabel={() => 'Mixed'}
         renderDatasetCounts={() => '1 dataset'}
-        renderYearValuePreview={() => (
-          <div>{localeText('v2Overview.previewAccountingRevenueLabel')}</div>
-        )}
+        renderYearValuePreview={renderYearValuePreview}
         openForecastButtonClass="v2-btn v2-btn-primary"
         onManageYears={onManageYears}
         onReopenYearReview={onReopenYearReview}
@@ -1657,7 +1929,35 @@ describe('OverviewPageV2', () => {
     expect(onManageYears).not.toHaveBeenCalled();
     expect(reopenReviewButtons).toHaveLength(1);
     expect(reopenReviewButtons[0]!.closest('.v2-actions-row')).toBe(
+      document.querySelector('.v2-overview-handoff-year-primary-actions'),
+    );
+    expect(
+      document.querySelectorAll('.v2-overview-handoff-summary-item'),
+    ).toHaveLength(2);
+    expect(
+      document.querySelectorAll('.v2-overview-handoff-summary-item strong')[1]
+        ?.textContent,
+    ).toBe('1');
+    expect(
+      document.querySelectorAll('.v2-overview-year-chip-row > span'),
+    ).toHaveLength(1);
+    expect(
+      document.querySelector('.v2-overview-handoff-year-actions-shell'),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: localeText('common.delete') }).closest('details'),
+    ).toBe(document.querySelector('.v2-overview-handoff-year-actions-shell'));
+    expect(
       screen.getByRole('button', { name: localeText('common.delete') }).closest('.v2-actions-row'),
+    ).toBe(document.querySelector('.v2-overview-handoff-year-actions'));
+    expect(renderYearValuePreview).toHaveBeenCalledWith(
+      2024,
+      {
+        financials: true,
+        prices: true,
+        volumes: true,
+      },
+      { compact: true },
     );
     fireEvent.click(reopenReviewButtons[0]!);
     expect(onReopenYearReview).toHaveBeenCalledWith(2024);
@@ -1704,6 +2004,55 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.wizardBackStep5'),
       }),
     ).toBeNull();
+  });
+
+  it('keeps mixed accepted years labeled with the caller status when compact provenance layers are missing', () => {
+    render(
+      <OverviewForecastHandoffStep
+        t={translate as any}
+        wizardBackLabel={localeText('v2Overview.wizardBackStep5')}
+        onBack={() => undefined}
+        acceptedPlanningYearRows={[
+          {
+            vuosi: 2024,
+            sourceStatus: 'MIXED',
+            datasetCounts: { tilinpaatos: 1 },
+            resultToZero: {
+              rawValue: 0,
+              effectiveValue: 0,
+              delta: 0,
+              absoluteGap: 0,
+              marginPct: 0,
+              direction: 'at_zero',
+            },
+            sourceLayers: undefined,
+            completeness: {
+              tilinpaatos: true,
+              taksa: true,
+              volume_vesi: true,
+              volume_jatevesi: true,
+            },
+          },
+        ]}
+        correctedPlanningYears={[]}
+        excludedYearsSorted={[]}
+        sourceStatusClassName={() => 'v2-status-provenance'}
+        sourceStatusLabel={() => 'Mixed'}
+        renderDatasetCounts={() => '1 dataset'}
+        renderYearValuePreview={() => null}
+        openForecastButtonClass="v2-btn v2-btn-primary"
+        onManageYears={() => undefined}
+        onReopenYearReview={() => undefined}
+        onDeleteYear={() => undefined}
+        onExcludeYear={() => undefined}
+        onRestoreYear={() => undefined}
+        onRestoreVeeti={() => undefined}
+        onOpenForecast={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText('Mixed')).toBeTruthy();
+    expect(screen.queryByText(localeText('v2Overview.sourceManual'))).toBeNull();
   });
 
   it('disables review continue and shows the empty-state footer when only excluded years remain', () => {
@@ -1806,7 +2155,7 @@ describe('OverviewPageV2', () => {
     ).toBe(true);
   });
 
-  it('treats workbook-backed accepted baseline years as financially available in the handoff panel', () => {
+  it('keeps workbook-backed accepted baseline years compact in the handoff panel', () => {
     const renderYearValuePreview = vi.fn(() => <div>preview</div>);
 
     render(
@@ -1847,13 +2196,16 @@ describe('OverviewPageV2', () => {
 
     expect(renderYearValuePreview).toHaveBeenCalledWith(
       2024,
-      expect.objectContaining({
+      {
         financials: true,
         prices: true,
         volumes: true,
-      }),
-      expect.objectContaining({ compact: true }),
+      },
+      { compact: true },
     );
+    expect(screen.getByText('2024')).toBeTruthy();
+    expect(screen.getByText(/1 dataset/)).toBeTruthy();
+    expect(screen.getByText('preview')).toBeTruthy();
   });
 
   it('builds the shared import-year accounting summary from current raw and effective data', () => {
@@ -2269,6 +2621,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
+    await openCurrentYearEstimateLane();
     fireEvent.click(
       await screen.findByRole('button', {
         name: localeText('v2Overview.currentYearEstimateAction'),
@@ -2287,15 +2640,10 @@ describe('OverviewPageV2', () => {
       await screen.findByText(localeText('v2Overview.wizardQuestionFixYear')),
     ).toBeTruthy();
 
-    const focusBlock = screen
-      .getByText(localeText('v2Overview.wizardCurrentFocus'))
-      .closest('.v2-overview-support-next-copy') as HTMLElement;
     expect(
-      within(focusBlock).getByText(localeText('v2Overview.blockedYearsTitle')),
-    ).toBeTruthy();
-    expect(
-      within(focusBlock).queryByText(localeText('v2Vesinvest.evidenceTitle')),
+      screen.queryByText(localeText('v2Overview.wizardCurrentFocus')),
     ).toBeNull();
+    expect(document.querySelector('.v2-overview-support-next-copy')).toBeNull();
   });
 
   it('does not fall back to the step-1 connect state when an active Vesinvest plan already carries utility identity', async () => {
@@ -2731,11 +3079,11 @@ describe('OverviewPageV2', () => {
     />,
   );
 
-  expect(
-    await screen.findByRole('heading', {
-      name: localeText('v2Overview.importBucket1Title'),
-    }),
-  ).toBeTruthy();
+    expect(
+      await screen.findByRole('heading', {
+        name: localeText('v2Overview.reviewBucketRepairTitle'),
+      }),
+    ).toBeTruthy();
   expect(screen.queryByText('0,00 â‚¬ / 0,00 â‚¬')).toBeNull();
 });
 
@@ -2866,6 +3214,167 @@ describe('OverviewPageV2', () => {
       expect(screen.getAllByText(/0 EUR/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/0 m3/).length).toBeGreaterThan(0);
     });
+  });
+
+  it('keeps loaded VEETI summary values visible when only the baseline financial requirement is missing', async () => {
+    const baselineGapYear = {
+      ...buildOverviewResponse().importStatus.years[0],
+      vuosi: 2024,
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      baselineReady: false,
+      baselineMissingRequirements: ['financialBaseline'],
+      baselineWarnings: [],
+      tariffRevenueReason: 'missing_fixed_revenue',
+      sourceStatus: 'VEETI',
+      sourceBreakdown: {
+        veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
+        manualDataTypes: [],
+      },
+      warnings: [],
+      datasetCounts: {
+        tilinpaatos: 1,
+        taksa: 2,
+        volume_vesi: 1,
+        volume_jatevesi: 1,
+      },
+      manualEditedAt: null,
+      manualEditedBy: null,
+      manualReason: null,
+      manualProvenance: null,
+    };
+
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [baselineGapYear],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+    getImportYearDataV2.mockResolvedValueOnce({
+      year: 2024,
+      veetiId: 1,
+      sourceStatus: 'VEETI',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      baselineReady: false,
+      baselineMissingRequirements: ['financialBaseline'],
+      baselineWarnings: [],
+      tariffRevenueReason: 'missing_fixed_revenue',
+      hasManualOverrides: false,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 850000,
+              AineetJaPalvelut: 180000,
+              Henkilostokulut: 130000,
+              Poistot: 90000,
+              LiiketoiminnanMuutKulut: 110000,
+              TilikaudenYliJaama: 40000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 850000,
+              AineetJaPalvelut: 180000,
+              Henkilostokulut: 130000,
+              Poistot: 90000,
+              LiiketoiminnanMuutKulut: 110000,
+              TilikaudenYliJaama: 40000,
+            },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 1.25 },
+            { Tyyppi_Id: 2, Kayttomaksu: 2.5 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 1.25 },
+            { Tyyppi_Id: 2, Kayttomaksu: 2.5 },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 25000 }],
+          effectiveRows: [{ Maara: 25000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 24000 }],
+          effectiveRows: [{ Maara: 24000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await clickReviewGroupYear(2024);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: `${localeText('v2Overview.openReviewYearButton')} 2024`,
+      }),
+    );
+
+    const reviewYearCard = document.querySelector(
+      '.v2-year-status-row.needs_attention',
+    );
+    expect(reviewYearCard).toBeTruthy();
+
+    const revenuePreview = await waitFor(() =>
+      within(reviewYearCard as HTMLElement)
+        .getByText(localeText('v2Overview.previewAccountingRevenueLabel'))
+        .closest('.v2-year-preview-item'),
+    );
+    expect(revenuePreview).toBeTruthy();
+    expect(
+      within(revenuePreview as HTMLElement).queryByText(
+        localeText('v2Overview.previewVeetiMissingValue'),
+      ),
+    ).toBeNull();
+    expect(revenuePreview?.textContent).toContain('EUR');
+    expect(
+      screen.queryByText(localeText('v2Overview.previewVeetiMissingValue')),
+    ).toBeNull();
   });
 
   it('keeps card actions in the chosen user language instead of leaking Finnish labels', async () => {
@@ -3451,6 +3960,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
+    await openCurrentYearEstimateLane();
     fireEvent.click(
       await screen.findByRole('button', {
         name: localeText('v2Overview.currentYearEstimateAction'),
@@ -5553,7 +6063,7 @@ describe('OverviewPageV2', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: localeText('v2Overview.importBucket0Title'),
+        name: localeText('v2Overview.reviewBucketReadyTitle'),
       }),
     ).toBeTruthy();
     expect(screen.queryByTestId('vesinvest-panel')).toBeNull();
@@ -5940,8 +6450,16 @@ describe('OverviewPageV2', () => {
       screen.getByTestId('vesinvest-panel').getAttribute('data-simplified-setup'),
     ).toBe('true');
     expect(
-      screen.getByText(/Vesinvest.*(luotu|skapad)/i),
+      screen.getByText(
+        /(Verket är länkat|Utility linked|Vesilaitos on linkitetty)/i,
+      ),
     ).toBeTruthy();
+    expect(
+      screen.queryByText(/Vesinvest.*(luotu|skapad|created)/i),
+    ).toBeNull();
+    expect(
+      screen.queryByText(/Vesinvest.*(luotu|skapad|created)/i),
+    ).toBeNull();
     expect(
       screen.queryByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
     ).toBeNull();
@@ -6168,7 +6686,11 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await openYearDecisionWorkspaceYear(2023);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: `${localeText('v2Overview.fixYearValues')} 2023`,
+      }),
+    );
     fireEvent.click(
       await screen.findByRole('button', { name: 'Pois suunnitelmasta' }),
     );
@@ -6411,7 +6933,11 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await openReviewWorkspaceYear(2023);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: `${localeText('v2Overview.fixYearValues')} 2023`,
+      }),
+    );
     fireEvent.click(
       await screen.findByRole('button', {
         name: localeText('v2Overview.fixYearValues'),
@@ -6747,7 +7273,7 @@ describe('OverviewPageV2', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: localeText('v2Overview.importBucket0Title'),
+        name: localeText('v2Overview.reviewBucketReadyTitle'),
       }),
     ).toBeTruthy();
     expect(screen.getAllByText(localeText('v2Overview.wizardQuestionImportYears'))).toHaveLength(
@@ -6758,7 +7284,7 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
     expect(
       screen.getByRole('heading', {
-        name: localeText('v2Overview.importBucket1Title'),
+        name: localeText('v2Overview.reviewBucketRepairTitle'),
       }),
     ).toBeTruthy();
     expect(
@@ -6794,7 +7320,7 @@ describe('OverviewPageV2', () => {
     expect(document.querySelector('.v2-overview-workspace-layout')).toBeTruthy();
     expect(document.querySelector('.v2-overview-support-rail.step2-support')).toBeTruthy();
     expect(
-      screen.getAllByText(localeText('v2Overview.importBucket1Title')).length,
+      screen.getAllByText(localeText('v2Overview.reviewBucketRepairTitle')).length,
     ).toBeGreaterThan(0);
     expect(
       document.querySelector('.v2-year-card-secondary-grid.compact'),
@@ -7005,7 +7531,7 @@ describe('OverviewPageV2', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: localeText('v2Overview.importBucket0Title'),
+        name: localeText('v2Overview.reviewBucketReadyTitle'),
       }),
     ).toBeTruthy();
     expect(screen.getByText(localeText('v2Overview.trustLooksPlausible'))).toBeTruthy();
@@ -7034,12 +7560,12 @@ describe('OverviewPageV2', () => {
 
     expect(
       screen.getByRole('heading', {
-        name: localeText('v2Overview.importBucket0Title'),
+        name: localeText('v2Overview.reviewBucketReadyTitle'),
       }),
     ).toBeTruthy();
     expect(
       screen.queryByRole('heading', {
-        name: localeText('v2Overview.importTrashbinTitle'),
+        name: localeText('v2Overview.reviewBucketExcludedTitle'),
       }),
     ).toBeNull();
     expect(
@@ -7113,7 +7639,11 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('checkbox', { name: '2024' }));
+    fireEvent.click(
+      document.querySelector(
+        '[data-review-group-year="almost_nothing-2024"]',
+      ) as HTMLButtonElement,
+    );
     expect(toggleSpy).toHaveBeenCalledWith(2024);
     expect(trashSpy).not.toHaveBeenCalled();
 
@@ -8944,6 +9474,12 @@ describe('OverviewPageV2', () => {
       ).toBeTruthy();
     });
 
+    fireEvent.click(
+      document.querySelector(
+        '[data-review-group-year="almost_nothing-2024"]',
+      ) as HTMLButtonElement,
+    );
+
     fireEvent.change(
       screen.getByRole('spinbutton', {
         name: `${localeText('v2Overview.manualFinancialMaterials')} 2024`,
@@ -8967,6 +9503,338 @@ describe('OverviewPageV2', () => {
         }),
       );
     });
+  });
+
+  it('hides the review workspace save strip once the reviewed year no longer has unsaved edits', async () => {
+    getOverviewV2.mockResolvedValue(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [
+          {
+            ...buildOverviewResponse().importStatus.years[1],
+            vuosi: 2024,
+            completeness: {
+              tilinpaatos: false,
+              taksa: true,
+              volume_vesi: true,
+              volume_jatevesi: true,
+            },
+            baselineReady: false,
+            baselineMissingRequirements: ['financialBaseline'],
+            warnings: ['missing_financials'],
+            datasetCounts: {
+              taksa: 2,
+              volume_vesi: 1,
+              volume_jatevesi: 1,
+            },
+          },
+        ],
+      }),
+    );
+    getImportYearDataV2.mockImplementation(async () => ({
+      year: 2024,
+      veetiId: 1,
+      sourceStatus: 'VEETI',
+      completeness: {
+        tilinpaatos: false,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: false,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 100000,
+              PerusmaksuYhteensa: '',
+              AineetJaPalvelut: '',
+              Henkilostokulut: 21000,
+              Poistot: 6500,
+              LiiketoiminnanMuutKulut: 19000,
+              TilikaudenYliJaama: 53500,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 100000,
+              PerusmaksuYhteensa: '',
+              AineetJaPalvelut: '',
+              Henkilostokulut: 21000,
+              Poistot: 6500,
+              LiiketoiminnanMuutKulut: 19000,
+              TilikaudenYliJaama: 53500,
+            },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.75 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.2 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.75 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.2 },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 25500 }],
+          effectiveRows: [{ Maara: 25500 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 24500 }],
+          effectiveRows: [{ Maara: 24500 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    }));
+    completeImportYearManuallyV2.mockResolvedValue({
+      year: 2024,
+      patchedDataTypes: ['tilinpaatos'],
+      missingBefore: ['financialBaseline'],
+      missingAfter: [],
+      syncReady: false,
+      status: buildOverviewResponse({ workspaceYears: [2024] }).importStatus,
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-review-workspace-year=\"2024\"]'),
+      ).toBeTruthy();
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: `${localeText('v2Overview.fixYearValues')} 2024`,
+      }),
+    );
+    await screen.findByRole('spinbutton', {
+      name: `${localeText('v2Overview.manualFinancialMaterials')} 2024`,
+    });
+
+    fireEvent.change(
+      screen.getByRole('spinbutton', {
+        name: `${localeText('v2Overview.manualFinancialFixedRevenue')} 2024`,
+      }),
+      { target: { value: '0' } },
+    );
+    fireEvent.change(
+      screen.getByRole('spinbutton', {
+        name: `${localeText('v2Overview.manualFinancialMaterials')} 2024`,
+      }),
+      { target: { value: '0' } },
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: `${localeText('v2Overview.manualPatchSave')} 2024`,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(completeImportYearManuallyV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          year: 2024,
+          financials: expect.objectContaining({
+            perusmaksuYhteensa: 0,
+            aineetJaPalvelut: 0,
+          }),
+        }),
+      );
+    });
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', {
+          name: `${localeText('v2Overview.manualPatchSave')} 2024`,
+        }),
+      ).toBeNull();
+      expect(
+        screen.queryByRole('button', {
+          name: `${localeText('v2Overview.manualPatchSaveAndSync')} 2024`,
+        }),
+      ).toBeNull();
+    });
+  });
+
+  it('does not serialize untouched missing financial rows when only fixed revenue is set to zero in the review workspace', async () => {
+    getOverviewV2.mockResolvedValue(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [
+          {
+            ...buildOverviewResponse().importStatus.years[1],
+            vuosi: 2024,
+            completeness: {
+              tilinpaatos: false,
+              taksa: true,
+              volume_vesi: true,
+              volume_jatevesi: true,
+            },
+            baselineReady: false,
+            baselineMissingRequirements: ['financialBaseline'],
+            warnings: ['missing_financials'],
+            datasetCounts: {
+              taksa: 2,
+              volume_vesi: 1,
+              volume_jatevesi: 1,
+            },
+          },
+        ],
+      }),
+    );
+    getImportYearDataV2.mockImplementation(async () => ({
+      year: 2024,
+      veetiId: 1,
+      sourceStatus: 'VEETI',
+      completeness: {
+        tilinpaatos: false,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: false,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 100000,
+              PerusmaksuYhteensa: '',
+              AineetJaPalvelut: '',
+              Henkilostokulut: 21000,
+              Poistot: 6500,
+              LiiketoiminnanMuutKulut: 19000,
+              TilikaudenYliJaama: 53500,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 100000,
+              PerusmaksuYhteensa: '',
+              AineetJaPalvelut: '',
+              Henkilostokulut: 21000,
+              Poistot: 6500,
+              LiiketoiminnanMuutKulut: 19000,
+              TilikaudenYliJaama: 53500,
+            },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.75 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.2 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.75 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.2 },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 25500 }],
+          effectiveRows: [{ Maara: 25500 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 24500 }],
+          effectiveRows: [{ Maara: 24500 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    }));
+    completeImportYearManuallyV2.mockResolvedValue({
+      year: 2024,
+      patchedDataTypes: ['tilinpaatos'],
+      missingBefore: ['financialBaseline'],
+      missingAfter: [],
+      syncReady: false,
+      status: buildOverviewResponse({ workspaceYears: [2024] }).importStatus,
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-review-workspace-year="2024"]'),
+      ).toBeTruthy();
+    });
+
+    const fixedRevenueInput = await screen.findByRole('spinbutton', {
+      name: `${localeText('v2Overview.manualFinancialFixedRevenue')} 2024`,
+    });
+
+    fireEvent.change(
+      fixedRevenueInput,
+      { target: { value: '0' } },
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: `${localeText('v2Overview.manualPatchSave')} 2024`,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(completeImportYearManuallyV2).toHaveBeenCalled();
+    });
+
+    const payload =
+      completeImportYearManuallyV2.mock.calls[
+        completeImportYearManuallyV2.mock.calls.length - 1
+      ]?.[0];
+    expect(payload?.financials?.perusmaksuYhteensa).toBe(0);
+    expect(payload?.financials?.aineetJaPalvelut).toBeUndefined();
   });
 
   it('lets the user pin and unpin review workspace years explicitly', async () => {
@@ -9112,6 +9980,180 @@ describe('OverviewPageV2', () => {
     expect(
       screen.getAllByText(localeText('v2Overview.noYearsSelected')).length,
     ).toBeGreaterThan(0);
+  });
+
+  it('gives the review workspace one primary action per year while keeping imports secondary', () => {
+    const buildWorkspaceYearData = (year: number, sourceStatus: string) => ({
+      year,
+      veetiId: 1,
+      sourceStatus,
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: sourceStatus === 'MIXED',
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 90000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 14000,
+              Henkilostokulut: 20000,
+              Poistot: 6000,
+              LiiketoiminnanMuutKulut: 15000,
+              TilikaudenYliJaama: 23000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 90000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 14000,
+              Henkilostokulut: 20000,
+              Poistot: 6000,
+              LiiketoiminnanMuutKulut: 15000,
+              TilikaudenYliJaama: 23000,
+            },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.3 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.3 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 26000 }],
+          effectiveRows: [{ Maara: 26000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 24000 }],
+          effectiveRows: [{ Maara: 24000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    });
+
+    render(
+      <OverviewYearWorkspace
+        t={translate as any}
+        reviewStatusRows={[
+          {
+            year: 2023,
+            sourceStatus: 'VEETI',
+            missingRequirements: ['prices'],
+            setupStatus: 'needs_attention',
+          },
+          {
+            year: 2024,
+            sourceStatus: 'MIXED',
+            missingRequirements: [],
+            setupStatus: 'reviewed',
+          },
+        ]}
+        activeYear={2023}
+        workspaceYears={[2023, 2024]}
+        onTogglePinnedYear={() => undefined}
+        yearDataCache={{
+          2023: buildWorkspaceYearData(2023, 'VEETI') as any,
+          2024: buildWorkspaceYearData(2024, 'MIXED') as any,
+        }}
+        sourceStatusClassName={() => 'v2-status-positive'}
+        sourceStatusLabel={(status) => status ?? 'VEETI'}
+        missingRequirementLabel={() => 'Prices'}
+        openInlineCardEditor={() => undefined}
+        saveYear={vi.fn().mockResolvedValue({ yearData: buildWorkspaceYearData(2023, 'VEETI') })}
+      />,
+    );
+
+    const needsAttentionYear = document.querySelector(
+      '[data-review-workspace-year="2023"]',
+    ) as HTMLElement;
+    const reviewedYear = document.querySelector(
+      '[data-review-workspace-year="2024"]',
+    ) as HTMLElement;
+
+    const needsPrimary = needsAttentionYear.querySelector(
+      '.v2-overview-year-workspace-year-actions-primary',
+    ) as HTMLElement;
+    const needsSecondary = needsAttentionYear.querySelector(
+      '.v2-overview-year-workspace-year-actions-secondary',
+    ) as HTMLElement;
+    const reviewedPrimary = reviewedYear.querySelector(
+      '.v2-overview-year-workspace-year-actions-primary',
+    ) as HTMLElement;
+    const reviewedSecondary = reviewedYear.querySelector(
+      '.v2-overview-year-workspace-year-actions-secondary',
+    ) as HTMLElement;
+
+    expect(
+      within(needsPrimary).getByRole('button', {
+        name: `${localeText('v2Overview.fixYearValues')} 2023`,
+      }),
+    ).toBeTruthy();
+    expect(
+      within(needsSecondary).getByRole('button', {
+        name: `${localeText('v2Overview.openReviewYearButton')} 2023`,
+      }),
+    ).toBeTruthy();
+    expect(
+      within(needsSecondary).getByRole('button', {
+        name: `${localeText('v2Overview.documentImportAction')} 2023`,
+      }),
+    ).toBeTruthy();
+    expect(
+      within(needsSecondary).getByRole('button', {
+        name: `${localeText('v2Overview.workbookImportAction')} 2023`,
+      }),
+    ).toBeTruthy();
+
+    expect(
+      within(reviewedPrimary).getByRole('button', {
+        name: `${localeText('v2Overview.openReviewYearButton')} 2024`,
+      }),
+    ).toBeTruthy();
+    expect(
+      within(reviewedSecondary).getByRole('button', {
+        name: `${localeText('v2Overview.fixYearValues')} 2024`,
+      }),
+    ).toBeTruthy();
+    expect(
+      within(reviewedSecondary).getByRole('button', {
+        name: `${localeText('v2Overview.documentImportAction')} 2024`,
+      }),
+    ).toBeTruthy();
+    expect(
+      within(reviewedSecondary).getByRole('button', {
+        name: `${localeText('v2Overview.workbookImportAction')} 2024`,
+      }),
+    ).toBeTruthy();
   });
 
   it('defaults the review workspace to the first unresolved year', async () => {
@@ -9669,6 +10711,34 @@ describe('OverviewPageV2', () => {
     expect(document.querySelector('[data-review-workspace-year="2023"]')).toBeNull();
   });
 
+  it('keeps the lower review year card hidden until a year is explicitly opened', async () => {
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-review-workspace-year="2023"]'),
+      ).toBeTruthy();
+    });
+
+    expect(document.querySelector('.v2-year-status-row')).toBeNull();
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: `${localeText('v2Overview.fixYearValues')} 2023`,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(document.querySelector('.v2-year-status-row')).toBeTruthy();
+    });
+  });
+
   it('collapses a broadened review workspace back to the next unresolved year on Continue', async () => {
     render(
       <OverviewPageV2
@@ -9916,12 +10986,12 @@ describe('OverviewPageV2', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: localeText('v2Overview.importBucket0Title'),
+        name: localeText('v2Overview.reviewBucketReadyTitle'),
       }),
     ).toBeTruthy();
     expect(
       screen.getByRole('heading', {
-        name: localeText('v2Overview.importBucket3PlusTitle'),
+        name: localeText('v2Overview.reviewBucketSparseTitle'),
       }),
     ).toBeTruthy();
   });
@@ -11669,6 +12739,17 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
   });
 
+  it('prefers manual fixed-revenue provenance over summary fallback labels after review save', () => {
+    const labels = getExactEditedFieldLabels({
+      t: translate as any,
+      yearData: undefined,
+      changedSummaryKeys: ['materialsCosts'],
+      manualFinancialFieldSources: [{ sourceField: 'PerusmaksuYhteensa' }],
+    });
+
+    expect(labels).toEqual([localeText('v2Overview.manualFinancialFixedRevenue')]);
+  });
+
   it('keeps accounting-first year cards factual across import and review surfaces', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
 
@@ -11767,6 +12848,270 @@ describe('OverviewPageV2', () => {
     expect(screen.queryByRole('button', { name: 'Luo suunnittelupohja' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Jatka' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();
+  });
+
+  it('advances from explicit no-change approval to baseline creation when continue is pressed again', async () => {
+    listForecastScenariosV2.mockResolvedValue([]);
+    listReportsV2.mockResolvedValue([]);
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [2024] }));
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    const continueButton = await screen.findByRole('button', { name: 'Jatka' });
+    fireEvent.click(continueButton);
+
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Jatka' }));
+
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.createPlanningBaseline'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    ).toBeNull();
+  });
+
+  it('keeps the ready-to-baseline review footer to one summary line plus CTA', async () => {
+    seedReviewedYears([2024]);
+    listForecastScenariosV2.mockResolvedValue([]);
+    listReportsV2.mockResolvedValue([]);
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [
+          {
+            ...buildOverviewResponse().importStatus.years[0],
+            vuosi: 2024,
+            baselineReady: true,
+            baselineMissingRequirements: [],
+            baselineWarnings: [],
+            warnings: [],
+          },
+        ],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Jatka' })).toBeTruthy();
+
+    const reviewActions = document.querySelector('.v2-overview-review-actions');
+    expect(reviewActions).toBeTruthy();
+    expect(reviewActions!.className).toContain('compact');
+    expect(reviewActions!.querySelectorAll('h4')).toHaveLength(0);
+    expect(reviewActions!.querySelectorAll('p.v2-muted')).toHaveLength(1);
+  });
+
+  it('keeps the ready-only review workspace collapsed until a year is explicitly opened', async () => {
+    seedReviewedYears([2024]);
+    listForecastScenariosV2.mockResolvedValue([]);
+    listReportsV2.mockResolvedValue([]);
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [
+          {
+            ...buildOverviewResponse().importStatus.years[0],
+            vuosi: 2024,
+            baselineReady: true,
+            baselineMissingRequirements: [],
+            baselineWarnings: [],
+            warnings: [],
+          },
+        ],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Jatka' })).toBeTruthy();
+    expect(
+      document.querySelector('[data-review-workspace-year="2024"]'),
+    ).toBeNull();
+    expect(
+      document.querySelector('[data-review-workspace-toggle="2024"]'),
+    ).toBeNull();
+
+    await clickReviewGroupYear(2024);
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-review-workspace-year="2024"]'),
+      ).toBeTruthy();
+    });
+    expect(
+      document.querySelector('[data-review-workspace-toggle="2024"]'),
+    ).toBeTruthy();
+  });
+
+  it('routes review continue straight to baseline creation when the only visible year is already reviewed', async () => {
+    seedReviewedYears([2024]);
+    listForecastScenariosV2.mockResolvedValue([]);
+    listReportsV2.mockResolvedValue([]);
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [
+          {
+            ...buildOverviewResponse().importStatus.years[0],
+            vuosi: 2024,
+            baselineReady: true,
+            baselineMissingRequirements: [],
+            baselineWarnings: ['tariffRevenueMismatch'],
+            tariffRevenueReason: 'mismatch',
+            sourceStatus: 'MIXED',
+            warnings: [],
+          },
+        ],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    const continueButton = await screen.findByRole('button', { name: 'Jatka' });
+    fireEvent.click(continueButton);
+
+    expect(
+      await screen.findByRole('heading', {
+        name: localeText('v2Overview.wizardQuestionBaseline'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.createPlanningBaseline'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    ).toBeNull();
+  });
+
+  it('closes the mounted review editor before advancing to baseline creation from the reviewed-only handoff', async () => {
+    seedReviewedYears([2024]);
+    listForecastScenariosV2.mockResolvedValue([]);
+    listReportsV2.mockResolvedValue([]);
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [
+          {
+            ...buildOverviewResponse().importStatus.years[0],
+            vuosi: 2024,
+            baselineReady: true,
+            baselineMissingRequirements: [],
+            baselineWarnings: ['tariffRevenueMismatch'],
+            tariffRevenueReason: 'mismatch',
+            sourceStatus: 'MIXED',
+            warnings: [],
+          },
+        ],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await clickReviewGroupYear(2024);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.openReviewYearButton'),
+      }),
+    );
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    ).toBeTruthy();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Jatka' }),
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: localeText('v2Overview.wizardQuestionBaseline'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    ).toBeNull();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.createPlanningBaseline'),
+      }),
+    ).toBeTruthy();
   });
 
   it('does not render local back buttons on review and baseline wizard surfaces', async () => {
@@ -12122,6 +13467,16 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.keepYearInPlan'),
       }),
     );
+
+    const baselinePlanningDisclosure = document.querySelector(
+      '.v2-overview-planning-shell-toggle',
+    ) as HTMLDetailsElement | null;
+    expect(baselinePlanningDisclosure).toBeTruthy();
+    fireEvent.click(
+      baselinePlanningDisclosure!.querySelector('summary') as HTMLElement,
+    );
+    expect(baselinePlanningDisclosure?.open).toBe(true);
+
     fireEvent.click(
       await screen.findByRole('button', { name: 'Luo suunnittelupohja' }),
     );
@@ -12134,6 +13489,12 @@ describe('OverviewPageV2', () => {
         years: '2024',
       })),
     ).toBeTruthy();
+    const handoffPlanningDisclosure = document.querySelector(
+      '.v2-overview-planning-shell-toggle',
+    ) as HTMLDetailsElement | null;
+    expect(
+      handoffPlanningDisclosure == null || handoffPlanningDisclosure.open === false,
+    ).toBe(true);
     expect(
       screen.queryByText(localeText('v2Overview.wizardSummaryBaselineReady')),
     ).toBeNull();
@@ -12201,6 +13562,148 @@ describe('OverviewPageV2', () => {
         baselineReady: false,
       });
     });
+  });
+
+  it('does not collapse to the baseline handoff when only one imported workspace year is accepted', async () => {
+    const onSetupWizardStateChange = vi.fn();
+    const years = [
+      {
+        vuosi: 2025,
+        planningRole: 'historical',
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        baselineReady: true,
+        baselineMissingRequirements: [],
+        baselineWarnings: [],
+        sourceStatus: 'MIXED',
+        sourceBreakdown: {
+          veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+          manualDataTypes: ['tilinpaatos'],
+        },
+        warnings: [],
+        datasetCounts: {
+          tilinpaatos: 1,
+          taksa: 2,
+          volume_vesi: 1,
+          volume_jatevesi: 1,
+        },
+        manualEditedAt: '2026-04-18T00:00:00.000Z',
+        manualEditedBy: 'tester',
+        manualReason: 'manual correction',
+        manualProvenance: null,
+      },
+      {
+        vuosi: 2024,
+        planningRole: 'historical',
+        completeness: {
+          tilinpaatos: false,
+          taksa: true,
+          volume_vesi: false,
+          volume_jatevesi: false,
+        },
+        baselineReady: false,
+        baselineMissingRequirements: ['financials', 'volumes'],
+        baselineWarnings: [],
+        sourceStatus: 'VEETI',
+        sourceBreakdown: {
+          veetiDataTypes: ['taksa'],
+          manualDataTypes: [],
+        },
+        warnings: ['missing_financials', 'missing_volumes'],
+        datasetCounts: {
+          taksa: 2,
+        },
+        manualEditedAt: null,
+        manualEditedBy: null,
+        manualReason: null,
+        manualProvenance: null,
+      },
+      {
+        vuosi: 2023,
+        planningRole: 'historical',
+        completeness: {
+          tilinpaatos: false,
+          taksa: true,
+          volume_vesi: false,
+          volume_jatevesi: false,
+        },
+        baselineReady: false,
+        baselineMissingRequirements: ['financials', 'volumes'],
+        baselineWarnings: [],
+        sourceStatus: 'VEETI',
+        sourceBreakdown: {
+          veetiDataTypes: ['taksa'],
+          manualDataTypes: [],
+        },
+        warnings: ['missing_financials', 'missing_volumes'],
+        datasetCounts: {
+          taksa: 2,
+        },
+        manualEditedAt: null,
+        manualEditedBy: null,
+        manualReason: null,
+        manualProvenance: null,
+      },
+    ];
+
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2025, 2024, 2023],
+        planningBaselineYears: [2025],
+        years,
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: true,
+        baselineYears: [
+          {
+            year: 2025,
+            quality: 'complete',
+            sourceStatus: 'MIXED',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: ['tilinpaatos'],
+            },
+          },
+        ],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+        onSetupWizardStateChange={onSetupWizardStateChange}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getLatestSetupWizardState(onSetupWizardStateChange)).toMatchObject({
+        currentStep: 3,
+        summary: {
+          baselineReady: false,
+        },
+      });
+    });
+
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.openForecastHandoff'),
+      }),
+    ).toBeNull();
+    expect(
+      await screen.findByRole('heading', {
+        name: localeText('v2Overview.wizardQuestionReviewYears'),
+      }),
+    ).toBeTruthy();
+    expect(document.querySelector('[data-review-group-year$="-2024"]')).toBeTruthy();
+    expect(document.querySelector('[data-review-group-year$="-2023"]')).toBeTruthy();
   });
 
   it('shows imported-year summary counts only for workspace years even when extra available VEETI years remain incomplete', async () => {
@@ -12317,6 +13820,229 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
     expect(document.querySelector('.v2-overview-handoff-actions-card')).toBeNull();
     expect(screen.getAllByRole('button', { name: 'Avaa Ennuste' })).toHaveLength(1);
+  });
+
+  it('keeps the Forecast handoff ahead of the Vesinvest workspace once baseline work is complete', async () => {
+    const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        planningBaselineYears: [2024],
+        years: [baselineReadyYear],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: true,
+        baselineYears: [
+          {
+            year: 2024,
+            quality: 'complete',
+            sourceStatus: 'MIXED',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: ['tilinpaatos'],
+            },
+            financials: { dataType: 'tilinpaatos', source: 'manual' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: {
+              dataType: 'volume_vesi+volume_jatevesi',
+              source: 'veeti',
+            },
+            investmentAmount: 150000,
+            soldWaterVolume: 25000,
+            soldWastewaterVolume: 25000,
+            combinedSoldVolume: 50000,
+            processElectricity: 4000,
+            pumpedWaterVolume: 55000,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 50000,
+            netWaterTradeVolume: 0,
+          },
+        ],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Avaa Ennuste' })).toBeTruthy();
+
+    const handoffHeading = screen.getByRole('heading', { name: 'Mukana olevat vuodet' });
+    const handoffCard = handoffHeading.closest('[class*="v2-overview-handoff"]');
+    const planningPanel = screen.getByTestId('vesinvest-panel');
+
+    expect(handoffCard).toBeTruthy();
+    expect(planningPanel).toBeTruthy();
+    expect(
+      handoffCard!.compareDocumentPosition(planningPanel) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('collapses the demoted Vesinvest workspace during the forecast handoff', async () => {
+    const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        planningBaselineYears: [2024],
+        years: [baselineReadyYear],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: true,
+        baselineYears: [
+          {
+            year: 2024,
+            quality: 'complete',
+            sourceStatus: 'MIXED',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: ['tilinpaatos'],
+            },
+            financials: { dataType: 'tilinpaatos', source: 'manual' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: {
+              dataType: 'volume_vesi+volume_jatevesi',
+              source: 'veeti',
+            },
+            investmentAmount: 150000,
+            soldWaterVolume: 25000,
+            soldWastewaterVolume: 25000,
+            combinedSoldVolume: 50000,
+            processElectricity: 4000,
+            pumpedWaterVolume: 55000,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 50000,
+            netWaterTradeVolume: 0,
+          },
+        ],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Avaa Ennuste' })).toBeTruthy();
+
+    const planningDisclosure = document.querySelector(
+      '.v2-overview-planning-shell-toggle',
+    ) as HTMLDetailsElement | null;
+
+    expect(planningDisclosure).toBeTruthy();
+    expect(planningDisclosure?.open).toBe(false);
+
+    fireEvent.click(planningDisclosure!.querySelector('summary') as HTMLElement);
+
+    expect(planningDisclosure?.open).toBe(true);
+  });
+
+  it('keeps the collapsed Vesinvest disclosure open after the saved-fee-path focus target is consumed', async () => {
+    const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
+    const onOverviewFocusTargetConsumed = vi.fn();
+    const focusTarget = { kind: 'saved_fee_path' as const, planId: 'plan-selected' };
+
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        planningBaselineYears: [2024],
+        years: [baselineReadyYear],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: true,
+        activePlan: {
+          id: 'plan-selected',
+          selectedScenarioId: 'scenario-1',
+          pricingStatus: 'verified',
+          baselineStatus: 'verified',
+        },
+        selectedPlan: {
+          id: 'plan-selected',
+          selectedScenarioId: 'scenario-1',
+          pricingStatus: 'verified',
+          baselineStatus: 'verified',
+        },
+        baselineYears: [
+          {
+            year: 2024,
+            quality: 'complete',
+            sourceStatus: 'MIXED',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: ['tilinpaatos'],
+            },
+            financials: { dataType: 'tilinpaatos', source: 'manual' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: {
+              dataType: 'volume_vesi+volume_jatevesi',
+              source: 'veeti',
+            },
+            investmentAmount: 150000,
+            soldWaterVolume: 25000,
+            soldWastewaterVolume: 25000,
+            combinedSoldVolume: 50000,
+            processElectricity: 4000,
+            pumpedWaterVolume: 55000,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 50000,
+            netWaterTradeVolume: 0,
+          },
+        ],
+      }),
+    );
+
+    const { rerender } = render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+        overviewFocusTarget={focusTarget}
+        onOverviewFocusTargetConsumed={onOverviewFocusTargetConsumed}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(onOverviewFocusTargetConsumed).toHaveBeenCalledTimes(1);
+    });
+
+    const planningDisclosure = document.querySelector(
+      '.v2-overview-planning-shell-toggle',
+    ) as HTMLDetailsElement | null;
+
+    expect(planningDisclosure).toBeTruthy();
+    expect(planningDisclosure?.open).toBe(true);
+
+    rerender(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+        overviewFocusTarget={null}
+        onOverviewFocusTargetConsumed={onOverviewFocusTargetConsumed}
+      />,
+    );
+
+    expect(
+      (
+        document.querySelector(
+          '.v2-overview-planning-shell-toggle',
+        ) as HTMLDetailsElement | null
+      )?.open,
+    ).toBe(true);
+    expect(onOverviewFocusTargetConsumed).toHaveBeenCalledTimes(1);
   });
 
   it('promotes a stale baseline-creation continue step to the forecast handoff when baseline truth is already ready', () => {

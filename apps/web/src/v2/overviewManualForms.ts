@@ -113,6 +113,7 @@ export const WORKBOOK_SOURCE_FIELD_TO_FINANCIAL_KEY: Record<
   keyof NonNullable<V2ManualYearPatchPayload['financials']>
 > = {
   Liikevaihto: 'liikevaihto',
+  PerusmaksuYhteensa: 'perusmaksuYhteensa',
   AineetJaPalvelut: 'aineetJaPalvelut',
   Henkilostokulut: 'henkilostokulut',
   Poistot: 'poistot',

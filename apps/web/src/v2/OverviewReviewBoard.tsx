@@ -818,6 +818,7 @@ type Props = {
       financials: boolean;
       prices: boolean;
       volumes: boolean;
+      financialFields?: Array<keyof ManualFinancialForm>;
     };
     syncAfterSave?: boolean;
   }) => Promise<{ yearData: V2ImportYearDataResponse }>;
@@ -891,10 +892,10 @@ function resolvePrimaryReviewYear(
   );
 }
 
-function buildDefaultPinnedYears(reviewStatusRows: ReviewStatusRow[]): number[] {
-  const primaryYear = resolvePrimaryReviewYear(reviewStatusRows);
-  return primaryYear == null ? [] : [primaryYear];
-}
+type WorkspaceSelection = {
+  activeYear: number | null;
+  compareYears: number[];
+};
 
 function getReviewBucket(row: ReviewStatusRow): ReviewBucketKey {
   if (row.setupStatus === 'excluded_from_plan') {
@@ -919,7 +920,7 @@ function getReviewBucketLabel(t: TFunction, bucket: ReviewBucketKey): string {
     case 'needs_filling':
       return t('v2Overview.reviewBucketRepairTitle');
     case 'almost_nothing':
-      return t('v2Overview.blockedYearsTitle');
+      return t('v2Overview.reviewBucketSparseTitle');
     case 'excluded':
       return t('v2Overview.reviewBucketExcludedTitle');
     default:
@@ -1001,8 +1002,8 @@ export const OverviewReviewBoard: React.FC<Props> = ({
   pendingReviewYearCount,
   technicalReadyYearsLabel,
 }) => {
-  const defaultPinnedYears = React.useMemo(
-    () => buildDefaultPinnedYears(reviewStatusRows),
+  const defaultActiveYear = React.useMemo(
+    () => resolvePrimaryReviewYear(reviewStatusRows),
     [reviewStatusRows],
   );
   const availableYearsKey = React.useMemo(
@@ -1010,9 +1011,23 @@ export const OverviewReviewBoard: React.FC<Props> = ({
     [reviewStatusRows],
   );
   const previousAvailableYearsKeyRef = React.useRef<string>('');
-  const allowEmptyPinnedYearsRef = React.useRef(false);
-  const explicitMultiSelectRef = React.useRef(false);
-  const [pinnedYears, setPinnedYears] = React.useState<number[]>([]);
+  const allowEmptyWorkspaceSelectionRef = React.useRef(false);
+  const [workspaceSelection, setWorkspaceSelection] =
+    React.useState<WorkspaceSelection>({
+      activeYear: null,
+      compareYears: [],
+    });
+  const workspaceYears = React.useMemo(() => {
+    if (workspaceSelection.activeYear == null) {
+      return [];
+    }
+    return [
+      workspaceSelection.activeYear,
+      ...workspaceSelection.compareYears.filter(
+        (year) => year !== workspaceSelection.activeYear,
+      ),
+    ];
+  }, [workspaceSelection]);
   const groupedRows = React.useMemo(
     () =>
       (['good_to_go', 'needs_filling', 'almost_nothing', 'excluded'] as const)
@@ -1024,8 +1039,16 @@ export const OverviewReviewBoard: React.FC<Props> = ({
     [reviewStatusRows],
   );
   const pinnedReviewRows = React.useMemo(
-    () => reviewStatusRows.filter((row) => pinnedYears.includes(row.year)),
-    [pinnedYears, reviewStatusRows],
+    () => {
+      if (cardEditContext !== 'step3') {
+        return [];
+      }
+      const expandedYear = manualPatchYear ?? cardEditYear;
+      return expandedYear == null
+        ? []
+        : reviewStatusRows.filter((row) => row.year === expandedYear);
+    },
+    [cardEditContext, cardEditYear, manualPatchYear, reviewStatusRows],
   );
   const includedPlanningYearCount = React.useMemo(
     () => reviewStatusRows.filter((row) => row.setupStatus === 'reviewed').length,
@@ -1069,6 +1092,9 @@ export const OverviewReviewBoard: React.FC<Props> = ({
   const reviewActionsTitle = baselineGateReady
     ? t('v2Overview.baselineClosureTitle')
     : t('v2Overview.wizardContextReviewQueue');
+  const reviewActionSummary = baselineGateReady
+    ? baselineGateSecondaryDetail
+    : baselineGateSecondaryDetail || baselineGatePrimaryDetail;
   const visibleMissingRequirementLabel = React.useCallback(
     (
       requirement: MissingRequirement,
@@ -1087,58 +1113,134 @@ export const OverviewReviewBoard: React.FC<Props> = ({
   const activeReviewYearCount = reviewStatusRows.filter(
     (row) => row.setupStatus !== 'excluded_from_plan',
   ).length;
+  const previousBaselineGateReadyRef = React.useRef(baselineGateReady);
+  const shouldAutoExpandWorkspace =
+    !baselineGateReady || manualPatchYear != null || cardEditYear != null;
+
+  React.useEffect(() => {
+    if (
+      baselineGateReady &&
+      !previousBaselineGateReadyRef.current &&
+      manualPatchYear == null &&
+      cardEditYear == null
+    ) {
+      allowEmptyWorkspaceSelectionRef.current = true;
+      setWorkspaceSelection({
+        activeYear: null,
+        compareYears: [],
+      });
+    }
+
+    previousBaselineGateReadyRef.current = baselineGateReady;
+  }, [baselineGateReady, cardEditYear, manualPatchYear]);
 
   React.useEffect(() => {
     const availableYears = new Set(reviewStatusRows.map((row) => row.year));
     const availableYearsChanged = previousAvailableYearsKeyRef.current !== availableYearsKey;
 
-    setPinnedYears((prev) => {
-      let next = prev.filter((year) => availableYears.has(year));
+    setWorkspaceSelection((prev) => {
+      let activeYear =
+        prev.activeYear != null && availableYears.has(prev.activeYear)
+          ? prev.activeYear
+          : null;
+      let compareYears = prev.compareYears.filter(
+        (year) => availableYears.has(year) && year !== activeYear,
+      );
 
-      if (
-        manualPatchYear != null &&
-        availableYears.has(manualPatchYear) &&
-        !next.includes(manualPatchYear)
-      ) {
-        next = explicitMultiSelectRef.current ? [...next, manualPatchYear] : [manualPatchYear];
-        allowEmptyPinnedYearsRef.current = false;
+      if (manualPatchYear != null && availableYears.has(manualPatchYear)) {
+        activeYear = manualPatchYear;
+        compareYears = compareYears.filter((year) => year !== manualPatchYear);
+        allowEmptyWorkspaceSelectionRef.current = false;
       }
 
       if (
-        next.length === 0 &&
+        activeYear == null &&
         reviewStatusRows.length > 0 &&
-        (!allowEmptyPinnedYearsRef.current || availableYearsChanged)
+        (!allowEmptyWorkspaceSelectionRef.current || availableYearsChanged)
       ) {
-        next = defaultPinnedYears;
-        allowEmptyPinnedYearsRef.current = false;
-        explicitMultiSelectRef.current = false;
+        if (shouldAutoExpandWorkspace) {
+          activeYear = defaultActiveYear;
+          compareYears = compareYears.filter((year) => year !== activeYear);
+          allowEmptyWorkspaceSelectionRef.current = false;
+        } else {
+          allowEmptyWorkspaceSelectionRef.current = true;
+        }
       }
 
-      return sameYearOrder(prev, next) ? prev : next;
+      if (
+        prev.activeYear === activeYear &&
+        sameYearOrder(prev.compareYears, compareYears)
+      ) {
+        return prev;
+      }
+
+      return { activeYear, compareYears };
     });
 
     previousAvailableYearsKeyRef.current = availableYearsKey;
-  }, [availableYearsKey, defaultPinnedYears, manualPatchYear, reviewStatusRows]);
+  }, [
+    availableYearsKey,
+    defaultActiveYear,
+    manualPatchYear,
+    reviewStatusRows,
+    shouldAutoExpandWorkspace,
+  ]);
 
   const handleTogglePinnedYear = React.useCallback((year: number) => {
-    setPinnedYears((prev) => {
-      const next = prev.includes(year)
-        ? prev.filter((currentYear) => currentYear !== year)
-        : [...prev, year];
-      allowEmptyPinnedYearsRef.current = next.length === 0;
-      explicitMultiSelectRef.current = next.length > 1;
-      return next;
+    setWorkspaceSelection((prev) => {
+      if (prev.activeYear == null) {
+        allowEmptyWorkspaceSelectionRef.current = false;
+        return {
+          activeYear: year,
+          compareYears: prev.compareYears.filter(
+            (currentYear) => currentYear !== year,
+          ),
+        };
+      }
+
+      if (prev.activeYear === year) {
+        if (prev.compareYears.length > 0) {
+          const [nextActiveYear, ...remainingCompareYears] = prev.compareYears;
+          allowEmptyWorkspaceSelectionRef.current = false;
+          return {
+            activeYear: nextActiveYear,
+            compareYears: remainingCompareYears.filter(
+              (currentYear) => currentYear !== nextActiveYear,
+            ),
+          };
+        }
+
+        allowEmptyWorkspaceSelectionRef.current = true;
+        return {
+          activeYear: null,
+          compareYears: [],
+        };
+      }
+
+      const nextCompareYears = prev.compareYears.includes(year)
+        ? prev.compareYears.filter((currentYear) => currentYear !== year)
+        : [...prev.compareYears, year];
+      allowEmptyWorkspaceSelectionRef.current = false;
+      return sameYearOrder(prev.compareYears, nextCompareYears)
+        ? prev
+        : {
+            activeYear: prev.activeYear,
+            compareYears: nextCompareYears,
+          };
     });
   }, []);
 
   const handleFocusPinnedYear = React.useCallback((year: number) => {
-    allowEmptyPinnedYearsRef.current = false;
-    explicitMultiSelectRef.current = false;
-    setPinnedYears((prev) => (sameYearOrder(prev, [year]) ? prev : [year]));
+    allowEmptyWorkspaceSelectionRef.current = false;
+    setWorkspaceSelection((prev) =>
+      prev.activeYear === year && prev.compareYears.length === 0
+        ? prev
+        : { activeYear: year, compareYears: [] },
+    );
   }, []);
 
   return (
-    <section className="v2-card">
+    <section className="v2-card v2-overview-review-surface">
     <div className="v2-section-header">
       <div>
         <p className="v2-overview-eyebrow">
@@ -1161,22 +1263,15 @@ export const OverviewReviewBoard: React.FC<Props> = ({
     {groupedRows.length > 0 ? (
       <div className="v2-overview-review-groups">
         {groupedRows.map((group) => (
-          <article
+          <div
             key={group.bucket}
-            className={`v2-subcard v2-overview-review-group ${group.bucket}`}
+            className={`v2-overview-review-group ${group.bucket}`}
             data-review-group={group.bucket}
           >
-            <div className="v2-section-header">
-              <div>
-                <p className="v2-overview-eyebrow">
-                  {getReviewBucketLabel(t, group.bucket)}
-                </p>
-                <h3>
-                  {t('v2Overview.reviewYearsCount', { count: group.rows.length })}
-                </h3>
-              </div>
-              <span className="v2-badge v2-status-info">
-                {group.rows.map((row) => row.year).join(', ')}
+            <div className="v2-overview-review-group-head">
+              <strong>{getReviewBucketLabel(t, group.bucket)}</strong>
+              <span className="v2-overview-review-group-count">
+                {t('v2Overview.reviewYearsCount', { count: group.rows.length })}
               </span>
             </div>
             <div className="v2-overview-review-group-years">
@@ -1185,17 +1280,17 @@ export const OverviewReviewBoard: React.FC<Props> = ({
                   key={`${group.bucket}-${row.year}`}
                   type="button"
                   className={`v2-chip ${
-                    pinnedYears.includes(row.year) ? 'ok' : ''
+                    workspaceSelection.activeYear === row.year ? 'ok' : ''
                   }`}
                   data-review-group-year={`${group.bucket}-${row.year}`}
-                  aria-pressed={pinnedYears.includes(row.year)}
+                  aria-pressed={workspaceSelection.activeYear === row.year}
                   onClick={() => handleFocusPinnedYear(row.year)}
                 >
                   {row.year}
                 </button>
               ))}
             </div>
-          </article>
+          </div>
         ))}
       </div>
     ) : null}
@@ -1203,7 +1298,9 @@ export const OverviewReviewBoard: React.FC<Props> = ({
     <OverviewYearWorkspace
       t={t}
       reviewStatusRows={reviewStatusRows}
-      pinnedYears={pinnedYears}
+      activeYear={workspaceSelection.activeYear}
+      workspaceYears={workspaceYears}
+      hideSelectionControlsWhenEmpty={baselineGateReady}
       onTogglePinnedYear={handleTogglePinnedYear}
       yearDataCache={yearDataCache}
       sourceStatusClassName={sourceStatusClassName}
@@ -1379,12 +1476,19 @@ export const OverviewReviewBoard: React.FC<Props> = ({
       </div>
     ) : null}
 
-    <div className="v2-overview-review-actions">
-      <div className="v2-manual-section-head">
-        <h4>{reviewActionsTitle}</h4>
-      </div>
-      <p className="v2-muted">{baselineGatePrimaryDetail}</p>
-      <p className="v2-muted">{baselineGateSecondaryDetail}</p>
+    <div
+      className={`v2-overview-review-actions${
+        baselineGateReady ? ' v2-overview-review-actions-compact' : ''
+      }`}
+    >
+      {!baselineGateReady ? (
+        <div className="v2-manual-section-head">
+          <h4>{reviewActionsTitle}</h4>
+        </div>
+      ) : null}
+      <p className="v2-muted v2-overview-review-actions-copy">
+        {reviewActionSummary}
+      </p>
       <button
         type="button"
         className={reviewContinueButtonClass}

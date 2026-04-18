@@ -775,21 +775,7 @@ export function useOverviewReviewController({
         setupStatus: row.setupStatus,
       })),
     );
-    const hasReviewedCorrectedYear = reviewStatusRows.some(
-      (row) =>
-        row.setupStatus === 'reviewed' &&
-        (row.sourceStatus === 'MANUAL' || row.sourceStatus === 'MIXED'),
-    );
-    const correctedReviewedYear =
-      target.selectedProblemYear == null &&
-      hasReviewedCorrectedYear &&
-      reviewedImportedYearRows.length > 0 &&
-      importedBlockedYearCount === 0 &&
-      pendingTechnicalReviewYearCount === 0 &&
-      !importController.baselineReady
-        ? reviewedImportedYearRows[0]?.vuosi ?? null
-        : null;
-    const reviewTargetYear = target.selectedProblemYear ?? correctedReviewedYear;
+    const reviewTargetYear = target.selectedProblemYear;
     if (reviewTargetYear != null) {
       importController.setReviewContinueStep(null);
       const selectedYear =
@@ -799,6 +785,10 @@ export function useOverviewReviewController({
           manualController.cardEditContext === 'step3' &&
           manualController.cardEditYear === selectedYear.year
         ) {
+          if (selectedYear.setupStatus === 'ready_for_review') {
+            await handleKeepCurrentYearValues();
+            return;
+          }
           const currentYearReason = buildSyncBlockReasonLabel(t, {
             vuosi: selectedYear.year,
             completeness: selectedYear.completeness,
@@ -806,9 +796,7 @@ export function useOverviewReviewController({
           });
           importController.setInfo(
             currentYearReason ??
-              (selectedYear.setupStatus === 'ready_for_review'
-                ? t('v2Overview.setupStatusTechnicalReadyHint')
-                : t('v2Overview.reviewContinueBlockedHint')),
+              t('v2Overview.reviewContinueBlockedHint'),
           );
           return;
         }
@@ -824,15 +812,15 @@ export function useOverviewReviewController({
       return;
     }
 
+    resetManualPatchDialog();
     importController.setReviewContinueStep(target.nextStep);
     importController.setInfo(t('v2Overview.reviewContinueReadyHint'));
   }, [
     importController,
-    importedBlockedYearCount,
+    handleKeepCurrentYearValues,
     manualController,
-    pendingTechnicalReviewYearCount,
+    resetManualPatchDialog,
     reviewStatusRows,
-    reviewedImportedYearRows,
     t,
   ]);
 

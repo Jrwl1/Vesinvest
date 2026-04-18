@@ -41,6 +41,7 @@ import { useOverviewManualPatchController } from './useOverviewManualPatchContro
 import { useOverviewReviewController } from './useOverviewReviewController';
 import { useOverviewReviewSelectors } from './overviewReviewSelectors';
 import { useOverviewSetupState } from './useOverviewSetupState';
+import { pickDefaultBaselineYears } from './overviewSelectors';
 import {
   resolveVesinvestWorkflowState,
   resolveSetupWizardStateFromImportStatus,
@@ -89,6 +90,7 @@ type ReviewWorkspaceYearSaveParams = {
     financials: boolean;
     prices: boolean;
     volumes: boolean;
+    financialFields?: Array<keyof ManualFinancialForm>;
   };
   syncAfterSave?: boolean;
 };
@@ -139,12 +141,7 @@ export function useOverviewPageController({
       vuosi: number;
       completeness: Record<string, boolean>;
       planningRole?: 'historical' | 'current_year_estimate';
-    }>) =>
-      [...rows]
-        .filter((row) => row.planningRole !== 'current_year_estimate')
-        .sort((a, b) => b.vuosi - a.vuosi)
-        .slice(0, 3)
-        .map((item) => item.vuosi),
+    }>) => pickDefaultBaselineYears(rows),
     [],
   );
 
@@ -669,7 +666,13 @@ export function useOverviewPageController({
       } = { ...payload };
 
       if (formsDiffer(financials, originalFinancials) || explicitMissing?.financials) {
-        const nextFinancials = { ...financials };
+        const nextFinancials: Partial<ManualFinancialForm> = {};
+        const explicitFinancialFields = new Set(
+          explicitMissing?.financialFields ?? [],
+        );
+        const financialKeys = Object.keys(originalFinancials) as Array<
+          keyof ManualFinancialForm
+        >;
         const resultFieldChanged = numbersDiffer(
           financials.tilikaudenYliJaama,
           originalFinancials.tilikaudenYliJaama,
@@ -706,6 +709,15 @@ export function useOverviewPageController({
             originalFinancials.omistajanTukiKayttokustannuksiin,
           );
 
+        for (const field of financialKeys) {
+          if (
+            numbersDiffer(financials[field], originalFinancials[field]) ||
+            explicitFinancialFields.has(field)
+          ) {
+            nextFinancials[field] = financials[field];
+          }
+        }
+
         if (!resultFieldChanged && visibleFinanceFieldsChanged) {
           nextFinancials.tilikaudenYliJaama = deriveAdjustedYearResult(
             originalFinancials,
@@ -713,7 +725,9 @@ export function useOverviewPageController({
           );
         }
 
-        nextPayload.financials = nextFinancials;
+        if (Object.keys(nextFinancials).length > 0) {
+          nextPayload.financials = nextFinancials as ManualFinancialForm;
+        }
       }
 
       if (formsDiffer(prices, originalPrices) || explicitMissing?.prices) {

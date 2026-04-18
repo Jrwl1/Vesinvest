@@ -50,6 +50,7 @@ export type ImportYearSummaryFieldKey =
 
 export type ImportYearSummarySourceField =
   | 'Liikevaihto'
+  | 'PerusmaksuYhteensa'
   | 'AineetJaPalvelut'
   | 'Henkilostokulut'
   | 'Poistot'

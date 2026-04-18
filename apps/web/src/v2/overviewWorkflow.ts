@@ -316,6 +316,14 @@ export function resolveVesinvestWorkflowState(
   const selectedPlan = planningContext?.vesinvest?.selectedPlan ?? null;
   const workflowPlan = activePlan ?? selectedPlan;
   const confirmedImportedYears = getConfirmedImportedYears(importStatus);
+  const baselinePlanningYears = getAcceptedPlanningBaselineYears(
+    importStatus,
+    planningContext,
+  );
+  const baselinePlanningYearSet = new Set(baselinePlanningYears);
+  const baselineCoversImportedWorkspaceYears =
+    confirmedImportedYears.length === 0 ||
+    confirmedImportedYears.every((year) => baselinePlanningYearSet.has(year));
   const hasPlan =
     planningContext?.vesinvest?.hasPlan === true ||
     activePlan != null ||
@@ -341,9 +349,10 @@ export function resolveVesinvestWorkflowState(
     (workflowPlan?.projectCount ?? 0) > 0 &&
     (workflowPlan?.totalInvestmentAmount ?? 0) > 0;
   const baselineVerified =
-    workflowPlan?.baselineStatus === 'verified' ||
-    planningContext?.canCreateScenario === true ||
-    getAcceptedPlanningBaselineYears(importStatus, planningContext).length > 0;
+    (workflowPlan?.baselineStatus === 'verified' ||
+      planningContext?.canCreateScenario === true ||
+      baselinePlanningYears.length > 0) &&
+    baselineCoversImportedWorkspaceYears;
   const forecastEntryReady = baselineVerified === true;
   const forecastReady =
     forecastEntryReady &&
@@ -467,6 +476,10 @@ export function resolveSetupWizardStateFromImportStatus(
     importStatus,
     planningContext,
   );
+  const baselinePlanningYearSet = new Set(baselinePlanningYears);
+  const baselineCoversImportedWorkspaceYears =
+    confirmedImportedYears.length === 0 ||
+    confirmedImportedYears.every((year) => baselinePlanningYearSet.has(year));
   const reviewedYearCount = availableYears.filter(
     (row) =>
       confirmedImportedYearSet.has(row.vuosi) &&
@@ -489,8 +502,9 @@ export function resolveSetupWizardStateFromImportStatus(
       }) === 'needs_attention',
   ).length;
   const baselineReady =
-    (planningContext?.canCreateScenario ?? false) ||
-    baselinePlanningYears.length > 0;
+    ((planningContext?.canCreateScenario ?? false) ||
+      baselinePlanningYears.length > 0) &&
+    baselineCoversImportedWorkspaceYears;
   const effectiveImportedYearCount = baselineReady
     ? baselinePlanningYears.length
     : confirmedImportedYears.length;

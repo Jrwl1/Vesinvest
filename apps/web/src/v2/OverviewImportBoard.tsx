@@ -14,6 +14,10 @@ import {
   type InlineCardField,
 } from './overviewManualForms';
 import {
+  DEFAULT_BASELINE_YEAR_COUNT,
+  getDefaultBaselineRunLength,
+} from './overviewSelectors';
+import {
   PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
   type MissingRequirement,
 } from './overviewWorkflow';
@@ -95,10 +99,9 @@ type Props = {
 
 type LaneKey =
   | 'current_estimate'
-  | 'bucket_0'
-  | 'bucket_1'
-  | 'bucket_2'
-  | 'bucket_3plus'
+  | 'ready'
+  | 'suspicious'
+  | 'blocked'
   | 'trashbin';
 
 export const OverviewImportBoard: React.FC<Props> = ({
@@ -198,16 +201,41 @@ export const OverviewImportBoard: React.FC<Props> = ({
     () => sortRowsByUsefulness(currentYearEstimateRows),
     [currentYearEstimateRows, sortRowsByUsefulness],
   );
-  const sortedHistoricalRows = React.useMemo(
-    () =>
-      sortRowsByUsefulness([...readyRows, ...suspiciousRows, ...blockedRows], {
-        prioritizeSelection: true,
-      }),
-    [blockedRows, readyRows, sortRowsByUsefulness, suspiciousRows],
+  const sortedReadyRows = React.useMemo(
+    () => sortRowsByUsefulness(readyRows, { prioritizeSelection: true }),
+    [readyRows, sortRowsByUsefulness],
+  );
+  const sortedSuspiciousRows = React.useMemo(
+    () => sortRowsByUsefulness(suspiciousRows, { prioritizeSelection: true }),
+    [sortRowsByUsefulness, suspiciousRows],
   );
   const sortedBlockedRows = React.useMemo(
-    () => sortRowsByUsefulness(blockedRows),
-    [blockedRows, sortRowsByUsefulness],
+    () =>
+      [...blockedRows].sort((left, right) => {
+        const leftSelected = selectedYears.includes(left.vuosi) ? 1 : 0;
+        const rightSelected = selectedYears.includes(right.vuosi) ? 1 : 0;
+        if (leftSelected !== rightSelected) {
+          return rightSelected - leftSelected;
+        }
+
+        const missingDelta = getMissingCount(left) - getMissingCount(right);
+        if (missingDelta !== 0) {
+          return missingDelta;
+        }
+
+        const completenessDelta =
+          getCompletenessScore(right) - getCompletenessScore(left);
+        if (completenessDelta !== 0) {
+          return completenessDelta;
+        }
+
+        return right.vuosi - left.vuosi;
+      }),
+    [blockedRows, getCompletenessScore, getMissingCount, selectedYears],
+  );
+  const sortedHistoricalRows = React.useMemo(
+    () => [...sortedReadyRows, ...sortedSuspiciousRows, ...sortedBlockedRows],
+    [sortedBlockedRows, sortedReadyRows, sortedSuspiciousRows],
   );
   const sortedTrashbinRows = React.useMemo(
     () => sortRowsByUsefulness(trashbinRows),
@@ -216,6 +244,13 @@ export const OverviewImportBoard: React.FC<Props> = ({
 
   const primaryRepairRow = sortedBlockedRows[0] ?? null;
   const hasSelectableImportRows = sortedHistoricalRows.length > 0;
+  const includedCurrentEstimateYearsCount = React.useMemo(
+    () =>
+      sortedCurrentYearEstimateRows.filter((row) =>
+        confirmedImportedYears.includes(row.vuosi),
+      ).length,
+    [confirmedImportedYears, sortedCurrentYearEstimateRows],
+  );
   const selectedSelectableYearsCount = React.useMemo(
     () =>
       selectedYears.filter((year) =>
@@ -224,24 +259,32 @@ export const OverviewImportBoard: React.FC<Props> = ({
     [selectedYears, sortedHistoricalRows],
   );
   const displayedYearCount = isManageMode
-    ? sortedHistoricalRows.length
-    : selectedSelectableYearsCount;
+    ? sortedHistoricalRows.length + includedCurrentEstimateYearsCount
+    : selectedSelectableYearsCount + includedCurrentEstimateYearsCount;
   const noSelectableYearsRemain = !hasSelectableImportRows;
   const shouldLeadWithRepair =
     isAdmin && noSelectableYearsRemain && primaryRepairRow != null;
+  const availableHistoricalBaselineYears = React.useMemo(
+    () => getDefaultBaselineRunLength(sortedHistoricalRows),
+    [sortedHistoricalRows],
+  );
+  const showThinBaselineHint =
+    !isManageMode &&
+    availableHistoricalBaselineYears > 0 &&
+    availableHistoricalBaselineYears < DEFAULT_BASELINE_YEAR_COUNT;
 
   const bucketLabel = React.useCallback(
     (missingCount: number) => {
       if (missingCount <= 0) {
-        return t('v2Overview.importBucket0Title', '0 missing');
+        return t('v2Overview.importBucket0Title');
       }
       if (missingCount === 1) {
-        return t('v2Overview.importBucket1Title', '1 missing');
+        return t('v2Overview.importBucket1Title');
       }
       if (missingCount === 2) {
-        return t('v2Overview.importBucket2Title', '2 missing');
+        return t('v2Overview.importBucket2Title');
       }
-      return t('v2Overview.importBucket3PlusTitle', '3+ missing');
+      return t('v2Overview.importBucket3PlusTitle');
     },
     [t],
   );
@@ -250,43 +293,39 @@ export const OverviewImportBoard: React.FC<Props> = ({
     () =>
       [
         {
+          key: 'ready' as LaneKey,
+          title: t('v2Overview.reviewBucketReadyTitle'),
+          rows: sortedReadyRows,
+        },
+        {
+          key: 'suspicious' as LaneKey,
+          title: t('v2Overview.reviewBucketRepairTitle'),
+          rows: sortedSuspiciousRows,
+        },
+        {
+          key: 'blocked' as LaneKey,
+          title: t('v2Overview.reviewBucketSparseTitle'),
+          rows: sortedBlockedRows,
+        },
+        {
           key: 'current_estimate' as LaneKey,
           title: t(
             'v2Overview.currentYearEstimateTitle',
-            'Current year estimate',
+            'Optional current-year estimate',
           ),
           rows: sortedCurrentYearEstimateRows,
         },
         {
-          key: 'bucket_0' as LaneKey,
-          title: t('v2Overview.importBucket0Title', '0 missing'),
-          rows: sortedHistoricalRows.filter((row) => getMissingCount(row) <= 0),
-        },
-        {
-          key: 'bucket_1' as LaneKey,
-          title: t('v2Overview.importBucket1Title', '1 missing'),
-          rows: sortedHistoricalRows.filter((row) => getMissingCount(row) === 1),
-        },
-        {
-          key: 'bucket_2' as LaneKey,
-          title: t('v2Overview.importBucket2Title', '2 missing'),
-          rows: sortedHistoricalRows.filter((row) => getMissingCount(row) === 2),
-        },
-        {
-          key: 'bucket_3plus' as LaneKey,
-          title: t('v2Overview.importBucket3PlusTitle', '3+ missing'),
-          rows: sortedHistoricalRows.filter((row) => getMissingCount(row) >= 3),
-        },
-        {
           key: 'trashbin' as LaneKey,
-          title: t('v2Overview.importTrashbinTitle', 'Trashbin'),
+          title: t('v2Overview.reviewBucketExcludedTitle'),
           rows: sortedTrashbinRows,
         },
       ].filter((lane) => lane.rows.length > 0),
     [
-      getMissingCount,
+      sortedBlockedRows,
       sortedCurrentYearEstimateRows,
-      sortedHistoricalRows,
+      sortedReadyRows,
+      sortedSuspiciousRows,
       sortedTrashbinRows,
       t,
     ],
@@ -323,6 +362,15 @@ export const OverviewImportBoard: React.FC<Props> = ({
             ? t('v2Overview.wizardBodyReviewYears')
             : t('v2Overview.wizardBodyImportYears')}
         </p>
+        {showThinBaselineHint ? (
+          <p className="v2-muted v2-overview-baseline-hint">
+            {t(
+              'v2Overview.baselineThinHint',
+              'Only {{count}} consecutive historical years are available right now.',
+              { count: availableHistoricalBaselineYears },
+            )}
+          </p>
+        ) : null}
 
         {lanes.length === 0 ? (
           <p className="v2-muted">
@@ -510,6 +558,8 @@ export const OverviewImportBoard: React.FC<Props> = ({
                         : suspiciousRows.some((item) => item.vuosi === row.vuosi)
                           ? 'suspicious'
                           : 'ready');
+                    const showBlockedAdminActions =
+                      rowTone === 'blocked' && isAdmin && !isTrashbinLane;
 
                     return (
                       <article
@@ -783,8 +833,38 @@ export const OverviewImportBoard: React.FC<Props> = ({
                           )}
                         </details>
 
+                        {showBlockedAdminActions ? (
+                          <div className="v2-year-card-actions-primary">
+                            <button
+                              type="button"
+                              className="v2-btn v2-btn-small v2-btn-primary"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void openInlineCardEditor(
+                                  row.vuosi,
+                                  null,
+                                  'step2',
+                                  row.missingRequirements,
+                                  'manualEdit',
+                                );
+                              }}
+                            >
+                              {t(
+                                'v2Overview.manualPatchButton',
+                                'Complete manually',
+                              )}
+                            </button>
+                          </div>
+                        ) : null}
+
                         {!isTrashbinLane && repairActions.length > 0 ? (
-                          <div className="v2-year-card-repair-actions">
+                          <div
+                            className={`v2-year-card-repair-actions${
+                              showBlockedAdminActions
+                                ? ' v2-year-card-actions-secondary'
+                                : ''
+                            }`}
+                          >
                             {repairActions.map((action) => (
                               <button
                                 key={`${row.vuosi}-${action.key}`}
@@ -807,8 +887,8 @@ export const OverviewImportBoard: React.FC<Props> = ({
                           </div>
                         ) : null}
 
-                        {rowTone === 'blocked' && isAdmin && !isTrashbinLane ? (
-                          <div className="v2-year-card-repair-actions">
+                        {showBlockedAdminActions ? (
+                          <div className="v2-year-card-repair-actions v2-year-card-actions-secondary">
                             <button
                               type="button"
                               className="v2-btn v2-btn-small"
@@ -851,27 +931,6 @@ export const OverviewImportBoard: React.FC<Props> = ({
                         ) : null}
 
                         <div className="v2-year-card-repair-actions">
-                          {rowTone === 'blocked' && isAdmin && !isTrashbinLane ? (
-                            <button
-                              type="button"
-                              className="v2-btn v2-btn-small v2-btn-primary"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                void openInlineCardEditor(
-                                  row.vuosi,
-                                  null,
-                                  'step2',
-                                  row.missingRequirements,
-                                  'manualEdit',
-                                );
-                              }}
-                            >
-                              {t(
-                                'v2Overview.manualPatchButton',
-                                'Complete manually',
-                              )}
-                            </button>
-                          ) : null}
                           {isCurrentEstimateLane &&
                           !confirmedImportedYears.includes(row.vuosi) ? (
                             <button
@@ -915,7 +974,9 @@ export const OverviewImportBoard: React.FC<Props> = ({
                               )}
                             </button>
                           ) : null}
-                          {!isCurrentEstimateLane && !isTrashbinLane ? (
+                          {!isCurrentEstimateLane &&
+                          !isTrashbinLane &&
+                          !showBlockedAdminActions ? (
                             <button
                               type="button"
                               className="v2-btn v2-btn-small"
@@ -934,6 +995,28 @@ export const OverviewImportBoard: React.FC<Props> = ({
                                 'Move to trashbin',
                               )}
                             </button>
+                          ) : null}
+                          {showBlockedAdminActions ? (
+                            <div className="v2-year-card-actions-tertiary">
+                              <button
+                                type="button"
+                                className="v2-btn v2-btn-small"
+                                aria-label={`${t(
+                                  'v2Overview.importTrashAction',
+                                  'Move to trashbin',
+                                )} ${row.vuosi}`}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void onTrashYear(row.vuosi);
+                                }}
+                                disabled={removingYear === row.vuosi}
+                              >
+                                {t(
+                                  'v2Overview.importTrashAction',
+                                  'Move to trashbin',
+                                )}
+                              </button>
+                            </div>
                           ) : null}
                           {isTrashbinLane ? (
                             <button
@@ -962,7 +1045,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
                 </div>
               );
 
-              if (lane.key === 'trashbin') {
+              if (lane.key === 'trashbin' || lane.key === 'current_estimate') {
                 return (
                   <details
                     key={lane.key}

@@ -313,7 +313,9 @@ function getWorkspaceDraftFieldValue(
 type Props = {
   t: TFunction;
   reviewStatusRows: ReviewStatusRow[];
-  pinnedYears: number[];
+  activeYear: number | null;
+  workspaceYears: number[];
+  hideSelectionControlsWhenEmpty?: boolean;
   onTogglePinnedYear: (year: number) => void;
   yearDataCache: Record<number, V2ImportYearDataResponse>;
   sourceStatusClassName: (status: string | undefined) => string;
@@ -340,6 +342,7 @@ type Props = {
       financials: boolean;
       prices: boolean;
       volumes: boolean;
+      financialFields?: Array<keyof ManualFinancialForm>;
     };
     syncAfterSave?: boolean;
   }) => Promise<{ yearData: V2ImportYearDataResponse }>;
@@ -349,7 +352,9 @@ type Props = {
 export const OverviewYearWorkspace: React.FC<Props> = ({
   t,
   reviewStatusRows,
-  pinnedYears,
+  activeYear,
+  workspaceYears,
+  hideSelectionControlsWhenEmpty = false,
   onTogglePinnedYear,
   yearDataCache,
   sourceStatusClassName,
@@ -370,10 +375,10 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
   );
   const pinnedRows = React.useMemo(
     () =>
-      pinnedYears
+      workspaceYears
         .map((year) => reviewStatusRows.find((row) => row.year === year) ?? null)
         .filter((row): row is ReviewStatusRow => row != null),
-    [pinnedYears, reviewStatusRows],
+    [reviewStatusRows, workspaceYears],
   );
 
   React.useEffect(() => {
@@ -441,6 +446,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
         financials: false,
         prices: false,
         volumes: false,
+        financialFields: [] as Array<keyof ManualFinancialForm>,
       };
       if (!draft) {
         return emptyGroups;
@@ -465,6 +471,11 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
           getWorkspaceDraftFieldValue(draft, field) === 0
         ) {
           explicitMissing[field.group] = true;
+          if (field.group === 'financials') {
+            explicitMissing.financialFields.push(
+              field.key as keyof ManualFinancialForm,
+            );
+          }
         }
       }
       return explicitMissing;
@@ -539,29 +550,52 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
     [getExplicitMissingGroups],
   );
 
+  const showYearDecisionActions = React.useMemo(
+    () =>
+      pinnedRows.some((row) => {
+        const draft = drafts[row.year];
+        const saveStateEntry = saveState[row.year];
+        return (
+          saveStateEntry?.saving === true ||
+          saveStateEntry?.error != null ||
+          (draft != null && (draft.dirty || hasExplicitMissingEntry(row.year, draft)))
+        );
+      }),
+    [drafts, hasExplicitMissingEntry, pinnedRows, saveState],
+  );
+
   if (reviewStatusRows.length === 0) {
     return null;
   }
 
+  const showSelectionControls =
+    !hideSelectionControlsWhenEmpty || pinnedRows.length > 0;
+
   return (
     <section className="v2-overview-year-workspace">
-      <div className="v2-year-select" aria-label={t('v2Overview.selectedYearsLabel')}>
-        {reviewStatusRows.map((row) => (
-          <label
-            key={`workspace-toggle-${row.year}`}
-            data-review-workspace-toggle={row.year}
-          >
-            <input
-              type="checkbox"
-              checked={pinnedYears.includes(row.year)}
-              onChange={() => onTogglePinnedYear(row.year)}
-            />
-            <span>{row.year}</span>
-          </label>
-        ))}
-      </div>
+      {showSelectionControls ? (
+        <div
+          className="v2-year-select"
+          aria-label={t('v2Overview.selectedYearsLabel')}
+        >
+          {reviewStatusRows.map((row) => (
+            <label
+              key={`workspace-toggle-${row.year}`}
+              data-review-workspace-toggle={row.year}
+              className={activeYear === row.year ? 'v2-year-select-active' : ''}
+            >
+              <input
+                type="checkbox"
+                checked={workspaceYears.includes(row.year)}
+                onChange={() => onTogglePinnedYear(row.year)}
+              />
+              <span>{row.year}</span>
+            </label>
+          ))}
+        </div>
+      ) : null}
 
-      {pinnedRows.length === 0 ? (
+      {pinnedRows.length === 0 && showSelectionControls ? (
         <div className="v2-empty-state">
           <p>{t('v2Overview.noYearsSelected', 'None selected')}</p>
         </div>
@@ -582,6 +616,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
           {pinnedRows.map((row) => {
             const draft = drafts[row.year];
             const yearBusy = busy || saveState[row.year]?.saving === true;
+            const prefersFixPrimary = row.setupStatus === 'needs_attention';
             return (
               <div
                 key={`workspace-head-${row.year}`}
@@ -610,43 +645,87 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                 {saveState[row.year]?.error ? (
                   <p className="v2-year-reason">{saveState[row.year]?.error}</p>
                 ) : null}
-                <div className="v2-overview-year-workspace-year-actions">
-                  <button
-                    type="button"
-                    className="v2-btn v2-btn-small"
-                    aria-label={`${t(
-                      'v2Overview.openReviewYearButton',
-                      'Avaa ja tarkista',
-                    )} ${row.year}`}
-                    onClick={() =>
-                      void openInlineCardEditor(
-                        row.year,
-                        null,
-                        'step3',
-                        row.missingRequirements,
-                      )
-                    }
-                    disabled={yearBusy}
-                  >
-                    {t('v2Overview.openReviewYearButton', 'Avaa ja tarkista')}
-                  </button>
-                  <button
-                    type="button"
-                    className="v2-btn v2-btn-small"
-                    aria-label={`${t('v2Overview.fixYearValues')} ${row.year}`}
-                    onClick={() =>
-                      void openInlineCardEditor(
-                        row.year,
-                        null,
-                        'step3',
-                        row.missingRequirements,
-                        'manualEdit',
-                      )
-                    }
-                    disabled={yearBusy}
-                  >
-                    {t('v2Overview.fixYearValues')}
-                  </button>
+                <div className="v2-overview-year-workspace-year-actions v2-overview-year-workspace-year-actions-primary">
+                  {prefersFixPrimary ? (
+                    <button
+                      type="button"
+                      className="v2-btn v2-btn-small v2-btn-primary"
+                      aria-label={`${t('v2Overview.fixYearValues')} ${row.year}`}
+                      onClick={() =>
+                        void openInlineCardEditor(
+                          row.year,
+                          null,
+                          'step3',
+                          row.missingRequirements,
+                          'manualEdit',
+                        )
+                      }
+                      disabled={yearBusy}
+                    >
+                      {t('v2Overview.fixYearValues')}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="v2-btn v2-btn-small v2-btn-primary"
+                      aria-label={`${t(
+                        'v2Overview.openReviewYearButton',
+                        'Avaa ja tarkista',
+                      )} ${row.year}`}
+                      onClick={() =>
+                        void openInlineCardEditor(
+                          row.year,
+                          null,
+                          'step3',
+                          row.missingRequirements,
+                        )
+                      }
+                      disabled={yearBusy}
+                    >
+                      {t('v2Overview.openReviewYearButton', 'Avaa ja tarkista')}
+                    </button>
+                  )}
+                </div>
+                <div className="v2-overview-year-workspace-year-actions v2-overview-year-workspace-year-actions-secondary">
+                  {prefersFixPrimary ? (
+                    <button
+                      type="button"
+                      className="v2-btn v2-btn-small"
+                      aria-label={`${t(
+                        'v2Overview.openReviewYearButton',
+                        'Avaa ja tarkista',
+                      )} ${row.year}`}
+                      onClick={() =>
+                        void openInlineCardEditor(
+                          row.year,
+                          null,
+                          'step3',
+                          row.missingRequirements,
+                        )
+                      }
+                      disabled={yearBusy}
+                    >
+                      {t('v2Overview.openReviewYearButton', 'Avaa ja tarkista')}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="v2-btn v2-btn-small"
+                      aria-label={`${t('v2Overview.fixYearValues')} ${row.year}`}
+                      onClick={() =>
+                        void openInlineCardEditor(
+                          row.year,
+                          null,
+                          'step3',
+                          row.missingRequirements,
+                          'manualEdit',
+                        )
+                      }
+                      disabled={yearBusy}
+                    >
+                      {t('v2Overview.fixYearValues')}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="v2-btn v2-btn-small"
@@ -954,54 +1033,61 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
             );
           })}
 
-          <div className="v2-overview-year-workspace-field">
-            <strong>
-              {t('v2Overview.yearDecisionAction', 'Review year decisions')}
-            </strong>
-          </div>
-
-          {pinnedRows.map((row) => {
-            const draft = drafts[row.year];
-            const yearBusy = busy || saveState[row.year]?.saving === true;
-            const canSaveYear =
-              draft != null &&
-              (draft.dirty || hasExplicitMissingEntry(row.year, draft));
-            return (
-              <div
-                key={`workspace-save-${row.year}`}
-                className="v2-overview-year-workspace-save"
-              >
-                <button
-                  type="button"
-                  className="v2-btn"
-                  aria-label={`${t(
-                    'v2Overview.manualPatchSave',
-                    'Save year data',
-                  )} ${row.year}`}
-                  onClick={() => void handleSave(row.year, false)}
-                  disabled={!canSaveYear || yearBusy}
-                >
-                  {yearBusy
-                    ? t('common.loading', 'Loading...')
-                    : t('v2Overview.manualPatchSave', 'Save year data')}
-                </button>
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-primary"
-                  aria-label={`${t(
-                    'v2Overview.manualPatchSaveAndSync',
-                    'Save and sync year',
-                  )} ${row.year}`}
-                  onClick={() => void handleSave(row.year, true)}
-                  disabled={!canSaveYear || yearBusy}
-                >
-                  {yearBusy
-                    ? t('common.loading', 'Loading...')
-                    : t('v2Overview.manualPatchSaveAndSync', 'Save and sync year')}
-                </button>
+          {showYearDecisionActions ? (
+            <>
+              <div className="v2-overview-year-workspace-field">
+                <strong>
+                  {t('v2Overview.yearDecisionAction', 'Review year decisions')}
+                </strong>
               </div>
-            );
-          })}
+
+              {pinnedRows.map((row) => {
+                const draft = drafts[row.year];
+                const yearBusy = busy || saveState[row.year]?.saving === true;
+                const canSaveYear =
+                  draft != null &&
+                  (draft.dirty || hasExplicitMissingEntry(row.year, draft));
+                return (
+                  <div
+                    key={`workspace-save-${row.year}`}
+                    className="v2-overview-year-workspace-save"
+                  >
+                    <button
+                      type="button"
+                      className="v2-btn"
+                      aria-label={`${t(
+                        'v2Overview.manualPatchSave',
+                        'Save year data',
+                      )} ${row.year}`}
+                      onClick={() => void handleSave(row.year, false)}
+                      disabled={!canSaveYear || yearBusy}
+                    >
+                      {yearBusy
+                        ? t('common.loading', 'Loading...')
+                        : t('v2Overview.manualPatchSave', 'Save year data')}
+                    </button>
+                    <button
+                      type="button"
+                      className="v2-btn v2-btn-primary"
+                      aria-label={`${t(
+                        'v2Overview.manualPatchSaveAndSync',
+                        'Save and sync year',
+                      )} ${row.year}`}
+                      onClick={() => void handleSave(row.year, true)}
+                      disabled={!canSaveYear || yearBusy}
+                    >
+                      {yearBusy
+                        ? t('common.loading', 'Loading...')
+                        : t(
+                            'v2Overview.manualPatchSaveAndSync',
+                            'Save and sync year',
+                          )}
+                    </button>
+                  </div>
+                );
+              })}
+            </>
+          ) : null}
         </div>
       </div>
       ) : null}

@@ -1498,6 +1498,7 @@ export type V2ImportYearSummaryFieldKey =
 
 export type V2ImportYearSummarySourceField =
   | 'Liikevaihto'
+  | 'PerusmaksuYhteensa'
   | 'AineetJaPalvelut'
   | 'Henkilostokulut'
   | 'Poistot'

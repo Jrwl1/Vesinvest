@@ -183,7 +183,8 @@ export class VeetiSanityService {
     const row = (tilinpaatos[0] ?? {}) as Record<string, unknown>;
     const revenue = this.toNumber(row.Liikevaihto);
     const operatingCosts = this.round2(
-      this.toNumber(row.Henkilostokulut) +
+      this.toNumber(row.AineetJaPalvelut) +
+        this.toNumber(row.Henkilostokulut) +
         this.toNumber(row.Poistot) +
         this.toNumber(row.LiiketoiminnanMuutKulut) +
         this.toNumber(row.Arvonalentumiset),

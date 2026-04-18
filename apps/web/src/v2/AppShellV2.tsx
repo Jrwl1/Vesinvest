@@ -482,6 +482,12 @@ export const AppShellV2: React.FC<Props> = ({
     [setupWizardState],
   );
 
+  const reportsNeedFeePathRecovery =
+    blockedTabNotice === 'reports' &&
+    setupWizardState?.forecastUnlocked === true &&
+    !!setupPlanState?.activePlanId &&
+    !savedFeePathReportReady;
+
   const lockedTabMessage = React.useCallback(
     (tab: TabId) => {
       if (
@@ -590,6 +596,51 @@ export const AppShellV2: React.FC<Props> = ({
     },
     [closeDrawer, setupPlanState?.activePlanId, setupPlanState?.linkedScenarioId],
   );
+
+  const lockedTabActionLabel = React.useCallback(
+    (tab: TabId) => {
+      if (
+        tab === 'reports' &&
+        setupWizardState?.forecastUnlocked &&
+        reportsNeedFeePathRecovery
+      ) {
+        return t('v2Vesinvest.openPricing', 'Open fee path');
+      }
+      if (tab === 'reports' && setupWizardState?.forecastUnlocked) {
+        return t('v2Reports.openForecast', 'Open Forecast');
+      }
+      return t('v2Shell.tabs.overview', 'Overview');
+    },
+    [reportsNeedFeePathRecovery, setupWizardState?.forecastUnlocked, t],
+  );
+
+  const handleLockedTabRecovery = React.useCallback(() => {
+    if (!blockedTabNotice) return;
+    if (blockedTabNotice === 'reports' && setupWizardState?.forecastUnlocked) {
+      if (reportsNeedFeePathRecovery && setupPlanState?.activePlanId) {
+        handleGoToOverviewFeePath(setupPlanState.activePlanId);
+        return;
+      }
+      handleGoToForecast(setupPlanState?.linkedScenarioId ?? null);
+      return;
+    }
+    closeDrawer();
+    setBlockedTabNotice(null);
+    setActiveTab('overview');
+    syncBrowserPath('overview', 'replace');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [
+    blockedTabNotice,
+    closeDrawer,
+    handleGoToForecast,
+    handleGoToOverviewFeePath,
+    reportsNeedFeePathRecovery,
+    setupPlanState?.activePlanId,
+    setupPlanState?.linkedScenarioId,
+    setupWizardState?.forecastUnlocked,
+  ]);
 
   const handleSavedFeePathReportConflict = React.useCallback(
     (planId?: string | null) => {
@@ -762,11 +813,21 @@ export const AppShellV2: React.FC<Props> = ({
   React.useEffect(() => {
     if (!setupTruthBootstrapped) return;
     if (!pendingPathTab) return;
+    if (setupWizardState != null) return;
+    void refreshWorkspaceTruth().catch(() => undefined);
+  }, [
+    pendingPathTab,
+    refreshWorkspaceTruth,
+    setupTruthBootstrapped,
+    setupWizardState,
+  ]);
 
-    if (
-      !setupWizardState ||
-      isTabLockedForState(pendingPathTab, setupWizardState)
-    ) {
+  React.useEffect(() => {
+    if (!setupTruthBootstrapped) return;
+    if (!pendingPathTab) return;
+    if (!setupWizardState) return;
+
+    if (isTabLockedForState(pendingPathTab, setupWizardState)) {
       setBlockedTabNotice(pendingPathTab);
       setActiveTab('overview');
       syncBrowserPath('overview', 'replace');
@@ -776,7 +837,12 @@ export const AppShellV2: React.FC<Props> = ({
       syncBrowserPath(pendingPathTab, 'replace');
     }
     setPendingPathTab(null);
-  }, [isTabLockedForState, pendingPathTab, setupTruthBootstrapped, setupWizardState]);
+  }, [
+    isTabLockedForState,
+    pendingPathTab,
+    setupTruthBootstrapped,
+    setupWizardState,
+  ]);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -994,18 +1060,20 @@ export const AppShellV2: React.FC<Props> = ({
                 {t('v2Shell.subtitle', 'Financial planning')}
               </span>
             </div>
-            {shellBackLabel ? (
-              <button
-                type="button"
-                className="v2-shell-back-btn"
-                onClick={() => setSetupBackSignal((prev) => prev + 1)}
-              >
-                {shellBackLabel}
-              </button>
-            ) : null}
-            <div className="v2-page-indicator" aria-live="polite">
-              <span>{pageIndicatorCaption}</span>
-              <strong>{pageIndicatorLabel}</strong>
+            <div className="v2-brand-meta">
+              {shellBackLabel ? (
+                <button
+                  type="button"
+                  className="v2-shell-back-btn"
+                  onClick={() => setSetupBackSignal((prev) => prev + 1)}
+                >
+                  {shellBackLabel}
+                </button>
+              ) : null}
+              <div className="v2-page-indicator" aria-live="polite">
+                <span>{pageIndicatorCaption}</span>
+                <strong>{pageIndicatorLabel}</strong>
+              </div>
             </div>
           </div>
 
@@ -1054,14 +1122,6 @@ export const AppShellV2: React.FC<Props> = ({
               <span>{t('v2Shell.workspaceLabel', 'Workspace')}</span>
               <strong className="v2-org-chip-value" title={orgChipLabel}>
                 <span className="v2-org-chip-name">{orgChipName}</span>
-                {orgChipHash ? (
-                  <>
-                    <span className="v2-org-chip-separator" aria-hidden="true">
-                      {' / '}
-                    </span>
-                    <span className="v2-org-chip-code">{orgChipHash}</span>
-                  </>
-                ) : null}
               </strong>
             </span>
           </div>
@@ -1125,13 +1185,24 @@ export const AppShellV2: React.FC<Props> = ({
       ) : null}
 
       {blockedTabNotice ? (
-        <div className="v2-language-notice" role="status" aria-live="polite">
+        <div
+          className="v2-language-notice v2-shell-tab-notice"
+          role="status"
+          aria-live="polite"
+        >
           <p>
             <strong>{tabLabels[blockedTabNotice]}</strong>
             {': '}
             {lockedTabMessage(blockedTabNotice)}
           </p>
           <div className="v2-language-notice-actions">
+            <button
+              type="button"
+              className="v2-btn v2-btn-small v2-btn-primary"
+              onClick={handleLockedTabRecovery}
+            >
+              {lockedTabActionLabel(blockedTabNotice)}
+            </button>
             <button
               type="button"
               className="v2-btn v2-btn-small"

@@ -601,14 +601,22 @@ describe('EnnustePageV2', () => {
         'Create a blank scenario or branch the selected one before editing the planning controls.',
       ),
     ).toBeNull();
-    expect(screen.getByText('Planning areas')).toBeTruthy();
+    expect(await screen.findByText('Planning areas')).toBeTruthy();
     expect(screen.getByText('Income statement overview')).toBeTruthy();
     const scenarioPicker = screen.getByRole('combobox', {
       name: 'Selected scenario',
     }) as HTMLSelectElement;
+    const scenarioHero = document.querySelector(
+      '.v2-scenario-editor-hero',
+    ) as HTMLElement | null;
+
+    expect(document.querySelector('.v2-forecast-strip-meta')).toBeNull();
+    expect(scenarioHero).toBeTruthy();
     expect(
-      document.querySelector('.v2-forecast-strip-meta-active')?.textContent,
-    ).toContain(scenarioPicker.options[scenarioPicker.selectedIndex]?.text ?? '');
+      within(scenarioHero!).getByDisplayValue(
+        scenarioPicker.options[scenarioPicker.selectedIndex]?.text ?? '',
+      ),
+    ).toBeTruthy();
     expect(
       document.querySelector('.v2-planning-launcher.primary-recommended')?.textContent,
     ).toContain('Investment program');
@@ -1974,6 +1982,8 @@ describe('EnnustePageV2', () => {
     expect(document.querySelector('#v2-forecast-new-scenario-name')).toBeNull();
     expect(document.querySelector('#v2-forecast-new-scenario-type')).toBeNull();
     expect(document.querySelector('#v2-forecast-scenario-name')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Actions'));
 
     fireEvent.click(screen.getByRole('button', { name: 'New' }));
 

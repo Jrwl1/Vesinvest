@@ -23,11 +23,6 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
     planningContextLoaded,
     planningContextError,
     hasBaselineBudget,
-    scenario,
-    forecastStateToneClass,
-    forecastStateLabel,
-    reportReadinessToneClass,
-    reportReadinessLabel,
     handleSave,
     hasUnsavedChanges,
     hasNearTermValidationErrors,
@@ -37,11 +32,13 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
     loadingList,
     getScenarioDisplayName,
     scenarioTypeOptions,
+    scenario,
     scenarioTypeLabel,
-    formatScenarioUpdatedAt,
   } = controller;
   const showCreationDraftControls =
     scenarios.length === 0 || !scenarios.some((item) => item.onOletus);
+  const hasScenarioTools = scenarios.length > 0;
+  const showPrimarySaveAction = !!scenario && hasUnsavedChanges;
 
   return (
     <>
@@ -60,7 +57,7 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
             ) : null}
           </div>
           <div className="v2-forecast-strip-actions">
-            <div className="v2-inline-form">
+            <div className="v2-inline-form v2-forecast-strip-primary-controls">
               {scenarios.length > 0 ? (
                 <label className="v2-field">
                   <span>{t('v2Forecast.selectedScenario', 'Scenario')}</span>
@@ -82,18 +79,21 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
                   </select>
                 </label>
               ) : null}
-              {showCreationDraftControls ? (
+              {!hasScenarioTools && showCreationDraftControls ? (
                 <>
-                  <input
-                    id="v2-forecast-new-scenario-name"
-                    className="v2-input"
-                    type="text"
-                    name="newScenarioName"
-                    autoFocus={scenarios.length === 0}
-                    placeholder={t('projection.newScenarioName', 'New scenario name')}
-                    value={newScenarioName}
-                    onChange={(event) => setNewScenarioName(event.target.value)}
-                  />
+                  <label className="v2-field">
+                    <span>{t('projection.newScenarioName', 'New scenario name')}</span>
+                    <input
+                      id="v2-forecast-new-scenario-name"
+                      className="v2-input"
+                      type="text"
+                      name="newScenarioName"
+                      autoFocus={scenarios.length === 0}
+                      placeholder={t('projection.newScenarioName', 'New scenario name')}
+                      value={newScenarioName}
+                      onChange={(event) => setNewScenarioName(event.target.value)}
+                    />
+                  </label>
                   <label className="v2-field">
                     <span>{t('v2Forecast.scenarioTypeLabel', 'Branch type')}</span>
                     <select
@@ -115,32 +115,107 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
                   </label>
                 </>
               ) : null}
-              <button
-                type="button"
-                className="v2-btn"
-                onClick={() => handleCreate(false)}
-                disabled={busy || !planningContextLoaded || !hasBaselineBudget}
-              >
-                {scenarios.length === 0
-                  ? t('v2Forecast.firstScenarioCta', 'Create first scenario')
-                  : t('v2Forecast.newScenario', 'New')}
-              </button>
-              <button
-                type="button"
-                className="v2-btn"
-                onClick={() => handleCreate(true)}
-                disabled={
-                  busy ||
-                  !selectedScenarioId ||
-                  !planningContextLoaded ||
-                  !hasBaselineBudget
-                }
-              >
-                {t('v2Forecast.copyScenario', 'Copy')}
-              </button>
+              {!hasScenarioTools ? (
+                <>
+                  <button
+                    type="button"
+                    className="v2-btn"
+                    onClick={() => handleCreate(false)}
+                    disabled={busy || !planningContextLoaded || !hasBaselineBudget}
+                  >
+                    {t('v2Forecast.firstScenarioCta', 'Create first scenario')}
+                  </button>
+                  <button
+                    type="button"
+                    className="v2-btn"
+                    onClick={() => handleCreate(true)}
+                    disabled={
+                      busy ||
+                      !selectedScenarioId ||
+                      !planningContextLoaded ||
+                      !hasBaselineBudget
+                    }
+                  >
+                    {t('v2Forecast.copyScenario', 'Copy')}
+                  </button>
+                </>
+              ) : null}
             </div>
-            {scenario ? (
-              <div className="v2-actions-row">
+            {hasScenarioTools ? (
+              <details className="v2-forecast-strip-tools">
+                <summary>{t('common.actions', 'Actions')}</summary>
+                <div className="v2-inline-form v2-forecast-strip-tools-body">
+                  {showCreationDraftControls ? (
+                    <>
+                      <label className="v2-field">
+                        <span>{t('projection.newScenarioName', 'New scenario name')}</span>
+                        <input
+                          id="v2-forecast-new-scenario-name"
+                          className="v2-input"
+                          type="text"
+                          name="newScenarioName"
+                          placeholder={t('projection.newScenarioName', 'New scenario name')}
+                          value={newScenarioName}
+                          onChange={(event) => setNewScenarioName(event.target.value)}
+                        />
+                      </label>
+                      <label className="v2-field">
+                        <span>{t('v2Forecast.scenarioTypeLabel', 'Branch type')}</span>
+                        <select
+                          id="v2-forecast-new-scenario-type"
+                          className="v2-input"
+                          name="newScenarioType"
+                          value={newScenarioType}
+                          onChange={(event) =>
+                            setNewScenarioType(event.target.value as typeof newScenarioType)
+                          }
+                          disabled={busy}
+                        >
+                          {scenarioTypeOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {scenarioTypeLabel(option)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="v2-btn"
+                    onClick={() => handleCreate(false)}
+                    disabled={busy || !planningContextLoaded || !hasBaselineBudget}
+                  >
+                    {t('v2Forecast.newScenario', 'New')}
+                  </button>
+                  <button
+                    type="button"
+                    className="v2-btn"
+                    onClick={() => handleCreate(true)}
+                    disabled={
+                      busy ||
+                      !selectedScenarioId ||
+                      !planningContextLoaded ||
+                      !hasBaselineBudget
+                    }
+                  >
+                    {t('v2Forecast.copyScenario', 'Copy')}
+                  </button>
+                  {scenario ? (
+                    <button
+                      type="button"
+                      className="v2-btn v2-btn-danger"
+                      onClick={handleDelete}
+                      disabled={busy || !scenario || scenario.onOletus}
+                    >
+                      {t('common.delete', 'Delete')}
+                    </button>
+                  ) : null}
+                </div>
+              </details>
+            ) : null}
+            {showPrimarySaveAction ? (
+              <div className="v2-actions-row v2-forecast-strip-save-row">
                 <button
                   type="button"
                   className="v2-btn"
@@ -155,14 +230,6 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
                   title={blockedForecastActionHint}
                 >
                   {t('v2Forecast.saveDraft', 'Save draft')}
-                </button>
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-danger"
-                  onClick={handleDelete}
-                  disabled={busy || !scenario || scenario.onOletus}
-                >
-                  {t('common.delete', 'Delete')}
                 </button>
               </div>
             ) : null}
@@ -181,36 +248,6 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
             )}
           </p>
         ) : null}
-
-        {scenario ? (
-          <div className="v2-forecast-strip-meta">
-            <div className="v2-forecast-strip-meta-active">
-              <span>{t('v2Forecast.selectedScenario', 'Selected scenario')}</span>
-              <strong>{getScenarioDisplayName(scenario.name, t)}</strong>
-              <small>{scenarioTypeLabel(scenario.scenarioType)}</small>
-            </div>
-            <div>
-              <span>{t('projection.v2.baselineYearLabel', 'Baseline year')}</span>
-              <strong>{scenario.baselineYear ?? '-'}</strong>
-            </div>
-            <div>
-              <span>{t('v2Forecast.updatedLabel', 'Updated')}</span>
-              <strong>{formatScenarioUpdatedAt(scenario.updatedAt)}</strong>
-            </div>
-            <div>
-              <span>{t('v2Forecast.reportReadinessTitle', 'Report state')}</span>
-              <strong>
-                <span className={`v2-badge ${forecastStateToneClass}`}>
-                  {forecastStateLabel}
-                </span>{' '}
-                <span className={`v2-badge ${reportReadinessToneClass}`}>
-                  {reportReadinessLabel}
-                </span>
-              </strong>
-            </div>
-          </div>
-        ) : null}
-
         {loadingList ? (
           <div className="v2-loading-state v2-subcard">
             <p>{t('v2Forecast.loadingScenarios', 'Loading scenarios...')}</p>

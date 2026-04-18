@@ -415,6 +415,32 @@ describe('ReportsPageV2', () => {
     expect(within(railSummary).queryByText('Selected report')).toBeNull();
   });
 
+  it('promotes the selected report preview and keeps source-level detail behind disclosure chrome', async () => {
+    const { container } = render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={() => undefined}
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getReportV2).toHaveBeenCalledWith('report-1');
+    });
+
+    expect(
+      container.querySelector('.v2-reports-layout')?.className,
+    ).toContain('has-selected-report');
+    expect(
+      container.querySelector('.v2-reports-preview-card')?.className,
+    ).toContain('v2-reports-preview-card-primary');
+    expect(
+      container.querySelector('.v2-reports-list-card')?.className,
+    ).toContain('v2-reports-list-card-secondary');
+    expect((await screen.findAllByText('Tekniset lähdetiedot')).length).toBeGreaterThan(0);
+  });
+
   it('keeps the reports list hint anchored to saved reports when reports already exist', async () => {
     render(
       <ReportsPageV2

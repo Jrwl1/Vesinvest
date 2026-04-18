@@ -80,6 +80,47 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
         (option): option is Exclude<typeof draftScenarioType, 'base'> =>
           option !== 'base',
       );
+  const primaryHeroCards = [
+    {
+      key: 'required-price',
+      label: primaryFeeSignal.priceLabel,
+      value: formatPrice(primaryFeeSignal.price),
+      tone: 'answer',
+    },
+    {
+      key: 'required-increase',
+      label: t(
+        'v2Forecast.requiredIncreaseFromToday',
+        'Required increase from current combined price',
+      ),
+      value: formatPercent(currentRequiredIncreaseFromToday),
+    },
+    {
+      key: 'underfunding-start',
+      label: t('v2Forecast.underfundingStarts', 'Underfunding starts'),
+      value:
+        primaryUnderfundingStartYear ?? t('v2Forecast.noUnderfunding', 'None'),
+    },
+  ];
+  const secondaryHeroCards = [
+    {
+      key: 'current-fee',
+      label: t('v2Forecast.currentFeeLevel'),
+      value: formatPrice(scenario.baselinePriceTodayCombined ?? 0),
+    },
+    {
+      key: 'peak-gap',
+      label: t('v2Forecast.peakCumulativeGap', 'Peak cumulative gap'),
+      value: formatEur(scenario.feeSufficiency.cumulativeCash.peakGap),
+    },
+    {
+      key: 'total-investments',
+      label: t('v2Forecast.totalInvestments', 'Total investments'),
+      value: formatEur(
+        scenario.investmentSeries.reduce((sum, row) => sum + row.amount, 0),
+      ),
+    },
+  ];
 
   return (
     <>
@@ -153,8 +194,8 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
             </div>
           </div>
         </div>
-        <div>
-          <div className="v2-actions-row">
+        <div className="v2-forecast-hero-summary">
+          <div className="v2-actions-row v2-forecast-hero-command-row">
             {canCreateReport ? (
               <>
                 <button
@@ -234,61 +275,31 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
               </>
             )}
           </div>
-          <div className={`v2-kpi-strip v2-executive-hero-strip ${denseAnalystMode ? 'dense' : ''}`}>
-            <div>
-              <h3>{t('v2Forecast.currentFeeLevel')}</h3>
-              <p>{formatPrice(scenario.baselinePriceTodayCombined ?? 0)}</p>
-            </div>
-            <div>
-              <h3>{primaryFeeSignal.priceLabel}</h3>
-              <p>{formatPrice(primaryFeeSignal.price)}</p>
-            </div>
-            <div>
-              <h3>
-                {t(
-                  'v2Forecast.requiredIncreaseFromToday',
-                  'Required increase from current combined price',
-                )}
-              </h3>
-              <p>{formatPercent(currentRequiredIncreaseFromToday)}</p>
-            </div>
-            <div>
-              <h3>{t('v2Forecast.underfundingStarts', 'Underfunding starts')}</h3>
-              <p>
-                {primaryUnderfundingStartYear ??
-                  t('v2Forecast.noUnderfunding', 'None')}
-              </p>
-            </div>
-            <div>
-              <h3>{t('v2Forecast.peakCumulativeGap', 'Peak cumulative gap')}</h3>
-              <p>{formatEur(scenario.feeSufficiency.cumulativeCash.peakGap)}</p>
-            </div>
-            <div>
-              <h3>{t('v2Forecast.totalInvestments', 'Total investments')}</h3>
-              <p>
-                {formatEur(
-                  scenario.investmentSeries.reduce((sum, row) => sum + row.amount, 0),
-                )}
-              </p>
-            </div>
+          <div
+            className={`v2-kpi-strip v2-executive-hero-strip v2-executive-hero-strip-primary ${denseAnalystMode ? 'dense' : ''}`}
+          >
+            {primaryHeroCards.map((card) => (
+              <div
+                key={card.key}
+                className={
+                  card.tone === 'answer'
+                    ? 'v2-executive-hero-card v2-executive-hero-card-answer'
+                    : 'v2-executive-hero-card'
+                }
+              >
+                <h3>{card.label}</h3>
+                <p>{card.value}</p>
+              </div>
+            ))}
           </div>
-          <div className="v2-actions-row">
-            <button
-              type="button"
-              className={`v2-btn ${denseAnalystMode ? '' : 'v2-btn-primary'}`}
-              onClick={() => setDenseAnalystMode(false)}
-            >
-              {t('v2Forecast.standardViewMode', 'Standard view')}
-            </button>
-            <button
-              type="button"
-              className={`v2-btn ${denseAnalystMode ? 'v2-btn-primary' : ''}`}
-              onClick={() => setDenseAnalystMode(true)}
-            >
-              {t('v2Forecast.analystViewMode', 'Analyst view')}
-            </button>
+          <div className="v2-executive-hero-strip v2-executive-hero-strip-secondary">
+            {secondaryHeroCards.map((card) => (
+              <div key={card.key} className="v2-executive-hero-card">
+                <h3>{card.label}</h3>
+                <p>{card.value}</p>
+              </div>
+            ))}
           </div>
-          {denseAnalystMode ? <p className="v2-muted">{reportCommandSummary}</p> : null}
         </div>
       </div>
 
@@ -370,6 +381,23 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
               </span>
             </div>
           </div>
+          <div className="v2-actions-row v2-primary-chart-view-toggle">
+            <button
+              type="button"
+              className={`v2-btn ${denseAnalystMode ? '' : 'v2-btn-primary'}`}
+              onClick={() => setDenseAnalystMode(false)}
+            >
+              {t('v2Forecast.standardViewMode', 'Standard view')}
+            </button>
+            <button
+              type="button"
+              className={`v2-btn ${denseAnalystMode ? 'v2-btn-primary' : ''}`}
+              onClick={() => setDenseAnalystMode(true)}
+            >
+              {t('v2Forecast.analystViewMode', 'Analyst view')}
+            </button>
+          </div>
+          {denseAnalystMode ? <p className="v2-muted">{reportCommandSummary}</p> : null}
           <div className={`v2-chart-wrap ${forecastSurfaceToneClass}`}>
             <ResponsiveContainer width="100%" height={320}>
               {activePrimaryChart === 'cashflow' ? (

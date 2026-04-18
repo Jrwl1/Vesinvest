@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShellV2 } from './AppShellV2';
@@ -494,6 +495,25 @@ describe('AppShellV2', () => {
     yearlyInvestments: [],
     ...overrides,
   });
+
+  const primeVerifiedBaselineImportStatus = () => {
+    getImportStatusV2Mock.mockResolvedValue({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1,
+        nimi: 'Wizard Utility',
+        ytunnus: '1234567-8',
+        uiLanguage: 'fi',
+      },
+      years: [],
+      availableYears: [],
+      workspaceYears: [2024],
+      excludedYears: [],
+      planningBaselineYears: [2024],
+    });
+  };
 
   const unlockSetupThroughOverview = async () => {
     fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
@@ -1115,6 +1135,11 @@ describe('AppShellV2', () => {
     expect(screen.getByRole('status').textContent).toContain(
       'Complete the setup steps before opening this workspace.',
     );
+    expect(
+      within(screen.getByRole('status')).getByRole('button', {
+        name: 'Overview',
+      }),
+    ).toBeTruthy();
     await waitFor(() => {
       expect(window.location.pathname).toBe('/');
     });
@@ -1193,6 +1218,8 @@ describe('AppShellV2', () => {
     expect(screen.getByRole('status').textContent).toContain(
       'Create the report after the fee path is saved and the linked scenario is up to date.',
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Open fee path' }));
+    expect(screen.getByText('overview-focus-target:plan-1')).toBeTruthy();
     expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
     await waitFor(() => {
       expect(window.location.pathname).toBe('/');
@@ -1221,7 +1248,9 @@ describe('AppShellV2', () => {
     expect(screen.getByRole('status').textContent).toContain(
       'Create the report after the fee path is saved and the linked scenario is up to date.',
     );
-    expect(window.location.pathname).toBe('/');
+    fireEvent.click(screen.getByRole('button', { name: 'Open Forecast' }));
+    expect(screen.getByText('ennuste-content:-')).toBeTruthy();
+    expect(window.location.pathname).toBe('/forecast');
   });
 
   it('shows the classification-review blocker when Reports is locked by class-plan work', async () => {
@@ -1298,6 +1327,9 @@ describe('AppShellV2', () => {
     expect(screen.getByRole('status').textContent).toContain(
       'Review and save the Vesinvest class plan before creating a report.',
     );
+    expect(
+      screen.getByRole('button', { name: 'Open fee path' }),
+    ).toBeTruthy();
   });
 
   it('keeps the shell in workflow-step mode while Forecast is unlocked but Reports are still locked', async () => {
@@ -1354,6 +1386,11 @@ describe('AppShellV2', () => {
     expect(screen.getByRole('status').textContent).toContain(
       'Complete the setup steps before opening this workspace.',
     );
+    expect(
+      within(screen.getByRole('status')).getByRole('button', {
+        name: 'Overview',
+      }),
+    ).toBeTruthy();
     expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
     expect(screen.getByText('Step 1 / 5')).toBeTruthy();
     expect(screen.getByText('Create Vesinvest plan')).toBeTruthy();
@@ -2153,7 +2190,7 @@ describe('AppShellV2', () => {
     ).toContain('"selectedScenarioId":null');
   });
 
-  it('formats the org chip as company plus short hash and keeps locked tabs marked locked', async () => {
+  it('renders the org chip as company only and keeps locked tabs marked locked', async () => {
     render(
       <AppShellV2
         tokenInfo={{
@@ -2171,6 +2208,8 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
     fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
 
+    expect(screen.getByText('Wizard Utility')).toBeTruthy();
+    expect(screen.queryByText('C9032CDE')).toBeNull();
     expect(screen.getByTitle('Wizard Utility / C9032CDE')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Forecast' }).getAttribute('aria-disabled')).toBe(
       'true',
@@ -2322,6 +2361,7 @@ describe('AppShellV2', () => {
   });
 
   it('returns stale report flow to Overview and stores a saved fee-path focus target', async () => {
+    primeVerifiedBaselineImportStatus();
     getPlanningContextV2Mock.mockResolvedValue(
       buildPlanningContext({
         canCreateScenario: true,
@@ -2368,6 +2408,7 @@ describe('AppShellV2', () => {
   });
 
   it('clears the shell stale-report demotion once the same saved fee path is opened cleanly again', async () => {
+    primeVerifiedBaselineImportStatus();
     getPlanningContextV2Mock.mockResolvedValue(
       buildPlanningContext({
         canCreateScenario: true,
@@ -2413,6 +2454,7 @@ describe('AppShellV2', () => {
   });
 
   it('clears the shell stale-report demotion when Overview reports the saved fee path as verified again', async () => {
+    primeVerifiedBaselineImportStatus();
     getPlanningContextV2Mock.mockResolvedValue(
       buildPlanningContext({
         canCreateScenario: true,
@@ -2447,9 +2489,9 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
     expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'stale-report-hit' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'stale-report-hit' }));
     expect(await screen.findByText('overview-content')).toBeTruthy();
-    expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
+    expect(await screen.findByText('Vesinvest in progress')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'set-plan-verified' }));
 
@@ -2457,6 +2499,7 @@ describe('AppShellV2', () => {
   });
 
   it('demotes the shell ready badge when the visible scenario drifts away from the linked saved fee path', async () => {
+    primeVerifiedBaselineImportStatus();
     getPlanningContextV2Mock.mockResolvedValue(
       buildPlanningContext({
         canCreateScenario: true,
@@ -2490,15 +2533,18 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
     fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
     expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
-    expect(screen.getByText('Report-ready scenario')).toBeTruthy();
+    expect(await screen.findByText('Report-ready scenario')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'select-stress' }));
 
     expect(await screen.findByText('Vesinvest in progress')).toBeTruthy();
-    expect(screen.queryByText('Report-ready scenario')).toBeNull();
+    await waitFor(() => {
+      expect(screen.queryByText('Report-ready scenario')).toBeNull();
+    });
   });
 
   it('keeps the shell ready badge on Reports when a saved report focuses another scenario, then demotes after opening that scenario in Forecast', async () => {
+    primeVerifiedBaselineImportStatus();
     getPlanningContextV2Mock.mockResolvedValue(
       buildPlanningContext({
         canCreateScenario: true,
@@ -2532,19 +2578,21 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
     fireEvent.click(screen.getByRole('button', { name: 'Reports' }));
     expect(await screen.findByText('reports-content:-')).toBeTruthy();
-    expect(screen.getByText('Report-ready scenario')).toBeTruthy();
+    expect(await screen.findByText('Report-ready scenario')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'focus-stress-report' }));
 
     expect(await screen.findByText('reports-content:report-123')).toBeTruthy();
-    expect(screen.getByText('Report-ready scenario')).toBeTruthy();
+    expect(await screen.findByText('Report-ready scenario')).toBeTruthy();
     expect(screen.queryByText('Vesinvest in progress')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'report-to-forecast' }));
 
     expect(await screen.findByText('ennuste-content:stress-1')).toBeTruthy();
-    expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
-    expect(screen.queryByText('Report-ready scenario')).toBeNull();
+    expect(await screen.findByText('Vesinvest in progress')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.queryByText('Report-ready scenario')).toBeNull();
+    });
   });
 
   it('demotes the shell ready badge when the saved fee path itself is stale', async () => {

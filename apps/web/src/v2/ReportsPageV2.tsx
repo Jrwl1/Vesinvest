@@ -371,6 +371,7 @@ export const ReportsPageV2: React.FC<Props> = ({
 
     let cancelled = false;
     const run = async () => {
+      setSelectedReport(null);
       setLoadingDetail(true);
       setError(null);
       try {
@@ -378,6 +379,7 @@ export const ReportsPageV2: React.FC<Props> = ({
         if (!cancelled) setSelectedReport(detail);
       } catch (err) {
         if (!cancelled) {
+          setSelectedReport(null);
           setError(
             err instanceof Error
               ? err.message
@@ -1324,13 +1326,15 @@ export const ReportsPageV2: React.FC<Props> = ({
       'Saved report is available for export.',
     );
   }, [downloadMatchesPreview, downloadingPdf, selectedReportHasPdf, t]);
-  return (
-    <div className="v2-page">
-      {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
+  const hasSelectedReportLayout = selectedReportId != null;
 
-      <section className="v2-grid v2-reports-layout">
-        <div className="v2-reports-list-column">
-          <section className="v2-card v2-reports-list-card">
+  const renderReportsListColumn = () => (
+    <div className="v2-reports-list-column">
+          <section
+            className={`v2-card v2-reports-list-card${
+              hasSelectedReportLayout ? ' v2-reports-list-card-secondary' : ''
+            }`}
+          >
             <div className="v2-section-header v2-reports-list-head">
               <div className="v2-reports-section-copy">
                 <p className="v2-overview-eyebrow">
@@ -1533,9 +1537,15 @@ export const ReportsPageV2: React.FC<Props> = ({
             ) : null}
           </section>
         </div>
+  );
 
+  const renderReportsPreviewColumn = () => (
         <div className="v2-reports-preview-column">
-          <section className="v2-card v2-reports-preview-card">
+          <section
+            className={`v2-card v2-reports-preview-card${
+              hasSelectedReportLayout ? ' v2-reports-preview-card-primary' : ''
+            }`}
+          >
             <div className="v2-section-header v2-reports-preview-head">
               <div className="v2-reports-section-copy">
                 <h2>{t('v2Reports.selectedReportTitle', 'Selected report')}</h2>
@@ -1737,12 +1747,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                           aria-label={t(option.labelKey, option.label)}
                         >
                           <div className="v2-report-variant-option-head">
-                            <div>
-                              <strong>{t(option.labelKey, option.label)}</strong>
-                              <p className="v2-muted">
-                                {t(option.descriptionKey, option.description)}
-                              </p>
-                            </div>
+                            <strong>{t(option.labelKey, option.label)}</strong>
                             <div className="v2-badge-row">
                               {previewVariant === option.id ? (
                                 <span className="v2-badge v2-status-info">
@@ -1919,54 +1924,62 @@ export const ReportsPageV2: React.FC<Props> = ({
                               </strong>
                             </div>
                           </div>
-                          <div className="v2-reports-provenance-grid">
-                            <article className="v2-keyvalue-row v2-reports-provenance-row">
-                              <div>
-                                <span>
-                                  {t('v2Reports.baselineFinancials', 'Financials')}
-                                </span>
-                                <strong>
-                                  {baselineDatasetSourceLabel(
-                                    summary.financials.source,
-                                    summary.financials.provenance,
-                                  )}
-                                </strong>
-                              </div>
-                              <p className="v2-muted">
-                                {datasetPublicationNote(summary.financials)}
-                              </p>
-                            </article>
-                            <article className="v2-keyvalue-row v2-reports-provenance-row">
-                              <div>
-                                <span>{t('v2Reports.baselinePrices', 'Prices')}</span>
-                                <strong>
-                                  {baselineDatasetSourceLabel(
-                                    summary.prices.source,
-                                    summary.prices.provenance,
-                                  )}
-                                </strong>
-                              </div>
-                              <p className="v2-muted">
-                                {datasetPublicationNote(summary.prices)}
-                              </p>
-                            </article>
-                            <article className="v2-keyvalue-row v2-reports-provenance-row">
-                              <div>
-                                <span>
-                                  {t('v2Reports.baselineVolumes', 'Sold volumes')}
-                                </span>
-                                <strong>
-                                  {baselineDatasetSourceLabel(
-                                    summary.volumes.source,
-                                    summary.volumes.provenance,
-                                  )}
-                                </strong>
-                              </div>
-                              <p className="v2-muted">
-                                {datasetPublicationNote(summary.volumes)}
-                              </p>
-                            </article>
-                          </div>
+                          <details className="v2-reports-provenance-details">
+                            <summary>
+                              {t(
+                                'v2Overview.yearTechnicalDetailsSummary',
+                                'Technical source details',
+                              )}
+                            </summary>
+                            <div className="v2-reports-provenance-grid">
+                              <article className="v2-keyvalue-row v2-reports-provenance-row">
+                                <div>
+                                  <span>
+                                    {t('v2Reports.baselineFinancials', 'Financials')}
+                                  </span>
+                                  <strong>
+                                    {baselineDatasetSourceLabel(
+                                      summary.financials.source,
+                                      summary.financials.provenance,
+                                    )}
+                                  </strong>
+                                </div>
+                                <p className="v2-muted">
+                                  {datasetPublicationNote(summary.financials)}
+                                </p>
+                              </article>
+                              <article className="v2-keyvalue-row v2-reports-provenance-row">
+                                <div>
+                                  <span>{t('v2Reports.baselinePrices', 'Prices')}</span>
+                                  <strong>
+                                    {baselineDatasetSourceLabel(
+                                      summary.prices.source,
+                                      summary.prices.provenance,
+                                    )}
+                                  </strong>
+                                </div>
+                                <p className="v2-muted">
+                                  {datasetPublicationNote(summary.prices)}
+                                </p>
+                              </article>
+                              <article className="v2-keyvalue-row v2-reports-provenance-row">
+                                <div>
+                                  <span>
+                                    {t('v2Reports.baselineVolumes', 'Sold volumes')}
+                                  </span>
+                                  <strong>
+                                    {baselineDatasetSourceLabel(
+                                      summary.volumes.source,
+                                      summary.volumes.provenance,
+                                    )}
+                                  </strong>
+                                </div>
+                                <p className="v2-muted">
+                                  {datasetPublicationNote(summary.volumes)}
+                                </p>
+                              </article>
+                            </div>
+                          </details>
                         </React.Fragment>
                       ))}
                     </article>
@@ -2347,6 +2360,19 @@ export const ReportsPageV2: React.FC<Props> = ({
             ) : null}
           </section>
         </div>
+  );
+
+  return (
+    <div className="v2-page">
+      {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
+
+      <section
+        className={`v2-grid v2-reports-layout${
+          hasSelectedReportLayout ? ' has-selected-report' : ''
+        }`}
+      >
+        {renderReportsListColumn()}
+        {renderReportsPreviewColumn()}
       </section>
     </div>
   );

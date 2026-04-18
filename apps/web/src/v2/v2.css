@@ -32,6 +32,7 @@
   --v2-border-strong: #b7c0cb;
   --v2-text: #18212d;
   --v2-muted: #62707d;
+  --v2-text-muted: var(--v2-muted);
   --v2-primary: #2347a6;
   --v2-primary-soft: #e7eefb;
   --v2-focus-ring: 0 0 0 4px rgba(35, 71, 166, 0.16);
@@ -534,6 +535,71 @@
   gap: var(--v2-page-gap);
 }
 
+.v2-overview-planning-shell {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.v2-overview-planning-shell-secondary .v2-vesinvest-panel {
+  border-color: rgba(183, 192, 203, 0.62);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 12px 26px rgba(24, 33, 45, 0.06);
+}
+
+.v2-overview-planning-shell-toggle {
+  border: 1px solid rgba(183, 192, 203, 0.62);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.v2-overview-planning-shell-toggle > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.v2-overview-planning-shell-toggle > summary::-webkit-details-marker {
+  display: none;
+}
+
+.v2-overview-planning-shell-toggle > summary::after {
+  content: '+';
+  color: var(--v2-text-muted);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.v2-overview-planning-shell-toggle[open] > summary::after {
+  content: '-';
+}
+
+.v2-overview-planning-shell-toggle-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.v2-overview-planning-shell-toggle-copy span {
+  color: var(--v2-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.v2-overview-planning-shell-toggle-copy strong {
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.v2-overview-planning-shell-toggle-body {
+  padding: 0 0 2px;
+}
+
 .v2-vesinvest-panel {
   display: grid;
   gap: 14px;
@@ -723,6 +789,10 @@
   grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
   gap: 14px;
   align-items: start;
+}
+
+.v2-overview-workspace-layout.step3-review-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 272px);
 }
 
 .v2-overview-hero-grid {
@@ -1320,6 +1390,35 @@
 .v2-reports-provenance-grid {
   display: grid;
   gap: 8px;
+}
+
+.v2-reports-provenance-details {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--v2-border);
+  border-radius: 8px;
+  background: var(--v2-surface-soft);
+}
+
+.v2-reports-provenance-details > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 12px;
+  color: var(--v2-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.v2-reports-provenance-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.v2-reports-provenance-details[open] > summary {
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.v2-reports-provenance-details .v2-reports-provenance-grid {
+  padding: 12px;
 }
 
 .v2-reports-provenance-row {
@@ -2506,6 +2605,11 @@
   background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
 }
 
+.v2-import-board-lane-current_estimate {
+  border-color: rgba(183, 192, 203, 0.72);
+  background: linear-gradient(180deg, #fbfcfd 0%, #ffffff 100%);
+}
+
 .v2-import-board-lane summary {
   cursor: pointer;
   list-style: none;
@@ -2518,6 +2622,7 @@
 }
 
 .v2-import-board-lane-blocked summary::after,
+.v2-import-board-lane-current_estimate summary::after,
 .v2-import-board-lane-trashbin summary::after {
   content: '▸';
   position: absolute;
@@ -2528,8 +2633,13 @@
 }
 
 .v2-import-board-lane-blocked[open] summary::after,
+.v2-import-board-lane-current_estimate[open] summary::after,
 .v2-import-board-lane-trashbin[open] summary::after {
   transform: rotate(90deg);
+}
+
+.v2-overview-baseline-hint {
+  margin-top: -4px;
 }
 
 .v2-import-board-summary {
@@ -2978,6 +3088,34 @@
   flex-wrap: wrap;
 }
 
+.v2-year-card-actions-primary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.v2-year-card-actions-secondary {
+  margin-top: -2px;
+}
+
+.v2-year-card-actions-secondary .v2-btn {
+  border-color: rgba(183, 192, 203, 0.68);
+  background: rgba(246, 248, 251, 0.88);
+  color: var(--v2-text-muted);
+}
+
+.v2-year-card-actions-tertiary {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.v2-year-card-actions-tertiary .v2-btn {
+  border-color: rgba(183, 192, 203, 0.58);
+  background: transparent;
+  color: var(--v2-text-muted);
+}
+
 .v2-year-preview-action {
   appearance: none;
   width: 100%;
@@ -3038,21 +3176,29 @@
 
 .v2-year-select {
   display: flex;
-  gap: 10px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-top: 8px;
+  margin-top: 0;
+  align-items: center;
 }
 
 .v2-year-select label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: var(--v2-surface-soft);
-  border: 1px solid var(--v2-border);
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(183, 192, 203, 0.62);
   border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 0.8rem;
+  padding: 2px 8px;
+  font-size: 0.74rem;
   line-height: 1.3;
+  color: var(--v2-text-muted);
+}
+
+.v2-year-select-active {
+  border-color: rgba(35, 71, 166, 0.24);
+  background: rgba(238, 243, 253, 0.72);
+  color: var(--v2-text);
 }
 
 .v2-year-select-disabled {
@@ -3426,13 +3572,38 @@
 
 .v2-overview-review-groups {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  gap: 6px;
+  padding: 4px 0 2px;
 }
 
 .v2-overview-review-group {
   display: grid;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(183, 192, 203, 0.48);
+}
+
+.v2-overview-review-group:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.v2-overview-review-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.v2-overview-review-group-head strong {
+  font-size: 0.88rem;
+}
+
+.v2-overview-review-group-count {
+  color: var(--v2-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .v2-overview-review-group-years {
@@ -3446,9 +3617,9 @@
 }
 
 .v2-overview-year-workspace {
-  margin: 14px 0 18px;
+  margin: 6px 0 18px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .v2-overview-year-workspace-scroll {
@@ -3476,9 +3647,9 @@
 
 .v2-overview-year-workspace-corner {
   color: var(--v2-muted);
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
@@ -3512,7 +3683,7 @@
 }
 
 .v2-overview-year-workspace-year-head strong {
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   margin-right: auto;
 }
 
@@ -3526,6 +3697,20 @@
   gap: 8px;
   flex-wrap: wrap;
   align-content: flex-start;
+}
+
+.v2-overview-year-workspace-year-actions-primary {
+  align-items: center;
+}
+
+.v2-overview-year-workspace-year-actions-secondary {
+  margin-top: -2px;
+}
+
+.v2-overview-year-workspace-year-actions-secondary .v2-btn {
+  border-color: rgba(183, 192, 203, 0.68);
+  background: rgba(246, 248, 251, 0.88);
+  color: var(--v2-text-muted);
 }
 
 .v2-overview-year-workspace-input {
@@ -3677,9 +3862,14 @@
 
 .v2-overview-review-actions-compact {
   margin-top: 0;
-  padding: 0;
+  padding: 10px 0 0;
   border: 0;
   background: transparent;
+  gap: 8px;
+}
+
+.v2-overview-review-actions-copy {
+  margin: 0;
 }
 
 .v2-overview-handoff-card {
@@ -3695,7 +3885,7 @@
 
 .v2-overview-handoff-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -3722,35 +3912,35 @@
 }
 
 .v2-year-status-list-accepted {
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 12px;
 }
 
 .v2-year-status-list-accepted .v2-year-status-row {
-  padding: 16px;
-  gap: 12px;
+  padding: 14px;
+  gap: 10px;
   border-color: rgba(29, 107, 77, 0.14);
   background: rgba(251, 254, 252, 0.98);
 }
 
 .v2-year-status-list-accepted .v2-year-status-head strong {
-  font-size: 1.5rem;
+  font-size: 1.15rem;
   line-height: 0.95;
 }
 
 .v2-year-status-list-accepted .v2-year-status-labels {
-  gap: 2px;
+  gap: 0;
 }
 
 .v2-year-status-list-accepted .v2-year-status-labels span {
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   color: var(--v2-text);
 }
 
 .v2-overview-year-chip-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -3806,20 +3996,81 @@
 }
 
 .v2-year-status-list-accepted .v2-year-card-meta {
-  padding-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 8px;
   border-top: 1px solid rgba(183, 192, 203, 0.34);
   color: rgba(98, 112, 128, 0.86);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
+}
+
+.v2-year-status-list-accepted .v2-year-card-preview {
+  gap: 10px;
+}
+
+.v2-overview-handoff-year-source {
+  color: var(--v2-text);
+  font-weight: 600;
 }
 
 .v2-overview-handoff-year-actions {
-  margin-top: 2px;
+  margin-top: 0;
   align-items: center;
+  gap: 8px;
 }
 
 .v2-overview-handoff-year-primary-actions {
-  margin-top: 2px;
+  margin-top: 0;
   align-items: center;
+  gap: 8px;
+}
+
+.v2-overview-handoff-year-actions-shell {
+  margin: 0;
+  border-top: 1px solid rgba(183, 192, 203, 0.28);
+  padding-top: 8px;
+}
+
+.v2-overview-handoff-year-actions-shell > summary {
+  list-style: none;
+  cursor: pointer;
+  color: var(--v2-text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.v2-overview-handoff-year-actions-shell > summary::-webkit-details-marker {
+  display: none;
+}
+
+.v2-overview-handoff-year-actions-shell > summary::after {
+  content: '+';
+  margin-left: 6px;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.v2-overview-handoff-year-actions-shell[open] > summary::after {
+  content: '-';
+}
+
+.v2-overview-handoff-year-actions .v2-btn {
+  border-color: rgba(183, 192, 203, 0.68);
+  background: transparent;
+  color: var(--v2-text-muted);
+  padding: 3px 7px;
+  font-size: 0.72rem;
+}
+
+.v2-overview-handoff-year-primary-actions .v2-btn {
+  padding: 5px 10px;
+}
+
+.v2-overview-handoff-year-actions .v2-btn-danger {
+  background: transparent;
+  color: var(--v2-danger);
 }
 
 .v2-overview-handoff-excluded {
@@ -3850,14 +4101,14 @@
 
 .v2-year-preview-grid.compact {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
 }
 
 .v2-year-preview-grid.compact .v2-year-preview-item {
   border-radius: 8px;
   border-color: rgba(183, 192, 203, 0.46);
   background: rgba(255, 255, 255, 0.92);
-  padding: 8px 10px;
+  padding: 9px 10px;
   gap: 3px;
 }
 
@@ -4374,18 +4625,14 @@
 
 .v2-report-variant-option-head {
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
 }
 
 .v2-report-variant-option-head strong {
-  font-size: 0.94rem;
-}
-
-.v2-report-variant-option-head p {
-  margin: 4px 0 0;
+  font-size: 0.9rem;
 }
 
 .v2-report-variant-sections {
@@ -4874,7 +5121,7 @@
 .v2-app-header,
 .v2-app-shell.v2-app-shell-forecast .v2-app-header,
 .v2-app-shell.v2-app-shell-reports .v2-app-header {
-  padding: 18px 24px 8px;
+  padding: 14px 24px 6px;
   background: transparent;
   backdrop-filter: none;
 }
@@ -4884,8 +5131,8 @@
 .v2-app-shell.v2-app-shell-reports .v2-app-header-inner {
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: start;
-  gap: 24px;
-  padding: 18px 20px;
+  gap: 18px;
+  padding: 14px 18px;
   border: 1px solid var(--v2-border);
   border-radius: 14px;
   background: var(--v2-surface-strong);
@@ -4894,7 +5141,14 @@
 }
 
 .v2-brand-block {
-  gap: 8px;
+  gap: 6px;
+}
+
+.v2-brand-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .v2-brand {
@@ -4923,18 +5177,21 @@
   background: var(--v2-surface-soft);
   color: var(--v2-text);
   border-radius: 10px;
-  padding: 8px 12px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
 }
 
 .v2-page-indicator,
 .v2-app-shell.v2-app-shell-forecast .v2-page-indicator,
 .v2-app-shell.v2-app-shell-reports .v2-page-indicator {
-  display: grid;
-  gap: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   width: auto;
-  border: 0;
-  background: transparent;
-  padding: 0;
+  border: 1px solid var(--v2-border);
+  border-radius: 10px;
+  background: var(--v2-surface-soft);
+  padding: 6px 10px;
   font-size: 0.78rem;
 }
 
@@ -4950,7 +5207,7 @@
 
 .v2-page-indicator strong {
   color: var(--v2-text);
-  font-size: 1rem;
+  font-size: 0.88rem;
   letter-spacing: -0.01em;
 }
 
@@ -5017,7 +5274,7 @@
 
 .v2-header-meta {
   width: min(var(--v2-page-width), 100%);
-  margin: 10px auto 0;
+  margin: 8px auto 0;
   display: flex;
   justify-content: flex-end;
   padding: 0 2px;
@@ -5025,7 +5282,7 @@
 
 .v2-language-notice {
   width: min(var(--v2-page-width), 100%);
-  margin: 10px auto 0;
+  margin: 8px auto 0;
   padding: 10px 12px;
   border: 1px solid rgba(43, 79, 136, 0.12);
   border-radius: 8px;
@@ -5045,6 +5302,29 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.v2-shell-tab-notice {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-color: rgba(43, 79, 136, 0.08);
+  background: rgba(231, 237, 245, 0.56);
+  color: var(--v2-muted);
+}
+
+.v2-shell-tab-notice strong {
+  color: var(--v2-primary);
+}
+
+.v2-shell-tab-notice .v2-language-notice-actions .v2-btn {
+  border-color: rgba(183, 192, 203, 0.72);
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.v2-shell-tab-notice .v2-language-notice-actions .v2-btn-primary {
+  border-color: var(--v2-primary);
+  background: var(--v2-primary);
+  color: #ffffff;
 }
 
 @media (max-width: 720px) {
@@ -5244,6 +5524,18 @@
   gap: 20px;
 }
 
+.v2-reports-layout.has-selected-report {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 336px);
+}
+
+.v2-reports-layout.has-selected-report .v2-reports-preview-column {
+  order: 1;
+}
+
+.v2-reports-layout.has-selected-report .v2-reports-list-column {
+  order: 2;
+}
+
 .v2-reports-list-column {
   top: 24px;
 }
@@ -5253,8 +5545,16 @@
   gap: 16px;
 }
 
+.v2-reports-list-card-secondary {
+  background: rgba(252, 251, 248, 0.82);
+}
+
+.v2-reports-preview-card-primary {
+  box-shadow: 0 14px 28px rgba(30, 39, 50, 0.08);
+}
+
 .v2-reports-list-summary {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .v2-reports-list-summary article,
@@ -5326,7 +5626,59 @@
 }
 
 .v2-forecast-strip-actions {
+  display: grid;
+  gap: 10px;
   min-width: 0;
+}
+
+.v2-forecast-strip-primary-controls {
+  align-items: end;
+}
+
+.v2-forecast-strip-tools {
+  border: 1px solid var(--v2-border);
+  border-radius: 8px;
+  background: var(--v2-surface-soft);
+}
+
+.v2-forecast-strip-tools > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  color: var(--v2-text);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.v2-forecast-strip-tools > summary::-webkit-details-marker {
+  display: none;
+}
+
+.v2-forecast-strip-tools > summary::after {
+  content: '+';
+  color: var(--v2-muted);
+  font-size: 0.92rem;
+  line-height: 1;
+}
+
+.v2-forecast-strip-tools[open] > summary {
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.v2-forecast-strip-tools[open] > summary::after {
+  content: '-';
+}
+
+.v2-forecast-strip-tools-body {
+  padding: 10px;
+  align-items: end;
+}
+
+.v2-forecast-strip-save-row {
+  justify-content: flex-start;
 }
 
 .v2-scenario-editor-hero {
@@ -5334,6 +5686,12 @@
   grid-template-columns: minmax(0, 1fr) minmax(320px, 28rem);
   gap: 20px;
   padding: 20px;
+}
+
+.v2-forecast-hero-summary {
+  display: grid;
+  gap: 10px;
+  align-content: start;
 }
 
 .v2-forecast-toolbar-main .v2-field {
@@ -5351,10 +5709,20 @@
   justify-content: flex-end;
 }
 
+.v2-forecast-hero-command-row,
+.v2-primary-chart-view-toggle {
+  justify-content: flex-start;
+}
+
 .v2-executive-hero-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 8px;
+}
+
+.v2-executive-hero-strip-primary,
+.v2-executive-hero-strip-secondary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .v2-executive-hero-strip > div {
@@ -5362,6 +5730,19 @@
   border-radius: 10px;
   background: var(--v2-surface-soft);
   padding: 12px;
+}
+
+.v2-executive-hero-card-answer {
+  border-color: rgba(43, 79, 136, 0.22);
+  background: #eef3fd;
+}
+
+.v2-executive-hero-card-answer h3 {
+  color: var(--v2-primary);
+}
+
+.v2-executive-hero-card-answer p {
+  font-size: 1.34rem;
 }
 
 .v2-executive-hero-strip h3 {
@@ -5377,6 +5758,15 @@
   font-size: 1.2rem;
   line-height: 1.2;
   letter-spacing: -0.02em;
+}
+
+.v2-executive-hero-strip-secondary > div {
+  background: rgba(255, 255, 255, 0.8);
+  padding: 10px 12px;
+}
+
+.v2-executive-hero-strip-secondary p {
+  font-size: 1.05rem;
 }
 
 .v2-tariff-answer-card {
@@ -5441,6 +5831,17 @@
   border-radius: 8px;
 }
 
+.v2-primary-chart-view-toggle {
+  margin-top: 0;
+  justify-content: flex-end;
+}
+
+.v2-primary-chart-view-toggle .v2-btn {
+  padding: 6px 10px;
+  font-size: 0.76rem;
+  background: var(--v2-surface-soft);
+}
+
 .v2-forecast-workspace-meta > div,
 .v2-forecast-strip-meta > div {
   box-shadow: none;
@@ -5461,6 +5862,10 @@
 
   .v2-brand-block {
     grid-column: 1;
+  }
+
+  .v2-brand-meta {
+    gap: 8px;
   }
 
   .v2-header-tools {
@@ -5488,6 +5893,8 @@
   }
 
   .v2-executive-hero-strip,
+  .v2-executive-hero-strip-primary,
+  .v2-executive-hero-strip-secondary,
   .v2-reports-list-summary,
   .v2-kpi-strip.v2-reports-secondary-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5615,6 +6022,31 @@
   color: var(--v2-text) !important;
   border-color: var(--v2-border) !important;
   box-shadow: none !important;
+}
+
+.v2-page.v2-forecast-theme .v2-badge.v2-status-info {
+  border-color: rgba(43, 79, 136, 0.12) !important;
+  background: #eef2f7 !important;
+  color: #2b4f88 !important;
+}
+
+.v2-page.v2-forecast-theme .v2-badge.v2-status-positive {
+  border-color: rgba(44, 108, 75, 0.14) !important;
+  background: #edf5ef !important;
+  color: #295f43 !important;
+}
+
+.v2-page.v2-forecast-theme .v2-badge.v2-status-warning {
+  border-color: rgba(152, 111, 34, 0.16) !important;
+  background: #f9f1df !important;
+  color: #7c5b1e !important;
+}
+
+.v2-page.v2-forecast-theme .v2-badge.v2-status-neutral,
+.v2-page.v2-forecast-theme .v2-badge.v2-status-provenance {
+  border-color: var(--v2-border) !important;
+  background: var(--v2-surface-soft) !important;
+  color: #44515d !important;
 }
 
 .v2-forecast-planning-section {

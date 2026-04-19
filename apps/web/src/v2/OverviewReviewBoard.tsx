@@ -174,7 +174,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
         </button>
         <button
           type="button"
-          className="v2-btn v2-btn-small"
+          className="v2-btn v2-btn-small v2-btn-quiet"
           onClick={handleSwitchToDocumentImportMode}
           disabled={manualPatchBusy || documentImportBusy}
         >
@@ -182,7 +182,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
         </button>
         <button
           type="button"
-          className="v2-btn v2-btn-small"
+          className="v2-btn v2-btn-small v2-btn-quiet"
           onClick={handleSwitchToWorkbookImportMode}
           disabled={manualPatchBusy || workbookImportBusy}
         >
@@ -190,7 +190,11 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
         </button>
         <button
           type="button"
-          className="v2-btn v2-btn-small"
+          className={`v2-btn v2-btn-small ${
+            isManualYearExcluded
+              ? 'v2-btn-plan-membership'
+              : 'v2-btn-plan-membership v2-btn-plan-membership-danger'
+          }`}
           onClick={
             isManualYearExcluded
               ? handleRestoreManualYearToPlan
@@ -210,7 +214,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
         {canReapplyFinancialVeetiForYear ? (
           <button
             type="button"
-            className="v2-btn v2-btn-small"
+            className="v2-btn v2-btn-small v2-btn-quiet"
             onClick={handleModalApplyVeetiFinancials}
             disabled={manualPatchBusy}
           >
@@ -220,7 +224,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
         {canReapplyPricesForYear ? (
           <button
             type="button"
-            className="v2-btn v2-btn-small"
+            className="v2-btn v2-btn-small v2-btn-quiet"
             onClick={handleModalApplyVeetiPrices}
             disabled={manualPatchBusy}
           >
@@ -230,7 +234,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
         {canReapplyVolumesForYear ? (
           <button
             type="button"
-            className="v2-btn v2-btn-small"
+            className="v2-btn v2-btn-small v2-btn-quiet"
             onClick={handleModalApplyVeetiVolumes}
             disabled={manualPatchBusy}
           >
@@ -239,7 +243,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
         ) : null}
         <button
           type="button"
-          className="v2-btn v2-btn-small"
+          className="v2-btn v2-btn-small v2-btn-quiet"
           onClick={closeInlineCardEditor}
           disabled={manualPatchBusy}
         >
@@ -1038,6 +1042,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
         .filter((group) => group.rows.length > 0),
     [reviewStatusRows],
   );
+  const showReviewHeaderCount = groupedRows.length === 0;
   const pinnedReviewRows = React.useMemo(
     () => {
       if (cardEditContext !== 'step3') {
@@ -1251,9 +1256,11 @@ export const OverviewReviewBoard: React.FC<Props> = ({
         </p>
         <h2>{t('v2Overview.wizardQuestionReviewYears')}</h2>
       </div>
-      <span className="v2-badge v2-status-provenance">
-        {t('v2Overview.reviewYearsCount', { count: activeReviewYearCount })}
-      </span>
+      {showReviewHeaderCount ? (
+        <span className="v2-badge v2-status-provenance">
+          {t('v2Overview.reviewYearsCount', { count: activeReviewYearCount })}
+        </span>
+      ) : null}
     </div>
 
     <p className="v2-muted v2-overview-review-body">
@@ -1300,6 +1307,9 @@ export const OverviewReviewBoard: React.FC<Props> = ({
       reviewStatusRows={reviewStatusRows}
       activeYear={workspaceSelection.activeYear}
       workspaceYears={workspaceYears}
+      openedDecisionYear={
+        cardEditContext === 'step3' ? manualPatchYear ?? cardEditYear : null
+      }
       hideSelectionControlsWhenEmpty={baselineGateReady}
       onTogglePinnedYear={handleTogglePinnedYear}
       yearDataCache={yearDataCache}
@@ -1373,7 +1383,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
               key={row.year}
               className={`v2-year-status-row ${yearStatusRowClassName(
                 row.setupStatus,
-              )}`}
+              )} ${isInlineReviewActive ? 'inline-active' : ''}`.trim()}
             >
               <div className="v2-year-status-head">
                 <div className="v2-year-status-labels">
@@ -1479,7 +1489,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
     <div
       className={`v2-overview-review-actions${
         baselineGateReady ? ' v2-overview-review-actions-compact' : ''
-      }`}
+      }${pinnedReviewRows.length > 0 ? ' has-open-year' : ''}`}
     >
       {!baselineGateReady ? (
         <div className="v2-manual-section-head">
@@ -1491,7 +1501,9 @@ export const OverviewReviewBoard: React.FC<Props> = ({
       </p>
       <button
         type="button"
-        className={reviewContinueButtonClass}
+        className={`${reviewContinueButtonClass} v2-overview-review-continue${
+          pinnedReviewRows.length > 0 ? ' v2-overview-review-continue-muted' : ''
+        }`}
         onClick={() => {
           if (nextReviewFocusYear != null) {
             handleFocusPinnedYear(nextReviewFocusYear);

@@ -299,6 +299,33 @@ function buildEffectiveValueLookup(
   };
 }
 
+function buildResultBaselineFinancials(
+  yearData: V2ImportYearDataResponse | undefined,
+): ManualFinancialForm {
+  const rawFinancials = getRawFirstRow(yearData, 'tilinpaatos');
+  const effectiveFinancials = getEffectiveFirstRow(yearData, 'tilinpaatos');
+  const pickFinancialValue = (key: string): number =>
+    parseOptionalNumber((rawFinancials as any)[key]) ??
+    parseOptionalNumber((effectiveFinancials as any)[key]) ??
+    0;
+
+  return {
+    liikevaihto: pickFinancialValue('Liikevaihto'),
+    perusmaksuYhteensa: pickFinancialValue('PerusmaksuYhteensa'),
+    aineetJaPalvelut: pickFinancialValue('AineetJaPalvelut'),
+    henkilostokulut: pickFinancialValue('Henkilostokulut'),
+    liiketoiminnanMuutKulut: pickFinancialValue('LiiketoiminnanMuutKulut'),
+    poistot: pickFinancialValue('Poistot'),
+    arvonalentumiset: pickFinancialValue('Arvonalentumiset'),
+    rahoitustuototJaKulut: pickFinancialValue('RahoitustuototJaKulut'),
+    tilikaudenYliJaama: pickFinancialValue('TilikaudenYliJaama'),
+    omistajatuloutus: pickFinancialValue('Omistajatuloutus'),
+    omistajanTukiKayttokustannuksiin: pickFinancialValue(
+      'OmistajanTukiKayttokustannuksiin',
+    ),
+  };
+}
+
 function getWorkspaceDraftFieldValue(
   draft: WorkspaceDraft,
   field: WorkspaceFieldConfig,
@@ -315,6 +342,7 @@ type Props = {
   reviewStatusRows: ReviewStatusRow[];
   activeYear: number | null;
   workspaceYears: number[];
+  openedDecisionYear?: number | null;
   hideSelectionControlsWhenEmpty?: boolean;
   onTogglePinnedYear: (year: number) => void;
   yearDataCache: Record<number, V2ImportYearDataResponse>;
@@ -354,6 +382,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
   reviewStatusRows,
   activeYear,
   workspaceYears,
+  openedDecisionYear = null,
   hideSelectionControlsWhenEmpty = false,
   onTogglePinnedYear,
   yearDataCache,
@@ -576,6 +605,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
       {showSelectionControls ? (
         <div
           className="v2-year-select"
+          role="group"
           aria-label={t('v2Overview.selectedYearsLabel')}
         >
           {reviewStatusRows.map((row) => (
@@ -617,21 +647,26 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
             const draft = drafts[row.year];
             const yearBusy = busy || saveState[row.year]?.saving === true;
             const prefersFixPrimary = row.setupStatus === 'needs_attention';
+            const isDecisionYearOpen = openedDecisionYear === row.year;
             return (
               <div
                 key={`workspace-head-${row.year}`}
-                className={`v2-overview-year-workspace-year ${row.setupStatus}`}
+                className={`v2-overview-year-workspace-year ${row.setupStatus}${
+                  isDecisionYearOpen ? ' decision-open' : ''
+                }`}
                 data-review-workspace-year={row.year}
               >
                 <div className="v2-overview-year-workspace-year-head">
                   <strong>{`${row.year}:`}</strong>
-                  <span
-                    className={`v2-badge ${sourceStatusClassName(row.sourceStatus)}`}
-                  >
-                    {sourceStatusLabel(row.sourceStatus)}
-                  </span>
+                  {!isDecisionYearOpen ? (
+                    <span
+                      className={`v2-badge ${sourceStatusClassName(row.sourceStatus)}`}
+                    >
+                      {sourceStatusLabel(row.sourceStatus)}
+                    </span>
+                  ) : null}
                 </div>
-                {row.missingRequirements.length > 0 ? (
+                {!isDecisionYearOpen && row.missingRequirements.length > 0 ? (
                   <p className="v2-muted v2-overview-year-workspace-year-note">
                     {row.missingRequirements
                       .map((requirement) =>
@@ -645,128 +680,93 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                 {saveState[row.year]?.error ? (
                   <p className="v2-year-reason">{saveState[row.year]?.error}</p>
                 ) : null}
-                <div className="v2-overview-year-workspace-year-actions v2-overview-year-workspace-year-actions-primary">
-                  {prefersFixPrimary ? (
-                    <button
-                      type="button"
-                      className="v2-btn v2-btn-small v2-btn-primary"
-                      aria-label={`${t('v2Overview.fixYearValues')} ${row.year}`}
-                      onClick={() =>
-                        void openInlineCardEditor(
-                          row.year,
-                          null,
-                          'step3',
-                          row.missingRequirements,
-                          'manualEdit',
-                        )
-                      }
-                      disabled={yearBusy}
-                    >
-                      {t('v2Overview.fixYearValues')}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="v2-btn v2-btn-small v2-btn-primary"
-                      aria-label={`${t(
-                        'v2Overview.openReviewYearButton',
-                        'Avaa ja tarkista',
-                      )} ${row.year}`}
-                      onClick={() =>
-                        void openInlineCardEditor(
-                          row.year,
-                          null,
-                          'step3',
-                          row.missingRequirements,
-                        )
-                      }
-                      disabled={yearBusy}
-                    >
-                      {t('v2Overview.openReviewYearButton', 'Avaa ja tarkista')}
-                    </button>
-                  )}
-                </div>
-                <div className="v2-overview-year-workspace-year-actions v2-overview-year-workspace-year-actions-secondary">
-                  {prefersFixPrimary ? (
-                    <button
-                      type="button"
-                      className="v2-btn v2-btn-small"
-                      aria-label={`${t(
-                        'v2Overview.openReviewYearButton',
-                        'Avaa ja tarkista',
-                      )} ${row.year}`}
-                      onClick={() =>
-                        void openInlineCardEditor(
-                          row.year,
-                          null,
-                          'step3',
-                          row.missingRequirements,
-                        )
-                      }
-                      disabled={yearBusy}
-                    >
-                      {t('v2Overview.openReviewYearButton', 'Avaa ja tarkista')}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="v2-btn v2-btn-small"
-                      aria-label={`${t('v2Overview.fixYearValues')} ${row.year}`}
-                      onClick={() =>
-                        void openInlineCardEditor(
-                          row.year,
-                          null,
-                          'step3',
-                          row.missingRequirements,
-                          'manualEdit',
-                        )
-                      }
-                      disabled={yearBusy}
-                    >
-                      {t('v2Overview.fixYearValues')}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="v2-btn v2-btn-small"
-                    aria-label={`${t(
-                      'v2Overview.documentImportAction',
-                      'Import source PDF',
-                    )} ${row.year}`}
-                    onClick={() =>
-                      void openInlineCardEditor(
-                        row.year,
-                        null,
-                        'step3',
-                        row.missingRequirements,
-                        'documentImport',
-                      )
-                    }
-                    disabled={yearBusy}
-                  >
-                    {t('v2Overview.documentImportAction', 'Import source PDF')}
-                  </button>
-                  <button
-                    type="button"
-                    className="v2-btn v2-btn-small"
-                    aria-label={`${t(
-                      'v2Overview.workbookImportAction',
-                      'Import KVA workbook',
-                    )} ${row.year}`}
-                    onClick={() =>
-                      void openInlineCardEditor(
-                        row.year,
-                        null,
-                        'step3',
-                        row.missingRequirements,
-                        'workbookImport',
-                      )
-                    }
-                    disabled={yearBusy}
-                  >
-                    {t('v2Overview.workbookImportAction', 'Import KVA workbook')}
-                  </button>
-                </div>
+                {!isDecisionYearOpen ? (
+                  <>
+                    <div className="v2-overview-year-workspace-year-actions v2-overview-year-workspace-year-actions-primary">
+                      {prefersFixPrimary ? (
+                        <button
+                          type="button"
+                          className="v2-btn v2-btn-small v2-btn-primary"
+                          aria-label={`${t('v2Overview.fixYearValues')} ${row.year}`}
+                          onClick={() =>
+                            void openInlineCardEditor(
+                              row.year,
+                              null,
+                              'step3',
+                              row.missingRequirements,
+                              'manualEdit',
+                            )
+                          }
+                          disabled={yearBusy}
+                        >
+                          {t('v2Overview.fixYearValues')}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="v2-btn v2-btn-small v2-btn-primary"
+                          aria-label={`${t(
+                            'v2Overview.openReviewYearButton',
+                            'Avaa ja tarkista',
+                          )} ${row.year}`}
+                          onClick={() =>
+                            void openInlineCardEditor(
+                              row.year,
+                              null,
+                              'step3',
+                              row.missingRequirements,
+                            )
+                          }
+                          disabled={yearBusy}
+                        >
+                          {t('v2Overview.openReviewYearButton', 'Avaa ja tarkista')}
+                        </button>
+                      )}
+                    </div>
+                    <div className="v2-overview-year-workspace-year-actions v2-overview-year-workspace-year-actions-secondary">
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small v2-btn-quiet"
+                        aria-label={`${t(
+                          'v2Overview.documentImportAction',
+                          'Import source PDF',
+                        )} ${row.year}`}
+                        onClick={() =>
+                          void openInlineCardEditor(
+                            row.year,
+                            null,
+                            'step3',
+                            row.missingRequirements,
+                            'documentImport',
+                          )
+                        }
+                        disabled={yearBusy}
+                      >
+                        {t('v2Overview.documentImportAction', 'Import source PDF')}
+                      </button>
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small v2-btn-quiet"
+                        aria-label={`${t(
+                          'v2Overview.workbookImportAction',
+                          'Import KVA workbook',
+                        )} ${row.year}`}
+                        onClick={() =>
+                          void openInlineCardEditor(
+                            row.year,
+                            null,
+                            'step3',
+                            row.missingRequirements,
+                            'workbookImport',
+                          )
+                        }
+                        disabled={yearBusy}
+                      >
+                        {t('v2Overview.workbookImportAction', 'Import KVA workbook')}
+                      </button>
+                    </div>
+                  </>
+                ) : null}
                 {!draft ? (
                   <p className="v2-muted">{t('common.loading', 'Loading...')}</p>
                 ) : null}
@@ -809,45 +809,53 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                     className="v2-overview-year-workspace-cell"
                   >
                     {draft ? (
-                      <label className="v2-overview-year-workspace-input">
-                        <input
-                          className="v2-input"
-                          type="number"
-                          min={field.min}
-                          step={field.step}
-                          value={displayValue}
-                          placeholder={t(
-                            'v2Overview.previewMissingValue',
-                            'Missing data',
-                          )}
-                          aria-label={`${t(field.labelKey, field.defaultLabel)} ${row.year}`}
-                          onChange={(event) => {
-                            setTouchedFields((prev) => ({
-                              ...prev,
-                              [row.year]: {
-                                ...(prev[row.year] ?? {}),
-                                [fieldId]: true,
-                              },
-                            }));
-                            updateDraft(
-                              row.year,
-                              field.group as 'financials' | 'prices' | 'volumes',
-                              field.key as never,
-                              Number(event.target.value || 0),
-                            );
-                          }}
-                          disabled={yearBusy}
-                        />
-                      </label>
+                      <div className="v2-overview-year-workspace-value-row">
+                        <label className="v2-overview-year-workspace-input">
+                          <input
+                            className="v2-input"
+                            type="number"
+                            min={field.min}
+                            step={field.step}
+                            value={displayValue}
+                            placeholder={t(
+                              'v2Overview.previewMissingValue',
+                              'Missing data',
+                            )}
+                            aria-label={`${t(field.labelKey, field.defaultLabel)} ${row.year}`}
+                            onChange={(event) => {
+                              setTouchedFields((prev) => ({
+                                ...prev,
+                                [row.year]: {
+                                  ...(prev[row.year] ?? {}),
+                                  [fieldId]: true,
+                                },
+                              }));
+                              updateDraft(
+                                row.year,
+                                field.group as 'financials' | 'prices' | 'volumes',
+                                field.key as never,
+                                Number(event.target.value || 0),
+                              );
+                            }}
+                            disabled={yearBusy}
+                          />
+                        </label>
+                        <span
+                          className={`v2-overview-year-workspace-reference${
+                            rawValue == null ? ' is-missing' : ''
+                          }`}
+                        >
+                          <span>{t('v2Overview.sourceVeeti', 'VEETI')}</span>
+                          <strong>
+                            {rawValue == null
+                              ? t('v2Overview.previewMissingValue', 'Missing data')
+                              : field.formatter(rawValue)}
+                          </strong>
+                        </span>
+                      </div>
                     ) : (
                       <span className="v2-muted">{t('common.loading', 'Loading...')}</span>
                     )}
-                    <small className="v2-muted">
-                      {t('v2Overview.sourceVeeti', 'VEETI')}:{' '}
-                      {rawValue == null
-                        ? t('v2Overview.previewMissingValue', 'Missing data')
-                        : field.formatter(rawValue)}
-                    </small>
                   </div>
                 );
               })}
@@ -856,18 +864,14 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
 
           <div className="v2-overview-year-workspace-field">
             <strong>{t(RESULT_FIELD.labelKey, RESULT_FIELD.defaultLabel)}</strong>
-            <small className="v2-muted">
-              {t(
-                'v2Overview.manualFinancialYearResultDerivedNote',
-                'Calculated from the saved financial basis for the year.',
-              )}
-            </small>
           </div>
           {pinnedRows.map((row) => {
             const draft = drafts[row.year];
             const yearData = yearDataCache[row.year];
             const yearBusy = busy || saveState[row.year]?.saving === true;
-            const baseFinancials = buildFinancialForm(yearData);
+            const rawValues = buildRawValueLookup(yearData);
+            const rawResult = rawValues.tilikaudenYliJaama;
+            const baseFinancials = buildResultBaselineFinancials(yearData);
             const computedResult =
               draft != null
                 ? deriveAdjustedYearResult(baseFinancials, draft.financials)
@@ -898,17 +902,25 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                     hasStoredOverride ? 'override-active' : ''
                   }`.trim()}
                 >
-                  <strong>
-                    {computedResult == null
-                      ? t('v2Overview.previewMissingValue', 'Missing data')
-                      : formatEur(computedResult)}
-                  </strong>
-                  <small>
-                    {t(
-                      'v2Overview.manualFinancialYearResultDerivedNote',
-                      'Calculated from the saved financial basis for the year.',
-                    )}
-                  </small>
+                  <div className="v2-overview-year-result-main">
+                    <strong>
+                      {computedResult == null
+                        ? t('v2Overview.previewMissingValue', 'Missing data')
+                        : formatEur(computedResult)}
+                    </strong>
+                    <span
+                      className={`v2-overview-year-workspace-reference${
+                        rawResult == null ? ' is-missing' : ''
+                      }`}
+                    >
+                      <span>{t('v2Overview.sourceVeeti', 'VEETI')}</span>
+                      <strong>
+                        {rawResult == null
+                          ? t('v2Overview.previewMissingValue', 'Missing data')
+                          : formatEur(rawResult)}
+                      </strong>
+                    </span>
+                  </div>
                   {hasStoredOverride ? (
                     <small className="v2-overview-year-result-warning">
                       {t(
@@ -919,49 +931,10 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                   ) : null}
                 </div>
 
-                {showResultOverride ? (
-                  <label className="v2-overview-year-workspace-input">
-                    <input
-                      className="v2-input"
-                      type="number"
-                      step={RESULT_FIELD.step}
-                      value={displayValue}
-                      placeholder={t(
-                        'v2Overview.previewMissingValue',
-                        'Missing data',
-                      )}
-                      aria-label={`${t(
-                        RESULT_FIELD.labelKey,
-                        RESULT_FIELD.defaultLabel,
-                      )} ${row.year}`}
-                      onChange={(event) => {
-                        setTouchedFields((prev) => ({
-                          ...prev,
-                          [row.year]: {
-                            ...(prev[row.year] ?? {}),
-                            [fieldId]: true,
-                          },
-                        }));
-                        setResultOverrideYears((prev) => ({
-                          ...prev,
-                          [row.year]: true,
-                        }));
-                        updateDraft(
-                          row.year,
-                          'financials',
-                          'tilikaudenYliJaama',
-                          Number(event.target.value || 0),
-                        );
-                      }}
-                      disabled={yearBusy}
-                    />
-                  </label>
-                ) : null}
-
                 <div className="v2-overview-year-result-actions">
                   <button
                     type="button"
-                    className="v2-btn v2-btn-small"
+                    className="v2-btn v2-btn-small v2-btn-quiet"
                     onClick={() => {
                       if (hasStoredOverride && computedResult != null) {
                         setTouchedFields((prev) => ({
@@ -1005,30 +978,59 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                           'Override derived result',
                         )} ${row.year}`}
                   >
-                    {showResultOverride && hasStoredOverride
-                      ? t(
-                          'v2Overview.manualFinancialYearResultResetToDerived',
-                          'Use derived result',
-                        )
-                      : showResultOverride
-                      ? t(
-                          'v2Overview.manualFinancialYearResultOverrideHide',
-                          'Hide result override',
-                        )
-                      : t(
-                          'v2Overview.manualFinancialYearResultOverrideShow',
-                          'Override derived result',
-                        )}
+                    {t(
+                      showResultOverride && hasStoredOverride
+                        ? 'v2Overview.manualFinancialYearResultResetToDerived'
+                        : showResultOverride
+                        ? 'v2Overview.manualFinancialYearResultOverrideHide'
+                        : 'v2Overview.manualFinancialYearResultOverrideShow',
+                      showResultOverride && hasStoredOverride
+                        ? 'Use derived result'
+                        : showResultOverride
+                        ? 'Hide result override'
+                        : 'Override derived result',
+                    )}
                   </button>
-                  {showResultOverride ? (
-                    <small className="v2-muted">
-                      {t(
-                        'v2Overview.manualFinancialYearResultHint',
-                        'Update this saved result field directly if the year result must differ from the calculated value.',
-                      )}
-                    </small>
-                  ) : null}
                 </div>
+
+                {showResultOverride ? (
+                  <label className="v2-overview-year-workspace-input">
+                    <input
+                      className="v2-input"
+                      type="number"
+                      step={RESULT_FIELD.step}
+                      value={displayValue}
+                      placeholder={t(
+                        'v2Overview.previewMissingValue',
+                        'Missing data',
+                      )}
+                      aria-label={`${t(
+                        RESULT_FIELD.labelKey,
+                        RESULT_FIELD.defaultLabel,
+                      )} ${row.year}`}
+                      onChange={(event) => {
+                        setTouchedFields((prev) => ({
+                          ...prev,
+                          [row.year]: {
+                            ...(prev[row.year] ?? {}),
+                            [fieldId]: true,
+                          },
+                        }));
+                        setResultOverrideYears((prev) => ({
+                          ...prev,
+                          [row.year]: true,
+                        }));
+                        updateDraft(
+                          row.year,
+                          'financials',
+                          'tilikaudenYliJaama',
+                          Number(event.target.value || 0),
+                        );
+                      }}
+                      disabled={yearBusy}
+                    />
+                  </label>
+                ) : null}
               </div>
             );
           })}

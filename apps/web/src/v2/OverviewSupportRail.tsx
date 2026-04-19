@@ -52,45 +52,62 @@ export const OverviewSupportRail: React.FC<Props> = ({
         compactSupportingChrome ? 'compact' : ''
       } ${isStep2SupportChrome ? 'step2-support' : ''}`.trim()}
     >
-      <div className="v2-overview-support-panel">
-        <div className="v2-section-header">
-          <div>
-            <p className="v2-overview-eyebrow">{supportingChromeEyebrow}</p>
-            <h3>{supportingChromeTitle}</h3>
-          </div>
-          <span className="v2-chip v2-status-provenance">
-            {t('v2Overview.wizardProgress', {
-              step: displayedStep,
-              total: PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
-            })}
-          </span>
+      <div className="v2-section-header">
+        <div>
+          <p className="v2-overview-eyebrow">{supportingChromeEyebrow}</p>
+          <h3>{supportingChromeTitle}</h3>
         </div>
+        <span className="v2-chip v2-status-provenance">
+          {t('v2Overview.wizardProgress', {
+            step: displayedStep,
+            total: PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
+          })}
+        </span>
+      </div>
 
-        <div className="v2-overview-summary-meta">
+      {compactSupportingChrome ? (
+        <div className="v2-overview-support-summary-strip">
           {summaryMetaBlocks.map((block) => (
-            <div key={block.label} className="v2-overview-meta-block">
+            <div key={block.label} className="v2-overview-support-summary-item">
               <span>{block.label}</span>
               <strong>{block.value}</strong>
             </div>
           ))}
+          {supportStatusItems.map((item) => (
+            <div
+              key={item.label}
+              className="v2-overview-support-summary-item v2-overview-support-summary-item-status"
+            >
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <small>{item.detail}</small>
+            </div>
+          ))}
         </div>
-
-        {supportStatusItems.length > 0 ? (
-          <div className="v2-overview-support-status-grid">
-            {supportStatusItems.map((item) => (
-              <article
-                key={item.label}
-                className="v2-overview-support-status-item"
-                title={compactSupportingChrome ? item.detail : undefined}
-              >
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-                {!compactSupportingChrome ? <small>{item.detail}</small> : null}
-              </article>
+      ) : (
+        <div className="v2-overview-support-panel">
+          <div className="v2-overview-summary-meta">
+            {summaryMetaBlocks.map((block) => (
+              <div key={block.label} className="v2-overview-meta-block">
+                <span>{block.label}</span>
+                <strong>{block.value}</strong>
+              </div>
             ))}
           </div>
-        ) : null}
-      </div>
+
+          {supportStatusItems.length > 0 ? (
+            <div className="v2-overview-support-status-grid">
+              {supportStatusItems.map((item) => (
+                <article key={item.label} className="v2-overview-support-status-item">
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                  <small>{item.detail}</small>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {showNextActionBlock ? (
         <div className="v2-overview-support-panel v2-overview-support-next">

@@ -140,21 +140,42 @@ const focusReviewWorkspaceYear = async (year: number) => {
 
 const openReviewWorkspaceYear = async (year: number) => {
   await focusReviewWorkspaceYear(year);
+  const yearWorkspace = (await waitFor(() => {
+    const container = document.querySelector(
+      `[data-review-workspace-year="${year}"]`,
+    ) as HTMLElement | null;
+    expect(container).toBeTruthy();
+    return container!;
+  })) as HTMLElement;
   fireEvent.click(
-    await screen.findByRole('button', {
-      name: localeText('v2Overview.openReviewYearButton'),
+    await within(yearWorkspace).findByRole('button', {
+      name: new RegExp(localeText('v2Overview.openReviewYearButton')),
     }),
   );
 };
 
 const openYearDecisionWorkspaceYear = async (year: number) => {
   await focusReviewWorkspaceYear(year);
+  const yearWorkspace = (await waitFor(() => {
+    const container = document.querySelector(
+      `[data-review-workspace-year="${year}"]`,
+    ) as HTMLElement | null;
+    expect(container).toBeTruthy();
+    return container!;
+  })) as HTMLElement;
+  const actionPattern = new RegExp(
+    [
+      localeText('v2Overview.yearDecisionAction'),
+      localeText('v2Overview.openReviewYearButton'),
+      localeText('v2Overview.fixYearValues'),
+    ].join('|'),
+  );
   const actionButton =
-    screen.queryByRole('button', {
-      name: localeText('v2Overview.yearDecisionAction'),
+    within(yearWorkspace).queryByRole('button', {
+      name: actionPattern,
     }) ??
-    (await screen.findByRole('button', {
-      name: localeText('v2Overview.openReviewYearButton'),
+    (await within(yearWorkspace).findByRole('button', {
+      name: actionPattern,
     }));
   fireEvent.click(actionButton);
 };
@@ -742,8 +763,8 @@ describe('OverviewPageV2', () => {
       )
         .length,
     ).toBeGreaterThan(0);
-    expect(screen.queryByText('Hidden imported-year detail')).toBeNull();
-    expect(screen.queryByText('Hidden baseline detail')).toBeNull();
+    expect(screen.getByText('Hidden imported-year detail')).toBeTruthy();
+    expect(screen.getByText('Hidden baseline detail')).toBeTruthy();
     expect(screen.getByText(localeText('v2Overview.importYearsButton'))).toBeTruthy();
     expect(screen.getByText(localeText('v2Overview.wizardBodyImportYears'))).toBeTruthy();
   });
@@ -2409,7 +2430,7 @@ describe('OverviewPageV2', () => {
     );
 
     expect(await screen.findByRole('button', { name: 'Jatka' })).toBeTruthy();
-    await clickReviewGroupYear(2024);
+    await openYearDecisionWorkspaceYear(2024);
     expect(
       screen.getAllByText(localeText('v2Overview.wizardSummaryTitle')).length,
     ).toBeGreaterThan(0);
@@ -2424,8 +2445,8 @@ describe('OverviewPageV2', () => {
     ).toBeGreaterThan(0);
     expect(screen.getByText(localeText('v2Overview.organizationLabel'))).toBeTruthy();
     expect(
-      screen.getByText(localeText('v2Overview.wizardSummaryImportedYears')),
-    ).toBeTruthy();
+      screen.getAllByText(localeText('v2Overview.selectedYearsLabel')).length,
+    ).toBeGreaterThan(0);
     expect(
       screen.getByText(localeText('v2Overview.wizardSummaryReadyYears')),
     ).toBeTruthy();
@@ -2485,11 +2506,11 @@ describe('OverviewPageV2', () => {
     ).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Jatka' })).toBeTruthy();
     expect(
-      screen.queryByText(localeText('v2Overview.noYearsSelected')),
-    ).toBeNull();
+      screen.getAllByText(localeText('v2Overview.noYearsSelected')).length,
+    ).toBeGreaterThan(0);
     expect(
-      screen.getByRole('button', { name: 'Avaa ja tarkista' }),
-    ).toBeTruthy();
+      screen.queryByRole('button', { name: /Avaa ja tarkista/ }),
+    ).toBeNull();
     expect(screen.queryByText('Selected year')).toBeNull();
     expect(screen.queryByRole('group', { name: 'Trend view' })).toBeNull();
     expect(screen.queryByText('Peer snapshot')).toBeNull();
@@ -3348,7 +3369,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await clickReviewGroupYear(2024);
+    await openYearDecisionWorkspaceYear(2024);
     fireEvent.click(
       await screen.findByRole('button', {
         name: `${localeText('v2Overview.openReviewYearButton')} 2024`,
@@ -9185,10 +9206,24 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(getImportYearDataV2).toHaveBeenCalledWith(2024);
     });
-    await clickReviewGroupYear(2024);
+    await openYearDecisionWorkspaceYear(2024);
     await waitFor(() => {
-      expect(screen.getAllByText(/16[\s\u00A0]?500 EUR/).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/28[\s\u00A0]?000 EUR/).length).toBeGreaterThan(0);
+      const materialsInput = screen.getByRole('spinbutton', {
+        name: `${localeText('v2Overview.manualFinancialMaterials')} 2024`,
+      }) as HTMLInputElement;
+      const yearResultInput = screen.getByRole('spinbutton', {
+        name: `${localeText('v2Overview.manualFinancialYearResult')} 2024`,
+      }) as HTMLInputElement;
+
+      expect(materialsInput.value).toBe('16500');
+      expect(yearResultInput.value).toBe('28000');
+      expect(
+        screen.getByRole('button', {
+          name: new RegExp(
+            `${localeText('v2Overview.manualFinancialYearResultResetToDerived')} 2024`,
+          ),
+        }),
+      ).toBeTruthy();
     });
   });
 
@@ -9303,6 +9338,11 @@ describe('OverviewPageV2', () => {
         document.querySelector('[data-review-workspace-year="2023"]'),
       ).toBeTruthy();
     });
+    expect(
+      screen.getByRole('group', {
+        name: localeText('v2Overview.selectedYearsLabel'),
+      }),
+    ).toBeTruthy();
     expect(document.querySelector('[data-review-workspace-year="2024"]')).toBeNull();
 
     fireEvent.click(
@@ -10119,10 +10159,10 @@ describe('OverviewPageV2', () => {
       }),
     ).toBeTruthy();
     expect(
-      within(needsSecondary).getByRole('button', {
+      within(needsSecondary).queryByRole('button', {
         name: `${localeText('v2Overview.openReviewYearButton')} 2023`,
       }),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(
       within(needsSecondary).getByRole('button', {
         name: `${localeText('v2Overview.documentImportAction')} 2023`,
@@ -10140,10 +10180,10 @@ describe('OverviewPageV2', () => {
       }),
     ).toBeTruthy();
     expect(
-      within(reviewedSecondary).getByRole('button', {
+      within(reviewedSecondary).queryByRole('button', {
         name: `${localeText('v2Overview.fixYearValues')} 2024`,
       }),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(
       within(reviewedSecondary).getByRole('button', {
         name: `${localeText('v2Overview.documentImportAction')} 2024`,
@@ -10737,6 +10777,27 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(document.querySelector('.v2-year-status-row')).toBeTruthy();
     });
+    const workspaceYear = document.querySelector(
+      '[data-review-workspace-year="2023"]',
+    ) as HTMLElement | null;
+    expect(workspaceYear).toBeTruthy();
+    expect(
+      within(workspaceYear!).queryByRole('button', {
+        name: new RegExp(
+          [
+            localeText('v2Overview.fixYearValues'),
+            localeText('v2Overview.openReviewYearButton'),
+            localeText('v2Overview.documentImportAction'),
+            localeText('v2Overview.workbookImportAction'),
+          ].join('|'),
+        ),
+      }),
+    ).toBeNull();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.reviewContinue'),
+      }).className,
+    ).toContain('v2-overview-review-continue-muted');
   });
 
   it('collapses a broadened review workspace back to the next unresolved year on Continue', async () => {
@@ -11128,10 +11189,10 @@ describe('OverviewPageV2', () => {
       '.v2-overview-year-workspace',
     ) as HTMLElement | null;
     expect(workspace).toBeTruthy();
-    expect(workspace?.textContent).toContain(
-      `VEETI: ${localeText('v2Overview.previewMissingValue')}`,
-    );
+    expect(workspace?.textContent).toContain(localeText('v2Overview.previewMissingValue'));
+    expect(workspace?.textContent).toContain('VEETI');
     expect(workspace?.textContent).not.toContain('VEETI: 0.00');
+    expect(workspace?.textContent).not.toContain('VEETI0.00');
   });
 
   it('shows direct price and volume repair actions in review mode', async () => {
@@ -12794,21 +12855,14 @@ describe('OverviewPageV2', () => {
 
     expect(await screen.findByRole('button', { name: 'Jatka' })).toBeTruthy();
     expect(
-      screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))
-        .length,
+      screen.getAllByText(localeText('v2Overview.manualFinancialRevenue')).length,
     ).toBeGreaterThan(0);
     await clickReviewGroupYear(2024);
-    const firstReviewRow = document.querySelector(
-      '.v2-year-status-row',
-    ) as HTMLElement | null;
-    expect(firstReviewRow).toBeTruthy();
     expect(
-      within(firstReviewRow!).getByText(
-        localeText('v2Overview.previewAccountingDepreciationLabel'),
-      ),
+      document.querySelector('[data-review-workspace-year="2024"]'),
     ).toBeTruthy();
     expect(
-      screen.getAllByText(localeText('v2Overview.setupStatusTechnicalReadyHint'))
+      screen.getAllByText(localeText('v2Overview.manualFinancialDepreciation'))
         .length,
     ).toBeGreaterThan(0);
     expect(

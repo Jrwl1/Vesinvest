@@ -1136,8 +1136,13 @@ describe('AppShellV2', () => {
       'Complete the setup steps before opening this workspace.',
     );
     expect(
-      within(screen.getByRole('status')).getByRole('button', {
+      within(screen.getByRole('status')).queryByRole('button', {
         name: 'Overview',
+      }),
+    ).toBeNull();
+    expect(
+      within(screen.getByRole('status')).getByRole('button', {
+        name: 'Close',
       }),
     ).toBeTruthy();
     await waitFor(() => {
@@ -1251,6 +1256,35 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open Forecast' }));
     expect(screen.getByText('ennuste-content:-')).toBeTruthy();
     expect(window.location.pathname).toBe('/forecast');
+  });
+
+  it('does not show a redundant Overview recovery button when a locked Forecast route lands on Overview', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Forecast' }));
+
+    const blocker = screen.getByRole('status');
+    expect(blocker.textContent).toContain(
+      'Complete the setup steps before opening this workspace.',
+    );
+    expect(
+      within(blocker).queryByRole('button', { name: 'Overview' }),
+    ).toBeNull();
+    expect(within(blocker).getByRole('button', { name: 'Close' })).toBeTruthy();
   });
 
   it('shows the classification-review blocker when Reports is locked by class-plan work', async () => {
@@ -1387,8 +1421,13 @@ describe('AppShellV2', () => {
       'Complete the setup steps before opening this workspace.',
     );
     expect(
-      within(screen.getByRole('status')).getByRole('button', {
+      within(screen.getByRole('status')).queryByRole('button', {
         name: 'Overview',
+      }),
+    ).toBeNull();
+    expect(
+      within(screen.getByRole('status')).getByRole('button', {
+        name: 'Close',
       }),
     ).toBeTruthy();
     expect(screen.getByText('Vesinvest workflow')).toBeTruthy();

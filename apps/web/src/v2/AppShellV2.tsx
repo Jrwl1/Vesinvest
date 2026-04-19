@@ -641,6 +641,10 @@ export const AppShellV2: React.FC<Props> = ({
     setupPlanState?.linkedScenarioId,
     setupWizardState?.forecastUnlocked,
   ]);
+  const showBlockedTabRecoveryAction =
+    blockedTabNotice === 'reports' && setupWizardState?.forecastUnlocked
+      ? true
+      : blockedTabNotice != null && activeTab !== 'overview';
 
   const handleSavedFeePathReportConflict = React.useCallback(
     (planId?: string | null) => {
@@ -1196,13 +1200,15 @@ export const AppShellV2: React.FC<Props> = ({
             {lockedTabMessage(blockedTabNotice)}
           </p>
           <div className="v2-language-notice-actions">
-            <button
-              type="button"
-              className="v2-btn v2-btn-small v2-btn-primary"
-              onClick={handleLockedTabRecovery}
-            >
-              {lockedTabActionLabel(blockedTabNotice)}
-            </button>
+            {showBlockedTabRecoveryAction ? (
+              <button
+                type="button"
+                className="v2-btn v2-btn-small v2-btn-primary"
+                onClick={handleLockedTabRecovery}
+              >
+                {lockedTabActionLabel(blockedTabNotice)}
+              </button>
+            ) : null}
             <button
               type="button"
               className="v2-btn v2-btn-small"

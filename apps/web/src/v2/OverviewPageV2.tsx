@@ -900,8 +900,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     shouldShowVesinvestPanel &&
     overviewVisualStep >= 2 &&
     overviewVisualStep <= PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS;
-  const collapsePlanningPanelInSetup =
-    demotePlanningPanelInSetup && overviewVisualStep >= 4;
+  const collapsePlanningPanelInSetup = demotePlanningPanelInSetup;
   const planningPanelDisclosureOpen =
     collapsedPlanningPanelOpenStep === overviewVisualStep ||
     overviewFocusTarget != null;

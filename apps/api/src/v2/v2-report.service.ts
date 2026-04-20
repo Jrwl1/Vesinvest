@@ -960,7 +960,7 @@ export class V2ReportService {
     const reportSections = this.buildReportSections(reportVariant);
     const vesinvestAppendix = await this.buildVesinvestAppendix(
       vesinvestPlan.projects,
-      scenario.years.map((item) => item.year),
+      scenario.years.map((item: any) => item.year),
       orgId,
     );
     const snapshot: SnapshotPayload = {
@@ -1264,7 +1264,7 @@ export class V2ReportService {
       this.getOptionalBoundUtilityIdentity(orgId),
     ]);
     const baselineYears = Array.isArray(planningContext?.baselineYears)
-      ? planningContext.baselineYears.map((row) => ({
+      ? planningContext.baselineYears.map((row: any) => ({
           year: row.year,
           planningRole: row.planningRole ?? null,
           quality: row.quality,

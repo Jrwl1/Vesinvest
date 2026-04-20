@@ -30,6 +30,9 @@ import {
   VESINVEST_LEGACY_DEPRECIATION_RULE_KEY_BY_GROUP_KEY,
 } from './vesinvest-contract';
 import { V2ImportOverviewService } from './v2-import-overview.service';
+import { createV2ForecastComputationSupport } from './v2-forecast-computation-support';
+import { createV2ForecastDepreciationSupport } from './v2-forecast-depreciation-support';
+import { createV2ForecastScenarioSupport } from './v2-forecast-scenario-support';
 import { V2PlanningWorkspaceSupport } from './v2-planning-workspace-support';
 import { buildV2ReportPdf } from './v2-report-pdf';
 
@@ -565,6 +568,15 @@ const ALLOWED_STATEMENT_CONTENT_TYPES = new Set([
 export class V2ForecastService {
   protected readonly logger = new Logger(V2ForecastService.name);
   private readonly planningWorkspaceSupport: V2PlanningWorkspaceSupport;
+  private readonly depreciationSupport: ReturnType<
+    typeof createV2ForecastDepreciationSupport
+  >;
+  private readonly scenarioSupport: ReturnType<
+    typeof createV2ForecastScenarioSupport
+  >;
+  private readonly computationSupport: ReturnType<
+    typeof createV2ForecastComputationSupport
+  >;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -578,6 +590,10 @@ export class V2ForecastService {
     private readonly importOverviewService: V2ImportOverviewService,
   ) {
     this.planningWorkspaceSupport = new V2PlanningWorkspaceSupport(prisma);
+    const ctx = this as any;
+    this.depreciationSupport = createV2ForecastDepreciationSupport(ctx);
+    this.scenarioSupport = createV2ForecastScenarioSupport(ctx);
+    this.computationSupport = createV2ForecastComputationSupport(ctx);
   }
 
   private getImportStatus(
@@ -960,68 +976,15 @@ export class V2ForecastService {
   }
 
   async listForecastScenarios(orgId: string) {
-    const scenarios = await this.projectionsService.list(orgId);
-    return scenarios.map((scenario: any) => ({
-      id: scenario.id,
-      name: scenario.nimi,
-      onOletus: Boolean(scenario.onOletus),
-      scenarioType: this.resolveScenarioType(
-        scenario?.olettamusYlikirjoitukset,
-        Boolean(scenario.onOletus),
-      ),
-      horizonYears: Number(scenario.aikajaksoVuosia),
-      baselineYear: scenario.talousarvio?.vuosi ?? null,
-      talousarvioId: scenario.talousarvioId,
-      updatedAt: scenario.updatedAt,
-      computedAt: scenario.computedAt ?? null,
-      computedFromUpdatedAt: scenario.computedFromUpdatedAt ?? null,
-      computedYears: scenario._count?.vuodet ?? 0,
-    }));
+    return this.scenarioSupport.listForecastScenarios(orgId);
   }
 
   async listDepreciationRules(orgId: string) {
-    const rules = await this.buildScenarioDepreciationRuleSeed(orgId);
-    return DEFAULT_VESINVEST_GROUP_DEFINITIONS.map((group) =>
-      this.mapScenarioDepreciationRule(
-        rules.find((rule) => rule.assetClassKey === group.key) ?? {
-          id: group.key,
-          assetClassKey: group.key,
-          assetClassName: group.label,
-          method: 'none',
-          linearYears: null,
-          residualPercent: null,
-          annualSchedule: null,
-        },
-      ),
-    );
+    return this.depreciationSupport.listDepreciationRules(orgId);
   }
 
   async createDepreciationRule(orgId: string, body: DepreciationRuleInput) {
-    const delegate = (this.prisma as any).organizationDepreciationRule;
-    const normalized = this.normalizeDepreciationRuleInput(body);
-    const {
-      id: _ignoredId,
-      annualSchedule: _ignoredAnnualSchedule,
-      ...orgScopedRule
-    } = normalized;
-    try {
-      const created = await delegate.create({
-        data: {
-          orgId,
-          ...orgScopedRule,
-          method:
-            normalized.method === 'straight-line' ? 'linear' : normalized.method,
-        },
-      });
-      return this.mapDepreciationRule(created);
-    } catch (error) {
-      if (this.isPrismaUniqueError(error)) {
-        throw new ConflictException(
-          `Depreciation rule for class "${normalized.assetClassKey}" already exists.`,
-        );
-      }
-      throw error;
-    }
+    return this.depreciationSupport.createDepreciationRule(orgId, body);
   }
 
   async updateDepreciationRule(
@@ -1029,78 +992,15 @@ export class V2ForecastService {
     ruleId: string,
     body: DepreciationRuleInput,
   ) {
-    const delegate = (this.prisma as any).organizationDepreciationRule;
-    const existing = await delegate.findFirst({
-      where: { id: ruleId, orgId },
-    });
-    if (!existing) {
-      return this.createDepreciationRule(orgId, {
-        assetClassKey: body.assetClassKey ?? ruleId,
-        assetClassName: body.assetClassName,
-        method: body.method ?? 'none',
-        linearYears: body.linearYears,
-        residualPercent: body.residualPercent,
-      });
-    }
-
-    const normalized = this.normalizeDepreciationRuleInput({
-      assetClassKey: body.assetClassKey ?? existing.assetClassKey,
-      assetClassName:
-        body.assetClassName !== undefined
-          ? body.assetClassName
-          : existing.assetClassName,
-      method: (body.method ?? existing.method) as DepreciationMethod,
-      linearYears:
-        body.linearYears !== undefined
-          ? body.linearYears
-          : existing.linearYears,
-      residualPercent:
-        body.residualPercent !== undefined
-          ? body.residualPercent
-          : existing.residualPercent,
-    });
-
-    try {
-      const updated = await delegate.update({
-        where: { id: ruleId },
-        data: {
-          assetClassKey: normalized.assetClassKey,
-          assetClassName: normalized.assetClassName,
-          method:
-            normalized.method === 'straight-line' ? 'linear' : normalized.method,
-          linearYears: normalized.linearYears,
-          residualPercent: normalized.residualPercent,
-        },
-      });
-      return this.mapDepreciationRule(updated);
-    } catch (error) {
-      if (this.isPrismaUniqueError(error)) {
-        throw new ConflictException(
-          `Depreciation rule for class "${normalized.assetClassKey}" already exists.`,
-        );
-      }
-      throw error;
-    }
+    return this.depreciationSupport.updateDepreciationRule(orgId, ruleId, body);
   }
 
   async deleteDepreciationRule(orgId: string, ruleId: string) {
-    const delegate = (this.prisma as any).organizationDepreciationRule;
-    const result = await delegate.deleteMany({
-      where: { id: ruleId, orgId },
-    });
-    if (result.count === 0) {
-      throw new NotFoundException('Depreciation rule not found.');
-    }
-    return { deleted: true };
+    return this.depreciationSupport.deleteDepreciationRule(orgId, ruleId);
   }
 
   async listScenarioDepreciationRules(orgId: string, scenarioId: string) {
-    const scenario = (await this.projectionsService.findById(
-      orgId,
-      scenarioId,
-    )) as any;
-    const storage = await this.ensureScenarioDepreciationStorage(orgId, scenario);
-    return storage.rules.map((rule) => this.mapScenarioDepreciationRule(rule));
+    return this.depreciationSupport.listScenarioDepreciationRules(orgId, scenarioId);
   }
 
   async createScenarioDepreciationRule(
@@ -1108,27 +1008,10 @@ export class V2ForecastService {
     scenarioId: string,
     body: DepreciationRuleInput,
   ) {
-    const scenario = (await this.projectionsService.findById(
+    return this.depreciationSupport.createScenarioDepreciationRule(
       orgId,
       scenarioId,
-    )) as any;
-    const storage = await this.ensureScenarioDepreciationStorage(orgId, scenario);
-    const normalized = this.normalizeDepreciationRuleInput(body);
-    if (storage.rules.some((rule) => rule.assetClassKey === normalized.assetClassKey)) {
-      throw new ConflictException(
-        `Depreciation rule for class "${normalized.assetClassKey}" already exists.`,
-      );
-    }
-    const nextRules = [
-      ...storage.rules,
-      {
-        ...normalized,
-        id: normalized.assetClassKey,
-      },
-    ];
-    await this.saveScenarioDepreciationRules(orgId, scenarioId, nextRules);
-    return this.mapScenarioDepreciationRule(
-      nextRules[nextRules.length - 1] as ScenarioStoredDepreciationRule,
+      body,
     );
   }
 
@@ -1138,57 +1021,11 @@ export class V2ForecastService {
     ruleId: string,
     body: DepreciationRuleInput,
   ) {
-    const scenario = (await this.projectionsService.findById(
+    return this.depreciationSupport.updateScenarioDepreciationRule(
       orgId,
       scenarioId,
-    )) as any;
-    const storage = await this.ensureScenarioDepreciationStorage(orgId, scenario);
-    const existing = storage.rules.find((rule) => rule.id === ruleId);
-    if (!existing) {
-      throw new NotFoundException('Depreciation rule not found.');
-    }
-    const normalized = this.normalizeDepreciationRuleInput({
-      assetClassKey: body.assetClassKey ?? existing.assetClassKey,
-      assetClassName:
-        body.assetClassName !== undefined
-          ? body.assetClassName
-          : existing.assetClassName,
-      method: body.method ?? existing.method,
-      linearYears:
-        body.linearYears !== undefined ? body.linearYears : existing.linearYears,
-      residualPercent:
-        body.residualPercent !== undefined
-          ? body.residualPercent
-          : existing.residualPercent,
-      annualSchedule:
-        body.annualSchedule !== undefined
-          ? body.annualSchedule
-          : existing.annualSchedule,
-    });
-    if (
-      storage.rules.some(
-        (rule) =>
-          rule.id !== ruleId && rule.assetClassKey === normalized.assetClassKey,
-      )
-    ) {
-      throw new ConflictException(
-        `Depreciation rule for class "${normalized.assetClassKey}" already exists.`,
-      );
-    }
-    const nextRules = storage.rules.map((rule) =>
-      rule.id === ruleId
-        ? {
-            ...normalized,
-            id: normalized.assetClassKey,
-          }
-        : rule,
-    );
-    const updated =
-      nextRules.find((rule) => rule.id === normalized.assetClassKey) ??
-      nextRules.find((rule) => rule.id === ruleId);
-    await this.saveScenarioDepreciationRules(orgId, scenarioId, nextRules);
-    return this.mapScenarioDepreciationRule(
-      updated as ScenarioStoredDepreciationRule,
+      ruleId,
+      body,
     );
   }
 
@@ -1197,56 +1034,15 @@ export class V2ForecastService {
     scenarioId: string,
     ruleId: string,
   ) {
-    const scenario = (await this.projectionsService.findById(
+    return this.depreciationSupport.deleteScenarioDepreciationRule(
       orgId,
       scenarioId,
-    )) as any;
-    const storage = await this.ensureScenarioDepreciationStorage(orgId, scenario);
-    const nextRules = storage.rules.filter((rule) => rule.id !== ruleId);
-    if (nextRules.length === storage.rules.length) {
-      throw new NotFoundException('Depreciation rule not found.');
-    }
-    await this.saveScenarioDepreciationRules(orgId, scenarioId, nextRules);
-    return { deleted: true };
+      ruleId,
+    );
   }
 
   async getScenarioClassAllocations(orgId: string, scenarioId: string) {
-    const scenario = (await this.projectionsService.findById(
-      orgId,
-      scenarioId,
-    )) as any;
-    const overrides = this.normalizeYearOverrides(
-      scenario?.vuosiYlikirjoitukset,
-    );
-
-    const baseYear = Number.isFinite(Number(scenario?.talousarvio?.vuosi))
-      ? Number(scenario.talousarvio.vuosi)
-      : null;
-    const horizonYears = Math.max(0, this.toNumber(scenario?.aikajaksoVuosia));
-
-    const out: Array<{
-      year: number;
-      allocations: Array<{ classKey: string; sharePct: number }>;
-    }> = [];
-
-    if (baseYear != null) {
-      for (let offset = 0; offset <= horizonYears; offset += 1) {
-        const year = baseYear + offset;
-        const allocations = this.normalizeScenarioYearAllocations(
-          (overrides[year]?.investmentClassAllocations as
-            | Record<string, unknown>
-            | undefined) ?? {},
-        );
-        if (allocations.length > 0) {
-          out.push({ year, allocations });
-        }
-      }
-    }
-
-    return {
-      scenarioId,
-      years: out,
-    };
+    return this.depreciationSupport.getScenarioClassAllocations(orgId, scenarioId);
   }
 
   async updateScenarioClassAllocations(
@@ -1254,65 +1050,11 @@ export class V2ForecastService {
     scenarioId: string,
     body: ScenarioClassAllocationInput,
   ) {
-    const scenario = (await this.projectionsService.findById(
+    return this.depreciationSupport.updateScenarioClassAllocations(
       orgId,
       scenarioId,
-    )) as any;
-    const baseYear = Number.isFinite(Number(scenario?.talousarvio?.vuosi))
-      ? Number(scenario.talousarvio.vuosi)
-      : null;
-    const horizonYears = Math.max(0, this.toNumber(scenario?.aikajaksoVuosia));
-    const lastScenarioYear =
-      baseYear == null ? null : baseYear + Math.max(0, horizonYears);
-
-    const overrides = this.normalizeYearOverrides(
-      scenario?.vuosiYlikirjoitukset,
+      body,
     );
-
-    for (const row of body.years ?? []) {
-      const year = Math.round(this.toNumber(row.year));
-      if (!Number.isFinite(year)) continue;
-
-      if (
-        baseYear != null &&
-        lastScenarioYear != null &&
-        (year < baseYear || year > lastScenarioYear)
-      ) {
-        throw new BadRequestException(
-          `Year ${year} is outside scenario range ${baseYear}-${lastScenarioYear}.`,
-        );
-      }
-
-      const allocations = this.normalizeScenarioYearAllocations(
-        this.scenarioAllocationRecordFromArray(row.allocations ?? []),
-      );
-      const payload = { ...(overrides[year] ?? {}) };
-
-      if (allocations.length === 0) {
-        delete payload.investmentClassAllocations;
-      } else {
-        payload.investmentClassAllocations = Object.fromEntries(
-          allocations.map((item) => [item.classKey, item.sharePct]),
-        );
-      }
-
-      if (Object.keys(payload).length === 0) {
-        delete overrides[year];
-      } else {
-        overrides[year] = payload;
-      }
-    }
-
-    await this.prisma.ennuste.updateMany({
-      where: { id: scenarioId, orgId },
-      data: {
-        vuosiYlikirjoitukset: overrides as unknown as Prisma.InputJsonValue,
-        computedAt: null,
-        computedFromUpdatedAt: null,
-      },
-    });
-
-    return this.getScenarioClassAllocations(orgId, scenarioId);
   }
 
   async createForecastScenario(
@@ -1326,101 +1068,7 @@ export class V2ForecastService {
       compute?: boolean;
     },
   ) {
-    const acceptedBaselineBudgetIds =
-      await this.resolveAcceptedPlanningBaselineBudgetIds(orgId);
-    const baselineBudgetId =
-      body.talousarvioId ??
-      (await this.resolveLatestAcceptedVeetiBudgetId(orgId));
-    if (!baselineBudgetId) {
-      throw new BadRequestException(
-        'No trusted baseline budget found. Complete Overview import and sync first.',
-      );
-    }
-    if (
-      body.talousarvioId &&
-      acceptedBaselineBudgetIds.length > 0 &&
-      !acceptedBaselineBudgetIds.includes(body.talousarvioId)
-    ) {
-      throw new BadRequestException(
-        'Selected baseline budget is not part of the accepted planning baseline.',
-      );
-    }
-
-    const name =
-      body.name?.trim() || this.buildDefaultScenarioName(new Date());
-    const payload: {
-      talousarvioId: string;
-      nimi: string;
-      aikajaksoVuosia: number;
-      olettamusYlikirjoitukset?: Record<string, number>;
-      userInvestments?: YearlyInvestment[];
-      vuosiYlikirjoitukset?: Record<number, Record<string, unknown>>;
-      ajuriPolut?: Record<string, unknown>;
-      onOletus?: boolean;
-    } = {
-      talousarvioId: baselineBudgetId,
-      nimi: name,
-      aikajaksoVuosia: Number.isInteger(body.horizonYears)
-        ? Number(body.horizonYears)
-        : 20,
-    };
-
-    const existingScenarios = await this.projectionsService.list(orgId);
-    const existingBaseScenario = existingScenarios.find((row: any) =>
-      Boolean(row.onOletus),
-    );
-    let sourceScenarioType: ScenarioType | null = null;
-
-    if (body.copyFromScenarioId) {
-      const source = (await this.projectionsService.findById(
-        orgId,
-        body.copyFromScenarioId,
-      )) as any;
-      sourceScenarioType = this.resolveScenarioType(
-        source?.olettamusYlikirjoitukset,
-        Boolean(source?.onOletus),
-      );
-      const normalized = this.normalizeUserInvestments(source?.userInvestments);
-      payload.userInvestments = normalized;
-      const sourceAssumptionOverrides = this.normalizeAssumptionOverrides(
-        source?.olettamusYlikirjoitukset,
-      );
-      if (Object.keys(sourceAssumptionOverrides).length > 0) {
-        payload.olettamusYlikirjoitukset = sourceAssumptionOverrides;
-      }
-      const sourceBaseYear = Number.isFinite(Number(source?.talousarvio?.vuosi))
-        ? Number(source.talousarvio.vuosi)
-        : null;
-      const sourceNearTerm = this.extractExplicitNearTermExpenseAssumptions(
-        sourceBaseYear,
-        source?.vuosiYlikirjoitukset,
-      );
-      payload.vuosiYlikirjoitukset = this.buildYearOverrides(
-        normalized,
-        sourceNearTerm,
-        source?.vuosiYlikirjoitukset,
-      );
-    }
-
-    const scenarioType = this.resolveScenarioTypeForCreate({
-      requestedScenarioType: body.scenarioType,
-      existingBaseScenarioExists: Boolean(existingBaseScenario),
-      sourceScenarioType,
-    });
-    if (scenarioType === 'base') {
-      payload.onOletus = true;
-    }
-    payload.olettamusYlikirjoitukset = this.withScenarioTypeOverride(
-      payload.olettamusYlikirjoitukset,
-      scenarioType,
-    );
-
-    const created = await this.projectionsService.create(orgId, payload);
-    if (body.compute !== false) {
-      await this.projectionsService.compute(orgId, created.id);
-    }
-
-    return this.getForecastScenario(orgId, created.id);
+    return this.scenarioSupport.createForecastScenario(orgId, body);
   }
 
   async getForecastScenario(orgId: string, scenarioId: string) {
@@ -1453,159 +1101,15 @@ export class V2ForecastService {
       };
     },
   ) {
-    const current = (await this.projectionsService.findById(
-      orgId,
-      scenarioId,
-    )) as any;
-    const scenarioDepreciationStorage =
-      await this.ensureScenarioDepreciationStorage(orgId, current);
-    const update: {
-      nimi?: string;
-      aikajaksoVuosia?: number;
-      olettamusYlikirjoitukset?: Record<string, number>;
-      userInvestments?: YearlyInvestment[];
-      vuosiYlikirjoitukset?: Record<number, Record<string, unknown>>;
-      computedAt?: Date | null;
-      computedFromUpdatedAt?: Date | null;
-    } = {};
-
-    if (body.name !== undefined) update.nimi = body.name;
-    if (body.horizonYears !== undefined)
-      update.aikajaksoVuosia = body.horizonYears;
-    const assumptionOverrides = this.normalizeAssumptionOverrides(
-      current?.olettamusYlikirjoitukset,
-    );
-    if (body.scenarioAssumptions) {
-      const scenarioAssumptions = this.normalizeScenarioAssumptionOverrides(
-        body.scenarioAssumptions,
-      );
-      for (const [key, value] of Object.entries(scenarioAssumptions)) {
-        assumptionOverrides[key] = value;
-      }
-    }
-    if (body.thereafterExpenseAssumptions) {
-      const thereafter = this.normalizeThereafterExpenseAssumptions(
-        body.thereafterExpenseAssumptions,
-      );
-      assumptionOverrides.henkilostokerroin = this.round2(
-        thereafter.personnelPct / 100,
-      );
-      assumptionOverrides.energiakerroin = this.round2(
-        thereafter.energyPct / 100,
-      );
-      assumptionOverrides.inflaatio = this.round2(
-        thereafter.opexOtherPct / 100,
-      );
-    }
-    if (body.scenarioType !== undefined) {
-      const currentScenarioType = this.resolveScenarioType(
-        current?.olettamusYlikirjoitukset,
-        Boolean(current?.onOletus),
-      );
-      const nextScenarioType = this.normalizeScenarioType(body.scenarioType);
-      if (current?.onOletus) {
-        if (nextScenarioType !== 'base') {
-          throw new BadRequestException(
-            'Base scenario type cannot be changed.',
-          );
-        }
-      } else {
-        if (nextScenarioType === 'base') {
-          throw new BadRequestException(
-            'Use the default scenario as the base branch.',
-          );
-        }
-      }
-      if (nextScenarioType !== currentScenarioType) {
-        Object.assign(
-          assumptionOverrides,
-          this.withScenarioTypeOverride(assumptionOverrides, nextScenarioType),
-        );
-      }
-    }
-    update.olettamusYlikirjoitukset = assumptionOverrides;
-
-    const normalizedInvestments = Array.isArray(body.yearlyInvestments)
-      ? this.normalizeUserInvestments(body.yearlyInvestments)
-      : this.normalizeUserInvestments(current.userInvestments);
-    const currentInvestmentByRowId = new Map(
-      this.normalizeUserInvestments(current.userInvestments).map((row) => [
-        row.rowId ?? String(row.year),
-        row,
-      ]),
-    );
-    const scenarioRuleByKey = new Map(
-      scenarioDepreciationStorage.rules.map((rule) => [rule.assetClassKey, rule] as const),
-    );
-    const enrichedInvestments = normalizedInvestments.map((row) => {
-      if (!row.depreciationClassKey) {
-        return { ...row, depreciationRuleSnapshot: null };
-      }
-      const currentRow = currentInvestmentByRowId.get(
-        row.rowId ?? String(row.year),
-      );
-      if (
-        currentRow?.depreciationRuleSnapshot &&
-        currentRow.depreciationClassKey === row.depreciationClassKey
-      ) {
-        return {
-          ...row,
-          depreciationRuleSnapshot: currentRow.depreciationRuleSnapshot,
-        };
-      }
-      const matchingRule = scenarioRuleByKey.get(row.depreciationClassKey);
-      return {
-        ...row,
-        depreciationRuleSnapshot: matchingRule
-          ? this.snapshotDepreciationRule(matchingRule)
-          : null,
-      };
-    });
-
-    const baseYear = Number.isFinite(Number(current?.talousarvio?.vuosi))
-      ? Number(current.talousarvio.vuosi)
-      : null;
-    const nearTermExpenseAssumptions = Array.isArray(
-      body.nearTermExpenseAssumptions,
-    )
-      ? this.normalizeNearTermExpenseAssumptions(
-          body.nearTermExpenseAssumptions,
-          baseYear,
-        )
-      : this.extractExplicitNearTermExpenseAssumptions(
-          baseYear,
-          current?.vuosiYlikirjoitukset,
-        );
-
-    update.userInvestments = enrichedInvestments;
-    update.vuosiYlikirjoitukset = this.buildYearOverrides(
-      enrichedInvestments,
-      nearTermExpenseAssumptions,
-      current?.vuosiYlikirjoitukset,
-    );
-    update.computedAt = null;
-    update.computedFromUpdatedAt = null;
-
-    await this.projectionsService.update(orgId, scenarioId, update);
-    await this.prisma.ennuste.updateMany({
-      where: { id: scenarioId, orgId },
-      data: {
-        ajuriPolut: Prisma.JsonNull,
-        computedAt: null,
-        computedFromUpdatedAt: null,
-      },
-    });
-    return this.getForecastScenario(orgId, scenarioId);
+    return this.scenarioSupport.updateForecastScenario(orgId, scenarioId, body);
   }
 
   async deleteForecastScenario(orgId: string, scenarioId: string) {
-    return this.projectionsService.delete(orgId, scenarioId);
+    return this.scenarioSupport.deleteForecastScenario(orgId, scenarioId);
   }
 
   async computeForecastScenario(orgId: string, scenarioId: string) {
-    await this.updateForecastScenario(orgId, scenarioId, {});
-    await this.projectionsService.compute(orgId, scenarioId);
-    return this.getForecastScenario(orgId, scenarioId);
+    return this.computationSupport.computeForecastScenario(orgId, scenarioId);
   }
 
 

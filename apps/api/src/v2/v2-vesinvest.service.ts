@@ -626,16 +626,20 @@ export class V2VesinvestService {
       });
       scenarioId = created.id;
     }
+    const linkedScenarioId = scenarioId;
+    if (!linkedScenarioId) {
+      throw new BadRequestException('Linked scenario could not be resolved.');
+    }
 
-    await this.forecastService.updateForecastScenario(orgId, scenarioId, {
+    await this.forecastService.updateForecastScenario(orgId, linkedScenarioId, {
       name: `${plan.name} v${plan.versionNumber}`,
       horizonYears: plan.horizonYears,
       yearlyInvestments,
     });
 
     const scenario = compute
-      ? await this.forecastService.computeForecastScenario(orgId, scenarioId)
-      : await this.forecastService.getForecastScenario(orgId, scenarioId);
+      ? await this.forecastService.computeForecastScenario(orgId, linkedScenarioId)
+      : await this.forecastService.getForecastScenario(orgId, linkedScenarioId);
     const scenarioFingerprint = computeVesinvestScenarioFingerprint({
       scenarioId: scenario.id,
       updatedAt: scenario.updatedAt,
@@ -709,7 +713,7 @@ export class V2VesinvestService {
       this.getOptionalBoundUtilityIdentity(orgId),
     ]);
     const baselineYears = Array.isArray(planningContext?.baselineYears)
-      ? planningContext.baselineYears.map((row) => ({
+      ? planningContext.baselineYears.map((row: any) => ({
           year: row.year,
           planningRole: row.planningRole ?? null,
           quality: row.quality,
@@ -1762,7 +1766,7 @@ export class V2VesinvestService {
       scenarioFingerprint,
       baselineCombinedPrice: scenario.baselinePriceTodayCombined,
       totalInvestments: investmentSeries.reduce(
-        (sum, item) => sum + this.toNumber(item.amount),
+        (sum: number, item: any) => sum + this.toNumber(item.amount),
         0,
       ),
       combined: {
@@ -1784,14 +1788,14 @@ export class V2VesinvestService {
       },
       water: {
         currentPrice: firstYear?.waterPrice ?? null,
-        forecastPath: priceSeries.map((item) => ({
+        forecastPath: priceSeries.map((item: any) => ({
           year: item.year,
           price: item.waterPrice,
         })),
       },
       wastewater: {
         currentPrice: firstYear?.wastewaterPrice ?? null,
-        forecastPath: priceSeries.map((item) => ({
+        forecastPath: priceSeries.map((item: any) => ({
           year: item.year,
           price: item.wastewaterPrice,
         })),
@@ -1800,7 +1804,7 @@ export class V2VesinvestService {
         currentRevenue: firstYear?.baseFeeRevenue ?? null,
         connectionCount: firstYear?.connectionCount ?? null,
       },
-      annualResults: years.map((item) => ({
+      annualResults: years.map((item: any) => ({
         year: item.year,
         result: item.result,
         cashflow: item.cashflow,

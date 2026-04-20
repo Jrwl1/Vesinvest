@@ -18,7 +18,7 @@ import {
   useDemoEntryState,
   useDemoStatus,
 } from './context/DemoStatusContext';
-import './App.css';
+import './app-entry.css';
 
 const OVERVIEW_RUNTIME_STORAGE_KEY = 'v2_overview_runtime_state';
 

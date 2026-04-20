@@ -1,4 +1,13 @@
 import { V2ForecastService } from './v2-forecast.service';
+import {
+  registerV2DepreciationCompatibilitySuite,
+  registerV2FeeSufficiencyHelpersSuite,
+  registerV2ForecastStarterContractSuite,
+  registerV2ScenarioAssumptionOverrideSuite,
+  registerV2ScenarioBranchCompatibilitySuite,
+  registerV2ScenarioMergeSafetySuite,
+  registerV2StructuredInvestmentCompatibilitySuite,
+} from './test-support/v2ServiceLegacySuites';
 
 const ORG_ID = 'org-1';
 const SCENARIO_ID = 'scenario-1';
@@ -176,3 +185,11 @@ describe('V2ForecastService helper behavior', () => {
     expect(result).toBe(11);
   });
 });
+
+registerV2DepreciationCompatibilitySuite();
+registerV2ScenarioMergeSafetySuite();
+registerV2StructuredInvestmentCompatibilitySuite();
+registerV2ScenarioAssumptionOverrideSuite();
+registerV2ForecastStarterContractSuite();
+registerV2ScenarioBranchCompatibilitySuite();
+registerV2FeeSufficiencyHelpersSuite();

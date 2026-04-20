@@ -1,4 +1,5 @@
 import { V2ReportService } from './v2-report.service';
+import { registerV2ReportVariantRegressionSuite } from './test-support/v2ServiceLegacySuites';
 
 const buildReportService = () =>
   new V2ReportService(
@@ -109,3 +110,5 @@ describe('V2ReportService collaborator helpers', () => {
     });
   });
 });
+
+registerV2ReportVariantRegressionSuite();

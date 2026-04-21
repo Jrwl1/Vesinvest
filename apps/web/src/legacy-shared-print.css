@@ -160,7 +160,7 @@
     overflow: visible !important;
   }
 
-  /* Print footer with page number Ã¢â‚¬â€ browser controlled */
+  /* Print footer with page number - browser controlled */
   @page {
     margin: 15mm 10mm;
     @bottom-center {

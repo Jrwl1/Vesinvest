@@ -1,5 +1,7 @@
-import fs from "node:fs/promises";
-import path from "node:path";
+import {
+  cleanupTempEngineFiles,
+  listTempEngineFiles,
+} from "../apps/api/scripts/prisma-client-health.mjs";
 
 async function main() {
   if (process.platform !== "win32") {
@@ -7,27 +9,7 @@ async function main() {
     return;
   }
 
-  const clientDir = path.join(
-    process.cwd(),
-    "node_modules",
-    ".pnpm",
-    "@prisma+client@5.22.0_prisma@5.22.0",
-    "node_modules",
-    ".prisma",
-    "client"
-  );
-
-  let entries = [];
-  try {
-    entries = await fs.readdir(clientDir);
-  } catch {
-    console.log("[prisma-lock] Prisma client directory not found, skipping");
-    return;
-  }
-
-  const tempEngines = entries.filter((name) =>
-    name.startsWith("query_engine-windows.dll.node.tmp")
-  );
+  const tempEngines = await listTempEngineFiles();
 
   if (tempEngines.length === 0) {
     console.log("[prisma-lock] OK");
@@ -35,19 +17,16 @@ async function main() {
   }
 
   console.warn("[prisma-lock] Detected stale Prisma engine temp files, attempting cleanup:");
-  const failed = [];
-  for (const item of tempEngines) {
-    const target = path.join(clientDir, item);
-    try {
-      await fs.unlink(target);
-      console.warn(` - removed ${item}`);
-    } catch (error) {
-      failed.push({ item, error });
+  const cleanup = await cleanupTempEngineFiles();
+  for (const item of cleanup.tempFiles) {
+    if (cleanup.failed.some((failedItem) => failedItem.fileName === item)) {
       console.error(` - failed to remove ${item}`);
+      continue;
     }
+    console.warn(` - removed ${item}`);
   }
 
-  if (failed.length > 0) {
+  if (cleanup.failed.length > 0) {
     console.error(
       "[prisma-lock] Close Node processes and delete stale query_engine*.tmp files before build."
     );

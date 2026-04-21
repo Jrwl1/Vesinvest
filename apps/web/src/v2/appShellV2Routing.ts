@@ -30,8 +30,16 @@ export type OrgLanguageNotice = {
   previousLanguage: 'fi' | 'sv' | 'en';
 };
 
+let overviewPageModulePromise: Promise<typeof import('./OverviewPageV2')> | null = null;
 let ennustePageModulePromise: Promise<typeof import('./EnnustePageV2')> | null = null;
 let reportsPageModulePromise: Promise<typeof import('./ReportsPageV2')> | null = null;
+
+function loadOverviewPageModule() {
+  if (!overviewPageModulePromise) {
+    overviewPageModulePromise = import('./OverviewPageV2');
+  }
+  return overviewPageModulePromise;
+}
 
 function loadEnnustePageModule() {
   if (!ennustePageModulePromise) {
@@ -46,6 +54,11 @@ function loadReportsPageModule() {
   }
   return reportsPageModulePromise;
 }
+
+export const OverviewPageV2 = React.lazy(async () => {
+  const mod = await loadOverviewPageModule();
+  return { default: mod.OverviewPageV2 };
+});
 
 export const EnnustePageV2 = React.lazy(async () => {
   const mod = await loadEnnustePageModule();

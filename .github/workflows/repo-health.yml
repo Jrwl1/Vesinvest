@@ -1,0 +1,72 @@
+name: Repo Health
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  ubuntu-health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Repo health
+        run: pnpm check:repo-health
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Focused web seams
+        run: pnpm smoke:v2
+      - name: Focused API seams
+        run: >
+          pnpm --filter ./apps/api test --
+          src/projections/projection-engine.spec.ts
+          src/v2/v2-report-pdf.spec.ts
+          src/v2/v2-import-overview.service.spec.ts
+          src/v2/v2-forecast.service.spec.ts
+          src/v2/v2-report.service.spec.ts
+          src/v2/v2.service.spec.ts
+      - name: Web build
+        run: pnpm --filter ./apps/web build
+      - name: Web bundle shape
+        run: pnpm check:web-bundle-shape
+
+  windows-api-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Prisma lock preflight
+        run: pnpm check:prisma-lock
+      - name: Focused API suites
+        run: >
+          pnpm --filter ./apps/api test --
+          src/projections/projection-engine.spec.ts
+          src/v2/v2-report-pdf.spec.ts
+          src/v2/v2-import-overview.service.spec.ts
+          src/v2/v2-forecast.service.spec.ts
+          src/v2/v2-report.service.spec.ts
+          src/v2/v2.service.spec.ts
+      - name: Upload security suite
+        run: pnpm --filter ./apps/api test:upload-security
+      - name: API build
+        run: pnpm --filter ./apps/api build

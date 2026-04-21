@@ -40,7 +40,7 @@ import {
 import {
   getDocumentImportSelectedPageNumbers,
   getDocumentImportSelectedSourceLines,
-} from './documentPdfImport';
+} from './documentPdfImportModel';
 import { sendV2OpsEvent } from './opsTelemetry';
 import { buildOverviewManualPatchPayload } from './overviewManualPatchPayload';
 import { saveOverviewInlineCardEdit } from './overviewManualPatchSave';

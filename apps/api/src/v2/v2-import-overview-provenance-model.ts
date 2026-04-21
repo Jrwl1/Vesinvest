@@ -251,7 +251,7 @@ export function createV2ImportOverviewProvenanceModel(
         });
       }
 
-      if (/[ÃƒÃ‚Ã¢]/.test(out)) {
+      if (/[\u00c3\u00c2\u00e2]/.test(out)) {
         const recovered = Buffer.from(out, 'latin1').toString('utf8');
         if (this.looksRecoveredText(recovered, out)) {
           out = recovered;
@@ -286,7 +286,7 @@ export function createV2ImportOverviewProvenanceModel(
     },
 
     looksRecoveredText(candidate: string, original: string): boolean {
-      const badPattern = /Ãƒ|Ã‚|Ã¢/;
+      const badPattern = /[\u00c3\u00c2\u00e2]/;
       if (badPattern.test(candidate)) return false;
       const candidateScore = (candidate.match(/[A-Za-z0-9\u00C0-\u017F]/g) ?? [])
         .length;

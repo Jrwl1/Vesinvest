@@ -87,7 +87,7 @@ export const STATEMENT_PREVIEW_FIELDS: Array<{
   },
   {
     key: 'tilikaudenYliJaama',
-    label: 'Tilikauden ylijÃ¤Ã¤mÃ¤/alijÃ¤Ã¤mÃ¤',
+    label: 'Tilikauden ylij\u00e4\u00e4m\u00e4/alij\u00e4\u00e4m\u00e4',
     sourceField: 'TilikaudenYliJaama',
   },
   {
@@ -97,7 +97,7 @@ export const STATEMENT_PREVIEW_FIELDS: Array<{
   },
   {
     key: 'omistajanTukiKayttokustannuksiin',
-    label: 'Omistajan tuki kÃ¤yttÃ¶kustannuksiin',
+    label: 'Omistajan tuki k\u00e4ytt\u00f6kustannuksiin',
     sourceField: 'OmistajanTukiKayttokustannuksiin',
   },
 ];

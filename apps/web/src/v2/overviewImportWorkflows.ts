@@ -8,7 +8,7 @@ import {
   type V2ManualYearPatchPayload,
   type V2WorkbookPreviewResponse,
 } from '../api';
-import type { DocumentImportPreview } from './documentPdfImport';
+import type { DocumentImportPreview } from './documentPdfImportModel';
 import type { QdisFieldKey, QdisFieldMatch } from './qdisPdfImport';
 import type { StatementOcrMatch } from './statementOcrParse';
 import {

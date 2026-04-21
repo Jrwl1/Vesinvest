@@ -1,25 +1,38 @@
 import React from 'react';
 import { type V2WorkbookPreviewResponse } from '../api';
 import { formatEur } from './format';
-import { OverviewImportBoard } from './OverviewImportBoard';
-import { OverviewReviewBoard } from './OverviewReviewBoard';
 import {
   OverviewConnectStep,
   OverviewForecastHandoffStep,
   OverviewPlanningBaselineStep,
 } from './OverviewWizardPanels';
-import {
-  VesinvestPlanningPanel,
-  type VesinvestOverviewFocusTarget,
-} from './VesinvestPlanningPanel';
-import { OverviewWorkbookImportWorkflow } from './OverviewWorkbookImportWorkflow';
 import { OverviewSupportRail } from './OverviewSupportRail';
-import { OverviewManualPatchPanel } from './OverviewManualPatchPanel';
 import { buildOverviewManualPatchViewModel } from './overviewManualPatchModel';
 import { type SetupWizardState } from './overviewWorkflow';
 import { buildOverviewPageViewModel } from './overviewPageViewModel';
-
 import { useOverviewPageController } from './useOverviewPageController';
+import type { Props as OverviewWorkbookImportWorkflowProps } from './OverviewWorkbookImportWorkflow';
+import type { VesinvestOverviewFocusTarget } from './VesinvestPlanningPanel';
+
+const OverviewImportBoard = React.lazy(async () => {
+  const mod = await import('./OverviewImportBoard');
+  return { default: mod.OverviewImportBoard };
+});
+
+const OverviewReviewBoard = React.lazy(async () => {
+  const mod = await import('./OverviewReviewBoard');
+  return { default: mod.OverviewReviewBoard };
+});
+
+const OverviewManualPatchPanel = React.lazy(async () => {
+  const mod = await import('./OverviewManualPatchPanel');
+  return { default: mod.OverviewManualPatchPanel };
+});
+
+const VesinvestPlanningPanel = React.lazy(async () => {
+  const mod = await import('./VesinvestPlanningPanel');
+  return { default: mod.VesinvestPlanningPanel };
+});
 type Props = {
   onGoToForecast: (scenarioId?: string | null) => void;
   onGoToReports: () => void;
@@ -90,7 +103,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     loading,
     setLoading,
     error,
-    setError,
     info,
     setInfo,
     query,
@@ -437,46 +449,50 @@ export const OverviewPageV2: React.FC<Props> = ({
     mountedWorkflowStep === 2 || showSimplifiedPostChoiceSetup;
   const importYearsSurface =
     showImportYearsSurface ? (
-      <OverviewImportBoard
-        t={t}
-        workflowStep={isManageYearsMaintenanceMode ? 3 : overviewVisualStep}
-        mode={isManageYearsMaintenanceMode ? 'manage' : 'import'}
-        wizardBackLabel={wizardBackLabel}
-        onBack={handleWizardBack}
-        selectedYears={selectedYears}
-        syncing={syncing}
-        readyRows={readyTrustBoardRows}
-        suspiciousRows={suspiciousTrustBoardRows}
-        blockedRows={blockedTrustBoardRows}
-        trashbinRows={trashbinTrustBoardRows}
-        currentYearEstimateRows={currentYearEstimateBoardRows}
-        confirmedImportedYears={confirmedImportedYears}
-        yearDataCache={yearDataCache}
-        cardEditYear={cardEditYear}
-        cardEditContext={cardEditContext}
-        cardEditFocusField={cardEditFocusField}
-        isAdmin={isAdmin}
-        renderStep2InlineFieldEditor={renderStep2InlineFieldEditor}
-        buildRepairActions={buildRepairActions}
-        sourceStatusLabel={sourceStatusLabel}
-        sourceStatusClassName={sourceStatusClassName}
-        sourceLayerText={sourceLayerText}
-        renderDatasetCounts={renderDatasetCounts}
-        missingRequirementLabel={missingRequirementLabel}
-        attemptOpenInlineCardEditor={attemptOpenInlineCardEditor}
-        openInlineCardEditor={openInlineCardEditor}
-        loadingYearData={loadingYearData}
-        manualPatchError={manualPatchError}
-        blockedYearCount={blockedYearCount}
-        removingYear={removingYear}
-        onToggleYear={(year) => toggleYear(year, null)}
-        onImportYears={handleImportYears}
-        onAddCurrentYearEstimate={handleAddCurrentYearEstimate}
-        onTrashYear={(year) => void excludeYearFromImportBoard(year)}
-        onRestoreYear={(year) => void restoreYearFromImportBoard(year)}
-        importYearsButtonClass={importYearsButtonClass}
-        importingYears={importingYears}
-      />
+      <React.Suspense
+        fallback={<div className="v2-loading">{t('common.loading', 'Loading...')}</div>}
+      >
+        <OverviewImportBoard
+          t={t}
+          workflowStep={isManageYearsMaintenanceMode ? 3 : overviewVisualStep}
+          mode={isManageYearsMaintenanceMode ? 'manage' : 'import'}
+          wizardBackLabel={wizardBackLabel}
+          onBack={handleWizardBack}
+          selectedYears={selectedYears}
+          syncing={syncing}
+          readyRows={readyTrustBoardRows}
+          suspiciousRows={suspiciousTrustBoardRows}
+          blockedRows={blockedTrustBoardRows}
+          trashbinRows={trashbinTrustBoardRows}
+          currentYearEstimateRows={currentYearEstimateBoardRows}
+          confirmedImportedYears={confirmedImportedYears}
+          yearDataCache={yearDataCache}
+          cardEditYear={cardEditYear}
+          cardEditContext={cardEditContext}
+          cardEditFocusField={cardEditFocusField}
+          isAdmin={isAdmin}
+          renderStep2InlineFieldEditor={renderStep2InlineFieldEditor}
+          buildRepairActions={buildRepairActions}
+          sourceStatusLabel={sourceStatusLabel}
+          sourceStatusClassName={sourceStatusClassName}
+          sourceLayerText={sourceLayerText}
+          renderDatasetCounts={renderDatasetCounts}
+          missingRequirementLabel={missingRequirementLabel}
+          attemptOpenInlineCardEditor={attemptOpenInlineCardEditor}
+          openInlineCardEditor={openInlineCardEditor}
+          loadingYearData={loadingYearData}
+          manualPatchError={manualPatchError}
+          blockedYearCount={blockedYearCount}
+          removingYear={removingYear}
+          onToggleYear={(year) => toggleYear(year, null)}
+          onImportYears={handleImportYears}
+          onAddCurrentYearEstimate={handleAddCurrentYearEstimate}
+          onTrashYear={(year) => void excludeYearFromImportBoard(year)}
+          onRestoreYear={(year) => void restoreYearFromImportBoard(year)}
+          importYearsButtonClass={importYearsButtonClass}
+          importingYears={importingYears}
+        />
+      </React.Suspense>
     ) : null;
   const heroGrid = useSupportRail ? (
     <OverviewSupportRail
@@ -498,32 +514,36 @@ export const OverviewPageV2: React.FC<Props> = ({
     overviewFocusTarget != null;
 
   const planningPanelContent = (
-    <VesinvestPlanningPanel
-      t={t}
-      isAdmin={isAdmin}
-      simplifiedSetup={showSimplifiedPostChoiceSetup}
-      compactReviewMode={shouldCompactPlanningPanel}
-      planningContext={planningContext}
-      linkedOrg={overview?.importStatus.link ?? null}
-      onGoToForecast={onGoToForecast}
-      onGoToReports={_onGoToReports}
-      overviewFocusTarget={overviewFocusTarget}
-      onOverviewFocusTargetConsumed={() => {
-        if (collapsePlanningPanelInSetup) {
-          setCollapsedPlanningPanelOpenStep(overviewVisualStep);
+    <React.Suspense
+      fallback={<div className="v2-loading">{t('common.loading', 'Loading...')}</div>}
+    >
+      <VesinvestPlanningPanel
+        t={t}
+        isAdmin={isAdmin}
+        simplifiedSetup={showSimplifiedPostChoiceSetup}
+        compactReviewMode={shouldCompactPlanningPanel}
+        planningContext={planningContext}
+        linkedOrg={overview?.importStatus.link ?? null}
+        onGoToForecast={onGoToForecast}
+        onGoToReports={_onGoToReports}
+        overviewFocusTarget={overviewFocusTarget}
+        onOverviewFocusTargetConsumed={() => {
+          if (collapsePlanningPanelInSetup) {
+            setCollapsedPlanningPanelOpenStep(overviewVisualStep);
+          }
+          onOverviewFocusTargetConsumed?.();
+        }}
+        onSavedFeePathReportConflict={onSavedFeePathReportConflict}
+        onPlansChanged={() =>
+          loadOverview({
+            preserveVisibleState: true,
+            preserveSelectionState: true,
+            preserveReviewContinueStep: true,
+            refreshPlanningContext: true,
+          })
         }
-        onOverviewFocusTargetConsumed?.();
-      }}
-      onSavedFeePathReportConflict={onSavedFeePathReportConflict}
-      onPlansChanged={() =>
-        loadOverview({
-          preserveVisibleState: true,
-          preserveSelectionState: true,
-          preserveReviewContinueStep: true,
-          refreshPlanningContext: true,
-        })
-      }
-    />
+      />
+    </React.Suspense>
   );
   const planningPanel = shouldShowVesinvestPanel ? (
     <div
@@ -596,81 +616,91 @@ export const OverviewPageV2: React.FC<Props> = ({
         hidden
       />
 
-      <OverviewManualPatchPanel
-        controller={controller}
-        manualPatchViewModel={manualPatchViewModel}
-        workbookImportWorkflowProps={workbookImportWorkflowProps}
-      />
+      {(wizardDisplayStep === 4 || wizardDisplayStep === 6) &&
+      manualPatchYear != null &&
+      cardEditContext !== 'step3' ? (
+        <React.Suspense fallback={null}>
+          <OverviewManualPatchPanel
+            controller={controller}
+            manualPatchViewModel={manualPatchViewModel}
+            workbookImportWorkflowProps={workbookImportWorkflowProps}
+          />
+        </React.Suspense>
+      ) : null}
       {!showSimplifiedPostChoiceSetup &&
       (mountedWorkflowStep === 3 || mountedWorkflowStep === 4) ? (
-        <OverviewReviewBoard
-          t={t}
-          workflowStep={overviewVisualStep}
-          wizardBackLabel={wizardBackLabel}
-          onBack={handleWizardBack}
-          reviewStatusRows={reviewStatusRows}
-          yearDataCache={yearDataCache}
-          cardEditContext={cardEditContext}
-          cardEditYear={cardEditYear}
-          manualPatchYear={manualPatchYear}
-          renderYearValuePreview={renderYearValuePreview}
-          sourceStatusClassName={sourceStatusClassName}
-          sourceStatusLabel={sourceStatusLabel}
-          setupStatusClassName={setupStatusClassName}
-          setupStatusLabel={setupStatusLabel}
-          yearStatusRowClassName={yearStatusRowClassName}
-          importWarningLabel={importWarningLabel}
-          missingRequirementLabel={missingRequirementLabel}
-          isAdmin={isAdmin}
-          buildRepairActions={buildRepairActions}
-          openInlineCardEditor={openInlineCardEditor}
-          saveReviewWorkspaceYear={saveReviewWorkspaceYear}
-          manualPatchMode={manualPatchMode}
-          manualPatchBusy={manualPatchBusy}
-          manualPatchError={manualPatchError}
-          documentImportBusy={documentImportBusy}
-          documentImportStatus={documentImportStatus}
-          documentImportError={documentImportError}
-          documentImportPreview={documentImportPreview}
-          documentImportReviewedKeys={controller.documentImportReviewedKeys}
-          handleSelectDocumentImportMatch={controller.handleSelectDocumentImportMatch}
-          isCurrentYearReadyForReview={manualPatchViewModel.isCurrentYearReadyForReview}
-          isManualYearExcluded={manualPatchViewModel.isManualYearExcluded}
-          canReapplyFinancialVeetiForYear={manualPatchViewModel.canReapplyFinancialVeetiForYear}
-          canReapplyPricesForYear={manualPatchViewModel.canReapplyPricesForYear}
-          canReapplyVolumesForYear={manualPatchViewModel.canReapplyVolumesForYear}
-          keepYearButtonClass={manualPatchViewModel.keepYearButtonClass}
-          fixYearButtonClass={manualPatchViewModel.fixYearButtonClass}
-          handleKeepCurrentYearValues={handleKeepCurrentYearValues}
-          handleSwitchToManualEditMode={handleSwitchToManualEditMode}
-          handleSwitchToDocumentImportMode={handleSwitchToDocumentImportMode}
-          handleSwitchToWorkbookImportMode={handleSwitchToWorkbookImportMode}
-          handleRestoreManualYearToPlan={handleRestoreManualYearToPlan}
-          handleExcludeManualYearFromPlan={handleExcludeManualYearFromPlan}
-          handleModalApplyVeetiFinancials={handleModalApplyVeetiFinancials}
-          handleModalApplyVeetiPrices={handleModalApplyVeetiPrices}
-          handleModalApplyVeetiVolumes={handleModalApplyVeetiVolumes}
-          closeInlineCardEditor={closeInlineCardEditor}
-          workbookImportBusy={workbookImportBusy}
-          canConfirmImportWorkflow={canConfirmImportWorkflow}
-          isInlineCardDirty={isInlineCardDirty}
-          documentFileInputRef={documentFileInputRef}
-          setInlineCardFieldRef={setInlineCardFieldRef}
-          manualFinancials={manualFinancials}
-          setManualFinancials={setManualFinancials}
-          manualPrices={manualPrices}
-          setManualPrices={setManualPrices}
-          manualVolumes={manualVolumes}
-          setManualVolumes={setManualVolumes}
-          markManualFieldTouched={markManualFieldTouched}
-          saveInlineCardEdit={saveInlineCardEdit}
-          workbookImportWorkflowProps={workbookImportWorkflowProps}
-          reviewContinueButtonClass={reviewContinueButtonClass}
-          onContinueFromReview={handleContinueFromReview}
-          importedBlockedYearCount={importedBlockedYearCount}
-          pendingReviewYearCount={pendingReviewYearCount}
-          technicalReadyYearsLabel={technicalReadyYearsLabel}
-        />
+        <React.Suspense
+          fallback={<div className="v2-loading">{t('common.loading', 'Loading...')}</div>}
+        >
+          <OverviewReviewBoard
+            t={t}
+            workflowStep={overviewVisualStep}
+            wizardBackLabel={wizardBackLabel}
+            onBack={handleWizardBack}
+            reviewStatusRows={reviewStatusRows}
+            yearDataCache={yearDataCache}
+            cardEditContext={cardEditContext}
+            cardEditYear={cardEditYear}
+            manualPatchYear={manualPatchYear}
+            renderYearValuePreview={renderYearValuePreview}
+            sourceStatusClassName={sourceStatusClassName}
+            sourceStatusLabel={sourceStatusLabel}
+            setupStatusClassName={setupStatusClassName}
+            setupStatusLabel={setupStatusLabel}
+            yearStatusRowClassName={yearStatusRowClassName}
+            importWarningLabel={importWarningLabel}
+            missingRequirementLabel={missingRequirementLabel}
+            isAdmin={isAdmin}
+            buildRepairActions={buildRepairActions}
+            openInlineCardEditor={openInlineCardEditor}
+            saveReviewWorkspaceYear={saveReviewWorkspaceYear}
+            manualPatchMode={manualPatchMode}
+            manualPatchBusy={manualPatchBusy}
+            manualPatchError={manualPatchError}
+            documentImportBusy={documentImportBusy}
+            documentImportStatus={documentImportStatus}
+            documentImportError={documentImportError}
+            documentImportPreview={documentImportPreview}
+            documentImportReviewedKeys={controller.documentImportReviewedKeys}
+            handleSelectDocumentImportMatch={controller.handleSelectDocumentImportMatch}
+            isCurrentYearReadyForReview={manualPatchViewModel.isCurrentYearReadyForReview}
+            isManualYearExcluded={manualPatchViewModel.isManualYearExcluded}
+            canReapplyFinancialVeetiForYear={manualPatchViewModel.canReapplyFinancialVeetiForYear}
+            canReapplyPricesForYear={manualPatchViewModel.canReapplyPricesForYear}
+            canReapplyVolumesForYear={manualPatchViewModel.canReapplyVolumesForYear}
+            keepYearButtonClass={manualPatchViewModel.keepYearButtonClass}
+            fixYearButtonClass={manualPatchViewModel.fixYearButtonClass}
+            handleKeepCurrentYearValues={handleKeepCurrentYearValues}
+            handleSwitchToManualEditMode={handleSwitchToManualEditMode}
+            handleSwitchToDocumentImportMode={handleSwitchToDocumentImportMode}
+            handleSwitchToWorkbookImportMode={handleSwitchToWorkbookImportMode}
+            handleRestoreManualYearToPlan={handleRestoreManualYearToPlan}
+            handleExcludeManualYearFromPlan={handleExcludeManualYearFromPlan}
+            handleModalApplyVeetiFinancials={handleModalApplyVeetiFinancials}
+            handleModalApplyVeetiPrices={handleModalApplyVeetiPrices}
+            handleModalApplyVeetiVolumes={handleModalApplyVeetiVolumes}
+            closeInlineCardEditor={closeInlineCardEditor}
+            workbookImportBusy={workbookImportBusy}
+            canConfirmImportWorkflow={canConfirmImportWorkflow}
+            isInlineCardDirty={isInlineCardDirty}
+            documentFileInputRef={documentFileInputRef}
+            setInlineCardFieldRef={setInlineCardFieldRef}
+            manualFinancials={manualFinancials}
+            setManualFinancials={setManualFinancials}
+            manualPrices={manualPrices}
+            setManualPrices={setManualPrices}
+            manualVolumes={manualVolumes}
+            setManualVolumes={setManualVolumes}
+            markManualFieldTouched={markManualFieldTouched}
+            saveInlineCardEdit={saveInlineCardEdit}
+            workbookImportWorkflowProps={workbookImportWorkflowProps}
+            reviewContinueButtonClass={reviewContinueButtonClass}
+            onContinueFromReview={handleContinueFromReview}
+            importedBlockedYearCount={importedBlockedYearCount}
+            pendingReviewYearCount={pendingReviewYearCount}
+            technicalReadyYearsLabel={technicalReadyYearsLabel}
+          />
+        </React.Suspense>
       ) : null}
 
       {mountedWorkflowStep === 5 ? (

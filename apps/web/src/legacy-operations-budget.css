@@ -463,7 +463,7 @@
 .budget-year-bucket { margin-bottom: 0.5rem; }
 .budget-year-bucket-tulot .budget-year-bucket-row .num { color: #059669; }
 .budget-year-bucket-kulut .budget-year-bucket-row .num { color: #dc2626; }
-/* Price rows in set view Ã¢â‚¬â€ non-clickable, compact */
+/* Price rows in set view - non-clickable, compact */
 .budget-year-price-row {
   cursor: default;
   font-size: 0.82rem;

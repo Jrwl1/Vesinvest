@@ -52,7 +52,7 @@
   font-weight: 600;
 }
 
-/* Quick Import as default flow Ã¢â‚¬â€ no sheet explorer */
+/* Quick Import as default flow - no sheet explorer */
 .quick-import-panel {
   display: flex;
   flex-direction: column;
@@ -87,7 +87,7 @@
   font-size: 0.9rem;
 }
 
-/* Choose sheet fallback Ã¢â‚¬â€ list only, no sample data */
+/* Choose sheet fallback - list only, no sample data */
 .choose-sheet-panel {
   padding: 20px;
   display: flex;
@@ -152,7 +152,7 @@
   text-decoration: underline;
 }
 
-/* Import Inbox (Inbox Ã¢â€ â€™ Sort Ã¢â€ â€™ Commit) */
+/* Import Inbox (Inbox -> Sort -> Commit) */
 .inbox-panel {
   padding: 20px;
   display: flex;

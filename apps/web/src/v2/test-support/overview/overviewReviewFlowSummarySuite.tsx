@@ -387,7 +387,7 @@ export function registerOverviewReviewFlowSummarySuite() {
         sourceStatusClassName={() => 'v2-status-info'}
         sourceStatusLabel={() => 'VEETI'}
         setupStatusClassName={() => 'v2-status-info'}
-        setupStatusLabel={() => 'Utesluten från planen'}
+        setupStatusLabel={() => 'Utesluten fr\u00e5n planen'}
         yearStatusRowClassName={() => 'excluded'}
         importWarningLabel={() => ''}
         missingRequirementLabel={() => 'Baseline economics'}

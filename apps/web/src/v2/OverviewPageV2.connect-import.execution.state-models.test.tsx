@@ -1,4 +1,4 @@
-﻿import { registerOverviewConnectImportExecutionStateModelSuite } from './test-support/overview/overviewConnectImportExecutionStateModelSuite';
+import { registerOverviewConnectImportExecutionStateModelSuite } from './test-support/overview/overviewConnectImportExecutionStateModelSuite';
 
 registerOverviewConnectImportExecutionStateModelSuite();
 

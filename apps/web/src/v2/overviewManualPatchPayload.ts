@@ -20,7 +20,7 @@ import {
 import {
   getDocumentImportSelectedPageNumbers,
   getDocumentImportSelectedSourceLines,
-} from './documentPdfImport';
+} from './documentPdfImportModel';
 
 type ManualPatchMode = 'review' | 'manualEdit' | 'documentImport' | 'workbookImport';
 

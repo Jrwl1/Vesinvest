@@ -1,4 +1,4 @@
-﻿import { registerOverviewConnectImportExecutionBoardSuite } from './test-support/overview/overviewConnectImportExecutionBoardSuite';
+import { registerOverviewConnectImportExecutionBoardSuite } from './test-support/overview/overviewConnectImportExecutionBoardSuite';
 
 registerOverviewConnectImportExecutionBoardSuite();
 

@@ -344,7 +344,7 @@
   color: var(--color-text);
 }
 
-/* Driver planner (Ennuste variables) Ã¢â‚¬â€ S-01: grid so cards sit side-by-side */
+/* Driver planner (Ennuste variables) - S-01: grid so cards sit side-by-side */
 .driver-planner__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));

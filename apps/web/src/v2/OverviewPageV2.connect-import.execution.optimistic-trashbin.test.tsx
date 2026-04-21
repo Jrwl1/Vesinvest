@@ -1,4 +1,4 @@
-﻿import { registerOverviewConnectImportExecutionStateOptimisticSuite } from './test-support/overview/overviewConnectImportExecutionStateOptimisticSuite';
+import { registerOverviewConnectImportExecutionStateOptimisticSuite } from './test-support/overview/overviewConnectImportExecutionStateOptimisticSuite';
 
 registerOverviewConnectImportExecutionStateOptimisticSuite();
 

@@ -428,7 +428,7 @@ export function registerOverviewWorkspaceDocumentImportSuite() {
       },
       sourceLines: [
         { text: 'Vatten brukningsavgift 1,20 eur/m3', pageNumber: 2 },
-        { text: 'SÃ¥ld vattenmÃ¤ngd 65 000 m3', pageNumber: 2 },
+        { text: 'S\u00e5ld vattenm\u00e4ngd 65 000 m3', pageNumber: 2 },
       ],
       matches: [
         { key: 'waterUnitPrice', label: 'Water unit price', datasetKind: 'prices', value: 1.2, sourceLine: 'Vatten brukningsavgift 1,20 eur/m3', pageNumber: 2 },

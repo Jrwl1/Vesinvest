@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@packages/domain": ["packages/domain/src"]
+    }
+  },
+  "include": [
+    "apps/web/src/**/*",
+    "apps/api/src/**/*",
+    "packages/domain/src/**/*"
+  ]
+}

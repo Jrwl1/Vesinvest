@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   cleanup,
   fireEvent,
@@ -519,8 +519,8 @@ export function registerAppShellV2BootstrapRoutingForecastSuite() {
   };
 
   const unlockSetupThroughOverview = async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'unlock-setup' }));
     await waitFor(() => {
       expect(
         (screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement)
@@ -531,6 +531,10 @@ export function registerAppShellV2BootstrapRoutingForecastSuite() {
           .disabled,
       ).toBe(false);
     });
+  };
+
+  const clickOverviewButton = async (name: string) => {
+    fireEvent.click(await screen.findByRole('button', { name }));
   };
 
   beforeEach(() => {
@@ -660,14 +664,14 @@ export function registerAppShellV2BootstrapRoutingForecastSuite() {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-forecast-only' }));
+    await clickOverviewButton('set-org-name');
+    await clickOverviewButton('unlock-forecast-only');
     expect(screen.getByRole('button', { name: 'Reports' }).getAttribute('aria-disabled')).toBe(
       'true',
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-plan-verified' }));
-    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
+    await clickOverviewButton('set-plan-verified');
+    await clickOverviewButton('open-linked-forecast');
 
     expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
     await waitFor(() => {
@@ -694,14 +698,14 @@ export function registerAppShellV2BootstrapRoutingForecastSuite() {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-forecast-only' }));
+    await clickOverviewButton('set-org-name');
+    await clickOverviewButton('unlock-forecast-only');
     expect(screen.getByRole('button', { name: 'Reports' }).getAttribute('aria-disabled')).toBe(
       'true',
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-plan-verified' }));
-    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
+    await clickOverviewButton('set-plan-verified');
+    await clickOverviewButton('open-linked-forecast');
 
     expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
     await waitFor(() => {

@@ -1,5 +1,5 @@
-const mojibakePattern = /[ÃƒÆ’Ãƒâ€šÃƒÂ¢]/;
-const nordicPattern = /[Ã…Ã„Ã–Ã¥Ã¤Ã¶]/;
+const mojibakePattern = /[\u00c3\u00c2\u00e2]/;
+const nordicPattern = /[\u00c5\u00c4\u00d6\u00e5\u00e4\u00f6]/;
 
 type DocumentImportSourceLineLike = {
   text?: string | null;

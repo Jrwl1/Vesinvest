@@ -8,7 +8,7 @@
     "predev": "pnpm run copy:ocr-assets",
     "prebuild": "pnpm run copy:ocr-assets",
     "dev": "vite",
-    "build": "vite build",
+    "build": "node ./scripts/build-vite-clean.mjs",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
@@ -25,10 +25,13 @@
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
+    "@types/node": "^20.19.30",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@typescript-eslint/eslint-plugin": "^8.55.0",
     "@typescript-eslint/parser": "^8.55.0",
+    "eslint-import-resolver-typescript": "^3.10.1",
+    "eslint-plugin-import": "^2.32.0",
     "@vitejs/plugin-react": "^4.2.1",
     "eslint-config-prettier": "^8.0.0",
     "eslint-plugin-react": "^7.37.5",

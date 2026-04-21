@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { DocumentImportPreviewDetails } from './DocumentImportPreviewDetails';
-import { getDocumentImportSelectedPageNumbers } from './documentPdfImport';
+import { getDocumentImportSelectedPageNumbers } from './documentPdfImportModel';
 import { formatEur, formatNumber, formatPrice } from './format';
 import {
   OverviewWorkbookImportWorkflow,

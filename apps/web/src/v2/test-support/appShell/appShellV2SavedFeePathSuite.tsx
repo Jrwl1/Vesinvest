@@ -519,8 +519,8 @@ export function registerAppShellV2SavedFeePathSuite() {
   };
 
   const unlockSetupThroughOverview = async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'unlock-setup' }));
     await waitFor(() => {
       expect(
         (screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement)
@@ -531,6 +531,10 @@ export function registerAppShellV2SavedFeePathSuite() {
           .disabled,
       ).toBe(false);
     });
+  };
+
+  const clickOverviewButton = async (name: string) => {
+    fireEvent.click(await screen.findByRole('button', { name }));
   };
 
   beforeEach(() => {
@@ -627,16 +631,16 @@ export function registerAppShellV2SavedFeePathSuite() {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
-    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
+    await clickOverviewButton('set-org-name');
+    await clickOverviewButton('unlock-setup');
+    await clickOverviewButton('open-linked-forecast');
     expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
 
     fireEvent.click(await screen.findByRole('button', { name: 'stale-report-hit' }));
     expect(await screen.findByText('overview-content')).toBeTruthy();
     expect(await screen.findByText('Vesinvest in progress')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-plan-verified' }));
+    await clickOverviewButton('set-plan-verified');
 
     expect(await screen.findByText('Report-ready scenario')).toBeTruthy();
   });
@@ -672,13 +676,13 @@ export function registerAppShellV2SavedFeePathSuite() {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
-    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
+    await clickOverviewButton('set-org-name');
+    await clickOverviewButton('unlock-setup');
+    await clickOverviewButton('open-linked-forecast');
     expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
     expect(await screen.findByText('Report-ready scenario')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'select-stress' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'select-stress' }));
 
     expect(await screen.findByText('Vesinvest in progress')).toBeTruthy();
     await waitFor(() => {
@@ -717,19 +721,19 @@ export function registerAppShellV2SavedFeePathSuite() {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    await clickOverviewButton('set-org-name');
+    await clickOverviewButton('unlock-setup');
     fireEvent.click(screen.getByRole('button', { name: 'Reports' }));
     expect(await screen.findByText('reports-content:-')).toBeTruthy();
     expect(await screen.findByText('Report-ready scenario')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'focus-stress-report' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'focus-stress-report' }));
 
     expect(await screen.findByText('reports-content:report-123')).toBeTruthy();
     expect(await screen.findByText('Report-ready scenario')).toBeTruthy();
     expect(screen.queryByText('Vesinvest in progress')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'report-to-forecast' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'report-to-forecast' }));
 
     expect(await screen.findByText('ennuste-content:stress-1')).toBeTruthy();
     expect(await screen.findByText('Vesinvest in progress')).toBeTruthy();
@@ -769,9 +773,9 @@ export function registerAppShellV2SavedFeePathSuite() {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
-    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
+    await clickOverviewButton('set-org-name');
+    await clickOverviewButton('unlock-setup');
+    await clickOverviewButton('open-linked-forecast');
 
     expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
     expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
@@ -793,7 +797,7 @@ export function registerAppShellV2SavedFeePathSuite() {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'focus-problem-year' }));
+    await clickOverviewButton('focus-problem-year');
 
     expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
     expect(screen.getByText('Step 3 / 5')).toBeTruthy();
@@ -814,18 +818,18 @@ export function registerAppShellV2SavedFeePathSuite() {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'review-blocked-year' }));
+    await clickOverviewButton('review-blocked-year');
     expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
     expect(screen.getByText('Step 2 / 5')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'focus-problem-year' }));
+    await clickOverviewButton('focus-problem-year');
     expect(screen.getByText('Step 3 / 5')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'review-ready' }));
+    await clickOverviewButton('review-ready');
     expect(screen.getByText('Step 4 / 5')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    await clickOverviewButton('set-org-name');
+    await clickOverviewButton('unlock-setup');
     expect(screen.getByText('Active workspace')).toBeTruthy();
     expect(screen.getAllByText('Overview').length).toBeGreaterThan(0);
     expect(screen.queryByText('Vesinvest workflow')).toBeNull();
@@ -848,12 +852,12 @@ export function registerAppShellV2SavedFeePathSuite() {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
+    await clickOverviewButton('lock-setup');
     expect(screen.getByRole('button', { name: 'Forecast' }).getAttribute('aria-disabled')).toBe(
       'true',
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    await clickOverviewButton('unlock-setup');
     fireEvent.click(screen.getByRole('button', { name: 'Forecast' }));
 
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
@@ -874,10 +878,8 @@ export function registerAppShellV2SavedFeePathSuite() {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
-    fireEvent.click(
-      screen.getByRole('button', { name: 'open-forecast-handoff' }),
-    );
+    await clickOverviewButton('unlock-setup');
+    await clickOverviewButton('open-forecast-handoff');
 
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
   });
@@ -900,15 +902,13 @@ export function registerAppShellV2SavedFeePathSuite() {
     const forecastTab = screen.getByRole('button', { name: 'Forecast' });
     const reportsTab = screen.getByRole('button', { name: 'Reports' });
 
-    fireEvent.click(screen.getByRole('button', { name: 'review-ready' }));
+    await clickOverviewButton('review-ready');
 
     expect(screen.getByText('Step 4 / 5')).toBeTruthy();
     expect(forecastTab.getAttribute('aria-disabled')).toBe('true');
     expect(reportsTab.getAttribute('aria-disabled')).toBe('true');
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'open-forecast-handoff' }),
-    );
+    await clickOverviewButton('open-forecast-handoff');
 
     expect(screen.getByText('overview-content')).toBeTruthy();
     expect(screen.queryByText('ennuste-content:-')).toBeNull();
@@ -916,9 +916,7 @@ export function registerAppShellV2SavedFeePathSuite() {
 
     await unlockSetupThroughOverview();
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'open-forecast-handoff' }),
-    );
+    await clickOverviewButton('open-forecast-handoff');
 
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
     expect(window.location.pathname).toBe('/forecast');
@@ -929,7 +927,7 @@ export function registerAppShellV2SavedFeePathSuite() {
     expect(window.location.pathname).toBe('/reports');
   });
 
-  it('keeps forecast and reports locked while a queued year review is still active', () => {
+  it('keeps forecast and reports locked while a queued year review is still active', async () => {
     render(
       <AppShellV2
         tokenInfo={{
@@ -947,7 +945,7 @@ export function registerAppShellV2SavedFeePathSuite() {
     const forecastTab = screen.getByRole('button', { name: 'Forecast' });
     const reportsTab = screen.getByRole('button', { name: 'Reports' });
 
-    fireEvent.click(screen.getByRole('button', { name: 'focus-problem-year' }));
+    await clickOverviewButton('focus-problem-year');
 
     expect(screen.getByText('Step 3 / 5')).toBeTruthy();
     expect(forecastTab.getAttribute('aria-disabled')).toBe('true');

@@ -532,12 +532,12 @@
 }
 
 .projection-page[data-ennuste-layout="codex"] .ennuste-table-details summary::before {
-  content: "Ã¢â€“Â¸ ";
+  content: "\25B8 ";
   color: #334155;
 }
 
 .projection-page[data-ennuste-layout="codex"] .ennuste-table-details[open] summary::before {
-  content: "Ã¢â€“Â¾ ";
+  content: "\25BE ";
 }
 
 .projection-page[data-ennuste-layout="codex"] .ennuste-table-wrap {

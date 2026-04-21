@@ -519,8 +519,8 @@ export function registerAppShellV2SmokeSuite() {
   };
 
   const unlockSetupThroughOverview = async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'unlock-setup' }));
     await waitFor(() => {
       expect(
         (screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement)
@@ -685,7 +685,7 @@ export function registerAppShellV2SmokeSuite() {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'lock-setup' }));
     expect(screen.getByRole('button', { name: 'Forecast' }).getAttribute('aria-disabled')).toBe(
       'true',
     );

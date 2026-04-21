@@ -1,13 +1,16 @@
+/// <reference types="node" />
+
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-
 import { describe, expect, it } from 'vitest';
 
-const readRelativeFile = (relativePath: string) =>
+const readCssBarrel = (relativePath: string) =>
   readFileSync(fileURLToPath(new URL(relativePath, import.meta.url)), 'utf8');
 
 const getCssImports = (relativePath: string) =>
-  [...readRelativeFile(relativePath).matchAll(/@import\s+['"](.+?)['"];/g)].map((match) => match[1]);
+  [...readCssBarrel(relativePath).matchAll(/@import\s+['"](.+?)['"];/g)].map(
+    (match) => match[1],
+  );
 
 describe('css import order barrels', () => {
   it.each([

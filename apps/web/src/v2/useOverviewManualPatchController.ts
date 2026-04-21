@@ -26,7 +26,7 @@ import {
   requiresDocumentImportConfidenceReview,
   type DocumentImportFieldMatch,
   type DocumentImportPreview,
-} from './documentPdfImport';
+} from './documentPdfImportModel';
 
 export type GenericDocumentImportPreview = DocumentImportPreview;
 

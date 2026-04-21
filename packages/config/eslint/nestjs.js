@@ -8,7 +8,7 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
     'plugin:nestjs/recommended',
   ],
-  plugins: ['nestjs'],
+  plugins: ['nestjs', 'import'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     tsconfigRoot: './tsconfig.json',
@@ -20,7 +20,9 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     '@typescript-eslint/no-require-imports': 'warn',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
+    'import/no-cycle': ['error', { ignoreExternal: true, maxDepth: 1 }],
     'nestjs/use-validation-pipe': 'warn',
     'prefer-const': 'warn',
   },
+  overrides: [],
 };

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   cleanup,
   fireEvent,
@@ -519,8 +519,8 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
   };
 
   const unlockSetupThroughOverview = async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'unlock-setup' }));
     await waitFor(() => {
       expect(
         (screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement)
@@ -531,6 +531,10 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
           .disabled,
       ).toBe(false);
     });
+  };
+
+  const clickOverviewButton = async (name: string) => {
+    fireEvent.click(await screen.findByRole('button', { name }));
   };
 
   beforeEach(() => {
@@ -799,15 +803,15 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-forecast-only' }));
+    await clickOverviewButton('set-org-name');
+    await clickOverviewButton('unlock-forecast-only');
     fireEvent.click(screen.getByRole('button', { name: 'Reports' }));
 
     expect(screen.getByRole('status').textContent).toContain(
       'Create the report after the fee path is saved and the linked scenario is up to date.',
     );
     fireEvent.click(screen.getByRole('button', { name: 'Open Forecast' }));
-    expect(screen.getByText('ennuste-content:-')).toBeTruthy();
+    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
     expect(window.location.pathname).toBe('/forecast');
   });
 
@@ -826,8 +830,8 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
+    await clickOverviewButton('set-org-name');
+    await clickOverviewButton('lock-setup');
     fireEvent.click(screen.getByRole('button', { name: 'Forecast' }));
 
     const blocker = screen.getByRole('status');
@@ -934,8 +938,8 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-forecast-only' }));
+    await clickOverviewButton('set-org-name');
+    await clickOverviewButton('unlock-forecast-only');
 
     expect(screen.getByText('Step 5 / 5')).toBeTruthy();
     expect(screen.getByText('Vesinvest workflow')).toBeTruthy();

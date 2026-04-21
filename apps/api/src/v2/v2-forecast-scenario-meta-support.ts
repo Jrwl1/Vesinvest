@@ -26,7 +26,7 @@ export class V2ForecastScenarioMetaSupport {
       });
     }
 
-    if (/[ÃƒÆ’Ãƒâ€šÃƒÂ¢]/.test(out)) {
+    if (out.includes('Ã') || out.includes('Æ') || out.includes('â')) {
       const recovered = Buffer.from(out, 'latin1').toString('utf8');
       if (this.looksRecoveredText(recovered, out)) {
         out = recovered;
@@ -34,14 +34,14 @@ export class V2ForecastScenarioMetaSupport {
     }
 
     out = out.normalize('NFKC');
-    out = out.replace(/[\u0000-\u001f\u007f]/g, '');
+    out = this.stripControlCharacters(out);
     return out.trim();
   }
 
   looksRecoveredText(candidate: string, original: string): boolean {
-    const candidateLetters = (candidate.match(/[A-Za-zÃ…Ã„Ã–Ã¥Ã¤Ã¶]/g) ?? [])
+    const candidateLetters = (candidate.match(/[A-Za-zÅÄÖåäö]/g) ?? [])
       .length;
-    const originalLetters = (original.match(/[A-Za-zÃ…Ã„Ã–Ã¥Ã¤Ã¶]/g) ?? [])
+    const originalLetters = (original.match(/[A-Za-zÅÄÖåäö]/g) ?? [])
       .length;
     const replacementCount = (candidate.match(/\uFFFD/g) ?? []).length;
     return (
@@ -234,5 +234,14 @@ export class V2ForecastScenarioMetaSupport {
   private toNumber(value: unknown): number {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private stripControlCharacters(value: string): string {
+    return Array.from(value)
+      .filter((character) => {
+        const codePoint = character.codePointAt(0) ?? 0;
+        return codePoint >= 0x20 && codePoint !== 0x7f;
+      })
+      .join('');
   }
 }

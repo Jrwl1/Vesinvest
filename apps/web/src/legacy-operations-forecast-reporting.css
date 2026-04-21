@@ -156,12 +156,12 @@
   display: none;
 }
 .revenue-report-toggle::before {
-  content: "Ã¢â€“Â¶";
+  content: "\25B6";
   margin-right: 8px;
   color: var(--ev2-muted);
 }
 .revenue-report-section[open] .revenue-report-toggle::before {
-  content: "Ã¢â€“Â¼";
+  content: "\25BC";
 }
 .projection-page-end {
   margin-top: 24px;

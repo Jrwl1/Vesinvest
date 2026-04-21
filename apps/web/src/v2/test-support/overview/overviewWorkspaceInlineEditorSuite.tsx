@@ -772,7 +772,7 @@ export function registerOverviewWorkspaceInlineEditorSuite() {
 
     await waitFor(() => {
       expect(
-        document.querySelector('[data-review-workspace-year=\"2024\"]'),
+        document.querySelector('[data-review-workspace-year="2024"]'),
       ).toBeTruthy();
     });
 

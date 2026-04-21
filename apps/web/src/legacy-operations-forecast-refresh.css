@@ -224,7 +224,7 @@
   }
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Final Vision V1: dominant chart + KPI hierarchy Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* Final Vision V1: dominant chart + KPI hierarchy ------------------------- */
 
 /* Chart card: remove default card padding so Recharts ResponsiveContainer
    fills the full card width edge-to-edge (chart controls its own spacing). */
@@ -278,12 +278,12 @@
   }
 }
 
-/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
-   ENNUSTE V2 Ã¢â‚¬â€ Dark Professional Theme
+/* ============================================================================
+   ENNUSTE V2 - Dark Professional Theme
    Design system: #0f1117 bg, #181d27 surface, #3b82f6 accent
-   Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */
+============================================================================ */
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Variables Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Variables ------------------------------------------------------------- */
 .ev2-page {
   --ev2-bg:          #0f1117;
   --ev2-surface:     #181d27;
@@ -307,12 +307,12 @@
   font-family: inherit;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Global EV2 utilities Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Global EV2 utilities -------------------------------------------------- */
 .ev2-positive { color: var(--ev2-green); }
 .ev2-negative { color: var(--ev2-red); }
 .ev2-muted    { color: var(--ev2-muted); font-size: 0.8125rem; }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Topbar Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Topbar ---------------------------------------------------------------- */
 .ev2-topbar {
   display: flex;
   align-items: center;
@@ -354,7 +354,7 @@
   font-weight: 600;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Error banner Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Error banner ---------------------------------------------------------- */
 .ev2-error-banner {
   margin: 8px 24px;
   padding: 10px 16px;
@@ -365,7 +365,7 @@
   font-size: 0.875rem;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Scenario row Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Scenario row ---------------------------------------------------------- */
 .ev2-scenario-row {
   display: flex;
   align-items: center;
@@ -382,7 +382,7 @@
   white-space: nowrap;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ KPI Strip Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- KPI Strip ------------------------------------------------------------- */
 .ev2-kpi-strip {
   display: flex;
   align-items: stretch;
@@ -439,7 +439,7 @@
   color: var(--ev2-accent);
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Chart section Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Chart section --------------------------------------------------------- */
 .ev2-chart-section {
   padding: 20px 32px 0;
   background: var(--ev2-bg);
@@ -474,7 +474,7 @@
   100% { background-position:  200% 0; }
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Combo chart custom tooltip Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Combo chart custom tooltip ------------------------------------------- */
 .ev2-tooltip {
   background: var(--ev2-surface2, #1e2537);
   border: 1px solid var(--ev2-border, #2a3347);
@@ -535,7 +535,7 @@
   margin: 6px 0;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Body grid Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Body grid ------------------------------------------------------------- */
 .ev2-body-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -545,7 +545,7 @@
   border-top: 1px solid var(--ev2-border);
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Year cards (left column) Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Year cards (left column) --------------------------------------------- */
 .ev2-year-cards {
   display: none;
   background: var(--ev2-surface);
@@ -634,7 +634,7 @@
   margin-top: 3px;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Badges Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Badges ---------------------------------------------------------------- */
 .ev2-badge {
   display: inline-block;
   padding: 1px 5px;
@@ -655,7 +655,7 @@
   color: var(--ev2-red);
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Inputs panel (right column) Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Inputs panel (right column) ------------------------------------------ */
 .ev2-inputs {
   padding: 0 24px 32px;
   overflow: visible;
@@ -663,7 +663,7 @@
   background: var(--ev2-bg);
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Compute bar Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Compute bar ----------------------------------------------------------- */
 .ev2-compute-bar {
   display: flex;
   align-items: center;
@@ -737,7 +737,7 @@
   white-space: nowrap;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Input sections Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Input sections -------------------------------------------------------- */
 .ev2-input-section {
   padding: 16px 0 8px;
   border-bottom: 1px solid var(--ev2-border);
@@ -762,7 +762,7 @@
   margin: -6px 0 10px;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Assumptions grid Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Assumptions grid ------------------------------------------------------ */
 .ev2-assumptions-grid {
   display: flex;
   flex-direction: column;
@@ -794,7 +794,7 @@
 }
 
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Investments list Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Investments list ------------------------------------------------------ */
 .ev2-investments-list {
   display: flex;
   flex-direction: column;
@@ -815,7 +815,7 @@
 }
 
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Generic inputs Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Generic inputs -------------------------------------------------------- */
 .ev2-input {
   padding: 6px 10px;
   background: var(--ev2-surface2);
@@ -857,7 +857,7 @@
   width: 80px;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Buttons Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Buttons --------------------------------------------------------------- */
 .ev2-btn {
   display: inline-flex;
   align-items: center;
@@ -939,7 +939,7 @@
   color: var(--ev2-red);
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Empty state Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Empty state ----------------------------------------------------------- */
 .ev2-empty-state {
   display: flex;
   flex-direction: column;
@@ -958,7 +958,7 @@
   justify-content: center;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ EV2 extra-info column (right of inputs on wide screens) Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- EV2 extra-info column (right of inputs on wide screens) --------------- */
 .ev2-extra-col {
   display: none;
   border-left: 1px solid var(--ev2-border);
@@ -1073,7 +1073,7 @@
   padding-top: 12px;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Timeline rows (extra col) Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Timeline rows (extra col) -------------------------------------------- */
 .ev2-timeline-row {
   display: grid;
   grid-template-columns: 42px 1fr 1fr;
@@ -1122,13 +1122,13 @@
   font-size: 0.775rem;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Year card tariff row Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Year card tariff row -------------------------------------------------- */
 .ev2-year-card__row--tariff span:last-child {
   color: #60a5fa;
   font-weight: 600;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Responsive Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* -- Responsive ------------------------------------------------------------ */
 @media (max-width: 1300px) {
   /* Collapse 3-col to 2-col: hide extra col */
   .ev2-body-grid {

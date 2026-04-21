@@ -10,7 +10,7 @@ import {
 import type {
   DocumentImportFieldMatch,
   DocumentImportPreview,
-} from './documentPdfImport';
+} from './documentPdfImportModel';
 
 type Props = {
   preview: DocumentImportPreview;

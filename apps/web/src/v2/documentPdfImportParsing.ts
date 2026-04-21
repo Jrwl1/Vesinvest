@@ -1,6 +1,6 @@
 import type { QdisFieldKey } from './qdisPdfImport';
 import type { V2DocumentImportSourceLine } from '../api';
-import type { DocumentImportFieldMatch } from './documentPdfImport';
+import type { DocumentImportFieldMatch } from './documentPdfImportModel';
 
 export function extractFinancialAmount(line: string): number | null {
   const values = extractAllAmounts(line).filter((value) => {
@@ -16,12 +16,12 @@ export function extractFinancialAmount(line: string): number | null {
 export function extractPriceAmount(line: string): number | null {
   return extractNumberWithPattern(
     line,
-    /(-?\d[\d\s.,]*)\s*(?:â‚¬|eur)?\s*(?:\/|per)?\s*(?:m3|mÂ³)/i,
+    /(-?\d[\d\s.,]*)\s*(?:\u20ac|eur)?\s*(?:\/|per)?\s*(?:m3|m\u00b3)/i,
   );
 }
 
 export function extractVolumeAmount(line: string): number | null {
-  return extractNumberWithPattern(line, /(-?\d[\d\s.,]*)\s*(?:m3|mÂ³)/i);
+  return extractNumberWithPattern(line, /(-?\d[\d\s.,]*)\s*(?:m3|m\u00b3)/i);
 }
 
 export function extractNumberWithPattern(value: string, pattern: RegExp): number | null {

@@ -32,7 +32,7 @@ import type { ManualPatchMode } from './useOverviewManualPatchEditor';
 import {
   getDocumentImportSelectedPageNumbers,
   type DocumentImportPreview,
-} from './documentPdfImport';
+} from './documentPdfImportModel';
 
 type Props = {
   t: TFunction;

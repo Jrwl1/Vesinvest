@@ -237,7 +237,7 @@ export function useOverviewReviewController({
       const confirmed = window.confirm(
         t('v2Overview.excludeYearConfirm', {
           defaultValue:
-            'Rajataanko vuosi {{year}} pois suunnitelmasta? Vuosi sÃ¤ilyy tyÃ¶tilassa ja sen voi palauttaa myÃ¶hemmin.',
+            'Rajataanko vuosi {{year}} pois suunnitelmasta? Vuosi s\u00e4ilyy ty\u00f6tilassa ja sen voi palauttaa my\u00f6hemmin.',
           year,
         }),
       );
@@ -268,7 +268,7 @@ export function useOverviewReviewController({
             ? err.message
             : t('v2Overview.excludeYearFailedSingle', {
                 defaultValue:
-                  'Vuoden rajaaminen pois suunnitelmasta epÃ¤onnistui.',
+                  'Vuoden rajaaminen pois suunnitelmasta ep\u00e4onnistui.',
               }),
         );
       } finally {
@@ -586,7 +586,7 @@ export function useOverviewReviewController({
           ? err.message
           : t(
               'v2Overview.excludeYearFailed',
-              'Vuoden rajaaminen pois suunnitelmasta epÃ¤onnistui.',
+              'Vuoden rajaaminen pois suunnitelmasta ep\u00e4onnistui.',
             ),
       );
     } finally {
@@ -624,7 +624,7 @@ export function useOverviewReviewController({
           ? err.message
           : t(
               'v2Overview.restoreYearFailed',
-              'Vuoden palauttaminen suunnitelmaan epÃ¤onnistui.',
+              'Vuoden palauttaminen suunnitelmaan ep\u00e4onnistui.',
             ),
       );
     } finally {
@@ -755,7 +755,7 @@ export function useOverviewReviewController({
           ? err.message
           : t(
               'v2Overview.planningBaselineFailed',
-              'Suunnittelupohjan luonti epÃ¤onnistui.',
+              'Suunnittelupohjan luonti ep\u00e4onnistui.',
             ),
       );
     } finally {

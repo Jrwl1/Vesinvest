@@ -11,7 +11,7 @@ import {
 import {
   getDocumentImportCandidateKeys,
   requiresDocumentImportConfidenceReview,
-} from './documentPdfImport';
+} from './documentPdfImportModel';
 import type { SetupWizardStep } from './overviewWorkflow';
 import { canReapplyDatasetVeeti } from './yearReview';
 import type { OverviewManualPatchController } from './useOverviewManualPatchController';

@@ -17,8 +17,9 @@ module.exports = {
     ecmaVersion: 12,
     sourceType: 'module',
   },
-  plugins: ['react', '@typescript-eslint'],
+  plugins: ['react', '@typescript-eslint', 'import'],
   rules: {
+    'import/no-cycle': ['error', { ignoreExternal: true, maxDepth: 1 }],
     'react/react-in-jsx-scope': 'off',
     'react/prop-types': 'off',
     'react/no-unescaped-entities': 'warn',
@@ -28,4 +29,5 @@ module.exports = {
       version: 'detect',
     },
   },
+  overrides: [],
 };

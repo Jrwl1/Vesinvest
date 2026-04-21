@@ -1,0 +1,12 @@
+{
+  "label": "codebase-healing-pass-start",
+  "capturedAt": "2026-04-21",
+  "firstLoadJsPatterns": [
+    "^index-.*\\.js$",
+    "^AppShellV2-.*\\.js$",
+    "^vendor-react-.*\\.js$",
+    "^vendor-core-.*\\.js$",
+    "^vendor-i18n-.*\\.js$"
+  ],
+  "firstLoadJsBytes": 1028692
+}

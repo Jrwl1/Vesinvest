@@ -15,7 +15,7 @@ import type {
 } from './overviewManualForms';
 import type { MissingRequirement } from './overviewWorkflow';
 import type { ManualPatchMode } from './useOverviewManualPatchEditor';
-import type { DocumentImportPreview } from './documentPdfImport';
+import type { DocumentImportPreview } from './documentPdfImportModel';
 import {
   renderDocumentImportPageValue,
   type ReviewStatusRow,
@@ -365,7 +365,7 @@ export const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
             <label>
               {t(
                 'v2Overview.manualFinancialYearResult',
-                'Year result (Tilikauden ylijÃ¤Ã¤mÃ¤/alijÃ¤Ã¤mÃ¤)',
+                'Year result (Tilikauden ylij\u00e4\u00e4m\u00e4/alij\u00e4\u00e4m\u00e4)',
               )}
               <input
                 ref={setInlineCardFieldRef('tilikaudenYliJaama')}

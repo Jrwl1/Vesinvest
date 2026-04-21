@@ -62,7 +62,7 @@ export const EnnustePageV2: React.FC<Props> = (props) => {
     <div className="v2-page v2-forecast-theme">
       <ForecastScenarioStrip controller={controller} />
 
-      <section className="v2-grid v2-grid-ennuste v2-forecast-layout v2-forecast-layout-board">
+      <section className="v2-grid v2-forecast-layout v2-forecast-layout-board">
         <section className="v2-card v2-scenario-editor v2-forecast-editor">
           {controller.loadingScenario ? (
             <div className="v2-loading-state">

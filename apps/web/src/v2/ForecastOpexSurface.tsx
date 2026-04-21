@@ -32,9 +32,6 @@ export const ForecastOpexSurface: React.FC<Props> = ({ controller }) => {
     >
       <div className="v2-forecast-workspace-head">
         <div className="v2-forecast-workspace-copy">
-          <p className="v2-overview-eyebrow">
-            {t('v2Forecast.opexWorkbenchEyebrow', 'Operating cost planning')}
-          </p>
           <h3>{opexWorkbenchConfig.title}</h3>
         </div>
         <div className="v2-actions-row">
@@ -74,17 +71,11 @@ export const ForecastOpexSurface: React.FC<Props> = ({ controller }) => {
         </button>
       </div>
 
-      <div className="v2-statement-cockpit-grid">
-        <article className="v2-subcard v2-statement-card">
+      <div className="v2-statement-cockpit-grid v2-opex-workbench-layout">
+        <article className="v2-subcard v2-statement-card v2-opex-summary-card">
           <div className="v2-section-header">
             <div>
               <h4>{t('v2Forecast.workbenchOverviewTitle', 'Workbench overview')}</h4>
-              <p className="v2-muted">
-                {t(
-                  'v2Forecast.workbenchOverviewHint',
-                  'Keep the cockpit context visible while tuning one operating-cost pillar at a time.',
-                )}
-              </p>
             </div>
             {showInlineFreshnessState ? (
               <span className={`v2-badge ${forecastStateToneClass}`}>
@@ -92,7 +83,7 @@ export const ForecastOpexSurface: React.FC<Props> = ({ controller }) => {
               </span>
             ) : null}
           </div>
-          <div className="v2-keyvalue-list">
+          <div className="v2-keyvalue-list v2-workbench-metric-list">
             <div className="v2-keyvalue-row">
               <span>{t('v2Forecast.baselineLabel', 'Baseline')}</span>
               <strong>{opexWorkbenchConfig.baseline}</strong>
@@ -114,7 +105,7 @@ export const ForecastOpexSurface: React.FC<Props> = ({ controller }) => {
           </div>
         </article>
 
-        <article className="v2-subcard v2-statement-card">
+        <article className="v2-subcard v2-statement-card v2-opex-editor-card">
           <div className="v2-section-header">
             <div>
               <h4>
@@ -123,17 +114,6 @@ export const ForecastOpexSurface: React.FC<Props> = ({ controller }) => {
                   'Near-term expense assumptions (editable)',
                 )}
               </h4>
-              <p className="v2-muted">
-                {denseAnalystMode
-                  ? t(
-                      'v2Forecast.analystModeHint',
-                      'Dense analyst mode compresses the yearly editor for faster scanning.',
-                    )
-                  : t(
-                      'v2Forecast.workbenchEditHint',
-                      'Edit one pillar here without losing the surrounding cockpit context.',
-                    )}
-              </p>
             </div>
           </div>
           {hasNearTermValidationErrors ? (

@@ -61,13 +61,12 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
   const editableScenarioTypeOptions: Array<typeof draftScenarioType> = scenario.onOletus
     ? ['base']
     : scenarioTypeOptions.filter((option): option is Exclude<typeof draftScenarioType, 'base'> => option !== 'base');
-  const primaryHeroCards = [
-    {
-      key: 'required-price',
-      label: primaryFeeSignal.priceLabel,
-      value: formatPrice(primaryFeeSignal.price),
-      tone: 'answer',
-    },
+  const primaryHeroCard = {
+    key: 'required-price',
+    label: primaryFeeSignal.priceLabel,
+    value: formatPrice(primaryFeeSignal.price),
+  };
+  const supportingHeroCards = [
     {
       key: 'required-increase',
       label: t(
@@ -81,8 +80,6 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
       label: t('v2Forecast.underfundingStarts', 'Underfunding starts'),
       value: primaryUnderfundingStartYear ?? t('v2Forecast.noUnderfunding', 'None'),
     },
-  ];
-  const secondaryHeroCards = [
     {
       key: 'current-fee',
       label: t('v2Forecast.currentFeeLevel'),
@@ -255,29 +252,20 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
             )}
           </div>
           <div
-            className={`v2-kpi-strip v2-executive-hero-strip v2-executive-hero-strip-primary ${denseAnalystMode ? 'dense' : ''}`}
+            className={`v2-forecast-answer-panel${denseAnalystMode ? ' dense' : ''}`}
           >
-            {primaryHeroCards.map((card) => (
-              <div
-                key={card.key}
-                className={
-                  card.tone === 'answer'
-                    ? 'v2-executive-hero-card v2-executive-hero-card-answer'
-                    : 'v2-executive-hero-card'
-                }
-              >
-                <h3>{card.label}</h3>
-                <p>{card.value}</p>
-              </div>
-            ))}
-          </div>
-          <div className="v2-executive-hero-strip v2-executive-hero-strip-secondary">
-            {secondaryHeroCards.map((card) => (
-              <div key={card.key} className="v2-executive-hero-card">
-                <h3>{card.label}</h3>
-                <p>{card.value}</p>
-              </div>
-            ))}
+            <div className="v2-forecast-answer-main">
+              <h3>{primaryHeroCard.label}</h3>
+              <p>{primaryHeroCard.value}</p>
+            </div>
+            <div className="v2-forecast-answer-supporting">
+              {supportingHeroCards.map((card) => (
+                <div key={card.key} className="v2-forecast-answer-supporting-card">
+                  <h3>{card.label}</h3>
+                  <p>{card.value}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

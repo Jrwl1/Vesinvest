@@ -648,7 +648,7 @@ export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
               <article className="v2-subcard v2-reports-panel-card">
                 <h3>{t('v2Reports.yearlyInvestmentsSnapshot')}</h3>
                 <div className="v2-keyvalue-list v2-reports-investment-list">
-                  {selectedReport.snapshot.scenario.yearlyInvestments.map((item) => {
+                  {selectedReport.snapshot.scenario.yearlyInvestments.map((item, index) => {
                     const snapshotLabel = resolveVesinvestGroupLabel(
                       t,
                       item.depreciationRuleSnapshot?.assetClassKey ??
@@ -660,8 +660,16 @@ export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
                         null,
                     );
                     const snapshotMethod = formatInvestmentSnapshotMethod(item, t);
+                    const investmentKey = [
+                      item.year,
+                      item.depreciationRuleSnapshot?.assetClassKey ??
+                        item.depreciationClassKey ??
+                        'uncategorized',
+                      item.amount,
+                      index,
+                    ].join('-');
                     return (
-                      <div key={item.year} className="v2-keyvalue-row">
+                      <div key={investmentKey} className="v2-keyvalue-row">
                         <div>
                           <span>{item.year}</span>
                           {snapshotLabel ? <div className="v2-muted">{snapshotLabel}</div> : null}

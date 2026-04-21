@@ -45,22 +45,21 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
       {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
 
-      <section className="v2-card v2-forecast-strip">
-        <div className="v2-forecast-strip-head">
-          <div>
-            <p className="v2-overview-eyebrow">
-              {t('v2Forecast.availableScenarios', 'Scenarios')}
-            </p>
-            <h2>{t('v2Forecast.scenarioRailTitle', 'Forecast workspace')}</h2>
-            {!loadingList && scenarios.length === 0 ? (
-              <h3>{t('v2Forecast.firstScenarioTitle', 'Create your first scenario')}</h3>
-            ) : null}
-          </div>
-          <div className="v2-forecast-strip-actions">
-            <div className="v2-inline-form v2-forecast-strip-primary-controls">
-              {scenarios.length > 0 ? (
-                <label className="v2-field">
-                  <span>{t('v2Forecast.selectedScenario', 'Scenario')}</span>
+        <section className="v2-card v2-forecast-strip">
+          <div className="v2-forecast-strip-head">
+            <div className="v2-forecast-strip-heading">
+              <h2>{t('v2Forecast.scenarioRailTitle', 'Forecast workspace')}</h2>
+              {!loadingList && scenarios.length === 0 ? (
+                <p className="v2-muted">
+                  {t('v2Forecast.firstScenarioTitle', 'Create your first scenario')}
+                </p>
+              ) : null}
+            </div>
+            <div className="v2-forecast-strip-actions">
+              <div className="v2-inline-form v2-forecast-strip-primary-controls">
+                {scenarios.length > 0 ? (
+                  <label className="v2-field">
+                    <span>{t('v2Forecast.selectedScenario', 'Scenario')}</span>
                   <select
                     id="v2-forecast-scenario-picker"
                     className="v2-input"
@@ -78,9 +77,9 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
                     ))}
                   </select>
                 </label>
-              ) : null}
-              {!hasScenarioTools && showCreationDraftControls ? (
-                <>
+                ) : null}
+                {!hasScenarioTools && showCreationDraftControls ? (
+                  <>
                   <label className="v2-field">
                     <span>{t('projection.newScenarioName', 'New scenario name')}</span>
                     <input
@@ -113,36 +112,40 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
                       ))}
                     </select>
                   </label>
-                </>
-              ) : null}
-              {!hasScenarioTools ? (
-                <>
+                  </>
+                ) : null}
+                {!hasScenarioTools ? (
+                  <>
+                    <button
+                      type="button"
+                      className="v2-btn v2-btn-primary"
+                      onClick={() => handleCreate(false)}
+                      disabled={busy || !planningContextLoaded || !hasBaselineBudget}
+                    >
+                      {t('v2Forecast.firstScenarioCta', 'Create first scenario')}
+                    </button>
+                  </>
+                ) : null}
+                {hasScenarioTools && showPrimarySaveAction ? (
                   <button
                     type="button"
-                    className="v2-btn"
-                    onClick={() => handleCreate(false)}
-                    disabled={busy || !planningContextLoaded || !hasBaselineBudget}
-                  >
-                    {t('v2Forecast.firstScenarioCta', 'Create first scenario')}
-                  </button>
-                  <button
-                    type="button"
-                    className="v2-btn"
-                    onClick={() => handleCreate(true)}
+                    className="v2-btn v2-btn-primary"
+                    onClick={handleSave}
                     disabled={
                       busy ||
-                      !selectedScenarioId ||
-                      !planningContextLoaded ||
-                      !hasBaselineBudget
+                      !scenario ||
+                      !hasUnsavedChanges ||
+                      hasNearTermValidationErrors ||
+                      hasMissingDepreciationRules
                     }
+                    title={blockedForecastActionHint}
                   >
-                    {t('v2Forecast.copyScenario', 'Copy')}
+                    {t('v2Forecast.saveDraft', 'Save draft')}
                   </button>
-                </>
-              ) : null}
-            </div>
-            {hasScenarioTools ? (
-              <details className="v2-forecast-strip-tools">
+                ) : null}
+              </div>
+              {hasScenarioTools ? (
+                <details className="v2-forecast-strip-tools">
                 <summary>{t('common.actions', 'Actions')}</summary>
                 <div className="v2-inline-form v2-forecast-strip-tools-body">
                   {showCreationDraftControls ? (
@@ -212,29 +215,10 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
                     </button>
                   ) : null}
                 </div>
-              </details>
-            ) : null}
-            {showPrimarySaveAction ? (
-              <div className="v2-actions-row v2-forecast-strip-save-row">
-                <button
-                  type="button"
-                  className="v2-btn"
-                  onClick={handleSave}
-                  disabled={
-                    busy ||
-                    !scenario ||
-                    !hasUnsavedChanges ||
-                    hasNearTermValidationErrors ||
-                    hasMissingDepreciationRules
-                  }
-                  title={blockedForecastActionHint}
-                >
-                  {t('v2Forecast.saveDraft', 'Save draft')}
-                </button>
-              </div>
-            ) : null}
+                </details>
+              ) : null}
+            </div>
           </div>
-        </div>
 
         {planningContextLoaded && planningContextError ? (
           <p className="v2-muted">{planningContextError}</p>

@@ -35,23 +35,17 @@ export const ForecastRevenueSurface: React.FC<Props> = ({ controller }) => {
         </div>
       </div>
 
-      <div className="v2-statement-cockpit-grid">
-        <article className="v2-subcard v2-statement-card">
+      <div className="v2-statement-cockpit-grid v2-revenue-workbench-grid">
+        <article className="v2-subcard v2-statement-card v2-revenue-panel">
           <div className="v2-section-header">
             <div>
               <h4>{t('v2Forecast.pillarRevenue', 'Revenue')}</h4>
-              <p className="v2-muted">
-                {t(
-                  'v2Forecast.revenueWorkbenchTariffHint',
-                  'Review today versus horizon tariffs before recomputing the scenario.',
-                )}
-              </p>
             </div>
             <span className={`v2-badge ${reportReadinessToneClass}`}>
               {reportReadinessLabel}
             </span>
           </div>
-          <div className="v2-keyvalue-list">
+          <div className="v2-keyvalue-list v2-workbench-metric-list">
             <div className="v2-keyvalue-row">
               <span>{t('v2Forecast.currentFeeLevel')}</span>
               <strong>{formatPrice(scenario.baselinePriceTodayCombined ?? 0)}</strong>
@@ -119,19 +113,13 @@ export const ForecastRevenueSurface: React.FC<Props> = ({ controller }) => {
           </div>
         </article>
 
-        <article className="v2-subcard v2-statement-card">
+        <article className="v2-subcard v2-statement-card v2-revenue-panel">
           <div className="v2-section-header">
             <div>
               <h4>{t('assumptions.volumeChange', 'Volume change')}</h4>
-              <p className="v2-muted">
-                {t(
-                  'v2Forecast.revenueWorkbenchVolumeHint',
-                  'Keep baseline and horizon sold-volume context visible while editing the annual volume driver.',
-                )}
-              </p>
             </div>
           </div>
-          <div className="v2-keyvalue-list">
+          <div className="v2-keyvalue-list v2-workbench-metric-list">
             <div className="v2-keyvalue-row">
               <span>{t('v2Forecast.ctxSoldWater', 'Sold water')}</span>
               <strong>

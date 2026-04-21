@@ -95,14 +95,6 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
 
   return (
     <article className="v2-subcard v2-investment-program-card">
-      <div className="v2-section-header">
-        <div>
-          <p className="v2-overview-eyebrow">
-            {t('v2Forecast.investmentProgramEyebrow', 'Investment program')}
-          </p>
-          <h3>{t('v2Forecast.investmentProgramTitle', 'Investment program')}</h3>
-        </div>
-      </div>
       {depreciationRulesUnavailable ? (
         <p className="v2-alert v2-alert-error">
           {t(

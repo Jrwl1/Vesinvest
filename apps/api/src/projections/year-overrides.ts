@@ -141,12 +141,21 @@ export function mergeUserInvestmentsIntoYearOverrides(
   if (!yearOverrides && (!userInvestments || userInvestments.length === 0))
     return undefined;
   const out: ProjectionYearOverrides = { ...(yearOverrides ?? {}) };
+  const yearsWithExplicitInvestmentOverride = new Set(
+    Object.entries(yearOverrides ?? {})
+      .filter(([, payload]) => typeof payload?.investmentEur === 'number')
+      .map(([year]) => Math.round(Number(year)))
+      .filter((year) => Number.isFinite(year)),
+  );
   for (const item of userInvestments ?? []) {
     if (!Number.isFinite(item.year) || !Number.isFinite(item.amount)) continue;
     const year = Math.round(item.year);
     out[year] = {
       ...(out[year] ?? {}),
-      investmentEur: item.amount,
+      investmentEur:
+        yearsWithExplicitInvestmentOverride.has(year)
+          ? out[year]?.investmentEur
+          : item.amount + (out[year]?.investmentEur ?? 0),
     };
   }
   return Object.keys(out).length > 0 ? out : undefined;

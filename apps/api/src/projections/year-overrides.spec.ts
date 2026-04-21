@@ -70,4 +70,59 @@ describe('normalizeProjectionYearOverrides', () => {
       investmentEur: 250000,
     });
   });
+
+  it('sums multiple structured user investments that land in the same year', () => {
+    const result = mergeUserInvestmentsIntoYearOverrides(
+      {
+        2027: {
+          waterPriceGrowthPct: 1.5,
+        },
+      },
+      [
+        {
+          year: 2027,
+          amount: 150000,
+          category: 'plant',
+        },
+        {
+          year: 2027,
+          amount: 40000,
+          category: 'meters',
+        },
+      ],
+    );
+
+    expect(result?.[2027]).toEqual({
+      waterPriceGrowthPct: 1.5,
+      investmentEur: 190000,
+    });
+  });
+
+  it('keeps an explicit year override when structured rows for the same year also exist', () => {
+    const result = mergeUserInvestmentsIntoYearOverrides(
+      {
+        2027: {
+          waterPriceGrowthPct: 1.5,
+          investmentEur: 290000,
+        },
+      },
+      [
+        {
+          year: 2027,
+          amount: 150000,
+          category: 'plant',
+        },
+        {
+          year: 2027,
+          amount: 40000,
+          category: 'meters',
+        },
+      ],
+    );
+
+    expect(result?.[2027]).toEqual({
+      waterPriceGrowthPct: 1.5,
+      investmentEur: 290000,
+    });
+  });
 });

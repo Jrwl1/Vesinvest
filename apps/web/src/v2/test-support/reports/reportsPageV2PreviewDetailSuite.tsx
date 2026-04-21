@@ -768,7 +768,104 @@ export function registerReportsPageV2PreviewDetailSuite() {
     expect((await screen.findAllByText(/bokslut-2024\.pdf/)).length).toBeGreaterThan(0);
   });
 
+  it('renders multiple yearly investment rows for the same year without duplicate-key warnings', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      getReportV2.mockResolvedValueOnce({
+        id: 'report-1',
+        title: 'Forecast report Water Utility 2026-04-09',
+        createdAt: '2026-04-09T08:00:00.000Z',
+        baselineYear: 2024,
+        requiredPriceToday: 3.2,
+        requiredAnnualIncreasePct: 4.1,
+        totalInvestments: 290000,
+        ennuste: { id: 'scenario-1', nimi: 'Water Utility Vesinvest v2' },
+        snapshot: {
+          scenario: {
+            id: 'scenario-1',
+            name: 'Water Utility Vesinvest v2',
+            baselineYear: 2024,
+            requiredPriceTodayCombinedAnnualResult: 3.2,
+            requiredAnnualIncreasePctAnnualResult: 4.1,
+            requiredPriceTodayCombinedCumulativeCash: 3.4,
+            requiredAnnualIncreasePctCumulativeCash: 4.8,
+            baselinePriceTodayCombined: 2.8,
+            assumptions: {},
+            years: [{ year: 2026, soldVolume: 100000, totalDepreciation: 45000 }],
+            nearTermExpenseAssumptions: [],
+            thereafterExpenseAssumptions: {
+              personnelPct: 2,
+              energyPct: 2.5,
+              opexOtherPct: 1.5,
+            },
+            yearlyInvestments: [
+              {
+                year: 2026,
+                amount: 100000,
+                depreciationClassKey: 'sanering_water_network',
+                depreciationRuleSnapshot: {
+                  assetClassKey: 'sanering_water_network',
+                  assetClassName: 'Sanering / vattennatverk',
+                  method: 'straight-line',
+                  linearYears: 40,
+                  residualPercent: null,
+                },
+              },
+              {
+                year: 2026,
+                amount: 150000,
+                depreciationClassKey: 'wastewater_equipment',
+                depreciationRuleSnapshot: {
+                  assetClassKey: 'wastewater_equipment',
+                  assetClassName: 'Jatevesilaitteet',
+                  method: 'straight-line',
+                  linearYears: 20,
+                  residualPercent: null,
+                },
+              },
+            ],
+          },
+          generatedAt: '2026-04-09T08:00:00.000Z',
+          acceptedBaselineYears: [2024],
+          baselineSourceSummaries: [],
+          baselineSourceSummary: null,
+          vesinvestPlan: null,
+          vesinvestAppendix: null,
+          reportVariant: 'confidential_appendix',
+          reportSections: {
+            baselineSources: false,
+            investmentPlan: false,
+            assumptions: false,
+            yearlyInvestments: true,
+            riskSummary: false,
+          },
+        },
+        variant: 'confidential_appendix',
+        pdfUrl: '/v2/reports/report-1/pdf',
+      } as any);
+
+      render(
+        <ReportsPageV2
+          refreshToken={0}
+          focusedReportId={null}
+          onGoToForecast={() => undefined}
+          onFocusedReportChange={() => undefined}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(getReportV2).toHaveBeenCalledWith('report-1');
+      });
+      expect(screen.getAllByText('2026').length).toBeGreaterThan(1);
+      expect(
+        consoleError.mock.calls.filter(([firstArg]) =>
+          String(firstArg).includes('Encountered two children with the same key'),
+        ),
+      ).toEqual([]);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   });
 }
-
-

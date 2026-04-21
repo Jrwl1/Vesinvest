@@ -625,6 +625,63 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
     ).toContain('Investment program');
   });
 
+  it('keeps delete disabled for the base scenario inside the Actions disclosure', async () => {
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+      />,
+    );
+
+    await screen.findByRole('heading', { name: 'Planning scenarios' });
+    fireEvent.click(screen.getByText('Actions'));
+
+    expect(
+      (screen.getByRole('button', { name: 'Delete' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
+
+  it('keeps copy and delete available for a non-base scenario inside the Actions disclosure', async () => {
+    createForecastScenarioV2.mockResolvedValueOnce({
+      ...buildStressScenario(),
+      id: 'copied-1',
+      name: 'Copied scenario',
+    });
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    deleteForecastScenarioV2.mockResolvedValueOnce(undefined as never);
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="stress-1"
+      />,
+    );
+
+    await screen.findByRole('heading', { name: 'Planning scenarios' });
+    fireEvent.click(screen.getByText('Actions'));
+
+    const copyButton = screen.getByRole('button', { name: 'Copy' });
+    const deleteButton = screen.getByRole('button', { name: 'Delete' });
+
+    expect((copyButton as HTMLButtonElement).disabled).toBe(false);
+    expect((deleteButton as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(copyButton);
+    await waitFor(() => {
+      expect(createForecastScenarioV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          copyFromScenarioId: 'stress-1',
+        }),
+      );
+    });
+
+    fireEvent.click(deleteButton);
+    await waitFor(() => {
+      expect(deleteForecastScenarioV2).toHaveBeenCalledWith('stress-1');
+    });
+    confirmSpy.mockRestore();
+  });
+
   it('renders tariff-answer cards with explicit driver labels instead of generic baseline rows', async () => {
     render(<EnnustePageV2 onReportCreated={() => undefined} />);
 
@@ -659,6 +716,19 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
     ).toBeNull();
   });
 
+  it('keeps the forecast workspace out of the overview review grid shell', async () => {
+    const { container } = render(<EnnustePageV2 onReportCreated={() => undefined} />);
+
+    await screen.findByRole('heading', { name: 'Planning scenarios' });
+
+    const forecastLayout = container.querySelector(
+      '.v2-forecast-layout.v2-forecast-layout-board',
+    );
+
+    expect(forecastLayout).toBeTruthy();
+    expect(forecastLayout?.className).not.toContain('v2-grid-ennuste');
+  });
+
   it('keeps view mode toggles out of the primary forecast action row', async () => {
     render(<EnnustePageV2 onReportCreated={() => undefined} />);
 
@@ -674,6 +744,46 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
     expect(createReportButton.closest('.v2-actions-row')).not.toBe(
       standardViewButton.closest('.v2-actions-row'),
     );
+  });
+
+  it('compresses the answer cluster in analyst view while keeping a dedicated metadata strip', async () => {
+    const { container } = render(<EnnustePageV2 onReportCreated={() => undefined} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Analyst view' }));
+
+    const answerPanel = container.querySelector('.v2-forecast-answer-panel.dense');
+    const metaStrip = container.querySelector('.v2-forecast-toolbar-meta');
+
+    expect(answerPanel).toBeTruthy();
+    expect(
+      answerPanel?.querySelectorAll('.v2-forecast-answer-supporting-card'),
+    ).toHaveLength(5);
+    expect(metaStrip).toBeTruthy();
+    expect(metaStrip?.querySelectorAll('.v2-overview-meta-block')).toHaveLength(4);
+  });
+
+  it('keeps the chart summary compact and drops to two items when baseline context is missing', async () => {
+    const { container } = render(<EnnustePageV2 onReportCreated={() => undefined} />);
+
+    await screen.findByRole('heading', { name: 'Income statement overview' });
+    expect(
+      container.querySelectorAll('.v2-chart-summary-list .v2-keyvalue-row'),
+    ).toHaveLength(3);
+
+    cleanup();
+    getPlanningContextV2.mockResolvedValueOnce({
+      ...buildPlanningContext(),
+      baselineYears: [],
+    });
+
+    const { container: noBaselineContainer } = render(
+      <EnnustePageV2 onReportCreated={() => undefined} />,
+    );
+
+    await screen.findByRole('heading', { name: 'Income statement overview' });
+    expect(
+      noBaselineContainer.querySelectorAll('.v2-chart-summary-list .v2-keyvalue-row'),
+    ).toHaveLength(2);
   });
 
   it('does not flash the first-scenario empty state while the scenario list is still loading', async () => {
@@ -722,6 +832,13 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
     expect(
       screen.getByRole('button', { name: 'Repeat near-term template' }),
     ).toBeTruthy();
+    expect(screen.getAllByRole('heading', { name: 'Investment program' })).toHaveLength(1);
+    expect(
+      container.querySelectorAll('.v2-investment-summary-strip article'),
+    ).toHaveLength(3);
+    expect(
+      container.querySelectorAll('.v2-investment-impact-strip article'),
+    ).toHaveLength(4);
     expectNoDuplicateIds(container);
   });
 
@@ -1143,5 +1260,3 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
 
   });
 }
-
-

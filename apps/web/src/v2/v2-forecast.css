@@ -928,30 +928,48 @@
 }
 
 .v2-forecast-strip {
-  gap: 16px;
+  gap: 12px;
 }
 
 .v2-forecast-strip-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 44rem);
-  align-items: end;
-  gap: 20px;
+  grid-template-columns: minmax(220px, 0.72fr) minmax(420px, 1.28fr);
+  align-items: center;
+  gap: 16px;
 }
 
 .v2-forecast-strip-head h2 {
-  font-size: 1.45rem;
-  line-height: 1.08;
+  margin: 0;
+  font-size: 1.28rem;
+  line-height: 1.1;
   letter-spacing: -0.02em;
+}
+
+.v2-forecast-strip-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.v2-forecast-strip-heading p {
+  margin: 0;
+}
+
+@media (max-width: 860px) {
+  .v2-forecast-strip-head {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
 }
 
 .v2-forecast-strip-actions {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
 .v2-forecast-strip-primary-controls {
   align-items: end;
+  justify-content: flex-start;
 }
 
 .v2-forecast-strip-tools {
@@ -996,10 +1014,6 @@
   align-items: end;
 }
 
-.v2-forecast-strip-save-row {
-  justify-content: flex-start;
-}
-
 .v2-scenario-editor-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 28rem);
@@ -1009,7 +1023,7 @@
 
 .v2-forecast-hero-summary {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   align-content: start;
 }
 
@@ -1029,24 +1043,126 @@
   justify-content: flex-start;
 }
 
+.v2-forecast-answer-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-forecast-answer-panel.dense {
+  gap: 8px;
+}
+
+.v2-forecast-answer-main {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(43, 79, 136, 0.22);
+  border-radius: 10px;
+  background: #eef3fd;
+  padding: 14px 16px;
+}
+
+.v2-forecast-answer-main h3,
+.v2-forecast-answer-supporting-card h3 {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--v2-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.v2-forecast-answer-main p {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--v2-primary);
+}
+
+.v2-forecast-answer-panel.dense .v2-forecast-answer-main {
+  padding: 12px 14px;
+}
+
+.v2-forecast-answer-panel.dense .v2-forecast-answer-main p {
+  font-size: 1.72rem;
+}
+
+.v2-forecast-answer-supporting {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-forecast-answer-supporting-card {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--v2-border);
+  border-radius: 10px;
+  background: var(--v2-surface-strong);
+  padding: 10px 12px;
+}
+
+.v2-forecast-answer-supporting-card p {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.v2-forecast-answer-panel.dense .v2-forecast-answer-supporting-card {
+  padding: 8px 10px;
+}
+
+.v2-forecast-answer-panel.dense .v2-forecast-answer-supporting-card p {
+  font-size: 0.94rem;
+}
+
 .v2-forecast-driver-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .v2-forecast-driver-card {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  padding: 10px 12px;
+  box-shadow: none !important;
 }
 
 .v2-forecast-driver-card > strong {
-  font-size: 0.96rem;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.v2-forecast-driver-card .v2-keyvalue-list {
+  gap: 0;
+}
+
+.v2-forecast-driver-card .v2-keyvalue-row {
+  border: 0;
+  border-bottom: 1px solid rgba(183, 192, 203, 0.62);
+  border-radius: 0;
+  background: transparent;
+  padding: 7px 0;
+  font-size: 0.8rem;
+}
+
+.v2-forecast-driver-card .v2-keyvalue-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.v2-forecast-driver-card .v2-keyvalue-row strong {
+  text-align: right;
 }
 
 .v2-forecast-editor {
   grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.92fr);
   gap: 18px;
+}
+
+.v2-forecast-editor > .v2-forecast-planning-section {
+  grid-column: 1 / -1;
 }
 
 .v2-forecast-editor > .v2-statement-cockpit,
@@ -1059,13 +1175,119 @@
 }
 
 .v2-statement-cockpit-grid {
-  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.95fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.9fr);
+  gap: 12px;
+}
+
+.v2-revenue-workbench-grid,
+.v2-opex-workbench-layout {
+  gap: 10px;
+}
+
+.v2-revenue-workbench-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.v2-opex-workbench-layout {
+  grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
+}
+
+.v2-revenue-panel,
+.v2-opex-summary-card,
+.v2-opex-editor-card {
+  gap: 10px;
+  box-shadow: none !important;
+}
+
+.v2-revenue-panel .v2-section-header,
+.v2-opex-summary-card .v2-section-header,
+.v2-opex-editor-card .v2-section-header {
+  gap: 8px;
+}
+
+.v2-workbench-metric-list {
+  gap: 4px;
+}
+
+.v2-workbench-metric-list .v2-keyvalue-row {
+  border: 0;
+  border-bottom: 1px solid rgba(183, 192, 203, 0.62);
+  border-radius: 0;
+  background: transparent;
+  padding: 7px 0;
+  font-size: 0.8rem;
+}
+
+.v2-workbench-metric-list .v2-keyvalue-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.v2-workbench-metric-list .v2-keyvalue-row strong {
+  text-align: right;
+}
+
+.v2-opex-summary-card .v2-workbench-metric-list {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px;
+}
+
+.v2-opex-summary-card .v2-workbench-metric-list .v2-keyvalue-row {
+  border: 1px solid var(--v2-border);
+  border-radius: 8px;
+  background: var(--v2-surface-soft);
+  padding: 7px 8px;
+}
+
+.v2-opex-summary-card .v2-workbench-metric-list .v2-keyvalue-row strong {
+  text-align: left;
+}
+
+.v2-revenue-panel .v2-field,
+.v2-opex-editor-card .v2-field {
+  gap: 4px;
+}
+
+.v2-revenue-panel .v2-field span,
+.v2-opex-editor-card .v2-field span {
+  font-size: 0.74rem;
+}
+
+.v2-revenue-panel .v2-input,
+.v2-opex-editor-card .v2-input {
+  padding: 7px 8px;
+  font-size: 0.84rem;
+}
+
+@media (max-width: 860px) {
+  .v2-revenue-workbench-grid,
+  .v2-opex-workbench-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
 }
 
 .v2-forecast-workspace-meta > div,
 .v2-forecast-strip-meta > div {
   box-shadow: none;
+}
+
+.v2-forecast-toolbar-meta {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.v2-forecast-toolbar-meta > .v2-overview-meta-block {
+  border-radius: 10px;
+  background: var(--v2-surface-soft);
+  padding: 10px 12px;
+}
+
+.v2-forecast-toolbar-meta > .v2-overview-meta-block span {
+  font-size: 0.7rem;
+}
+
+.v2-forecast-toolbar-meta > .v2-overview-meta-block strong {
+  font-size: 1rem;
 }
 
 .v2-investment-program-row,
@@ -1121,6 +1343,8 @@
 .v2-page.v2-forecast-theme .v2-investment-program-row,
 .v2-page.v2-forecast-theme .v2-investment-row,
 .v2-page.v2-forecast-theme .v2-executive-hero-strip > div,
+.v2-page.v2-forecast-theme .v2-forecast-answer-main,
+.v2-page.v2-forecast-theme .v2-forecast-answer-supporting-card,
 .v2-page.v2-forecast-theme .v2-statement-row-head {
   background: var(--v2-surface-strong) !important;
   color: var(--v2-text) !important;
@@ -1214,13 +1438,268 @@
   box-shadow: 0 0 0 2px rgba(43, 79, 136, 0.06) !important;
 }
 
+.v2-page.v2-forecast-theme .v2-forecast-answer-main {
+  background: #eef3fd !important;
+  border-color: rgba(43, 79, 136, 0.24) !important;
+}
+
+.v2-page.v2-forecast-theme .v2-forecast-answer-main h3 {
+  color: #516170 !important;
+}
+
+.v2-page.v2-forecast-theme .v2-forecast-answer-main p {
+  color: var(--v2-primary) !important;
+}
+
 .v2-page.v2-forecast-theme .v2-primary-chart-region {
-  padding: 20px;
-  box-shadow: 0 18px 34px rgba(30, 39, 50, 0.08) !important;
+  padding: 16px;
+  box-shadow: none !important;
 }
 
 .v2-page.v2-forecast-theme .v2-kpi-strip > div {
   padding: 10px 12px;
+}
+
+.v2-chart-summary-list {
+  margin-top: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px;
+}
+
+.v2-chart-summary-list .v2-keyvalue-row {
+  display: grid;
+  gap: 3px;
+  justify-content: flex-start;
+  border-radius: 8px;
+  padding: 7px 8px;
+  background: var(--v2-surface-soft);
+  font-size: 0.78rem;
+}
+
+.v2-chart-summary-list .v2-keyvalue-row strong {
+  font-size: 0.9rem;
+}
+
+.v2-statement-card .v2-planning-launcher {
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.v2-statement-card .v2-forecast-context-summary {
+  gap: 8px;
+}
+
+.v2-statement-card .v2-keyvalue-row {
+  padding: 7px 8px;
+}
+
+.v2-investment-program-card {
+  gap: 10px;
+}
+
+.v2-investment-summary-strip,
+.v2-investment-impact-strip {
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.v2-investment-summary-strip {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.v2-investment-impact-strip {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.v2-investment-summary-strip article,
+.v2-investment-impact-strip article {
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: none !important;
+}
+
+.v2-investment-summary-strip h3,
+.v2-investment-impact-strip h3 {
+  font-size: 0.7rem;
+}
+
+.v2-investment-summary-strip p,
+.v2-investment-impact-strip p {
+  font-size: 1rem;
+}
+
+.v2-investment-summary-strip small {
+  font-size: 0.76rem;
+}
+
+.v2-investment-workspace-toolbar {
+  align-items: start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.v2-investment-workspace-toolbar p {
+  flex: 1 1 420px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.v2-investment-bulk-actions {
+  gap: 6px;
+}
+
+.v2-investment-bulk-actions .v2-btn {
+  padding: 7px 10px;
+  font-size: 0.82rem;
+}
+
+.v2-investment-program-table,
+.v2-investment-table {
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.v2-investment-program-row,
+.v2-investment-row {
+  gap: 6px;
+  padding: 8px;
+}
+
+.v2-investment-program-row,
+.v2-investment-program-row-head {
+  grid-template-columns:
+    60px
+    minmax(0, 1.18fr)
+    minmax(0, 0.84fr)
+    minmax(0, 0.94fr)
+    minmax(0, 1.08fr)
+    minmax(0, 0.8fr)
+    minmax(0, 0.8fr)
+    minmax(0, 0.84fr)
+    minmax(0, 1fr);
+}
+
+.v2-investment-row,
+.v2-investment-row-head {
+  grid-template-columns:
+    60px
+    minmax(0, 0.82fr)
+    minmax(0, 1fr)
+    minmax(0, 0.78fr)
+    minmax(0, 0.78fr)
+    minmax(0, 1fr);
+}
+
+.v2-investment-program-row > *,
+.v2-investment-row > * {
+  min-width: 0;
+}
+
+.v2-investment-program-row-head,
+.v2-investment-row-head {
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}
+
+.v2-investment-program-row-head span,
+.v2-investment-row-head span {
+  white-space: normal;
+  line-height: 1.15;
+}
+
+.v2-investment-program-row .v2-input,
+.v2-investment-row .v2-input {
+  padding: 7px 8px;
+  font-size: 0.84rem;
+}
+
+.v2-investment-program-row .v2-input,
+.v2-investment-row .v2-input,
+.v2-investment-program-row select,
+.v2-investment-row select,
+.v2-readonly-field {
+  min-width: 0;
+}
+
+.v2-investment-year-pill {
+  min-height: 34px;
+  font-size: 0.8rem;
+}
+
+.v2-readonly-field {
+  display: grid;
+  gap: 2px;
+  align-content: center;
+  padding: 7px 8px;
+}
+
+.v2-readonly-field strong,
+.v2-readonly-field span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-page.v2-forecast-theme .v2-investment-program-row,
+.v2-page.v2-forecast-theme .v2-investment-program-row-head {
+  grid-template-columns:
+    60px
+    minmax(0, 1.18fr)
+    minmax(0, 0.84fr)
+    minmax(0, 0.94fr)
+    minmax(0, 1.08fr)
+    minmax(0, 0.8fr)
+    minmax(0, 0.8fr)
+    minmax(0, 0.84fr)
+    minmax(0, 1fr) !important;
+  gap: 6px !important;
+}
+
+.v2-page.v2-forecast-theme .v2-investment-row,
+.v2-page.v2-forecast-theme .v2-investment-row-head {
+  grid-template-columns:
+    60px
+    minmax(0, 0.82fr)
+    minmax(0, 1fr)
+    minmax(0, 0.78fr)
+    minmax(0, 0.78fr)
+    minmax(0, 1fr) !important;
+  gap: 6px !important;
+}
+
+.v2-page.v2-forecast-theme .v2-investment-program-row-head span,
+.v2-page.v2-forecast-theme .v2-investment-row-head span {
+  white-space: normal !important;
+  line-height: 1.15;
+}
+
+.v2-opex-workbench-row {
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.v2-opex-workbench-row > strong {
+  font-size: 0.86rem;
+}
+
+.v2-opex-workbench-row .v2-muted {
+  font-size: 0.78rem;
+}
+
+.v2-investment-group-list {
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.v2-investment-group-card summary {
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.v2-investment-group-card > p {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
 }
 
 .v2-page.v2-forecast-theme .v2-planning-launcher.primary-recommended {

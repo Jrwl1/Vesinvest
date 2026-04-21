@@ -1,4 +1,6 @@
 import React from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   cleanup,
   fireEvent,
@@ -912,7 +914,7 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
     };
     updateForecastScenarioV2.mockResolvedValue(updatedScenario);
 
-    render(
+    const { container } = render(
       <EnnustePageV2
         onReportCreated={() => undefined}
         initialScenarioId="base-1"
@@ -931,6 +933,18 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
     expect(
       await screen.findByRole('heading', { name: 'Revenue and volume drivers' }),
     ).toBeTruthy();
+    expect(
+      screen.queryByText(
+        'Review today versus horizon tariffs before recomputing the scenario.',
+      ),
+    ).toBeNull();
+    expect(
+      screen.queryByText(
+        'Keep baseline and horizon sold-volume context visible while editing the annual volume driver.',
+      ),
+    ).toBeNull();
+    expect(container.querySelectorAll('.v2-revenue-panel')).toHaveLength(2);
+    expect(container.querySelectorAll('.v2-revenue-panel .v2-workbench-metric-list')).toHaveLength(2);
     expect(
       (
         screen.getAllByRole('textbox', {
@@ -984,7 +998,7 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
   });
 
   it('navigates between operating-cost drill-downs in analyst mode and keeps edits when returning to the cockpit', async () => {
-    render(
+    const { container } = render(
       <EnnustePageV2
         onReportCreated={() => undefined}
         initialScenarioId="base-1"
@@ -1001,6 +1015,12 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
         name: 'Open materials planning',
       }),
     );
+    expect(screen.queryByText('Operating cost planning')).toBeNull();
+    expect(
+      screen.queryByText(
+        'Keep the cockpit context visible while tuning one operating-cost pillar at a time.',
+      ),
+    ).toBeNull();
     fireEvent.click(
       screen.getByRole('button', { name: 'Enable analyst mode' }),
     );
@@ -1008,6 +1028,8 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
     expect(
       screen.getByRole('button', { name: 'Disable analyst mode' }),
     ).toBeTruthy();
+    expect(container.querySelector('.v2-opex-summary-card')).toBeTruthy();
+    expect(container.querySelector('.v2-opex-editor-card')).toBeTruthy();
 
     fireEvent.change(
       screen.getByRole('textbox', { name: 'Materials and services 2024' }),
@@ -1055,6 +1077,17 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
     ).toBe('5');
   });
 
+  it('keeps the revenue and opex workbenches on a one-column fallback at the compact breakpoint', () => {
+    const forecastCss = readFileSync(
+      resolve(process.cwd(), 'src/v2/v2-forecast.css'),
+      'utf8',
+    );
+
+    expect(forecastCss).toMatch(
+      /@media \(max-width: 860px\)\s*\{[\s\S]*?\.v2-revenue-workbench-grid,\s*\.v2-opex-workbench-layout\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*!important;/,
+    );
+  });
+
   it('keeps depreciation impact in Forecast but removes the old depreciation planning workbench', async () => {
     render(
       <EnnustePageV2
@@ -1088,5 +1121,3 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
 
   });
 }
-
-

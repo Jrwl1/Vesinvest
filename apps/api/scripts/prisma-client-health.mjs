@@ -216,7 +216,7 @@ async function hashFile(filePath) {
 
 async function resolvePrismaEnginesDir() {
   try {
-    const pnpmStoreDir = path.resolve(prismaClientPackageDir, '..', '..', '..');
+    const pnpmStoreDir = path.resolve(prismaClientPackageDir, '..', '..', '..', '..');
     const exactPackageDir = path.join(
       pnpmStoreDir,
       `@prisma+engines@${prismaClientVersion}`,

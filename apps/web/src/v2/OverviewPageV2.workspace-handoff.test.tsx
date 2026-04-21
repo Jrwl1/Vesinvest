@@ -1,3 +1,3 @@
-import { registerOverviewPageV2WorkspaceHandoffSuite } from './test-support/overviewPageV2TestSupport';
+import { registerOverviewWorkspaceInlineEditorSuite } from './test-support/overview/overviewWorkspaceInlineEditorSuite';
 
-registerOverviewPageV2WorkspaceHandoffSuite();
+registerOverviewWorkspaceInlineEditorSuite();

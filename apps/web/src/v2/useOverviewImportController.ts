@@ -8,9 +8,7 @@ import i18n, {
 } from '../i18n';
 
 import {
-  excludeImportYearsV2,
   getImportYearDataV2,
-  restoreImportYearsV2,
   syncImportV2,
   type V2ForecastScenarioListItem,
   type V2ImportYearDataResponse,
@@ -34,77 +32,14 @@ import {
   getConfirmedImportedYears,
   type SetupWizardStep,
 } from './overviewWorkflow';
-
-const AUTO_SEARCH_MIN_QUERY_LENGTH = 3;
-const AUTO_SEARCH_BUSINESS_ID_MIN_LENGTH = 4;
-const AUTO_SEARCH_DELAY_MS = 320;
-const AUTO_SEARCH_BUSINESS_ID_DELAY_MS = 120;
-const OVERVIEW_RUNTIME_STORAGE_KEY = 'v2_overview_runtime_state';
-
-const normalizeOrganizationSearchQuery = (value: string): string =>
-  value.trim().replace(/\s+/g, ' ');
-
-const normalizeBusinessIdCandidate = (value: string): string =>
-  normalizeOrganizationSearchQuery(value).replace(/[^\d]/g, '');
-
-const isBusinessIdLikeQuery = (value: string): boolean =>
-  /^[\d-\s]+$/.test(normalizeOrganizationSearchQuery(value)) &&
-  normalizeBusinessIdCandidate(value).length > 0;
-
-const getAutoSearchMinLength = (value: string): number =>
-  isBusinessIdLikeQuery(value)
-    ? AUTO_SEARCH_BUSINESS_ID_MIN_LENGTH
-    : AUTO_SEARCH_MIN_QUERY_LENGTH;
-
-const getAutoSearchDelayMs = (value: string): number =>
-  isBusinessIdLikeQuery(value)
-    ? AUTO_SEARCH_BUSINESS_ID_DELAY_MS
-    : AUTO_SEARCH_DELAY_MS;
-
-function readOverviewRuntimeState(workspaceKey: string | null): {
-  selectedYears: number[];
-} {
-  if (typeof window === 'undefined') {
-    return {
-      selectedYears: [],
-    };
-  }
-
-  try {
-    const raw = window.sessionStorage.getItem(OVERVIEW_RUNTIME_STORAGE_KEY);
-    if (!raw) {
-      return {
-        selectedYears: [],
-      };
-    }
-    const parsed = JSON.parse(raw) as {
-      workspaceKey?: unknown;
-      selectedYears?: unknown;
-    };
-    const storedWorkspaceKey =
-      typeof parsed.workspaceKey === 'string' && parsed.workspaceKey.trim().length > 0
-        ? parsed.workspaceKey.trim()
-        : null;
-    if (storedWorkspaceKey == null || storedWorkspaceKey !== workspaceKey) {
-      return {
-        selectedYears: [],
-      };
-    }
-    const parseYears = (value: unknown): number[] =>
-      Array.isArray(value)
-        ? value
-            .map((item) => Number(item))
-            .filter((item) => Number.isFinite(item))
-        : [];
-    return {
-      selectedYears: parseYears(parsed.selectedYears),
-    };
-  } catch {
-    return {
-      selectedYears: [],
-    };
-  }
-}
+import {
+  getAutoSearchDelayMs,
+  getAutoSearchMinLength,
+  normalizeOrganizationSearchQuery,
+  OVERVIEW_RUNTIME_STORAGE_KEY,
+  readOverviewRuntimeState,
+} from './overviewImportPersistence';
+import { useOverviewImportMaintenance } from './useOverviewImportMaintenance';
 
 export type UseOverviewImportControllerParams = {
   t: TFunction;
@@ -291,6 +226,9 @@ export function useOverviewImportController({
   React.useEffect(() => {
     selectedOrgRef.current = selectedOrg;
   }, [selectedOrg]);
+  React.useEffect(() => {
+    previewFetchYearsRef.current.clear();
+  }, [runtimeWorkspaceKey]);
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!runtimeWorkspaceKey) return;
@@ -762,285 +700,36 @@ export function useOverviewImportController({
     [searchResults, selectedOrg],
   );
 
-  const toggleYearForDelete = React.useCallback((year: number) => {
-    setSelectedYearsForDelete((prev) =>
-      prev.includes(year)
-        ? prev.filter((item) => item !== year)
-        : [...prev, year].sort((a, b) => a - b),
-    );
-  }, []);
-
-  const toggleYearForRestore = React.useCallback((year: number) => {
-    setSelectedYearsForRestore((prev) =>
-      prev.includes(year)
-        ? prev.filter((item) => item !== year)
-        : [...prev, year].sort((a, b) => a - b),
-    );
-  }, []);
-
-  const handleBulkDeleteYears = React.useCallback(async () => {
-    if (selectedYearsForDelete.length === 0) return;
-    const yearsLabel = [...selectedYearsForDelete]
-      .sort((a, b) => a - b)
-      .join(', ');
-    const confirmed = window.confirm(
-      t(
-        'v2Overview.excludeYearsBulkConfirm',
-        'Rajataanko vuodet {{years}} pois suunnitelmasta? Vuodet sÃ¤ilyvÃ¤t tyÃ¶tilassa ja ne voi palauttaa myÃ¶hemmin.',
-        { years: yearsLabel },
-      ),
-    );
-    if (!confirmed) return;
-
-    setBulkDeletingYears(true);
-    setError(null);
-    setInfo(null);
-    try {
-      const result = await excludeImportYearsV2(selectedYearsForDelete);
-      const skippedYears = result.results
-        .filter((row) => row.reason !== null)
-        .map((row) => row.vuosi);
-      if (skippedYears.length > 0) {
-        setInfo(
-          t(
-            'v2Overview.excludeYearsBulkPartial',
-            'Rajattiin {{excluded}} vuosi/vuotta pois suunnitelmasta. {{skipped}} vuosi/vuotta oli jo rajattu: {{years}}.',
-            {
-              excluded: result.excludedCount,
-              skipped: result.alreadyExcludedCount,
-              years: skippedYears.join(', '),
-            },
-          ),
-        );
-      } else {
-        setInfo(
-          t(
-            'v2Overview.excludeYearsBulkDone',
-            'Vuodet rajattiin pois suunnitelmasta: {{count}}.',
-            { count: result.excludedCount },
-          ),
-        );
-      }
-      setSelectedYearsForDelete([]);
-      await loadOverview();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : t(
-              'v2Overview.excludeYearsBulkFailed',
-              'Valittujen vuosien rajaaminen pois suunnitelmasta epäonnistui.',
-            ),
-      );
-    } finally {
-      setBulkDeletingYears(false);
-    }
-  }, [loadOverview, selectedYearsForDelete, t]);
-
-  const handleBulkRestoreYears = React.useCallback(async () => {
-    if (selectedYearsForRestore.length === 0) return;
-    setBulkRestoringYears(true);
-    setError(null);
-    setInfo(null);
-    try {
-      const result = await restoreImportYearsV2(selectedYearsForRestore);
-      const notRestored = result.results.filter((row) => !row.restored);
-      if (notRestored.length > 0) {
-        setInfo(
-          t(
-            'v2Overview.restoreYearsBulkPartial',
-            'Restored {{restored}} year(s). {{missing}} year(s) were not excluded.',
-            {
-              restored: result.restoredCount,
-              missing: result.notExcludedCount,
-            },
-          ),
-        );
-      } else {
-        setInfo(
-          t('v2Overview.restoreYearsBulkDone', 'Restored {{count}} year(s).', {
-            count: result.restoredCount,
-          }),
-        );
-      }
-      setSelectedYearsForRestore([]);
-      await loadOverview();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : t('v2Overview.restoreYearsBulkFailed', 'Failed to restore selected years.'),
-      );
-    } finally {
-      setBulkRestoringYears(false);
-    }
-  }, [loadOverview, selectedYearsForRestore, t]);
-
-  const excludeYearFromImportBoard = React.useCallback(
-    async (year: number) => {
-      const previousSelectedYears = selectedYearsRef.current;
-      const nextSelectedYears = previousSelectedYears.filter(
-        (item) => item !== year,
-      );
-
-      syncYearSelectionTouchedRef.current = true;
-      setSelectedYears(nextSelectedYears);
-      selectedYearsRef.current = nextSelectedYears;
-      setSelectedYearsForDelete((prev) => prev.filter((item) => item !== year));
-      setSelectedYearsForRestore((prev) => prev.filter((item) => item !== year));
-      selectedYearsForDeleteRef.current = selectedYearsForDeleteRef.current.filter(
-        (item) => item !== year,
-      );
-      selectedYearsForRestoreRef.current = selectedYearsForRestoreRef.current.filter(
-        (item) => item !== year,
-      );
-      setExcludedYearOverrides((prev) => ({ ...prev, [year]: true }));
-      setRemovingYear(year);
-      setError(null);
-      setInfo(null);
-      try {
-        const result = await excludeImportYearsV2([year]);
-        const skippedYears = result.results
-          .filter((row) => row.reason !== null)
-          .map((row) => row.vuosi);
-        if (skippedYears.length > 0) {
-          setInfo(
-            t(
-              'v2Overview.excludeYearsBulkPartial',
-              'Rajattiin {{excluded}} vuosi/vuotta pois suunnitelmasta. {{skipped}} vuosi/vuotta oli jo rajattu: {{years}}.',
-              {
-                excluded: result.excludedCount,
-                skipped: result.alreadyExcludedCount,
-                years: skippedYears.join(', '),
-              },
-            ),
-          );
-        } else {
-          setInfo(
-            t(
-              'v2Overview.excludeYearsBulkDone',
-              'Vuodet rajattiin pois suunnitelmasta: {{count}}.',
-              { count: result.excludedCount },
-            ),
-          );
-        }
-        const refreshSucceeded = await loadOverviewInternal({
-          preserveVisibleState: true,
-          preserveSelectionState: true,
-          preserveReviewContinueStep: true,
-          deferSecondaryLoads: true,
-        });
-        if (refreshSucceeded) {
-          setExcludedYearOverrides((prev) => {
-            const next = { ...prev };
-            delete next[year];
-            return next;
-          });
-        }
-      } catch (err) {
-        setSelectedYears(previousSelectedYears);
-        selectedYearsRef.current = previousSelectedYears;
-        setExcludedYearOverrides((prev) => {
-          const next = { ...prev };
-          delete next[year];
-          return next;
-        });
-        setError(
-          err instanceof Error
-            ? err.message
-            : t(
-                'v2Overview.excludeYearsBulkFailed',
-                'Valittujen vuosien rajaaminen pois suunnitelmasta epäonnistui.',
-              ),
-        );
-      } finally {
-        setRemovingYear(null);
-      }
-    },
-    [loadOverview, t],
-  );
-
-  const restoreYearFromImportBoard = React.useCallback(
-    async (year: number) => {
-      setSelectedYearsForDelete((prev) => prev.filter((item) => item !== year));
-      setSelectedYearsForRestore((prev) => prev.filter((item) => item !== year));
-      selectedYearsForDeleteRef.current = selectedYearsForDeleteRef.current.filter(
-        (item) => item !== year,
-      );
-      selectedYearsForRestoreRef.current = selectedYearsForRestoreRef.current.filter(
-        (item) => item !== year,
-      );
-      setExcludedYearOverrides((prev) => ({ ...prev, [year]: false }));
-      setRemovingYear(year);
-      setError(null);
-      setInfo(null);
-      try {
-        const result = await restoreImportYearsV2([year]);
-        const notRestored = result.results.filter((row) => !row.restored);
-        if (notRestored.length > 0) {
-          setInfo(
-            t(
-              'v2Overview.restoreYearsBulkPartial',
-              'Restored {{restored}} year(s). {{missing}} year(s) were not excluded.',
-              {
-                restored: result.restoredCount,
-                missing: result.notExcludedCount,
-              },
-            ),
-          );
-        } else {
-          setInfo(
-            t(
-              'v2Overview.restoreYearsBulkDone',
-              'Restored {{count}} year(s).',
-              {
-                count: result.restoredCount,
-              },
-            ),
-          );
-        }
-        const refreshSucceeded = await loadOverviewInternal({
-          preserveVisibleState: true,
-          preserveSelectionState: true,
-          preserveReviewContinueStep: true,
-          deferSecondaryLoads: true,
-        });
-        if (refreshSucceeded) {
-          setExcludedYearOverrides((prev) => {
-            const next = { ...prev };
-            delete next[year];
-            return next;
-          });
-        }
-      } catch (err) {
-        setExcludedYearOverrides((prev) => {
-          const next = { ...prev };
-          delete next[year];
-          return next;
-        });
-        setError(
-          err instanceof Error
-            ? err.message
-            : t(
-                'v2Overview.restoreYearsBulkFailed',
-                'Failed to restore selected years.',
-              ),
-        );
-      } finally {
-        setRemovingYear(null);
-      }
-    },
-    [loadOverviewInternal, t],
-  );
+  const {
+    excludeYearFromImportBoard,
+    handleBulkDeleteYears,
+    handleBulkRestoreYears,
+    handleGuideBlockedYears,
+    restoreYearFromImportBoard,
+    toggleYearForDelete,
+    toggleYearForRestore,
+  } = useOverviewImportMaintenance({
+    t,
+    selectedYearsForDelete,
+    selectedYearsForRestore,
+    selectedYearsRef,
+    selectedYearsForDeleteRef,
+    selectedYearsForRestoreRef,
+    syncYearSelectionTouchedRef,
+    setSelectedYears,
+    setSelectedYearsForDelete,
+    setSelectedYearsForRestore,
+    setExcludedYearOverrides,
+    setRemovingYear,
+    setError,
+    setInfo,
+    setBulkDeletingYears,
+    setBulkRestoringYears,
+    loadOverview,
+    loadOverviewInternal,
+  });
 
   const searchTerm = query.trim();
-
-  const handleGuideBlockedYears = React.useCallback(() => {
-    document.getElementById('v2-import-years')?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    });
-  }, []);
 
   return {
     overview,

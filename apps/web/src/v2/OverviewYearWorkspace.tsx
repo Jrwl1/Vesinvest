@@ -2,15 +2,10 @@ import React from 'react';
 import type { TFunction } from 'i18next';
 
 import type { V2ImportYearDataResponse } from '../api';
-import { formatEur, formatNumber, formatPrice } from './format';
+import { getSourceLayerText } from './overviewLabels';
+import { formatEur } from './format';
 import {
-  buildFinancialForm,
-  buildPriceForm,
-  buildVolumeForm,
   deriveAdjustedYearResult,
-  getEffectiveFirstRow,
-  getEffectiveRows,
-  getRawFirstRow,
   numbersDiffer,
   type InlineCardField,
   type ManualFinancialForm,
@@ -18,324 +13,24 @@ import {
   type ManualVolumeForm,
 } from './overviewManualForms';
 import type { MissingRequirement, SetupYearStatus } from './overviewWorkflow';
+import {
+  DEFAULT_WORKSPACE_FIELDS,
+  RESULT_FIELD,
+  WORKSPACE_FIELDS,
+  buildDraft,
+  buildDraftSignature,
+  buildEffectiveValueLookup,
+  buildRawValueLookup,
+  buildResultBaselineFinancials,
+  getWorkspaceDraftFieldValue,
+  getWorkspaceFieldId,
+  type ReviewStatusRow,
+  type WorkspaceDraft,
+  type WorkspaceSaveState,
+  type WorkspaceTouchedFields,
+} from './overviewYearWorkspaceModel';
+import { buildImportYearSourceLayers } from './yearReview';
 import type { ManualPatchMode } from './useOverviewManualPatchEditor';
-
-type ReviewStatusRow = {
-  year: number;
-  sourceStatus: string | undefined;
-  tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
-  missingRequirements: MissingRequirement[];
-  setupStatus: SetupYearStatus;
-};
-
-type WorkspaceDraft = {
-  financials: ManualFinancialForm;
-  prices: ManualPriceForm;
-  volumes: ManualVolumeForm;
-  baseSignature: string;
-  dirty: boolean;
-};
-
-type WorkspaceSaveState = {
-  saving: boolean;
-  error: string | null;
-};
-
-type WorkspaceTouchedFields = Record<number, Record<string, boolean>>;
-
-type WorkspaceFieldConfig =
-  | {
-      key: keyof ManualFinancialForm;
-      group: 'financials';
-      labelKey: string;
-      defaultLabel: string;
-      min?: number;
-      step: string;
-      formatter: (value: number) => string;
-    }
-  | {
-      key: keyof ManualPriceForm;
-      group: 'prices';
-      labelKey: string;
-      defaultLabel: string;
-      min?: number;
-      step: string;
-      formatter: (value: number) => string;
-    }
-  | {
-      key: keyof ManualVolumeForm;
-      group: 'volumes';
-      labelKey: string;
-      defaultLabel: string;
-      min?: number;
-      step: string;
-      formatter: (value: number) => string;
-    };
-
-const WORKSPACE_FIELDS: WorkspaceFieldConfig[] = [
-  {
-    key: 'liikevaihto',
-    group: 'financials',
-    labelKey: 'v2Overview.manualFinancialRevenue',
-    defaultLabel: 'Revenue (Liikevaihto)',
-    min: 0,
-    step: '0.01',
-    formatter: formatEur,
-  },
-  {
-    key: 'perusmaksuYhteensa',
-    group: 'financials',
-    labelKey: 'v2Overview.manualFinancialFixedRevenue',
-    defaultLabel: 'Fixed revenue total',
-    min: 0,
-    step: '0.01',
-    formatter: formatEur,
-  },
-  {
-    key: 'aineetJaPalvelut',
-    group: 'financials',
-    labelKey: 'v2Overview.manualFinancialMaterials',
-    defaultLabel: 'Materials and services',
-    min: 0,
-    step: '0.01',
-    formatter: formatEur,
-  },
-  {
-    key: 'henkilostokulut',
-    group: 'financials',
-    labelKey: 'v2Overview.manualFinancialPersonnel',
-    defaultLabel: 'Personnel costs',
-    min: 0,
-    step: '0.01',
-    formatter: formatEur,
-  },
-  {
-    key: 'poistot',
-    group: 'financials',
-    labelKey: 'v2Overview.manualFinancialDepreciation',
-    defaultLabel: 'Depreciation',
-    min: 0,
-    step: '0.01',
-    formatter: formatEur,
-  },
-  {
-    key: 'liiketoiminnanMuutKulut',
-    group: 'financials',
-    labelKey: 'v2Overview.manualFinancialOtherOpex',
-    defaultLabel: 'Other operating costs',
-    min: 0,
-    step: '0.01',
-    formatter: formatEur,
-  },
-  {
-    key: 'tilikaudenYliJaama',
-    group: 'financials',
-    labelKey: 'v2Overview.manualFinancialYearResult',
-    defaultLabel: 'Year result (Tilikauden ylijäämä/alijäämä)',
-    step: '0.01',
-    formatter: formatEur,
-  },
-  {
-    key: 'waterUnitPrice',
-    group: 'prices',
-    labelKey: 'v2Overview.manualPriceWater',
-    defaultLabel: 'Water unit price (EUR/m3)',
-    min: 0,
-    step: '0.001',
-    formatter: formatPrice,
-  },
-  {
-    key: 'wastewaterUnitPrice',
-    group: 'prices',
-    labelKey: 'v2Overview.manualPriceWastewater',
-    defaultLabel: 'Wastewater unit price (EUR/m3)',
-    min: 0,
-    step: '0.001',
-    formatter: formatPrice,
-  },
-  {
-    key: 'soldWaterVolume',
-    group: 'volumes',
-    labelKey: 'v2Overview.manualVolumeWater',
-    defaultLabel: 'Sold water volume (m3)',
-    min: 0,
-    step: '1',
-    formatter: (value) => formatNumber(value, 0),
-  },
-  {
-    key: 'soldWastewaterVolume',
-    group: 'volumes',
-    labelKey: 'v2Overview.manualVolumeWastewater',
-    defaultLabel: 'Sold wastewater volume (m3)',
-    min: 0,
-    step: '1',
-    formatter: (value) => formatNumber(value, 0),
-  },
-];
-
-const RESULT_FIELD = WORKSPACE_FIELDS.find(
-  (field) => field.group === 'financials' && field.key === 'tilikaudenYliJaama',
-)!;
-
-const DEFAULT_WORKSPACE_FIELDS = WORKSPACE_FIELDS.filter(
-  (field) => !(field.group === 'financials' && field.key === 'tilikaudenYliJaama'),
-);
-
-function parseOptionalNumber(value: unknown): number | null {
-  if (value == null || value === '') {
-    return null;
-  }
-  const parsed = Number(String(value).replace(',', '.'));
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function buildDraftSignature(
-  financials: ManualFinancialForm,
-  prices: ManualPriceForm,
-  volumes: ManualVolumeForm,
-): string {
-  return JSON.stringify({
-    financials,
-    prices,
-    volumes,
-  });
-}
-
-function buildDraft(yearData: V2ImportYearDataResponse): WorkspaceDraft {
-  const financials = buildFinancialForm(yearData);
-  const prices = buildPriceForm(yearData);
-  const volumes = buildVolumeForm(yearData);
-  return {
-    financials,
-    prices,
-    volumes,
-    baseSignature: buildDraftSignature(financials, prices, volumes),
-    dirty: false,
-  };
-}
-
-function getWorkspaceFieldId(field: WorkspaceFieldConfig): string {
-  return `${field.group}:${String(field.key)}`;
-}
-
-function buildRawValueLookup(yearData: V2ImportYearDataResponse | undefined) {
-  const rawFinancials = getRawFirstRow(yearData, 'tilinpaatos');
-  const rawPriceRows =
-    yearData?.datasets.find((dataset) => dataset.dataType === 'taksa')?.rawRows ??
-    [];
-  const rawWaterPrice = rawPriceRows.find(
-    (row) => parseOptionalNumber((row as any).Tyyppi_Id) === 1,
-  );
-  const rawWastewaterPrice = rawPriceRows.find(
-    (row) => parseOptionalNumber((row as any).Tyyppi_Id) === 2,
-  );
-  const rawWaterVolume = getRawFirstRow(yearData, 'volume_vesi');
-  const rawWastewaterVolume = getRawFirstRow(yearData, 'volume_jatevesi');
-
-  return {
-    liikevaihto: parseOptionalNumber((rawFinancials as any).Liikevaihto),
-    perusmaksuYhteensa: parseOptionalNumber((rawFinancials as any).PerusmaksuYhteensa),
-    aineetJaPalvelut: parseOptionalNumber((rawFinancials as any).AineetJaPalvelut),
-    henkilostokulut: parseOptionalNumber((rawFinancials as any).Henkilostokulut),
-    poistot: parseOptionalNumber((rawFinancials as any).Poistot),
-    liiketoiminnanMuutKulut: parseOptionalNumber(
-      (rawFinancials as any).LiiketoiminnanMuutKulut,
-    ),
-    tilikaudenYliJaama: parseOptionalNumber((rawFinancials as any).TilikaudenYliJaama),
-    waterUnitPrice: parseOptionalNumber((rawWaterPrice as any)?.Kayttomaksu),
-    wastewaterUnitPrice: parseOptionalNumber(
-      (rawWastewaterPrice as any)?.Kayttomaksu,
-    ),
-    soldWaterVolume: parseOptionalNumber((rawWaterVolume as any).Maara),
-    soldWastewaterVolume: parseOptionalNumber(
-      (rawWastewaterVolume as any).Maara,
-    ),
-  };
-}
-
-function buildEffectiveValueLookup(
-  yearData: V2ImportYearDataResponse | undefined,
-) {
-  const effectiveFinancials = getEffectiveFirstRow(yearData, 'tilinpaatos');
-  const effectivePriceRows = getEffectiveRows(yearData, 'taksa');
-  const effectiveWaterPrice = effectivePriceRows.find(
-    (row) => parseOptionalNumber((row as any).Tyyppi_Id) === 1,
-  );
-  const effectiveWastewaterPrice = effectivePriceRows.find(
-    (row) => parseOptionalNumber((row as any).Tyyppi_Id) === 2,
-  );
-  const effectiveWaterVolume = getEffectiveFirstRow(yearData, 'volume_vesi');
-  const effectiveWastewaterVolume = getEffectiveFirstRow(
-    yearData,
-    'volume_jatevesi',
-  );
-
-  return {
-    liikevaihto: parseOptionalNumber((effectiveFinancials as any).Liikevaihto),
-    perusmaksuYhteensa: parseOptionalNumber(
-      (effectiveFinancials as any).PerusmaksuYhteensa,
-    ),
-    aineetJaPalvelut: parseOptionalNumber(
-      (effectiveFinancials as any).AineetJaPalvelut,
-    ),
-    henkilostokulut: parseOptionalNumber(
-      (effectiveFinancials as any).Henkilostokulut,
-    ),
-    poistot: parseOptionalNumber((effectiveFinancials as any).Poistot),
-    liiketoiminnanMuutKulut: parseOptionalNumber(
-      (effectiveFinancials as any).LiiketoiminnanMuutKulut,
-    ),
-    tilikaudenYliJaama: parseOptionalNumber(
-      (effectiveFinancials as any).TilikaudenYliJaama,
-    ),
-    waterUnitPrice: parseOptionalNumber((effectiveWaterPrice as any)?.Kayttomaksu),
-    wastewaterUnitPrice: parseOptionalNumber(
-      (effectiveWastewaterPrice as any)?.Kayttomaksu,
-    ),
-    soldWaterVolume: parseOptionalNumber((effectiveWaterVolume as any).Maara),
-    soldWastewaterVolume: parseOptionalNumber(
-      (effectiveWastewaterVolume as any).Maara,
-    ),
-  };
-}
-
-function buildResultBaselineFinancials(
-  yearData: V2ImportYearDataResponse | undefined,
-): ManualFinancialForm {
-  const rawFinancials = getRawFirstRow(yearData, 'tilinpaatos');
-  const effectiveFinancials = getEffectiveFirstRow(yearData, 'tilinpaatos');
-  const pickFinancialValue = (key: string): number =>
-    parseOptionalNumber((rawFinancials as any)[key]) ??
-    parseOptionalNumber((effectiveFinancials as any)[key]) ??
-    0;
-
-  return {
-    liikevaihto: pickFinancialValue('Liikevaihto'),
-    perusmaksuYhteensa: pickFinancialValue('PerusmaksuYhteensa'),
-    aineetJaPalvelut: pickFinancialValue('AineetJaPalvelut'),
-    henkilostokulut: pickFinancialValue('Henkilostokulut'),
-    liiketoiminnanMuutKulut: pickFinancialValue('LiiketoiminnanMuutKulut'),
-    poistot: pickFinancialValue('Poistot'),
-    arvonalentumiset: pickFinancialValue('Arvonalentumiset'),
-    rahoitustuototJaKulut: pickFinancialValue('RahoitustuototJaKulut'),
-    tilikaudenYliJaama: pickFinancialValue('TilikaudenYliJaama'),
-    omistajatuloutus: pickFinancialValue('Omistajatuloutus'),
-    omistajanTukiKayttokustannuksiin: pickFinancialValue(
-      'OmistajanTukiKayttokustannuksiin',
-    ),
-  };
-}
-
-function getWorkspaceDraftFieldValue(
-  draft: WorkspaceDraft,
-  field: WorkspaceFieldConfig,
-): number {
-  return field.group === 'financials'
-    ? draft.financials[field.key as keyof ManualFinancialForm]
-    : field.group === 'prices'
-    ? draft.prices[field.key as keyof ManualPriceForm]
-    : draft.volumes[field.key as keyof ManualVolumeForm];
-}
 
 type Props = {
   t: TFunction;
@@ -645,9 +340,13 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
 
           {pinnedRows.map((row) => {
             const draft = drafts[row.year];
+            const yearData = yearDataCache[row.year];
             const yearBusy = busy || saveState[row.year]?.saving === true;
             const prefersFixPrimary = row.setupStatus === 'needs_attention';
             const isDecisionYearOpen = openedDecisionYear === row.year;
+            const sourceLayers = buildImportYearSourceLayers(yearData).filter(
+              (layer) => layer.source !== 'none',
+            );
             return (
               <div
                 key={`workspace-head-${row.year}`}
@@ -676,6 +375,18 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                       )
                       .join(', ')}
                   </p>
+                ) : null}
+                {!isDecisionYearOpen && sourceLayers.length > 0 ? (
+                  <div className="v2-overview-year-workspace-year-provenance">
+                    {sourceLayers.map((layer) => (
+                      <p
+                        key={`${row.year}-${layer.key}`}
+                        className="v2-muted v2-overview-year-workspace-year-note"
+                      >
+                        {getSourceLayerText(t, layer)}
+                      </p>
+                    ))}
+                  </div>
                 ) : null}
                 {saveState[row.year]?.error ? (
                   <p className="v2-year-reason">{saveState[row.year]?.error}</p>

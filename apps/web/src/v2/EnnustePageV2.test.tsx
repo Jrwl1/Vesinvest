@@ -1,3 +1,3 @@
-import { registerEnnustePageV2SmokeSuite } from './test-support/ennustePageV2TestSupport';
+import { registerEnnustePageV2SmokeSuite } from './test-support/ennuste/ennustePageV2SmokeSuite';
 
 registerEnnustePageV2SmokeSuite();

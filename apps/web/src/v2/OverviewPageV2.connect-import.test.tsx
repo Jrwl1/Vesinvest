@@ -1,3 +1,3 @@
-import { registerOverviewPageV2ConnectImportSuite } from './test-support/overviewPageV2TestSupport';
+import { registerOverviewConnectImportSearchSelectionSuite } from './test-support/overview/overviewConnectImportSearchSelectionSuite';
 
-registerOverviewPageV2ConnectImportSuite();
+registerOverviewConnectImportSearchSelectionSuite();

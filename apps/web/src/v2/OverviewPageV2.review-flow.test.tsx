@@ -1,3 +1,3 @@
-import { registerOverviewPageV2ReviewFlowSuite } from './test-support/overviewPageV2TestSupport';
+import { registerOverviewReviewFlowSummarySuite } from './test-support/overview/overviewReviewFlowSummarySuite';
 
-registerOverviewPageV2ReviewFlowSuite();
+registerOverviewReviewFlowSummarySuite();

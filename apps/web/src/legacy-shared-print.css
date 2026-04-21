@@ -1,0 +1,175 @@
+/* ============================================
+   Print Styles
+   ============================================ */
+
+@media print {
+  /* Hide nav, header controls, buttons */
+  .app-header .header-right,
+  .app-header .header-center,
+  .language-switcher,
+  .demo-banner,
+  .btn-primary,
+  .btn-secondary,
+  .btn-toggle,
+  .btn-link,
+  .btn-icon,
+  .btn-danger-text,
+  .btn-compute,
+  .header-actions,
+  .scenario-selector,
+  .create-scenario-form,
+  .assumptions-panel,
+  .form-actions,
+  .comparison-picker,
+  .comparison-legend button,
+  .error-banner,
+  .empty-state,
+  .status-indicator-wrapper {
+    display: none !important;
+  }
+
+  /* General print cleanup */
+  body {
+    background: white !important;
+    font-size: 11pt;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .app-header {
+    background: white !important;
+    border-bottom: 2px solid #000 !important;
+    box-shadow: none !important;
+    padding: 10px 0 !important;
+  }
+
+  .app-header .header-left h1 {
+    color: #000 !important;
+    font-size: 14pt;
+  }
+
+  .app-content {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+    break-inside: avoid;
+  }
+
+  /* Page headers */
+  .page-header h2 {
+    font-size: 16pt;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+  }
+
+  /* Tables */
+  .projection-table,
+  .comparison-table,
+  .report-table,
+  .budget-table {
+    font-size: 9pt;
+  }
+
+  .projection-table th,
+  .comparison-table th,
+  .report-table th {
+    background: #f0f0f0 !important;
+  }
+
+  .projection-table .deficit-row {
+    background: #ffecec !important;
+  }
+
+  .projection-table .base-year-row {
+    background: #eef2ff !important;
+  }
+
+  /* Color adjustments for print */
+  .positive { color: #059669 !important; }
+  .negative { color: #dc2626 !important; }
+
+  /* Verdict card */
+  .verdict-card {
+    border-width: 2px !important;
+    break-inside: avoid;
+  }
+
+  .verdict-sustainable {
+    background: #ecfdf5 !important;
+    border-color: #6ee7b7 !important;
+  }
+
+  .verdict-tight {
+    background: #fffbeb !important;
+    border-color: #fcd34d !important;
+  }
+
+  .verdict-unsustainable {
+    background: #fef2f2 !important;
+    border-color: #fca5a5 !important;
+  }
+
+  /* Comparison table print */
+  .comparison-table-wrapper {
+    overflow: visible !important;
+  }
+
+  .comparison-legend {
+    padding: 8px 0;
+  }
+
+  .legend-color {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Revenue page print */
+  .driver-card {
+    break-inside: avoid;
+  }
+
+  .revenue-totals {
+    break-inside: avoid;
+  }
+
+  /* Budget page print */
+  .budget-section {
+    break-inside: avoid;
+  }
+
+  .budget-result {
+    break-inside: avoid;
+  }
+
+  /* Page breaks */
+  .projection-page,
+  .budget-page,
+  .revenue-page {
+    page-break-before: auto;
+  }
+
+  /* Hide scrollbars */
+  .projection-table-wrapper,
+  .comparison-table-wrapper {
+    overflow: visible !important;
+  }
+
+  /* Print footer with page number Ã¢â‚¬â€ browser controlled */
+  @page {
+    margin: 15mm 10mm;
+    @bottom-center {
+      content: counter(page) " / " counter(pages);
+    }
+  }
+
+  .budget-import-overlay {
+    display: none !important;
+  }
+}
+

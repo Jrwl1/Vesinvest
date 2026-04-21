@@ -1,0 +1,847 @@
+/* ============================================
+   Budget Page
+   ============================================ */
+
+.budget-page {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 32px;
+}
+
+.budget-page .page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.page-header-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.page-header-left h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.budget-page-subtitle {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-muted, #666);
+}
+
+.budget-section-empty {
+  padding: 16px 0;
+  margin-bottom: 8px;
+}
+
+.budget-section-empty-hint {
+  margin: 0 0 12px 0;
+  font-size: 0.9rem;
+  color: var(--color-muted, #666);
+}
+
+.year-select {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #e0e0e0);
+  font-size: 0.875rem;
+}
+
+.status-badge {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.status-luonnos { background: #fef3c7; color: #92400e; }
+.status-vahvistettu { background: #d1fae5; color: #065f46; }
+
+.budget-section {
+  margin-bottom: 32px;
+}
+
+.budget-section .section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #555);
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border, #e0e0e0);
+}
+
+.section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #666);
+  margin: 0 0 8px 0;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--border, #e0e0e0);
+}
+
+.budget-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.budget-table td {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border, #f0f0f0);
+  font-size: 0.875rem;
+}
+
+.line-code {
+  width: 60px;
+  color: var(--text-muted, #999);
+  font-size: 0.8rem;
+  font-family: monospace;
+}
+
+.line-name {
+  flex: 1;
+}
+
+.line-amount {
+  width: 140px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.line-actions {
+  width: 32px;
+  text-align: center;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--text-muted, #999);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.btn-icon:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.computed-badge {
+  font-size: 0.7rem;
+  color: var(--text-muted, #999);
+  margin-left: 6px;
+  font-style: italic;
+}
+
+.palvelutyyppi-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  margin-left: 6px;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: var(--color-bg-subtle, #eee);
+  color: var(--text-muted, #666);
+}
+
+.computed-row td {
+  color: var(--text-muted, #888);
+  font-style: italic;
+}
+
+.btn-vesimaksut-info {
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-vesimaksut-info:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.vesimaksut-breakdown-row {
+  vertical-align: top;
+}
+.vesimaksut-breakdown-cell {
+  padding: 0.5rem 0 0.5rem 2rem;
+  background: var(--color-bg-subtle, #f8f9fa);
+  border-bottom: 1px solid var(--color-border, #eee);
+}
+.vesimaksut-breakdown-panel {
+  max-width: 520px;
+}
+.vesimaksut-formula {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.85rem;
+  color: var(--text-muted, #666);
+}
+.vesimaksut-breakdown-table {
+  width: 100%;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+.vesimaksut-breakdown-table td {
+  padding: 0.2rem 0.5rem 0.2rem 0;
+}
+.vesimaksut-breakdown-table .num {
+  text-align: right;
+}
+.vesimaksut-breakdown-total td {
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--color-border, #ddd);
+}
+.vesimaksut-actions {
+  margin-top: 0.25rem;
+}
+
+.computed-row-clickable {
+  cursor: pointer;
+}
+.computed-row-clickable:hover {
+  background: var(--color-bg-subtle, rgba(0, 0, 0, 0.02));
+}
+.btn-chip.source-chip {
+  margin-left: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  background: var(--color-bg-subtle, #eee);
+  border: 1px solid var(--color-border, #ddd);
+  color: var(--color-primary, #2563eb);
+  cursor: pointer;
+}
+.btn-chip.source-chip:hover {
+  background: var(--color-surface, #e5e7eb);
+}
+.vesimaksut-unset {
+  color: var(--text-muted, #888);
+  margin-right: 0.35rem;
+}
+.vesimaksut-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted, #888);
+  font-style: italic;
+}
+.vesimaksut-missing-block {
+  margin-top: 0.5rem;
+}
+.vesimaksut-missing-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0 0 0.35rem 0;
+  color: var(--color-text, #333);
+}
+/* Tuloajurit panel (revenue drivers inside Tulot section) */
+.tuloajurit-panel {
+  margin-bottom: 1rem;
+  padding: 0.75rem 0;
+  border: 1px solid var(--color-border, #eee);
+  border-radius: 6px;
+  background: var(--color-bg-subtle, #f8f9fa);
+}
+.tuloajurit-panel-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text, #333);
+}
+.tuloajurit-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.tuloajurit-card {
+  min-width: 200px;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+}
+.tuloajurit-card-header {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--color-text, #333);
+}
+.tuloajurit-card-fields {
+  display: grid;
+  gap: 0.5rem;
+}
+.tuloajurit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.tuloajurit-field label {
+  font-size: 0.8rem;
+  color: var(--text-muted, #666);
+}
+.driver-field-wrap {
+  display: inline-block;
+}
+.driver-field-wrap .driver-input {
+  width: 100%;
+  min-width: 5rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 4px;
+}
+.driver-field-wrap .driver-input.input-error {
+  border-color: var(--color-error, #dc2626);
+}
+.driver-field-error {
+  font-size: 0.75rem;
+  color: var(--color-error, #dc2626);
+}
+
+.vesimaksut-missing-list {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #666);
+  margin: 0 0 0.75rem 0;
+  padding-left: 1.25rem;
+}
+
+.editable-amount {
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.editable-amount:hover {
+  background: var(--color-surface, #f5f5f5);
+}
+
+.inline-edit {
+  width: 120px;
+  padding: 4px 8px;
+  border: 2px solid var(--color-primary, #3b82f6);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  text-align: right;
+  outline: none;
+}
+
+.section-total td {
+  border-top: 2px solid var(--border, #e0e0e0);
+  padding-top: 10px;
+  font-weight: 600;
+}
+
+.section-total.section-total-tulo td.num {
+  color: #059669;
+}
+
+.section-total.section-total-kulu td.num {
+  color: #dc2626;
+}
+
+.section-total.section-total-investointi td.num {
+  color: var(--text-muted, #555);
+}
+
+.add-line-btn {
+  margin-top: 4px;
+  font-size: 0.8rem;
+}
+
+.add-line-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.input-sm {
+  padding: 6px 10px;
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.input-wide {
+  flex: 1;
+  min-width: 150px;
+}
+
+.budget-result {
+  margin-top: 28px;
+  margin-bottom: 8px;
+  padding: 24px 28px;
+  border-radius: 10px;
+  background: var(--color-surface, #f9fafb);
+  border: 2px solid var(--border, #e0e0e0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.result-label {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.result-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.result-value.surplus { color: #059669; }
+.result-value.deficit { color: #dc2626; }
+
+.budget-year-cards-wrapper {
+  width: 100%;
+  margin-top: 1.5rem;
+}
+.budget-year-cards {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 160px minmax(280px, 1fr) 160px minmax(280px, 1fr);
+  align-items: start;
+  gap: 24px;
+}
+@media (max-width: 1319px) {
+  .budget-year-cards {
+    grid-template-columns: 1fr;
+    max-width: 100%;
+  }
+}
+.budget-year-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  background: var(--color-surface, #fff);
+}
+.budget-year-card-header {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.budget-year-source-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #2563eb;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+}
+.budget-year-bucket { margin-bottom: 0.5rem; }
+.budget-year-bucket-tulot .budget-year-bucket-row .num { color: #059669; }
+.budget-year-bucket-kulut .budget-year-bucket-row .num { color: #dc2626; }
+/* Price rows in set view Ã¢â‚¬â€ non-clickable, compact */
+.budget-year-price-row {
+  cursor: default;
+  font-size: 0.82rem;
+}
+.budget-year-price-row:hover {
+  background: transparent;
+}
+.budget-year-price-row .num {
+  color: #2563eb;
+  font-weight: 600;
+}
+.budget-year-bucket-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.4rem;
+  margin: 0 -0.4rem;
+  cursor: pointer;
+  gap: 0.5rem;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+.budget-year-bucket-row:hover {
+  background: var(--color-surface-alt, #f5f5f5);
+}
+.budget-year-bucket-row:focus-visible {
+  outline: 2px solid var(--color-primary, #2563eb);
+  outline-offset: 2px;
+}
+.budget-year-bucket-row .num { font-variant-numeric: tabular-nums; }
+.budget-year-expand {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #666);
+  min-width: 1.25rem;
+  text-align: center;
+  pointer-events: none;
+}
+.budget-year-bucket-details {
+  padding-left: 0.75rem;
+  margin-bottom: 0.5rem;
+  border-left: 2px solid var(--color-border, #eee);
+}
+.budget-year-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  font-size: 0.9rem;
+  min-width: 0;
+}
+.budget-year-detail-label {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.budget-year-detail-value {
+  flex-shrink: 0;
+  width: 6rem;
+  min-width: 6rem;
+  text-align: right;
+}
+.budget-year-detail-value .inline-edit {
+  width: 100%;
+  max-width: 6rem;
+  text-align: right;
+}
+.budget-year-delta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  width: 160px;
+  max-width: 180px;
+  flex-shrink: 0;
+  padding: 0.35rem 0.5rem;
+  background: var(--color-surface-alt, #f9fafb);
+  border-radius: 6px;
+  border: 1px dashed var(--color-border, #e5e7eb);
+  overflow: hidden;
+  align-self: center;
+}
+@media (max-width: 1319px) {
+  .budget-year-delta {
+    width: 100%;
+    max-width: 320px;
+    justify-self: start;
+  }
+}
+.budget-year-delta-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--color-text-muted, #666);
+  margin-bottom: 0.1rem;
+  text-align: center;
+}
+.budget-year-delta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+.budget-year-delta-name {
+  flex-shrink: 0;
+  color: var(--color-text-muted, #555);
+  font-weight: 600;
+}
+.budget-year-delta-name-tulos {
+  font-size: 1.08em;
+}
+.budget-year-delta-value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.budget-year-delta-row.positive .budget-year-delta-value { color: #059669; }
+.budget-year-delta-row.negative .budget-year-delta-value { color: #dc2626; }
+.budget-year-delta-row.neutral .budget-year-delta-value { color: var(--color-text-muted, #666); }
+.budget-year-card-footer {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border, #eee);
+  font-weight: 600;
+}
+.budget-year-card-footer.surplus { color: #059669; }
+.budget-year-card-footer.deficit { color: #dc2626; }
+.budget-year-source-info {
+  display: inline-block;
+  margin-top: 0.5rem;
+}
+.budget-year-source-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 50%;
+  background: var(--color-surface-alt, #f5f5f5);
+  color: var(--color-text-muted, #666);
+  font-size: 0.75rem;
+  cursor: help;
+  line-height: 1;
+}
+.budget-year-source-btn:hover {
+  background: var(--color-border, #e5e7eb);
+  color: var(--color-text, #333);
+}
+.budget-year-kalla {
+  margin: 0.75rem 0 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #666);
+}
+
+/* ============================================
+   Revenue Page
+   ============================================ */
+
+.revenue-page {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.revenue-page .page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.revenue-page .page-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.saving-indicator {
+  font-size: 0.75rem;
+  color: var(--text-muted, #999);
+  font-style: italic;
+}
+
+.formula-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted, #999);
+  margin: 0 0 24px 0;
+  font-style: italic;
+}
+
+.driver-section {
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border, #e0e0e0);
+}
+
+.driver-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #666);
+}
+
+.driver-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 10px 16px;
+  align-items: center;
+}
+
+.driver-grid label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.driver-grid .computed-label {
+  font-weight: 600;
+}
+
+.driver-grid .computed-value {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--color-primary, #3b82f6);
+}
+
+.input-with-unit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-field {
+  padding: 8px 12px;
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  width: 160px;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.input-sm-num {
+  width: 80px;
+  padding: 6px 10px;
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.unit {
+  font-size: 0.8rem;
+  color: var(--text-muted, #999);
+  white-space: nowrap;
+}
+
+.revenue-vat-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 20px 0;
+  padding: 12px 0;
+  font-size: 0.875rem;
+}
+
+.revenue-vat-section label {
+  font-weight: 600;
+}
+
+.revenue-totals {
+  margin-top: 20px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  background: var(--color-surface, #f9fafb);
+  border: 2px solid var(--border, #e0e0e0);
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 0.875rem;
+}
+
+.total-row-big {
+  font-size: 1.1rem;
+  padding-top: 10px;
+  margin-top: 8px;
+  border-top: 1px solid var(--border, #e0e0e0);
+}
+
+/* ============================================
+   Settings & Assumptions
+   ============================================ */
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.section-header-row h3 {
+  margin: 0;
+}
+
+.assumptions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.assumption-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border, #f0f0f0);
+}
+
+.assumption-info {
+  flex: 1;
+}
+
+.assumption-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.assumption-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted, #999);
+  margin-top: 2px;
+}
+
+.assumption-value {
+  min-width: 100px;
+  text-align: right;
+}
+
+.inline-edit-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #991b1b;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 640px) {
+  .driver-grid {
+    grid-template-columns: 1fr;
+  }
+  .budget-result {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+}
+

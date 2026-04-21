@@ -1,16 +1,124 @@
-// @ts-nocheck
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { VeetiBenchmarkService } from '../veeti/veeti-benchmark.service';
+import { VeetiEffectiveDataService } from '../veeti/veeti-effective-data.service';
 import { VEETI_TARIFF_SCOPE } from '../veeti/veeti-import-contract';
+import { VeetiService } from '../veeti/veeti.service';
+import { VeetiSyncService } from '../veeti/veeti-sync.service';
+import type { TrendPoint } from './v2-forecast.types';
+import type { BaselineSourceSummary } from './v2-import-overview.types';
 
-type BaselineSourceSummary = any;
-type TrendPoint = any;
-export function createV2OverviewReadModelSupport(ctx: any) {
+type OverviewReadModelContext = {
+  logger: Logger;
+  prisma: PrismaService;
+  veetiService: VeetiService;
+  veetiSyncService: VeetiSyncService;
+  veetiEffectiveDataService: VeetiEffectiveDataService;
+  veetiBenchmarkService: VeetiBenchmarkService;
+  sanitizeOpsAttrs(
+    attrs: Record<string, unknown> | undefined,
+  ): Record<string, string | number | boolean | null>;
+  hydrateYearRowsWithTariffRevenueReadiness<T extends { vuosi: number; completeness: Record<string, boolean> }>(
+    orgId: string,
+    yearRows: T[],
+  ): Promise<
+    Array<
+      T & {
+        tariffRevenueReason: 'missing_fixed_revenue' | 'mismatch' | null;
+        baselineReady: boolean;
+        baselineMissingRequirements: Array<'financialBaseline' | 'prices' | 'volumes'>;
+        baselineWarnings: Array<'tariffRevenueMismatch'>;
+      }
+    >
+  >;
+  annotatePlanningYearRows<T extends { vuosi: number }>(
+    yearRows: T[],
+  ): Array<T & { planningRole: 'historical' | 'current_year_estimate' }>;
+  resolveBaselineBlockReason(params: {
+    completeness: Record<string, boolean>;
+    baselineReady?: boolean;
+    baselineMissingRequirements?: Array<'financialBaseline' | 'prices' | 'volumes'>;
+  }): string | null;
+  getWorkspaceYears(orgId: string): Promise<number[]>;
+  resolveVeetiOrgLanguage(
+    veetiId: number | null | undefined,
+  ): Promise<{ kieliId: number | null; uiLanguage: 'fi' | 'sv' | null }>;
+  resolvePlanningBaselineYears(
+    orgId: string,
+    options?: {
+      link?: { veetiId: number; workspaceYears?: number[] } | null;
+      persistRepair?: boolean;
+    },
+  ): Promise<number[]>;
+  getImportStatus(orgId: string): Promise<{
+    years: Array<{
+      vuosi: number;
+      completeness?: Record<string, boolean>;
+      planningRole?: 'historical' | 'current_year_estimate';
+      sourceStatus?: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
+      sourceBreakdown?: {
+        veetiDataTypes?: string[];
+        manualDataTypes?: string[];
+      };
+      baselineReady?: boolean;
+      baselineMissingRequirements?: Array<'financialBaseline' | 'prices' | 'volumes'>;
+    }>;
+    link?: { veetiId?: number | null } | null;
+    planningBaselineYears?: number[];
+  }>;
+  getTrendSeries(orgId: string): Promise<TrendPoint[]>;
+  resolveLatestDataIndex(points: TrendPoint[]): number;
+  resolveLatestComparableYear(
+    years:
+      | Array<{
+          vuosi: number;
+          completeness?: {
+            tilinpaatos?: boolean;
+            volume_vesi?: boolean;
+            volume_jatevesi?: boolean;
+          };
+        }>
+      | undefined,
+  ): number | null;
+  buildKpi(value: number, previous: number | undefined): {
+    value: number;
+    deltaYoY: number | null;
+  };
+  buildPeerSnapshot(orgId: string, year: number | null): Promise<unknown>;
+  buildBaselineSourceSummary(
+    importStatus: {
+      years: Array<{
+        vuosi: number;
+        planningRole?: 'historical' | 'current_year_estimate';
+        sourceStatus?: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
+        sourceBreakdown?: {
+          veetiDataTypes?: string[];
+          manualDataTypes?: string[];
+        };
+      }>;
+    },
+    year: number,
+    yearDataset: Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>,
+  ): BaselineSourceSummary;
+  normalizeYears(years: number[]): number[];
+  resolveImportedYears(importStatus: {
+    years?: Array<{ vuosi: number }>;
+    workspaceYears?: number[];
+  }): number[];
+  resolvePlanningRole(year: number): 'historical' | 'current_year_estimate';
+  resolveLatestAcceptedVeetiBudgetId(orgId: string): Promise<string | null>;
+  round2(value: number): number;
+  toNumber(value: unknown): number;
+};
+
+export function createV2OverviewReadModelSupport(ctx: OverviewReadModelContext) {
   return {
   async trackOpsEvent(
     orgId: string,
     userId: string,
     roles: string[],
-    body: any,
+    body: { event: string; status?: string; attrs?: Record<string, unknown> },
   ) {
     const payload = {
       type: 'ops_event',
@@ -409,6 +517,7 @@ export function createV2OverviewReadModelSupport(ctx: any) {
 
     const baselineYears = acceptedBaselineYears.map((year) => {
       const yearStatus = importStatus.years.find((row) => row.vuosi === year);
+      const completeness = yearStatus?.completeness ?? {};
       const sourceSummary = baselineSourceSummaryByYear.get(year) ?? null;
       const useBaselineReadiness =
         typeof yearStatus?.baselineReady === 'boolean' ||
@@ -417,16 +526,16 @@ export function createV2OverviewReadModelSupport(ctx: any) {
       const hasFinancials = useBaselineReadiness
         ? !baselineMissing.has('financialBaseline')
         : sourceSummary?.financials?.source !== 'none' ||
-          yearStatus?.completeness.tilinpaatos === true;
+          completeness.tilinpaatos === true;
       const hasPrices = useBaselineReadiness
         ? !baselineMissing.has('prices')
         : sourceSummary?.prices?.source !== 'none' ||
-          yearStatus?.completeness.taksa === true;
+          completeness.taksa === true;
       const hasVolume = useBaselineReadiness
         ? !baselineMissing.has('volumes')
         : sourceSummary?.volumes?.source !== 'none' ||
-          yearStatus?.completeness.volume_vesi === true ||
-          yearStatus?.completeness.volume_jatevesi === true;
+          completeness.volume_vesi === true ||
+          completeness.volume_jatevesi === true;
       const quality: 'complete' | 'partial' | 'missing' =
         hasFinancials && hasPrices && hasVolume
           ? 'complete'

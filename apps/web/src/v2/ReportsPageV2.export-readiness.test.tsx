@@ -1,3 +1,3 @@
-import { registerReportsPageV2ExportReadinessSuite } from './test-support/reportsPageV2TestSupport';
+import { registerReportsPageV2ExportReadinessSuite } from './test-support/reports/reportsPageV2ExportReadinessSuite';
 
 registerReportsPageV2ExportReadinessSuite();

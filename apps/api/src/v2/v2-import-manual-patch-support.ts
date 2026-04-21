@@ -1,100 +1,110 @@
-// @ts-nocheck
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { parseKvaWorkbookPreview } from '../budgets/va-import/kva-workbook-preview';
+import { PrismaService } from '../prisma/prisma.service';
+import {
+  VeetiEffectiveDataService,
+  type OverrideProvenance,
+} from '../veeti/veeti-effective-data.service';
+import { VeetiSyncService } from '../veeti/veeti-sync.service';
+import { IMPORT_YEAR_SUMMARY_FIELDS } from './v2-import-overview.constants';
+import { createV2ImportManualFinancialSupport } from './v2-import-manual-financial-support';
+import type {
+  OverrideProvenanceCore,
+  StatementPreviewRequest,
+  StatementPreviewResponse,
+  WorkbookPreviewRequest,
+  WorkbookPreviewResponse,
+} from './v2-import-overview.types';
 
-type WorkbookPreviewRequest = any;
-type WorkbookPreviewResponse = any;
-type StatementPreviewRequest = any;
-type StatementPreviewResponse = any;
-type OverrideProvenance = any;
-type OverrideProvenanceCore = any;
-type ImportYearSummaryFieldKey = any;
-type ImportYearSummarySourceField = any;
-type ImportYearSummarySource = any;
-type ImportYearSummaryRow = any;
-type ImportYearTrustSignal = any;
-type ImportYearResultToZeroSignal = any;
-type ImportYearSubrowAvailability = any;
+type ImportManualPatchContext = {
+  prisma: PrismaService;
+  veetiEffectiveDataService: VeetiEffectiveDataService;
+  veetiSyncService: VeetiSyncService;
+  manualPatchSupport: ReturnType<typeof createV2ImportManualFinancialSupport>;
+  assertStatementPreviewUpload(input: StatementPreviewRequest): void;
+  assertWorkbookPreviewUpload(input: WorkbookPreviewRequest): void;
+  augmentCompletenessWithTariffRevenue(
+    completeness: Record<string, boolean>,
+    yearDataset:
+      | Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>
+      | null
+      | undefined,
+  ): {
+    completeness: Record<string, boolean>;
+    tariffRevenueReason: 'missing_fixed_revenue' | 'mismatch' | null;
+  };
+  buildImportYearResultToZeroSignal(summaryRows: unknown): unknown;
+  buildImportYearSubrowAvailability(
+    yearDataset: Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>,
+  ): unknown;
+  buildImportYearSummaryRows(
+    yearDataset: Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>,
+  ): Array<{
+    sourceField: string;
+    effectiveValue: number | null;
+    effectiveSource: 'direct' | 'missing';
+    key: string;
+    changed: boolean;
+  }>;
+  buildImportYearTrustSignal(yearDataset: unknown, summaryRows: unknown): unknown;
+  buildStatementPreviewFields(
+    veetiRow: Record<string, unknown> | null,
+    effectiveRow: Record<string, unknown> | null,
+  ): StatementPreviewResponse['fields'];
+  emptyCompleteness(): Record<string, boolean>;
+  evaluateBaselineReadiness(
+    completeness: Record<string, boolean>,
+    yearDataset:
+      | Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>
+      | null
+      | undefined,
+    summaryRows: ReturnType<ImportManualPatchContext['buildImportYearSummaryRows']>,
+    tariffRevenueReason: 'missing_fixed_revenue' | 'mismatch' | null,
+  ): {
+    baselineReady: boolean;
+    baselineMissingRequirements: Array<'financialBaseline' | 'prices' | 'volumes'>;
+    baselineWarnings: Array<'tariffRevenueMismatch'>;
+  };
+  getImportStatus(orgId: string): Promise<{
+    years: Array<{
+      vuosi: number;
+      completeness?: Record<string, boolean>;
+      baselineReady?: boolean;
+      baselineMissingRequirements?: Array<'financialBaseline' | 'prices' | 'volumes'>;
+      baselineWarnings?: Array<'tariffRevenueMismatch'>;
+      tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
+    }>;
+    excludedYears?: number[];
+    workspaceYears?: number[];
+    [key: string]: unknown;
+  }>;
+  hydrateYearRowsWithTariffRevenueReadiness<T extends { vuosi: number; completeness: Record<string, boolean> }>(
+    orgId: string,
+    yearRows: T[],
+  ): Promise<
+    Array<
+      T & {
+        tariffRevenueReason: 'missing_fixed_revenue' | 'mismatch' | null;
+        baselineReady: boolean;
+        baselineMissingRequirements: Array<'financialBaseline' | 'prices' | 'volumes'>;
+        baselineWarnings: Array<'tariffRevenueMismatch'>;
+      }
+    >
+  >;
+  normalizeText(value: string | null | undefined): string | null;
+  normalizeYears(years: number[]): number[];
+  resolveMissingSyncRequirements(
+    completeness: Record<string, boolean>,
+  ): Array<'financials' | 'prices' | 'volumes' | 'tariffRevenue'>;
+  round2(value: number): number;
+  summaryValuesDiffer(left: number | null, right: number | null): boolean;
+  toNumber(value: unknown): number;
+};
 
-const IMPORT_YEAR_SUMMARY_FIELDS = [
-  { key: 'revenue', sourceField: 'Liikevaihto' },
-  { key: 'materialsCosts', sourceField: 'AineetJaPalvelut' },
-  { key: 'personnelCosts', sourceField: 'Henkilostokulut' },
-  { key: 'depreciation', sourceField: 'Poistot' },
-  { key: 'otherOperatingCosts', sourceField: 'LiiketoiminnanMuutKulut' },
-  { key: 'result', sourceField: 'TilikaudenYliJaama' },
-];
-
-const MANUAL_YEAR_FINANCIAL_FIELD_MAPPINGS = [
-  { payloadKey: 'liikevaihto', sourceField: 'Liikevaihto' },
-  { payloadKey: 'perusmaksuYhteensa', sourceField: 'PerusmaksuYhteensa' },
-  { payloadKey: 'aineetJaPalvelut', sourceField: 'AineetJaPalvelut' },
-  { payloadKey: 'henkilostokulut', sourceField: 'Henkilostokulut' },
-  {
-    payloadKey: 'liiketoiminnanMuutKulut',
-    sourceField: 'LiiketoiminnanMuutKulut',
-  },
-  { payloadKey: 'poistot', sourceField: 'Poistot' },
-  { payloadKey: 'arvonalentumiset', sourceField: 'Arvonalentumiset' },
-  {
-    payloadKey: 'rahoitustuototJaKulut',
-    sourceField: 'RahoitustuototJaKulut',
-  },
-  { payloadKey: 'tilikaudenYliJaama', sourceField: 'TilikaudenYliJaama' },
-  { payloadKey: 'omistajatuloutus', sourceField: 'Omistajatuloutus' },
-  {
-    payloadKey: 'omistajanTukiKayttokustannuksiin',
-    sourceField: 'OmistajanTukiKayttokustannuksiin',
-  },
-];
-
-const STATEMENT_PREVIEW_FIELDS = [
-  { key: 'liikevaihto', label: 'Liikevaihto', sourceField: 'Liikevaihto' },
-  {
-    key: 'aineetJaPalvelut',
-    label: 'Aineet ja palvelut',
-    sourceField: 'AineetJaPalvelut',
-  },
-  {
-    key: 'henkilostokulut',
-    label: 'Henkilostokulut',
-    sourceField: 'Henkilostokulut',
-  },
-  {
-    key: 'liiketoiminnanMuutKulut',
-    label: 'Liiketoiminnan muut kulut',
-    sourceField: 'LiiketoiminnanMuutKulut',
-  },
-  { key: 'poistot', label: 'Poistot', sourceField: 'Poistot' },
-  {
-    key: 'arvonalentumiset',
-    label: 'Arvonalentumiset',
-    sourceField: 'Arvonalentumiset',
-  },
-  {
-    key: 'rahoitustuototJaKulut',
-    label: 'Rahoitustuotot ja -kulut',
-    sourceField: 'RahoitustuototJaKulut',
-  },
-  {
-    key: 'tilikaudenYliJaama',
-    label: 'Tilikauden ylijäämä/alijäämä',
-    sourceField: 'TilikaudenYliJaama',
-  },
-  {
-    key: 'omistajatuloutus',
-    label: 'Omistajatuloutus',
-    sourceField: 'Omistajatuloutus',
-  },
-  {
-    key: 'omistajanTukiKayttokustannuksiin',
-    label: 'Omistajan tuki käyttökustannuksiin',
-    sourceField: 'OmistajanTukiKayttokustannuksiin',
-  },
-];
-export function createV2ImportManualPatchSupport(ctx: any) {
+export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) {
+  const financialSupport = createV2ImportManualFinancialSupport(ctx);
   return {
+    ...financialSupport,
   async getImportYearData(orgId: string, year: number) {
     const targetYear = Math.round(Number(year));
     if (!Number.isFinite(targetYear)) {
@@ -297,8 +307,8 @@ export function createV2ImportManualPatchSupport(ctx: any) {
       targetYear,
     );
     const defaultDataTypes = yearData.datasets
-      .filter((row) => row.reconcileNeeded)
-      .map((row) => row.dataType);
+      .filter((row: { reconcileNeeded?: boolean }) => row.reconcileNeeded)
+      .map((row: { dataType: string }) => row.dataType);
     const requestedDataTypes = Array.isArray(body?.dataTypes)
       ? body.dataTypes
       : defaultDataTypes;
@@ -312,8 +322,8 @@ export function createV2ImportManualPatchSupport(ctx: any) {
       'verkko',
     ]);
     const dataTypes = requestedDataTypes
-      .map((item) => String(item))
-      .filter((item) => allowedDataTypes.has(item));
+      .map((item: unknown) => String(item))
+      .filter((item: string) => allowedDataTypes.has(item));
 
     if (body.action === 'apply_veeti' && dataTypes.length > 0) {
       await ctx.veetiEffectiveDataService.removeOverrides(
@@ -451,7 +461,10 @@ export function createV2ImportManualPatchSupport(ctx: any) {
       orgId,
       await ctx.veetiSyncService.getAvailableYears(orgId),
     );
-    const existing = yearRows.find((row) => row.vuosi === year);
+    const existing = yearRows.find(
+      (row: { vuosi: number; completeness?: Record<string, boolean> }) =>
+        row.vuosi === year,
+    );
     const missingBefore = ctx.resolveMissingSyncRequirements(
       existing?.completeness ?? ctx.emptyCompleteness(),
     );
@@ -462,7 +475,7 @@ export function createV2ImportManualPatchSupport(ctx: any) {
 
     const now = new Date();
     const workbookCandidateRows = body.workbookImport?.candidateRows
-      ?.map((row) => {
+      ?.map((row: Record<string, unknown>) => {
         const sourceField = String(row.sourceField ?? '').trim();
         const action =
           row.action === 'keep_veeti' || row.action === 'apply_workbook'
@@ -482,7 +495,11 @@ export function createV2ImportManualPatchSupport(ctx: any) {
       })
       .filter(
         (
-          row,
+          row: {
+            sourceField: string;
+            workbookValue: number | null;
+            action: 'keep_veeti' | 'apply_workbook';
+          } | null,
         ): row is {
           sourceField: string;
           workbookValue: number | null;
@@ -494,21 +511,24 @@ export function createV2ImportManualPatchSupport(ctx: any) {
         [
           ...(body.workbookImport?.confirmedSourceFields ?? []),
           ...workbookCandidateRows
-            .filter((row) => row.action === 'apply_workbook')
-            .map((row) => row.sourceField),
+            .filter(
+              (row: { action: 'keep_veeti' | 'apply_workbook' }) =>
+                row.action === 'apply_workbook',
+            )
+            .map((row: { sourceField: string }) => row.sourceField),
         ]
-          .map((field) => String(field ?? '').trim())
-          .filter((field) => field.length > 0),
+          .map((field: unknown) => String(field ?? '').trim())
+          .filter((field: string) => field.length > 0),
       ),
     ];
     const workbookMatchedFields = [
       ...new Set(
         [
           ...(body.workbookImport?.matchedFields ?? []),
-          ...workbookCandidateRows.map((row) => row.sourceField),
+          ...workbookCandidateRows.map((row: { sourceField: string }) => row.sourceField),
         ]
-          .map((field) => String(field ?? '').trim())
-          .filter((field) => field.length > 0),
+          .map((field: unknown) => String(field ?? '').trim())
+          .filter((field: string) => field.length > 0),
       ),
     ];
     const createBaseProvenance = (
@@ -558,7 +578,9 @@ export function createV2ImportManualPatchSupport(ctx: any) {
             warnings: body.documentImport.warnings ?? [],
             documentProfile: body.documentImport.documentProfile ?? null,
             datasetKinds: body.documentImport.datasetKinds ?? [],
-            sourceLines: (body.documentImport.sourceLines ?? []).map((row) => ({
+            sourceLines: (
+              body.documentImport.sourceLines ?? []
+            ).map((row: { text?: string; pageNumber?: number | null }) => ({
               text: ctx.normalizeText(row.text) ?? row.text,
               pageNumber: row.pageNumber ?? null,
             })),
@@ -609,7 +631,9 @@ export function createV2ImportManualPatchSupport(ctx: any) {
         ? documentImportProvenance
         : manualEditProvenance;
     const currentFinancialProvenance =
-      existingYearDataset?.datasets.find((row) => row.dataType === 'tilinpaatos')
+      existingYearDataset?.datasets.find(
+        (row: { dataType: string }) => row.dataType === 'tilinpaatos',
+      )
         ?.overrideMeta?.provenance ?? null;
     const workbookFinancialProvenance = body.workbookImport
       ? createBaseProvenance(body.workbookImport.kind ?? 'excel_import')
@@ -625,7 +649,7 @@ export function createV2ImportManualPatchSupport(ctx: any) {
       ? buildSourceMeta(createBaseProvenance('qdis_import'))
       : documentImportProvenance &&
           (body.documentImport?.datasetKinds?.some(
-            (kind) => kind === 'prices' || kind === 'volumes',
+            (kind: string) => kind === 'prices' || kind === 'volumes',
           ) ??
             Boolean(body.prices || body.volumes))
         ? buildSourceMeta(documentImportProvenance)
@@ -752,7 +776,10 @@ export function createV2ImportManualPatchSupport(ctx: any) {
     await Promise.all(patchOps);
 
     const status = await ctx.getImportStatus(orgId);
-    const afterRow = status.years.find((row) => row.vuosi === year);
+    const afterRow = status.years.find(
+      (row: { vuosi: number; completeness?: Record<string, boolean> }) =>
+        row.vuosi === year,
+    );
     const missingAfter = ctx.resolveMissingSyncRequirements(
       afterRow?.completeness ?? ctx.emptyCompleteness(),
     );
@@ -771,154 +798,5 @@ export function createV2ImportManualPatchSupport(ctx: any) {
     };
   },
 
-  buildFinancialOverrideRow(
-    year: number,
-    financials: NonNullable<ManualYearCompletionDto['financials']>,
-    yearDataset:
-      | Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>
-      | null,
-    sourceMeta: Record<string, unknown>,
-  ): Record<string, unknown> | null {
-    const financialDataset =
-      yearDataset?.datasets.find((row) => row.dataType === 'tilinpaatos') ?? null;
-    const baseRow = {
-      ...(((financialDataset?.effectiveRows?.[0] ??
-        financialDataset?.rawRows?.[0] ??
-        {}) as Record<string, unknown>) ?? {}),
-    };
-    delete baseRow.__sourceMeta;
-    baseRow.Vuosi = year;
-
-    let hasExplicitFinancialValue = false;
-    for (const mapping of MANUAL_YEAR_FINANCIAL_FIELD_MAPPINGS) {
-      if (!Object.prototype.hasOwnProperty.call(financials, mapping.payloadKey)) {
-        continue;
-      }
-      const value = financials[mapping.payloadKey];
-      if (value == null) {
-        continue;
-      }
-      baseRow[mapping.sourceField] = ctx.round2(ctx.toNumber(value));
-      hasExplicitFinancialValue = true;
-    }
-
-    return hasExplicitFinancialValue
-      ? {
-          ...baseRow,
-          __sourceMeta: sourceMeta,
-        }
-      : null;
-  },
-
-  mergeFinancialOverrideProvenance(
-    current: OverrideProvenance | null,
-    incoming: OverrideProvenanceCore,
-  ): OverrideProvenance | null {
-    const fieldSources = ctx.manualPatchSupport.collectFinancialFieldSources(current);
-    const incomingFields = ctx.manualPatchSupport.collectIncomingFinancialFields(incoming);
-
-    for (const sourceField of incomingFields) {
-      fieldSources.set(sourceField, ctx.manualPatchSupport.stripFieldSources(incoming));
-    }
-
-    if (fieldSources.size === 0) {
-      return incoming;
-    }
-
-    return {
-      ...incoming,
-      fieldSources: IMPORT_YEAR_SUMMARY_FIELDS
-        .map(({ sourceField }) => {
-          const provenance = fieldSources.get(sourceField);
-          return provenance ? { sourceField, provenance } : null;
-        })
-        .filter(
-          (
-            item,
-          ): item is {
-            sourceField: ImportYearSummarySourceField;
-            provenance: OverrideProvenanceCore;
-          } => item !== null,
-        ),
-    };
-  },
-
-  collectIncomingFinancialFields(
-    provenance: OverrideProvenanceCore,
-  ): ImportYearSummarySourceField[] {
-    const explicitFields =
-      provenance.kind === 'statement_import' ||
-      provenance.kind === 'document_import'
-        ? provenance.matchedFields
-        : provenance.kind === 'kva_import' || provenance.kind === 'excel_import'
-        ? provenance.confirmedSourceFields ?? []
-        : [];
-
-    return explicitFields
-      .map((field) => ctx.manualPatchSupport.toFinancialSourceField(field))
-      .filter((field): field is ImportYearSummarySourceField => field != null);
-  },
-
-  collectFinancialFieldSources(
-    provenance: OverrideProvenance | null,
-  ): Map<ImportYearSummarySourceField, OverrideProvenanceCore> {
-    const fieldSources = new Map<
-      ImportYearSummarySourceField,
-      OverrideProvenanceCore
-    >();
-    if (!provenance) {
-      return fieldSources;
-    }
-
-    if (Array.isArray(provenance.fieldSources) && provenance.fieldSources.length > 0) {
-      for (const fieldSource of provenance.fieldSources) {
-        if (!ctx.manualPatchSupport.isImportYearSummarySourceField(fieldSource.sourceField)) {
-          continue;
-        }
-        fieldSources.set(
-          fieldSource.sourceField,
-          ctx.manualPatchSupport.stripFieldSources(fieldSource.provenance),
-        );
-      }
-      return fieldSources;
-    }
-
-    for (const sourceField of ctx.manualPatchSupport.collectIncomingFinancialFields(provenance)) {
-      fieldSources.set(sourceField, ctx.manualPatchSupport.stripFieldSources(provenance));
-    }
-
-    return fieldSources;
-  },
-
-  stripFieldSources(
-    provenance: OverrideProvenance | OverrideProvenanceCore,
-  ): OverrideProvenanceCore {
-    const { fieldSources: _fieldSources, ...core } = provenance as OverrideProvenance;
-    return core;
-  },
-
-  isImportYearSummarySourceField(
-    value: string,
-  ): value is ImportYearSummarySourceField {
-    return IMPORT_YEAR_SUMMARY_FIELDS.some((field) => field.sourceField === value);
-  },
-
-  toFinancialSourceField(
-    value: string,
-  ): ImportYearSummarySourceField | null {
-    if (ctx.manualPatchSupport.isImportYearSummarySourceField(value)) {
-      return value;
-    }
-    const fromStatementPreview =
-      STATEMENT_PREVIEW_FIELDS.find((field) => field.key === value)?.sourceField ?? null;
-    if (
-      fromStatementPreview != null &&
-      ctx.manualPatchSupport.isImportYearSummarySourceField(fromStatementPreview)
-    ) {
-      return fromStatementPreview;
-    }
-    return null;
-  },
   };
 }
-

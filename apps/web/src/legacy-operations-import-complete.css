@@ -1,0 +1,164 @@
+/* ============================================
+   Import Complete Styles
+   ============================================ */
+
+.import-complete {
+  padding: 24px 0;
+  text-align: center;
+}
+
+.complete-status {
+  margin-bottom: 24px;
+}
+
+.complete-status.success h4 {
+  color: var(--success-dark, #065f46);
+}
+
+.complete-status.partial h4 {
+  color: var(--warning-dark, #92400e);
+}
+
+.result-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.result-card {
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.result-card.created {
+  background: var(--success-light, #d1fae5);
+}
+
+.result-card.updated {
+  background: var(--info-light, #dbeafe);
+}
+
+.result-card.skipped {
+  background: var(--bg-secondary);
+}
+
+.result-card.errors {
+  background: var(--danger-light, #fee2e2);
+}
+
+.result-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.result-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.error-details {
+  text-align: left;
+  padding: 16px;
+  background: var(--danger-light, #fee2e2);
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.error-details h5 {
+  margin-bottom: 12px;
+}
+
+.error-details ul {
+  font-size: 0.85rem;
+}
+
+.complete-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* ============================================
+   Asset Identity Contract UI Styles
+   ============================================ */
+
+/* Identity Options in ReadinessGate */
+.identity-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.identity-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.identity-option:hover {
+  border-color: var(--primary);
+  background: var(--bg-secondary);
+}
+
+.identity-option input[type="radio"] {
+  margin-top: 4px;
+}
+
+.identity-option.warning {
+  border-color: var(--warning-border, #fcd34d);
+  background: var(--warning-light, #fffbeb);
+}
+
+.identity-option .option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.identity-option .option-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.identity-warning {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--warning-light, #fffbeb);
+  border: 1px solid var(--warning-border, #fcd34d);
+  border-radius: 8px;
+  color: var(--warning-dark, #92400e);
+}
+
+.derived-identity-warning {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--warning-light, #fffbeb);
+  border: 1px solid var(--warning-border, #fcd34d);
+  border-radius: 8px;
+  color: var(--warning-dark, #92400e);
+}
+
+/* Derived Identity Badge in Assets Table */
+.asset-ref.derived-identity {
+  color: var(--warning-dark, #92400e);
+}
+
+.derived-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 6px;
+  background: var(--warning-light, #fffbeb);
+  border: 1px solid var(--warning-border, #fcd34d);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: var(--warning-dark, #92400e);
+  cursor: help;
+}
+

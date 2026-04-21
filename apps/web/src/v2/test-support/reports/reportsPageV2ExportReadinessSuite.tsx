@@ -1,0 +1,773 @@
+import React from 'react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { ReportsPageV2 } from '../../ReportsPageV2';
+
+const downloadReportPdfV2 = vi.fn();
+const getForecastScenarioV2 = vi.fn();
+const getReportV2 = vi.fn();
+const listForecastScenariosV2 = vi.fn();
+const listReportsV2 = vi.fn();
+
+vi.mock('../../../api', () => ({
+  downloadReportPdfV2: (...args: unknown[]) => downloadReportPdfV2(...args),
+  getForecastScenarioV2: (...args: unknown[]) => getForecastScenarioV2(...args),
+  getReportV2: (...args: unknown[]) => getReportV2(...args),
+  listForecastScenariosV2: (...args: unknown[]) => listForecastScenariosV2(...args),
+  listReportsV2: (...args: unknown[]) => listReportsV2(...args),
+}));
+
+
+
+export function registerReportsPageV2ExportReadinessSuite() {
+  describe('ReportsPageV2 export readiness', () => {
+  beforeEach(() => {
+    downloadReportPdfV2.mockReset();
+    getForecastScenarioV2.mockReset();
+    getReportV2.mockReset();
+    listForecastScenariosV2.mockReset();
+    listReportsV2.mockReset();
+
+    listReportsV2.mockResolvedValue([
+      {
+        id: 'report-1',
+        title: 'Forecast report Water Utility 2026-04-09',
+        createdAt: '2026-04-09T08:00:00.000Z',
+        ennuste: { id: 'scenario-1', nimi: 'Water Utility Vesinvest v2' },
+        baselineYear: 2024,
+        requiredPriceToday: 3.2,
+        requiredAnnualIncreasePct: 4.1,
+        totalInvestments: 100000,
+        baselineSourceSummary: null,
+        variant: 'confidential_appendix',
+        pdfUrl: '/v2/reports/report-1/pdf',
+      },
+    ]);
+    getReportV2.mockResolvedValue({
+      id: 'report-1',
+      title: 'Forecast report Water Utility 2026-04-09',
+      createdAt: '2026-04-09T08:00:00.000Z',
+      baselineYear: 2024,
+      requiredPriceToday: 3.2,
+      requiredAnnualIncreasePct: 4.1,
+      totalInvestments: 100000,
+      ennuste: { id: 'scenario-1', nimi: 'Water Utility Vesinvest v2' },
+      snapshot: {
+        scenario: {
+          id: 'scenario-1',
+          name: 'Water Utility Vesinvest v2',
+          baselineYear: 2024,
+          requiredPriceTodayCombinedAnnualResult: 3.2,
+          requiredAnnualIncreasePctAnnualResult: 4.1,
+          requiredPriceTodayCombinedCumulativeCash: 3.4,
+          requiredAnnualIncreasePctCumulativeCash: 4.8,
+          baselinePriceTodayCombined: 2.8,
+          assumptions: {
+            perusmaksuMuutos: 0.05,
+          },
+          years: [
+            {
+              year: 2026,
+              soldVolume: 100000,
+              totalDepreciation: 45000,
+            },
+            {
+              year: 2027,
+              soldVolume: 99500,
+              totalDepreciation: 47000,
+            },
+            {
+              year: 2028,
+              soldVolume: 99000,
+              totalDepreciation: 49000,
+            },
+            {
+              year: 2029,
+              soldVolume: 98500,
+              totalDepreciation: 50500,
+            },
+            {
+              year: 2030,
+              soldVolume: 98000,
+              totalDepreciation: 52000,
+            },
+          ],
+          nearTermExpenseAssumptions: [
+            {
+              year: 2026,
+              personnelPct: 2,
+              energyPct: 3,
+              opexOtherPct: 1,
+            },
+          ],
+          thereafterExpenseAssumptions: {
+            personnelPct: 2,
+            energyPct: 2.5,
+            opexOtherPct: 1.5,
+          },
+          yearlyInvestments: [
+            {
+              year: 2026,
+              amount: 150000,
+              depreciationClassKey: 'sanering_water_network',
+              depreciationRuleSnapshot: {
+                assetClassKey: 'sanering_water_network',
+                assetClassName: 'Sanering / vattennatverk',
+                method: 'straight-line',
+                linearYears: 40,
+                residualPercent: null,
+              },
+            },
+          ],
+        },
+        generatedAt: '2026-04-09T08:00:00.000Z',
+        acceptedBaselineYears: [2022, 2023, 2024],
+        baselineSourceSummaries: [
+          {
+            year: 2022,
+            planningRole: 'historical',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: {
+              veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi'],
+              manualDataTypes: [],
+            },
+            financials: {
+              source: 'veeti',
+              provenance: null,
+              editedAt: null,
+              editedBy: null,
+              reason: null,
+            },
+            prices: {
+              source: 'veeti',
+              provenance: null,
+              editedAt: null,
+              editedBy: null,
+              reason: null,
+            },
+            volumes: {
+              source: 'veeti',
+              provenance: null,
+              editedAt: null,
+              editedBy: null,
+              reason: null,
+            },
+          },
+          {
+            year: 2023,
+            planningRole: 'historical',
+            sourceStatus: 'MIXED',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa'],
+              manualDataTypes: ['tilinpaatos'],
+            },
+            financials: {
+              source: 'manual',
+              provenance: {
+                kind: 'document_import',
+                fileName: 'baseline-2023.pdf',
+                pageNumbers: [3, 4],
+                sourceLines: [
+                  { pageNumber: 3, text: 'Revenue 95 000 EUR' },
+                  { pageNumber: 4, text: 'Operating costs 70 000 EUR' },
+                ],
+              },
+              editedAt: '2026-04-09T08:00:00.000Z',
+              editedBy: 'planner@example.com',
+              reason: 'Reviewed',
+            },
+            prices: {
+              source: 'veeti',
+              provenance: null,
+              editedAt: null,
+              editedBy: null,
+              reason: null,
+            },
+            volumes: {
+              source: 'veeti',
+              provenance: null,
+              editedAt: null,
+              editedBy: null,
+              reason: null,
+            },
+          },
+          {
+            year: 2024,
+            planningRole: 'historical',
+            sourceStatus: 'MANUAL',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa'],
+              manualDataTypes: ['tilinpaatos', 'volume_vesi'],
+            },
+            financials: {
+              source: 'manual',
+              provenance: {
+                kind: 'statement_import',
+                fileName: 'baseline-2024.pdf',
+              },
+              editedAt: '2026-04-09T08:00:00.000Z',
+              editedBy: 'planner@example.com',
+              reason: 'Reviewed',
+            },
+            prices: {
+              source: 'veeti',
+              provenance: null,
+              editedAt: null,
+              editedBy: null,
+              reason: null,
+            },
+            volumes: {
+              source: 'manual',
+              provenance: {
+                kind: 'excel_import',
+                fileName: 'kva-2024.xlsx',
+              },
+              editedAt: '2026-04-09T08:00:00.000Z',
+              editedBy: 'planner@example.com',
+              reason: 'Reviewed',
+            },
+          },
+        ],
+        baselineSourceSummary: {
+          year: 2024,
+          planningRole: 'historical',
+          sourceStatus: 'MANUAL',
+          sourceBreakdown: {
+            veetiDataTypes: ['taksa'],
+            manualDataTypes: ['tilinpaatos', 'volume_vesi'],
+          },
+          financials: {
+            source: 'manual',
+            provenance: {
+              kind: 'statement_import',
+              fileName: 'baseline-2024.pdf',
+            },
+            editedAt: '2026-04-09T08:00:00.000Z',
+            editedBy: 'planner@example.com',
+            reason: 'Reviewed',
+          },
+          prices: {
+            source: 'veeti',
+            provenance: null,
+            editedAt: null,
+            editedBy: null,
+            reason: null,
+          },
+          volumes: {
+            source: 'manual',
+            provenance: {
+              kind: 'excel_import',
+              fileName: 'kva-2024.xlsx',
+            },
+            editedAt: '2026-04-09T08:00:00.000Z',
+            editedBy: 'planner@example.com',
+            reason: 'Reviewed',
+          },
+        },
+        vesinvestPlan: {
+          id: 'plan-1',
+          name: 'Water Utility Vesinvest',
+          utilityName: 'Water Utility',
+          versionNumber: 2,
+        },
+        vesinvestAppendix: {
+          yearlyTotals: [
+            { year: 2026, totalAmount: 100000 },
+            { year: 2027, totalAmount: 50000 },
+            { year: 2028, totalAmount: 0 },
+            { year: 2029, totalAmount: 0 },
+            { year: 2030, totalAmount: 0 },
+          ],
+          fiveYearBands: [
+            { startYear: 2026, endYear: 2030, totalAmount: 150000 },
+          ],
+          groupedProjects: [
+            {
+              classKey: 'sanering_water_network',
+              classLabel: 'Sanering / vattennätverk',
+              totalAmount: 150000,
+              projects: [
+                {
+                  code: 'P-001',
+                  name: 'Main rehabilitation',
+                  classKey: 'sanering_water_network',
+                  classLabel: 'Sanering / vattennätverk',
+                  accountKey: 'sanering_water_network',
+                  allocations: [
+                    {
+                      year: 2026,
+                      totalAmount: 150000,
+                      waterAmount: 150000,
+                      wastewaterAmount: 0,
+                    },
+                  ],
+                  totalAmount: 150000,
+                },
+              ],
+            },
+          ],
+          depreciationPlan: [
+            {
+              classKey: 'sanering_water_network',
+              classLabel: 'Sanering / vattennätverk',
+              accountKey: 'sanering_water_network',
+              serviceSplit: 'water',
+              method: 'straight-line',
+              linearYears: 40,
+              residualPercent: null,
+            },
+          ],
+        },
+        reportVariant: 'confidential_appendix',
+        reportSections: {
+          baselineSources: true,
+          investmentPlan: true,
+          assumptions: true,
+          yearlyInvestments: true,
+          riskSummary: true,
+        },
+      },
+      variant: 'confidential_appendix',
+      pdfUrl: '/v2/reports/report-1/pdf',
+    } as any);
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('disables export and drops the ready helper when preview differs from the saved variant', async () => {
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={() => undefined}
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getReportV2).toHaveBeenCalledWith('report-1');
+    });
+
+    expect(
+      await screen.findByText('Tallennettu raportti on valmis vietäväksi.'),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Julkinen yhteenveto' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Lataa PDF')).toHaveLength(1);
+      expect(
+        screen.getByRole('button', { name: 'Lataa PDF' }).hasAttribute('disabled'),
+      ).toBe(true);
+      expect(
+        screen.getByText(/PDF-vienti.+tallennettua raporttiversiota/u),
+      ).toBeTruthy();
+      expect(
+        screen.queryByText('Tallennettu raportti on valmis vietäväksi.'),
+      ).toBeNull();
+    });
+  });
+
+  it('keeps the saved report title in the document header', async () => {
+    const { container } = render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={() => undefined}
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getReportV2).toHaveBeenCalledWith('report-1');
+    });
+
+    const documentHeader = container.querySelector('.v2-reports-document-header');
+    expect(documentHeader?.textContent).toContain(
+      'Ennusteraportti Water Utility Vesinvest v2 2026-04-09',
+    );
+    expect(documentHeader?.textContent).toContain('Luotu esikatselu');
+  });
+
+  it('prefers the fetched saved report title over the list summary title in the document header', async () => {
+    listReportsV2.mockResolvedValueOnce([
+      {
+        id: 'report-1',
+        title: 'Outdated list title',
+        createdAt: '2026-04-09T08:00:00.000Z',
+        ennuste: { id: 'scenario-1', nimi: 'Water Utility Vesinvest v2' },
+        baselineYear: 2024,
+        requiredPriceToday: 3.2,
+        requiredAnnualIncreasePct: 4.1,
+        totalInvestments: 100000,
+        baselineSourceSummary: null,
+        variant: 'confidential_appendix',
+        pdfUrl: '/v2/reports/report-1/pdf',
+      },
+    ]);
+
+    const { container } = render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={() => undefined}
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getReportV2).toHaveBeenCalledWith('report-1');
+    });
+
+    const documentHeader = container.querySelector('.v2-reports-document-header');
+    expect(documentHeader?.textContent).toContain(
+      'Ennusteraportti Water Utility Vesinvest v2 2026-04-09',
+    );
+    expect(documentHeader?.textContent).not.toContain('Outdated list title');
+  });
+
+  it('disables export when the saved report has no PDF available', async () => {
+    getReportV2.mockResolvedValueOnce({
+      id: 'report-1',
+      title: 'Forecast report Water Utility 2026-04-09',
+      createdAt: '2026-04-09T08:00:00.000Z',
+      baselineYear: 2024,
+      requiredPriceToday: 3.2,
+      requiredAnnualIncreasePct: 4.1,
+      totalInvestments: 100000,
+      ennuste: { id: 'scenario-1', nimi: 'Water Utility Vesinvest v2' },
+      snapshot: {
+        scenario: {
+          id: 'scenario-1',
+          name: 'Water Utility Vesinvest v2',
+          baselineYear: 2024,
+          requiredPriceTodayCombinedAnnualResult: 3.2,
+          requiredAnnualIncreasePctAnnualResult: 4.1,
+          requiredPriceTodayCombinedCumulativeCash: 3.4,
+          requiredAnnualIncreasePctCumulativeCash: 4.8,
+          baselinePriceTodayCombined: 2.8,
+          assumptions: { perusmaksuMuutos: 0.05 },
+          years: [{ year: 2026, soldVolume: 100000, totalDepreciation: 45000 }],
+          nearTermExpenseAssumptions: [],
+          thereafterExpenseAssumptions: {
+            personnelPct: 2,
+            energyPct: 2.5,
+            opexOtherPct: 1.5,
+          },
+          yearlyInvestments: [],
+        },
+        generatedAt: '2026-04-09T08:00:00.000Z',
+        acceptedBaselineYears: [2024],
+        baselineSourceSummaries: [],
+        baselineSourceSummary: null,
+        vesinvestPlan: null,
+        vesinvestAppendix: null,
+        reportVariant: 'confidential_appendix',
+        reportSections: {
+          baselineSources: true,
+          investmentPlan: true,
+          assumptions: true,
+          yearlyInvestments: true,
+          riskSummary: true,
+        },
+      },
+      variant: 'confidential_appendix',
+      pdfUrl: null,
+    } as any);
+
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={() => undefined}
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getReportV2).toHaveBeenCalledWith('report-1');
+    });
+
+    expect(
+      screen.getByRole('button', { name: 'Lataa PDF' }).hasAttribute('disabled'),
+    ).toBe(true);
+    expect(
+      screen.getByText(/PDF-vienti on.+poissa käytöstä/u),
+    ).toBeTruthy();
+  });
+
+  it('keeps the unavailable export message authoritative when preview also differs from the saved variant', async () => {
+    getReportV2.mockResolvedValueOnce({
+      id: 'report-1',
+      title: 'Forecast report Water Utility 2026-04-09',
+      createdAt: '2026-04-09T08:00:00.000Z',
+      baselineYear: 2024,
+      requiredPriceToday: 3.2,
+      requiredAnnualIncreasePct: 4.1,
+      totalInvestments: 100000,
+      ennuste: { id: 'scenario-1', nimi: 'Water Utility Vesinvest v2' },
+      snapshot: {
+        scenario: {
+          id: 'scenario-1',
+          name: 'Water Utility Vesinvest v2',
+          baselineYear: 2024,
+          requiredPriceTodayCombinedAnnualResult: 3.2,
+          requiredAnnualIncreasePctAnnualResult: 4.1,
+          requiredPriceTodayCombinedCumulativeCash: 3.4,
+          requiredAnnualIncreasePctCumulativeCash: 4.8,
+          baselinePriceTodayCombined: 2.8,
+          assumptions: { perusmaksuMuutos: 0.05 },
+          years: [{ year: 2026, soldVolume: 100000, totalDepreciation: 45000 }],
+          nearTermExpenseAssumptions: [],
+          thereafterExpenseAssumptions: {
+            personnelPct: 2,
+            energyPct: 2.5,
+            opexOtherPct: 1.5,
+          },
+          yearlyInvestments: [],
+        },
+        generatedAt: '2026-04-09T08:00:00.000Z',
+        acceptedBaselineYears: [2024],
+        baselineSourceSummaries: [],
+        baselineSourceSummary: null,
+        vesinvestPlan: null,
+        vesinvestAppendix: null,
+        reportVariant: 'confidential_appendix',
+        reportSections: {
+          baselineSources: true,
+          investmentPlan: true,
+          assumptions: true,
+          yearlyInvestments: true,
+          riskSummary: true,
+        },
+      },
+      variant: 'confidential_appendix',
+      pdfUrl: null,
+    } as any);
+
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={() => undefined}
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getReportV2).toHaveBeenCalledWith('report-1');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Julkinen yhteenveto' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/PDF-vienti on.+poissa käytöstä/u),
+      ).toBeTruthy();
+      expect(
+        screen.queryByText(/PDF-vienti.+tallennettua raporttiversiota/u),
+      ).toBeNull();
+    });
+  });
+
+  it('drops the ready helper while a PDF export is in flight', async () => {
+    downloadReportPdfV2.mockReturnValue(
+      new Promise(() => undefined),
+    );
+
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={() => undefined}
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getReportV2).toHaveBeenCalledWith('report-1');
+    });
+
+    expect(
+      await screen.findByText('Tallennettu raportti on valmis vietäväksi.'),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lataa PDF' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Ladataan PDF...' })).toBeTruthy();
+      expect(
+        screen.getByRole('button', { name: 'Ladataan PDF...' }).hasAttribute('disabled'),
+      ).toBe(true);
+      expect(
+        screen.queryByText('Tallennettu raportti on valmis vietäväksi.'),
+      ).toBeNull();
+    });
+  });
+
+  it('derives accepted baseline years from saved baseline provenance when the explicit list is missing', async () => {
+    getReportV2.mockResolvedValueOnce({
+      id: 'report-1',
+      title: 'Forecast report Water Utility 2026-04-09',
+      createdAt: '2026-04-09T08:00:00.000Z',
+      baselineYear: 2024,
+      requiredPriceToday: 3.2,
+      requiredAnnualIncreasePct: 4.1,
+      totalInvestments: 100000,
+      ennuste: { id: 'scenario-1', nimi: 'Water Utility Vesinvest v2' },
+      snapshot: {
+        scenario: {
+          id: 'scenario-1',
+          name: 'Water Utility Vesinvest v2',
+          baselineYear: 2024,
+          requiredPriceTodayCombinedAnnualResult: 3.2,
+          requiredAnnualIncreasePctAnnualResult: 4.1,
+          requiredPriceTodayCombinedCumulativeCash: 3.4,
+          requiredAnnualIncreasePctCumulativeCash: 4.8,
+          baselinePriceTodayCombined: 2.8,
+          assumptions: {},
+          years: [{ year: 2026, soldVolume: 100000, totalDepreciation: 45000 }],
+          nearTermExpenseAssumptions: [],
+          thereafterExpenseAssumptions: {
+            personnelPct: 2,
+            energyPct: 2.5,
+            opexOtherPct: 1.5,
+          },
+          yearlyInvestments: [],
+        },
+        baselineSourceSummaries: [
+          {
+            year: 2024,
+            planningRole: 'historical',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: {
+              veetiDataTypes: ['tilinpaatos'],
+              manualDataTypes: [],
+            },
+            financials: {
+              source: 'veeti',
+              provenance: null,
+              editedAt: null,
+              editedBy: null,
+              reason: null,
+            },
+            prices: {
+              source: 'veeti',
+              provenance: null,
+              editedAt: null,
+              editedBy: null,
+              reason: null,
+            },
+            volumes: {
+              source: 'veeti',
+              provenance: null,
+              editedAt: null,
+              editedBy: null,
+              reason: null,
+            },
+          },
+          {
+            year: 2022,
+            planningRole: 'historical',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: {
+              veetiDataTypes: ['tilinpaatos'],
+              manualDataTypes: [],
+            },
+            financials: {
+              source: 'veeti',
+              provenance: null,
+              editedAt: null,
+              editedBy: null,
+              reason: null,
+            },
+            prices: {
+              source: 'veeti',
+              provenance: null,
+              editedAt: null,
+              editedBy: null,
+              reason: null,
+            },
+            volumes: {
+              source: 'veeti',
+              provenance: null,
+              editedAt: null,
+              editedBy: null,
+              reason: null,
+            },
+          },
+        ],
+        baselineSourceSummary: {
+          year: 2024,
+          planningRole: 'historical',
+          sourceStatus: 'VEETI',
+          sourceBreakdown: {
+            veetiDataTypes: ['tilinpaatos'],
+            manualDataTypes: [],
+          },
+          financials: {
+            source: 'veeti',
+            provenance: null,
+            editedAt: null,
+            editedBy: null,
+            reason: null,
+          },
+          prices: {
+            source: 'veeti',
+            provenance: null,
+            editedAt: null,
+            editedBy: null,
+            reason: null,
+          },
+          volumes: {
+            source: 'veeti',
+            provenance: null,
+            editedAt: null,
+            editedBy: null,
+            reason: null,
+          },
+        },
+        vesinvestPlan: {
+          id: 'plan-1',
+          name: 'Water Utility Vesinvest',
+          utilityName: 'Water Utility',
+          versionNumber: 2,
+        },
+        vesinvestAppendix: {
+          yearlyTotals: [{ year: 2026, totalAmount: 100000 }],
+          fiveYearBands: [],
+          groupedProjects: [],
+          depreciationPlan: [],
+        },
+        reportVariant: 'confidential_appendix',
+        reportSections: {
+          baselineSources: true,
+          investmentPlan: true,
+          assumptions: true,
+          yearlyInvestments: true,
+          riskSummary: true,
+        },
+      },
+      variant: 'confidential_appendix',
+      pdfUrl: '/v2/reports/report-1/pdf',
+    } as any);
+
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={() => undefined}
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    expect((await screen.findAllByText('2022, 2024')).length).toBeGreaterThan(0);
+  });
+
+  });
+}
+
+

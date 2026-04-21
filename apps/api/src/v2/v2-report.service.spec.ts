@@ -1,5 +1,5 @@
 import { V2ReportService } from './v2-report.service';
-import { registerV2ReportVariantRegressionSuite } from './test-support/v2ServiceLegacySuites';
+import { registerV2ReportVariantRegressionSuite } from './test-support/legacy/v2ReportVariantRegressionSuite';
 
 const buildReportService = () =>
   new V2ReportService(

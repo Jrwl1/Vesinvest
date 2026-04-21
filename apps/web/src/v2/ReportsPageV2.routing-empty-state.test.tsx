@@ -1,3 +1,3 @@
-import { registerReportsPageV2RoutingEmptyStateSuite } from './test-support/reportsPageV2TestSupport';
+import { registerReportsPageV2RoutingEmptyStateSuite } from './test-support/reports/reportsPageV2RoutingEmptyStateSuite';
 
 registerReportsPageV2RoutingEmptyStateSuite();

@@ -1,13 +1,11 @@
 import { V2ForecastService } from './v2-forecast.service';
-import {
-  registerV2DepreciationCompatibilitySuite,
-  registerV2FeeSufficiencyHelpersSuite,
-  registerV2ForecastStarterContractSuite,
-  registerV2ScenarioAssumptionOverrideSuite,
-  registerV2ScenarioBranchCompatibilitySuite,
-  registerV2ScenarioMergeSafetySuite,
-  registerV2StructuredInvestmentCompatibilitySuite,
-} from './test-support/v2ServiceLegacySuites';
+import { registerV2DepreciationCompatibilitySuite } from './test-support/legacy/v2DepreciationCompatibilitySuite';
+import { registerV2FeeSufficiencyHelpersSuite } from './test-support/legacy/v2FeeSufficiencyHelpersSuite';
+import { registerV2ForecastStarterContractSuite } from './test-support/legacy/v2ForecastStarterContractSuite';
+import { registerV2ScenarioAssumptionOverrideSuite } from './test-support/legacy/v2ScenarioAssumptionOverrideSuite';
+import { registerV2ScenarioBranchCompatibilitySuite } from './test-support/legacy/v2ScenarioBranchCompatibilitySuite';
+import { registerV2ScenarioMergeSafetySuite } from './test-support/legacy/v2ScenarioMergeSafetySuite';
+import { registerV2StructuredInvestmentCompatibilitySuite } from './test-support/legacy/v2StructuredInvestmentCompatibilitySuite';
 
 const ORG_ID = 'org-1';
 const SCENARIO_ID = 'scenario-1';

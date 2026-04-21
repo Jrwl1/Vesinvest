@@ -1,3 +1,3 @@
-import { registerReportsPageV2PreviewDetailSuite } from './test-support/reportsPageV2TestSupport';
+import { registerReportsPageV2PreviewDetailSuite } from './test-support/reports/reportsPageV2PreviewDetailSuite';
 
 registerReportsPageV2PreviewDetailSuite();

@@ -1,3 +1,3 @@
-import { registerVesinvestPlanningPanelDraftAdminSuite } from './test-support/vesinvestPlanningPanelTestSupport';
+import { registerVesinvestPlanningPanelDraftAdminSuite } from './test-support/vesinvest/vesinvestPlanningPanelDraftAdminSuite';
 
 registerVesinvestPlanningPanelDraftAdminSuite();

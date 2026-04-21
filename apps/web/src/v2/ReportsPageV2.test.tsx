@@ -1,3 +1,3 @@
-import { registerReportsPageV2SmokeSuite } from './test-support/reportsPageV2TestSupport';
+import { registerReportsPageV2SmokeSuite } from './test-support/reports/reportsPageV2SmokeSuite';
 
 registerReportsPageV2SmokeSuite();

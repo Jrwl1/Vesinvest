@@ -1,11 +1,87 @@
-// @ts-nocheck
 import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { VeetiBudgetGenerator } from '../veeti/veeti-budget-generator';
+import { VeetiEffectiveDataService } from '../veeti/veeti-effective-data.service';
+import { VeetiSanityService } from '../veeti/veeti-sanity.service';
+import { VeetiService } from '../veeti/veeti.service';
+import { VeetiSyncService } from '../veeti/veeti-sync.service';
 
-export function createV2ImportWorkspaceSupport(ctx: any) {
+type ImportWorkspaceContext = {
+  prisma: PrismaService;
+  veetiService: VeetiService;
+  veetiSyncService: VeetiSyncService;
+  veetiBudgetGenerator: VeetiBudgetGenerator;
+  veetiSanityService: VeetiSanityService;
+  veetiEffectiveDataService: VeetiEffectiveDataService;
+  normalizeYears(years: number[]): number[];
+  annotatePlanningYearRows<T extends { vuosi: number }>(
+    yearRows: T[],
+  ): Array<T & { planningRole: 'historical' | 'current_year_estimate' }>;
+  hydrateYearRowsWithTariffRevenueReadiness<T extends { vuosi: number; completeness: Record<string, boolean> }>(
+    orgId: string,
+    yearRows: T[],
+  ): Promise<
+    Array<
+      T & {
+        tariffRevenueReason: 'missing_fixed_revenue' | 'mismatch' | null;
+        baselineReady: boolean;
+        baselineMissingRequirements: Array<'financialBaseline' | 'prices' | 'volumes'>;
+        baselineWarnings: Array<'tariffRevenueMismatch'>;
+      }
+    >
+  >;
+  isFuturePlanningYear(year: number): boolean;
+  persistPlanningBaselineYears(
+    orgId: string,
+    veetiId: number,
+    workspaceYears: number[],
+    includedYears: number[],
+  ): Promise<void>;
+  persistWorkspaceYears(orgId: string, years: number[]): Promise<number[]>;
+  removeWorkspaceYears(orgId: string, years: number[]): Promise<number[]>;
+  getWorkspaceYears(orgId: string): Promise<number[]>;
+  resolveBaselineBlockReason(params: {
+    completeness: Record<string, boolean>;
+    baselineReady?: boolean;
+    baselineMissingRequirements?: Array<'financialBaseline' | 'prices' | 'volumes'>;
+  }): string | null;
+  resolveVeetiOrgLanguage(
+    veetiId: number | null | undefined,
+  ): Promise<{ kieliId: number | null; uiLanguage: 'fi' | 'sv' | null }>;
+  getImportStatus(orgId: string): Promise<{
+    years: Array<{
+      vuosi: number;
+      completeness?: Record<string, boolean>;
+      baselineReady?: boolean;
+      baselineMissingRequirements?: Array<'financialBaseline' | 'prices' | 'volumes'>;
+      baselineWarnings?: Array<'tariffRevenueMismatch'>;
+      tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
+    }>;
+    excludedYears?: number[];
+    workspaceYears?: number[];
+    [key: string]: unknown;
+  }>;
+  workspaceSupport: {
+    removeImportedYearInternal(
+      orgId: string,
+      year: number,
+      options?: { keepExcluded?: boolean },
+    ): Promise<{
+      vuosi: number;
+      deletedSnapshots: number;
+      deletedOverrides: number;
+      deletedBudgets: number;
+      workspaceYears: number[];
+      excludedPolicyApplied: boolean;
+    }>;
+  };
+};
+
+export function createV2ImportWorkspaceSupport(ctx: ImportWorkspaceContext) {
   return {
   async searchOrganizations(query: string, limit: number) {
     const normalizedQuery = query.trim();

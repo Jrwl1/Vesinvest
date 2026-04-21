@@ -14,38 +14,6 @@ import {
   SubtotalInput,
   AssumptionMap,
 } from './projection-engine.service';
-
-type ProjectionWithBudget = NonNullable<
-  Awaited<ReturnType<ProjectionsRepository['findById']>>
->;
-type ParsedUserInvestment = {
-  year: number;
-  amount: number;
-  depreciationClassKey?: string | null;
-  depreciationRuleSnapshot?:
-    | {
-        assetClassKey: string;
-        assetClassName?: string | null;
-        method:
-          | 'linear'
-          | 'residual'
-          | 'straight-line'
-          | 'custom-annual-schedule'
-          | 'none';
-        linearYears?: number | null;
-        residualPercent?: number | null;
-        annualSchedule?: number[] | null;
-      }
-    | null;
-};
-type VuosiWithCashflow = NonNullable<ProjectionWithBudget['vuodet']>[number] & {
-  kassafloede: number;
-  ackumuleradKassa: number;
-};
-type EnrichedProjection = Omit<ProjectionWithBudget, 'vuodet'> & {
-  requiredTariff: number | null;
-  vuodet?: VuosiWithCashflow[];
-};
 import { CreateProjectionDto } from './dto/create-projection.dto';
 import { UpdateProjectionDto } from './dto/update-projection.dto';
 import {
@@ -55,13 +23,18 @@ import {
   synthesizeDriversFromSubtotals,
   buildManualDriverPathsFromDrivers,
 } from './driver-paths';
+import { ProjectionYearOverrides, mergeUserInvestmentsIntoYearOverrides } from './year-overrides';
 import {
-  ProjectionYearOverrides,
-  normalizeProjectionYearOverrides,
-  mergeUserInvestmentsIntoYearOverrides,
-} from './year-overrides';
-
-const SALES_REVENUE_CATEGORY_KEYS = new Set(['sales_revenue', 'liikevaihto']);
+  collectRequiredDriverMissing,
+  type EnrichedProjection,
+  hasUsableDriverVolume,
+  parseProjectionYearOverrides,
+  parseUserInvestments,
+  type ProjectionWithBudget,
+  waterDriverRevenue,
+  waterSalesRevenueFromSubtotals,
+  shouldUseSubtotalFallbackForImportedDrivers,
+} from './projections-support';
 
 @Injectable()
 export class ProjectionsService {
@@ -149,19 +122,19 @@ export class ProjectionsService {
       : [];
     let drivers: RevenueDriverInput[] = budgetDrivers;
     if (budgetDrivers.length > 0) {
-      if (!this.hasUsableDriverVolume(drivers)) {
-        if (this.hasUsableDriverVolume(driversFromPaths)) {
+      if (!hasUsableDriverVolume(drivers)) {
+        if (hasUsableDriverVolume(driversFromPaths)) {
           drivers = driversFromPaths;
-        } else if (this.hasUsableDriverVolume(subtotalFallbackDrivers)) {
+        } else if (hasUsableDriverVolume(subtotalFallbackDrivers)) {
           drivers = subtotalFallbackDrivers;
         }
       }
-    } else if (this.hasUsableDriverVolume(driversFromPaths)) {
+    } else if (hasUsableDriverVolume(driversFromPaths)) {
       drivers = driversFromPaths;
-    } else if (this.hasUsableDriverVolume(subtotalFallbackDrivers)) {
+    } else if (hasUsableDriverVolume(subtotalFallbackDrivers)) {
       drivers = subtotalFallbackDrivers;
     }
-    if (!this.hasUsableDriverVolume(drivers)) {
+    if (!hasUsableDriverVolume(drivers)) {
       return { ...base, vuodet: enrichedVuodet } as EnrichedProjection;
     }
 
@@ -186,12 +159,12 @@ export class ProjectionsService {
         summa: Number(v.summa),
         palvelutyyppi: v.palvelutyyppi,
       }));
-      const userInvestments = this.parseUserInvestments(
+      const userInvestments = parseUserInvestments(
         (projection as unknown as { userInvestments?: unknown })
           .userInvestments,
       );
       const projectionYearOverrides = mergeUserInvestmentsIntoYearOverrides(
-        this.parseYearOverrides(
+        parseProjectionYearOverrides(
           (projection as unknown as { vuosiYlikirjoitukset?: unknown })
             .vuosiYlikirjoitukset,
         ),
@@ -217,210 +190,6 @@ export class ProjectionsService {
     return { ...base, vuodet: enrichedVuodet } as EnrichedProjection;
   }
 
-  private parseUserInvestments(
-    raw: unknown,
-  ): ParsedUserInvestment[] | undefined {
-    if (!Array.isArray(raw)) return undefined;
-    const out: ParsedUserInvestment[] = [];
-    for (const item of raw) {
-      if (
-        item &&
-        typeof item === 'object' &&
-        'year' in item &&
-        'amount' in item
-      ) {
-        const year = Math.round(Number(item.year));
-        const amount = Number(item.amount);
-        if (!Number.isFinite(year) || !Number.isFinite(amount)) continue;
-        const depreciationClassKey =
-          typeof (item as { depreciationClassKey?: unknown })
-            .depreciationClassKey === 'string'
-            ? (
-                item as {
-                  depreciationClassKey?: string;
-                }
-              ).depreciationClassKey?.trim() || null
-            : null;
-        const snapshotRaw = (item as { depreciationRuleSnapshot?: unknown })
-          .depreciationRuleSnapshot;
-        const depreciationRuleSnapshot =
-          snapshotRaw && typeof snapshotRaw === 'object'
-            ? {
-                assetClassKey: String(
-                  (snapshotRaw as { assetClassKey?: unknown }).assetClassKey ??
-                    '',
-                ).trim(),
-                assetClassName:
-                  typeof (snapshotRaw as { assetClassName?: unknown })
-                    .assetClassName === 'string'
-                    ? (
-                        snapshotRaw as { assetClassName?: string }
-                      ).assetClassName?.trim() || null
-                    : null,
-                method: String(
-                  (snapshotRaw as { method?: unknown }).method ?? 'none',
-                ) as NonNullable<
-                  ParsedUserInvestment['depreciationRuleSnapshot']
-                >['method'],
-                linearYears:
-                  (snapshotRaw as { linearYears?: unknown }).linearYears == null
-                    ? null
-                    : Math.round(
-                        Number(
-                          (snapshotRaw as { linearYears?: unknown })
-                            .linearYears,
-                        ),
-                      ),
-                residualPercent:
-                  (snapshotRaw as { residualPercent?: unknown })
-                    .residualPercent == null
-                    ? null
-                    : Number(
-                        (snapshotRaw as { residualPercent?: unknown })
-                          .residualPercent,
-                      ),
-                annualSchedule: Array.isArray(
-                  (snapshotRaw as { annualSchedule?: unknown }).annualSchedule,
-                )
-                  ? (
-                      (snapshotRaw as { annualSchedule?: unknown[] })
-                        .annualSchedule ?? []
-                    )
-                      .map((value) => Number(value))
-                      .filter((value) => Number.isFinite(value))
-                  : null,
-              }
-            : null;
-        out.push({
-          year,
-          amount,
-          depreciationClassKey,
-          depreciationRuleSnapshot:
-            depreciationRuleSnapshot &&
-            depreciationRuleSnapshot.assetClassKey.length > 0
-              ? depreciationRuleSnapshot
-              : null,
-        });
-      }
-    }
-    return out.length > 0 ? out : undefined;
-  }
-
-  private parseYearOverrides(
-    raw: unknown,
-  ): ProjectionYearOverrides | undefined {
-    return normalizeProjectionYearOverrides(raw);
-  }
-
-  private hasUsableDriverVolume(drivers: RevenueDriverInput[]): boolean {
-    return drivers.some(
-      (driver) =>
-        Number.isFinite(driver.myytyMaara) && Number(driver.myytyMaara) > 0,
-    );
-  }
-
-  private collectRequiredDriverMissing(
-    drivers: RevenueDriverInput[],
-  ): string[] {
-    const find = (service: 'vesi' | 'jatevesi') =>
-      drivers.find((driver) => driver.palvelutyyppi === service);
-    const water = find('vesi');
-    const wastewater = find('jatevesi');
-    const missing: string[] = [];
-    if (!water || !(Number(water.yksikkohinta) > 0))
-      missing.push('vesi.yksikkohinta');
-    if (!water || !(Number(water.myytyMaara) > 0))
-      missing.push('vesi.myytyMaara');
-    if (!wastewater || !(Number(wastewater.yksikkohinta) > 0))
-      missing.push('jatevesi.yksikkohinta');
-    if (!wastewater || !(Number(wastewater.myytyMaara) > 0))
-      missing.push('jatevesi.myytyMaara');
-    return missing;
-  }
-
-  private isImportedDriverMeta(sourceMeta: unknown): boolean {
-    if (!sourceMeta || typeof sourceMeta !== 'object') return false;
-    const meta = sourceMeta as Record<string, unknown>;
-    return meta.imported === true && meta.manualOverride !== true;
-  }
-
-  private waterSalesRevenueFromSubtotals(
-    valisummat:
-      | Array<{ categoryKey: string; tyyppi: string; summa: unknown }>
-      | undefined,
-  ): number {
-    return (valisummat ?? [])
-      .filter(
-        (line) =>
-          line.tyyppi === 'tulo' &&
-          SALES_REVENUE_CATEGORY_KEYS.has(line.categoryKey),
-      )
-      .reduce((sum, line) => {
-        const amount = Number(line.summa);
-        return Number.isFinite(amount) ? sum + amount : sum;
-      }, 0);
-  }
-
-  private waterDriverRevenue(
-    drivers: RevenueDriverInput[],
-    baseFeeTotal = 0,
-  ): number {
-    return (
-      drivers
-      .filter(
-        (driver) =>
-          driver.palvelutyyppi === 'vesi' ||
-          driver.palvelutyyppi === 'jatevesi',
-      )
-      .reduce(
-        (sum, driver) =>
-          sum +
-          driver.yksikkohinta * driver.myytyMaara +
-          (driver.perusmaksu ?? 0) * (driver.liittymamaara ?? 0),
-        0,
-      ) + (Number.isFinite(baseFeeTotal) ? Number(baseFeeTotal) : 0)
-    );
-  }
-
-  private shouldUseSubtotalFallbackForImportedDrivers(
-    budget: {
-      valisummat?: Array<{
-        categoryKey: string;
-        tyyppi: string;
-        summa: unknown;
-      }>;
-      tuloajurit?: Array<{ palvelutyyppi: string; sourceMeta?: unknown }>;
-    },
-    drivers: RevenueDriverInput[],
-    hasExplicitDriverPaths: boolean,
-  ): boolean {
-    if (hasExplicitDriverPaths) return false;
-    if (!budget.valisummat || budget.valisummat.length === 0) return false;
-
-    const importedWaterDrivers = (budget.tuloajurit ?? []).filter(
-      (driver) =>
-        (driver.palvelutyyppi === 'vesi' ||
-          driver.palvelutyyppi === 'jatevesi') &&
-        this.isImportedDriverMeta(driver.sourceMeta),
-    );
-    if (importedWaterDrivers.length === 0) return false;
-
-    const subtotalSalesRevenue = this.waterSalesRevenueFromSubtotals(
-      budget.valisummat,
-    );
-    if (!(subtotalSalesRevenue > 0)) return false;
-
-    const driverRevenue = this.waterDriverRevenue(
-      drivers,
-      Number(
-        (budget as { perusmaksuYhteensa?: unknown }).perusmaksuYhteensa ?? 0,
-      ),
-    );
-    if (!(driverRevenue > 0)) return true;
-
-    // Imported placeholder drivers can be tiny vs subtotal sales_revenue.
-    return driverRevenue < subtotalSalesRevenue * 0.25;
-  }
 
   private async buildAssumptionMap(
     orgId: string,
@@ -612,7 +381,7 @@ export class ProjectionsService {
     if (budgetDrivers.length > 0) {
       drivers = budgetDrivers;
     } else if (hasExplicitDriverPaths) {
-      if (!this.hasUsableDriverVolume(driversFromPaths)) {
+      if (!hasUsableDriverVolume(driversFromPaths)) {
         throw new BadRequestException({
           code: 'PROJECTION_BASELINE_DRIVERS_INVALID',
           message:
@@ -640,7 +409,7 @@ export class ProjectionsService {
     }
 
     if (hasValisummat) {
-      const requiredMissing = this.collectRequiredDriverMissing(drivers);
+      const requiredMissing = collectRequiredDriverMissing(drivers);
       if (requiredMissing.length > 0) {
         throw new BadRequestException({
           code: 'PROJECTION_BASELINE_DRIVERS_MISSING',
@@ -652,11 +421,11 @@ export class ProjectionsService {
             'Open Talousarvio and complete the required baseline fields.',
         });
       }
-      const subtotalSalesRevenue = this.waterSalesRevenueFromSubtotals(
+      const subtotalSalesRevenue = waterSalesRevenueFromSubtotals(
         budget.valisummat,
       );
       if (subtotalSalesRevenue > 0) {
-        const baselineRevenue = this.waterDriverRevenue(
+        const baselineRevenue = waterDriverRevenue(
           drivers,
           Number(budget.perusmaksuYhteensa ?? 0),
         );
@@ -667,7 +436,7 @@ export class ProjectionsService {
       }
     }
 
-    if (!hasExplicitDriverPaths && this.hasUsableDriverVolume(drivers)) {
+    if (!hasExplicitDriverPaths && hasUsableDriverVolume(drivers)) {
       const inferredPaths = buildManualDriverPathsFromDrivers(
         drivers,
         budget.vuosi,
@@ -702,12 +471,12 @@ export class ProjectionsService {
           palvelutyyppi: v.palvelutyyppi,
         }));
 
-        const userInvestments = this.parseUserInvestments(
+        const userInvestments = parseUserInvestments(
           (projection as unknown as { userInvestments?: unknown })
             .userInvestments,
         );
         const projectionYearOverrides = mergeUserInvestmentsIntoYearOverrides(
-          this.parseYearOverrides(
+          parseProjectionYearOverrides(
             (projection as unknown as { vuosiYlikirjoitukset?: unknown })
               .vuosiYlikirjoitukset,
           ),
@@ -1025,3 +794,4 @@ export class ProjectionsService {
     return Buffer.concat([Buffer.from(pdfBytes), marker]);
   }
 }
+

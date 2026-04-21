@@ -10,8 +10,8 @@ import {
   restoreImportYearsV2,
 } from '../api';
 import { getSyncBlockReasonLabel as buildSyncBlockReasonLabel } from './overviewLabels';
-import { submitWorkbookImportWorkflow } from './overviewImportWorkflows';
 import { sendV2OpsEvent } from './opsTelemetry';
+import { submitOverviewWorkbookImport } from './overviewReviewWorkbookImport';
 import type { MissingRequirement, SetupWizardStep } from './overviewWorkflow';
 import type { OverviewImportController } from './useOverviewImportController';
 import type {
@@ -80,117 +80,19 @@ export function useOverviewReviewController({
   onGoToForecast,
 }: UseOverviewReviewControllerParams) {
   const submitWorkbookImport = React.useCallback(
-    async (syncAfterSave: boolean) => {
-      const built = manualController.buildWorkbookImportPayloads();
-      if (!built) {
-        return;
-      }
-
-      manualController.setManualPatchBusy(true);
-      manualController.setManualPatchError(null);
-      importController.setError(null);
-      importController.setInfo(null);
-      try {
-        const { syncedYears, nextQueueRow, shouldCloseInlineReview } =
-          await submitWorkbookImportWorkflow({
-            built,
-            syncAfterSave,
-            reviewStatusRows,
-            reviewStorageOrgId,
-            confirmedImportedYears,
-            cardEditContext: manualController.cardEditContext,
-            baselineReady: importController.baselineReady,
-            runSync: importController.runSync,
-            loadOverview: importController.loadOverview,
-            setReviewedImportedYears: importController.setReviewedImportedYears,
-            setYearDataCache: manualController.setYearDataCache,
-          });
-
-        sendV2OpsEvent({
-          event: 'veeti_manual_patch',
-          status: 'ok',
-          attrs: {
-            years: built.yearsToSync.join(','),
-            syncReadyCount: syncedYears.length,
-            patchedYearCount: built.payloads.length,
-          },
-        });
-
-        if (!syncAfterSave || syncedYears.length === 0) {
-          importController.setInfo(
-            t(
-              'v2Overview.workbookImportSaved',
-              'Workbook choices saved for {{count}} year(s).',
-              { count: built.payloads.length },
-            ),
-          );
-        }
-
-        if (manualController.cardEditContext === 'step3' && nextQueueRow) {
-          await manualController.openInlineCardEditor(
-            nextQueueRow.year,
-            null,
-            'step3',
-            nextQueueRow.missingRequirements,
-          );
-          return;
-        }
-
-        if (shouldCloseInlineReview) {
-          manualController.closeInlineCardEditor();
-          importController.setReviewContinueStep(
-            importController.baselineReady ? 6 : 5,
-          );
-          return;
-        }
-
-        if (nextQueueRow) {
-          resetManualPatchDialog();
-          await openManualPatchDialog(
-            nextQueueRow.year,
-            nextQueueRow.missingRequirements,
-            'review',
-          );
-          return;
-        }
-
-        if (syncedYears.length > 0) {
-          importController.setReviewContinueStep(
-            importController.baselineReady ? 6 : 5,
-          );
-        }
-        resetManualPatchDialog();
-      } catch (err) {
-        sendV2OpsEvent({
-          event: 'veeti_manual_patch',
-          status: 'error',
-          attrs: {
-            syncAfterSave,
-            mode: 'workbookImport',
-          },
-        });
-        manualController.setManualPatchError(
-          err instanceof Error
-            ? err.message
-            : t(
-                'v2Overview.workbookImportApplyFailed',
-                'Applying workbook choices failed.',
-              ),
-        );
-      } finally {
-        manualController.setManualPatchBusy(false);
-      }
-    },
-    [
-      confirmedImportedYears,
-      importController,
-      manualController,
-      openManualPatchDialog,
-      resetManualPatchDialog,
-      reviewStatusRows,
-      reviewStorageOrgId,
-      t,
-    ],
+    async (syncAfterSave: boolean) =>
+      submitOverviewWorkbookImport({
+        syncAfterSave,
+        t,
+        manualController,
+        importController,
+        reviewStatusRows,
+        reviewStorageOrgId,
+        confirmedImportedYears,
+        resetManualPatchDialog,
+        openManualPatchDialog,
+      }),
+    [confirmedImportedYears, importController, manualController, openManualPatchDialog, resetManualPatchDialog, reviewStatusRows, reviewStorageOrgId, t],
   );
 
   const submitManualPatch = React.useCallback(

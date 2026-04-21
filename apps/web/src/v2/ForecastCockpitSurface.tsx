@@ -1,20 +1,8 @@
 import React from 'react';
-import {
-  Bar,
-  CartesianGrid,
-  ComposedChart,
-  Legend,
-  Line,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { ForecastPageController } from './useForecastPageController';
 
-type Props = {
-  controller: ForecastPageController;
-};
+type Props = { controller: ForecastPageController };
 
 export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
   const {
@@ -76,10 +64,7 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
 
   const editableScenarioTypeOptions: Array<typeof draftScenarioType> = scenario.onOletus
     ? ['base']
-    : scenarioTypeOptions.filter(
-        (option): option is Exclude<typeof draftScenarioType, 'base'> =>
-          option !== 'base',
-      );
+    : scenarioTypeOptions.filter((option): option is Exclude<typeof draftScenarioType, 'base'> => option !== 'base');
   const primaryHeroCards = [
     {
       key: 'required-price',
@@ -98,8 +83,7 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
     {
       key: 'underfunding-start',
       label: t('v2Forecast.underfundingStarts', 'Underfunding starts'),
-      value:
-        primaryUnderfundingStartYear ?? t('v2Forecast.noUnderfunding', 'None'),
+      value: primaryUnderfundingStartYear ?? t('v2Forecast.noUnderfunding', 'None'),
     },
   ];
   const secondaryHeroCards = [

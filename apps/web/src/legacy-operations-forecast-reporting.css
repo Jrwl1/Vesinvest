@@ -1,0 +1,249 @@
+/* ============================================
+   Scenario Comparison
+   ============================================ */
+
+.scenario-comparison {
+  margin-bottom: 20px;
+}
+
+.comparison-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.comparison-header h3 {
+  margin: 0;
+}
+
+.comparison-picker {
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.comparison-picker p {
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+.scenario-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.comparison-table-wrapper {
+  padding: 0;
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.comparison-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.8rem;
+  border-bottom: 1px solid var(--color-border);
+  background: #fafbfc;
+}
+
+.comparison-table .sub-header th {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding: 6px 14px;
+  background: #f5f6f8;
+}
+
+.comparison-table td {
+  padding: 8px 14px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.comparison-table .num-col {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.comparison-table .positive { color: #059669; }
+.comparison-table .negative { color: #dc2626; }
+
+.comparison-table .summary-row td {
+  border-top: 2px solid var(--color-border);
+  padding-top: 12px;
+}
+
+.comparison-table .summary-row small {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+}
+
+.comparison-legend {
+  display: flex;
+  gap: 20px;
+  padding: 12px 20px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-name {
+  font-weight: 600;
+}
+
+.legend-info {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+/* ============================================
+   Revenue Report Component
+   ============================================ */
+
+.revenue-report-section {
+  margin-top: 4px;
+  margin-bottom: 0;
+  border: 1px solid var(--ev2-border);
+  border-radius: var(--ev2-radius);
+  background: var(--ev2-surface);
+  overflow: hidden;
+}
+.revenue-report-toggle {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  padding: 12px 14px;
+  font-weight: 600;
+  color: var(--ev2-text);
+  background: var(--ev2-surface2);
+  border-bottom: 1px solid var(--ev2-border);
+}
+.revenue-report-toggle::-webkit-details-marker {
+  display: none;
+}
+.revenue-report-toggle::before {
+  content: "Ã¢â€“Â¶";
+  margin-right: 8px;
+  color: var(--ev2-muted);
+}
+.revenue-report-section[open] .revenue-report-toggle::before {
+  content: "Ã¢â€“Â¼";
+}
+.projection-page-end {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+}
+.projection-page-end__label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+.projection-anchor-nav {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+.projection-anchor-nav a {
+  color: var(--color-primary, #2563eb);
+  text-decoration: none;
+}
+.projection-anchor-nav a:hover {
+  text-decoration: underline;
+}
+.revenue-report {
+  margin: 0;
+}
+.revenue-report__header {
+  padding: 12px 14px 0;
+}
+.revenue-report__header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--ev2-text);
+}
+.revenue-report__purpose {
+  margin: 6px 0 14px;
+  font-size: 0.82rem;
+  color: var(--ev2-muted);
+}
+.revenue-report__table-wrap {
+  overflow-x: auto;
+  padding: 0 0 12px;
+}
+.revenue-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  min-width: 1060px;
+}
+.revenue-report-table th,
+.revenue-report-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(123, 138, 170, 0.25);
+}
+.revenue-report-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  font-weight: 600;
+  color: var(--ev2-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #151c2a;
+  border-bottom: 1px solid var(--ev2-border);
+}
+.revenue-report-table .num-col {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.revenue-report-table tbody tr:hover {
+  background: rgba(96, 165, 250, 0.08);
+}
+.revenue-report-table tfoot td {
+  font-weight: 700;
+  border-top: 1px solid var(--ev2-border);
+  background: #121827;
+}
+.revenue-report-table__total {
+  font-weight: 700;
+  color: var(--ev2-text);
+}
+

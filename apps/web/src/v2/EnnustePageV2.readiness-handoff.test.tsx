@@ -1,3 +1,3 @@
-import { registerEnnustePageV2ReadinessHandoffSuite } from './test-support/ennustePageV2TestSupport';
+import { registerEnnustePageV2ReadinessHandoffSuite } from './test-support/ennuste/ennustePageV2ReadinessHandoffSuite';
 
 registerEnnustePageV2ReadinessHandoffSuite();

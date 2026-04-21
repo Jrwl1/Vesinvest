@@ -1,3 +1,3 @@
-import { registerVesinvestPlanningPanelEvidenceWorkflowSuite } from './test-support/vesinvestPlanningPanelTestSupport';
+import { registerVesinvestPlanningPanelEvidenceWorkflowSuite } from './test-support/vesinvest/vesinvestPlanningPanelEvidenceWorkflowSuite';
 
 registerVesinvestPlanningPanelEvidenceWorkflowSuite();

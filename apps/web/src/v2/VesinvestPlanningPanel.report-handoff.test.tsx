@@ -1,3 +1,3 @@
-import { registerVesinvestPlanningPanelReportHandoffSuite } from './test-support/vesinvestPlanningPanelTestSupport';
+import { registerVesinvestPlanningPanelReportHandoffSuite } from './test-support/vesinvest/vesinvestPlanningPanelReportHandoffSuite';
 
 registerVesinvestPlanningPanelReportHandoffSuite();

@@ -42,6 +42,8 @@ import {
   getDocumentImportSelectedSourceLines,
 } from './documentPdfImport';
 import { sendV2OpsEvent } from './opsTelemetry';
+import { buildOverviewManualPatchPayload } from './overviewManualPatchPayload';
+import { saveOverviewInlineCardEdit } from './overviewManualPatchSave';
 
 export type ManualPatchMode =
   | 'review'
@@ -89,10 +91,7 @@ type ManualTouchedFieldKey =
   | keyof ReturnType<typeof buildEnergyForm>
   | keyof ReturnType<typeof buildNetworkForm>;
 
-const FINANCIAL_FIELD_SOURCE_KEYS: Record<
-  keyof ManualFinancialForm,
-  string
-> = {
+const FINANCIAL_FIELD_SOURCE_KEYS = {
   liikevaihto: 'Liikevaihto',
   perusmaksuYhteensa: 'PerusmaksuYhteensa',
   aineetJaPalvelut: 'AineetJaPalvelut',
@@ -104,214 +103,13 @@ const FINANCIAL_FIELD_SOURCE_KEYS: Record<
   tilikaudenYliJaama: 'TilikaudenYliJaama',
   omistajatuloutus: 'Omistajatuloutus',
   omistajanTukiKayttokustannuksiin: 'OmistajanTukiKayttokustannuksiin',
-};
+} as const;
 
-const hasOwnNonNullValue = (
-  row: Record<string, unknown>,
-  key: string,
-): boolean => {
-  if (!Object.prototype.hasOwnProperty.call(row, key)) {
-    return false;
-  }
+const hasOwnNonNullValue = (row: Record<string, unknown>, key: string): boolean => {
+  if (!Object.prototype.hasOwnProperty.call(row, key)) return false;
   const value = row[key];
-  if (value == null) {
-    return false;
-  }
-  if (typeof value === 'string' && value.trim().length === 0) {
-    return false;
-  }
-  return true;
+  return !(value == null || (typeof value === 'string' && value.trim().length === 0));
 };
-
-function buildManualFinancialPayload(
-  params: {
-    originalFinancials: ManualFinancialForm;
-    manualFinancials: ManualFinancialForm;
-    touchedFields: Partial<Record<ManualTouchedFieldKey, boolean>>;
-    yearData: V2ImportYearDataResponse | undefined;
-  },
-): NonNullable<V2ManualYearPatchPayload['financials']> {
-  const { originalFinancials, manualFinancials, touchedFields, yearData } = params;
-  const nextFinancials: NonNullable<V2ManualYearPatchPayload['financials']> = {};
-  const rawFinancials = getRawFirstRow(yearData, 'tilinpaatos');
-  const effectiveFinancials = getEffectiveFirstRow(yearData, 'tilinpaatos');
-  const hasExplicitZeroIntent = (field: keyof ManualFinancialForm) => {
-    if (touchedFields[field] !== true || manualFinancials[field] !== 0) {
-      return false;
-    }
-    const sourceField = FINANCIAL_FIELD_SOURCE_KEYS[field];
-    return (
-      !hasOwnNonNullValue(rawFinancials, sourceField) &&
-      !hasOwnNonNullValue(effectiveFinancials, sourceField)
-    );
-  };
-
-  (
-    Object.keys(FINANCIAL_FIELD_SOURCE_KEYS) as Array<keyof ManualFinancialForm>
-  ).forEach((field) => {
-    if (
-      numbersDiffer(manualFinancials[field], originalFinancials[field]) ||
-      hasExplicitZeroIntent(field)
-    ) {
-      nextFinancials[field] = manualFinancials[field];
-    }
-  });
-
-  const resultFieldChanged = numbersDiffer(
-    manualFinancials.tilikaudenYliJaama,
-    originalFinancials.tilikaudenYliJaama,
-  );
-  const visibleFinanceFieldsChanged =
-    numbersDiffer(manualFinancials.liikevaihto, originalFinancials.liikevaihto) ||
-    numbersDiffer(
-      manualFinancials.aineetJaPalvelut,
-      originalFinancials.aineetJaPalvelut,
-    ) ||
-    numbersDiffer(
-      manualFinancials.henkilostokulut,
-      originalFinancials.henkilostokulut,
-    ) ||
-    numbersDiffer(
-      manualFinancials.liiketoiminnanMuutKulut,
-      originalFinancials.liiketoiminnanMuutKulut,
-    ) ||
-    numbersDiffer(manualFinancials.poistot, originalFinancials.poistot) ||
-    numbersDiffer(
-      manualFinancials.arvonalentumiset,
-      originalFinancials.arvonalentumiset,
-    ) ||
-    numbersDiffer(
-      manualFinancials.rahoitustuototJaKulut,
-      originalFinancials.rahoitustuototJaKulut,
-    ) ||
-    numbersDiffer(
-      manualFinancials.omistajatuloutus,
-      originalFinancials.omistajatuloutus,
-    ) ||
-    numbersDiffer(
-      manualFinancials.omistajanTukiKayttokustannuksiin,
-      originalFinancials.omistajanTukiKayttokustannuksiin,
-    );
-
-  if (!resultFieldChanged && visibleFinanceFieldsChanged) {
-    nextFinancials.tilikaudenYliJaama = deriveAdjustedYearResult(
-      originalFinancials,
-      manualFinancials,
-    );
-  }
-
-  return nextFinancials;
-}
-
-function buildDocumentFinancialPayload(params: {
-  previewFinancials: Partial<Record<keyof ManualFinancialForm, number>>;
-  originalFinancials: ManualFinancialForm;
-  manualFinancials: ManualFinancialForm;
-}): ManualFinancialForm | null {
-  const { previewFinancials, originalFinancials, manualFinancials } = params;
-  const previewKeys = Object.keys(previewFinancials) as Array<
-    keyof ManualFinancialForm
-  >;
-  const mergedFinancials: ManualFinancialForm = { ...originalFinancials };
-  let changed = false;
-
-  for (const key of previewKeys) {
-    const value = previewFinancials[key];
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      mergedFinancials[key] = value;
-      if (numbersDiffer(value, originalFinancials[key])) {
-        changed = true;
-      }
-    }
-  }
-
-  const manuallyEditedKeys = (
-    Object.keys(manualFinancials) as Array<keyof ManualFinancialForm>
-  ).filter((key) => numbersDiffer(manualFinancials[key], originalFinancials[key]));
-  for (const key of manuallyEditedKeys) {
-    mergedFinancials[key] = manualFinancials[key];
-    changed = true;
-  }
-
-  if (!changed) {
-    return null;
-  }
-
-  const resultManuallyChanged = manuallyEditedKeys.includes('tilikaudenYliJaama');
-  const previewProvidesResult =
-    typeof previewFinancials.tilikaudenYliJaama === 'number' &&
-    Number.isFinite(previewFinancials.tilikaudenYliJaama);
-  const visibleFinanceFieldsChanged =
-    numbersDiffer(mergedFinancials.liikevaihto, originalFinancials.liikevaihto) ||
-    numbersDiffer(
-      mergedFinancials.aineetJaPalvelut,
-      originalFinancials.aineetJaPalvelut,
-    ) ||
-    numbersDiffer(
-      mergedFinancials.henkilostokulut,
-      originalFinancials.henkilostokulut,
-    ) ||
-    numbersDiffer(
-      mergedFinancials.liiketoiminnanMuutKulut,
-      originalFinancials.liiketoiminnanMuutKulut,
-    ) ||
-    numbersDiffer(mergedFinancials.poistot, originalFinancials.poistot) ||
-    numbersDiffer(
-      mergedFinancials.arvonalentumiset,
-      originalFinancials.arvonalentumiset,
-    ) ||
-    numbersDiffer(
-      mergedFinancials.rahoitustuototJaKulut,
-      originalFinancials.rahoitustuototJaKulut,
-    ) ||
-    numbersDiffer(
-      mergedFinancials.omistajatuloutus,
-      originalFinancials.omistajatuloutus,
-    ) ||
-    numbersDiffer(
-      mergedFinancials.omistajanTukiKayttokustannuksiin,
-      originalFinancials.omistajanTukiKayttokustannuksiin,
-    );
-
-  if (!resultManuallyChanged && !previewProvidesResult && visibleFinanceFieldsChanged) {
-    mergedFinancials.tilikaudenYliJaama = deriveAdjustedYearResult(
-      originalFinancials,
-      mergedFinancials,
-    );
-  }
-
-  return mergedFinancials;
-}
-
-function buildDocumentDatasetPayload<T extends Record<string, number>>(params: {
-  original: T;
-  manual: T;
-  preview: Partial<T>;
-}): T | null {
-  const { original, manual, preview } = params;
-  const merged = { ...original } as T;
-  let changed = false;
-
-  for (const key of Object.keys(preview) as Array<keyof T>) {
-    const value = preview[key];
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      merged[key] = value as T[keyof T];
-      if (numbersDiffer(value, original[key])) {
-        changed = true;
-      }
-    }
-  }
-
-  for (const key of Object.keys(manual) as Array<keyof T>) {
-    if (!numbersDiffer(manual[key], original[key])) {
-      continue;
-    }
-    merged[key] = manual[key];
-    changed = true;
-  }
-
-  return changed ? merged : null;
-}
 
 export function useOverviewManualPatchEditor(params: {
   t: TFunction;
@@ -805,181 +603,29 @@ export function useOverviewManualPatchEditor(params: {
 
   const buildManualPatchPayload = React.useCallback(
     (year: number): V2ManualYearPatchPayload | null => {
-      if (manualFinancials.liikevaihto < 0) {
-        setManualPatchError(
-          t(
-            'v2Overview.manualPatchFinancialsRequired',
-            'Revenue (Liikevaihto) cannot be negative.',
-          ),
-        );
-        return null;
-      }
-
-      const originalYearData = yearDataCache[year];
-      const originalFinancials = buildFinancialForm(originalYearData);
-      const originalPrices = buildPriceForm(originalYearData);
-      const originalVolumes = buildVolumeForm(originalYearData);
-      const originalInvestments = buildInvestmentForm(originalYearData);
-      const originalEnergy = buildEnergyForm(originalYearData);
-      const originalNetwork = buildNetworkForm(originalYearData);
-      const explicitMissingFinancialEntry =
-        hasExplicitMissingFinancialEntry(originalYearData);
-      const explicitMissingPriceEntry =
-        hasExplicitMissingPriceEntry(originalYearData);
-      const explicitMissingVolumeEntry =
-        hasExplicitMissingVolumeEntry(originalYearData);
-
-      const payload: V2ManualYearPatchPayload = {
+      const result = buildOverviewManualPatchPayload({
         year,
-        reason: manualReason.trim() || undefined,
-      };
-
-      const shouldPersistDocumentImport =
-        manualPatchMode === 'documentImport' && documentImportPreview != null;
-      const documentFinancialOverrides =
-        shouldPersistDocumentImport && documentImportPreview != null
-          ? buildDocumentFinancialPayload({
-              previewFinancials: documentImportPreview.financials,
-              originalFinancials,
-              manualFinancials,
-            })
-          : null;
-      const documentPriceOverrides =
-        shouldPersistDocumentImport && documentImportPreview != null
-          ? buildDocumentDatasetPayload({
-              original: originalPrices,
-              manual: manualPrices,
-              preview: documentImportPreview.prices,
-            })
-          : null;
-      const documentVolumeOverrides =
-        shouldPersistDocumentImport && documentImportPreview != null
-          ? buildDocumentDatasetPayload({
-              original: originalVolumes,
-              manual: manualVolumes,
-              preview: documentImportPreview.volumes,
-            })
-          : null;
-
-      if (
-        formsDiffer(manualFinancials, originalFinancials) ||
-        explicitMissingFinancialEntry ||
-        documentFinancialOverrides != null
-      ) {
-        payload.financials =
-          documentFinancialOverrides ??
-          buildManualFinancialPayload({
-            originalFinancials,
-            manualFinancials,
-            touchedFields,
-            yearData: originalYearData,
-          });
-      }
-      if (
-        formsDiffer(manualPrices, originalPrices) ||
-        explicitMissingPriceEntry ||
-        documentPriceOverrides != null
-      ) {
-        payload.prices = documentPriceOverrides ?? { ...manualPrices };
-      }
-      if (
-        formsDiffer(manualVolumes, originalVolumes) ||
-        explicitMissingVolumeEntry ||
-        documentVolumeOverrides != null
-      ) {
-        payload.volumes = documentVolumeOverrides ?? { ...manualVolumes };
-      }
-      if (formsDiffer(manualInvestments, originalInvestments)) {
-        payload.investments = { ...manualInvestments };
-      }
-      if (formsDiffer(manualEnergy, originalEnergy)) {
-        payload.energy = { ...manualEnergy };
-      }
-      if (formsDiffer(manualNetwork, originalNetwork)) {
-        payload.network = { ...manualNetwork };
-      }
-      if (
-        (payload.financials || payload.prices || payload.volumes) &&
-        shouldPersistDocumentImport
-      ) {
-        const selectedDocumentImportFields = [
-          ...new Set(documentImportPreview.matches.map((match) => match.key)),
-        ];
-        const selectedDocumentImportDatasetKindsFromMatches = [
-          ...new Set(
-            documentImportPreview.matches
-              .map((match) => match.datasetKind)
-              .filter(
-                (
-                  datasetKind,
-                ): datasetKind is 'financials' | 'prices' | 'volumes' =>
-                  datasetKind === 'financials' ||
-                  datasetKind === 'prices' ||
-                  datasetKind === 'volumes',
-              ),
-          ),
-        ];
-        const selectedDocumentImportDatasetKinds =
-          selectedDocumentImportDatasetKindsFromMatches.length > 0
-            ? selectedDocumentImportDatasetKindsFromMatches
-            : documentImportPreview.datasetKinds.filter(
-                (
-                  datasetKind,
-                ): datasetKind is 'financials' | 'prices' | 'volumes' =>
-                  datasetKind === 'financials' ||
-                  datasetKind === 'prices' ||
-                  datasetKind === 'volumes',
-              );
-        const selectedDocumentImportPageNumbers =
-          getDocumentImportSelectedPageNumbers(documentImportPreview);
-        const selectedDocumentImportSourceLines =
-          getDocumentImportSelectedSourceLines(documentImportPreview);
-        payload.documentImport = {
-          fileName: documentImportPreview.fileName,
-          pageNumber:
-            selectedDocumentImportPageNumbers.length === 1
-              ? selectedDocumentImportPageNumbers[0]
-              : undefined,
-          pageNumbers:
-            selectedDocumentImportPageNumbers.length > 0
-              ? selectedDocumentImportPageNumbers
-              : undefined,
-          confidence: documentImportPreview.confidence ?? undefined,
-          scannedPageCount: documentImportPreview.scannedPageCount,
-          matchedFields: selectedDocumentImportFields,
-          warnings: documentImportPreview.warnings,
-          documentProfile:
-            documentImportPreview.documentProfile as
-              | 'generic_pdf'
-              | 'statement_pdf'
-              | 'qdis_pdf'
-              | 'unknown_pdf',
-          datasetKinds: selectedDocumentImportDatasetKinds,
-          sourceLines: selectedDocumentImportSourceLines.map((row) => ({
-            text: row.text,
-            pageNumber: row.pageNumber ?? undefined,
-          })),
-        };
-      }
-
-      if (
-        !payload.financials &&
-        !payload.prices &&
-        !payload.volumes &&
-        !payload.investments &&
-        !payload.energy &&
-        !payload.network
-      ) {
-        setManualPatchError(
-          t(
-            'v2Overview.manualPatchNoChanges',
-            'No changes detected. Update at least one field before saving.',
-          ),
-        );
+        manualFinancials,
+        manualPrices,
+        manualVolumes,
+        manualInvestments,
+        manualEnergy,
+        manualNetwork,
+        manualReason,
+        touchedFields,
+        yearDataCache,
+        manualPatchMode,
+        documentImportPreview,
+        t,
+        hasExplicitMissingFinancialEntry,
+        hasExplicitMissingPriceEntry,
+        hasExplicitMissingVolumeEntry,
+      });
+      if (result.error) {
+        setManualPatchError(result.error);
         return null;
       }
-
-      return payload;
+      return result.payload;
     },
     [
       documentImportPreview,
@@ -995,10 +641,10 @@ export function useOverviewManualPatchEditor(params: {
       hasExplicitMissingPriceEntry,
       hasExplicitMissingVolumeEntry,
       t,
+      touchedFields,
       yearDataCache,
     ],
   );
-
   const saveInlineCardEdit = React.useCallback(
     async (params: {
       syncAfterSave?: boolean;
@@ -1014,143 +660,25 @@ export function useOverviewManualPatchEditor(params: {
       reviewStorageOrgId: string | null;
       baselineReady: boolean;
       setReviewedImportedYears: React.Dispatch<React.SetStateAction<number[]>>;
-      setReviewContinueStep: React.Dispatch<
-        React.SetStateAction<SetupWizardStep | null>
-      >;
+      setReviewContinueStep: React.Dispatch<React.SetStateAction<SetupWizardStep | null>>;
       setError: React.Dispatch<React.SetStateAction<string | null>>;
       setInfo: React.Dispatch<React.SetStateAction<string | null>>;
     }) => {
-      const {
-        syncAfterSave = false,
-        loadOverview,
-        runSync,
-        reviewStatusRows,
-        confirmedImportedYears,
-        reviewStorageOrgId,
-        baselineReady,
-        setReviewedImportedYears,
-        setReviewContinueStep,
-        setError,
-        setInfo,
-      } = params;
-      if (cardEditYear == null) return;
-      const payload = buildManualPatchPayload(cardEditYear);
-      if (!payload) return;
-
-      setManualPatchBusy(true);
-      setManualPatchError(null);
-      setError(null);
-      setInfo(null);
-      try {
-        const currentYear = cardEditYear;
-        const result = await completeImportYearManuallyV2(payload);
-        const reopenCurrentYearForFollowup = false;
-        const nextRows = reviewStatusRows.map((row) => ({
-          year: row.year,
-          setupStatus:
-            row.year === currentYear && result.syncReady && !reopenCurrentYearForFollowup
-              ? ('reviewed' as const)
-              : row.setupStatus,
-          missingRequirements: row.missingRequirements,
-        }));
-        const nextQueueYear = result.syncReady
-          ? resolveNextReviewQueueYear(nextRows)
-          : null;
-        const nextQueueRow =
-          nextQueueYear == null
-            ? null
-            : nextRows.find((row) => row.year === nextQueueYear) ?? null;
-        if (result.syncReady && !reopenCurrentYearForFollowup) {
-          setReviewedImportedYears(
-            markPersistedReviewedImportYears(
-              reviewStorageOrgId,
-              [currentYear],
-              [...confirmedImportedYears, currentYear],
-            ),
-          );
-        }
-        if (syncAfterSave && result.syncReady) {
-          await runSync([currentYear]);
-        } else {
-          const refreshedYearData = await getImportYearDataV2(currentYear);
-          setYearDataCache((prev) => ({ ...prev, [currentYear]: refreshedYearData }));
-          populateManualEditorFromYearData(refreshedYearData);
-          await loadOverview({
-            preserveVisibleState: true,
-            refreshPlanningContext: false,
-            skipSecondaryLoads: true,
-          });
-          setCardEditYear(currentYear);
-        }
-        if (reopenCurrentYearForFollowup) {
-          await openInlineCardEditor(currentYear, null, 'step3', manualPatchMissing);
-        } else if (cardEditContext === 'step3' && result.syncReady) {
-          if (nextQueueRow) {
-            await openInlineCardEditor(
-              nextQueueRow.year,
-              null,
-              'step3',
-              nextQueueRow.missingRequirements,
-            );
-          } else {
-            closeInlineCardEditor();
-            setReviewContinueStep(baselineReady ? 6 : 5);
-          }
-        } else if (cardEditContext === 'step3') {
-          setCardEditYear(currentYear);
-        } else {
-          closeInlineCardEditor();
-        }
-        const savedYear = result.status.years.find(
-          (row) => row.vuosi === currentYear,
-        );
-        const savedYearReason = savedYear
-          ? buildSyncBlockReasonLabel(t, savedYear)
-          : null;
-        setInfo(
-          result.syncReady
-            ? t('v2Overview.manualPatchSaved', { year: currentYear })
-            : savedYearReason
-            ? t('v2Overview.manualPatchSavedNeedsReview', {
-                year: currentYear,
-                reason: savedYearReason,
-              })
-            : t(
-                'v2Overview.manualPatchSavedStillBlocked',
-                'Year {{year}} was saved. Review is still incomplete.',
-                { year: currentYear },
-              ),
-        );
-        sendV2OpsEvent({
-          event: 'veeti_manual_patch',
-          status: 'ok',
-          attrs: {
-            year: currentYear,
-            syncReady: result.syncReady,
-            patchedDataTypeCount: result.patchedDataTypes.length,
-            surface: cardEditContext === 'step3' ? 'review_card' : 'step2_card',
-          },
-        });
-      } catch (err) {
-        sendV2OpsEvent({
-          event: 'veeti_manual_patch',
-          status: 'error',
-          attrs: {
-            year: cardEditYear,
-            surface: cardEditContext === 'step3' ? 'review_card' : 'step2_card',
-          },
-        });
-        setManualPatchError(
-          err instanceof Error
-            ? err.message
-            : t(
-                'v2Overview.manualPatchFailed',
-                'Manual year completion failed.',
-              ),
-        );
-      } finally {
-        setManualPatchBusy(false);
-      }
+      await saveOverviewInlineCardEdit({
+        ...params,
+        cardEditYear,
+        cardEditContext,
+        manualPatchMissing,
+        t,
+        buildManualPatchPayload,
+        closeInlineCardEditor,
+        openInlineCardEditor,
+        populateManualEditorFromYearData,
+        setYearDataCache,
+        setManualPatchBusy,
+        setManualPatchError,
+        setCardEditYear,
+      });
     },
     [
       buildManualPatchPayload,
@@ -1158,13 +686,11 @@ export function useOverviewManualPatchEditor(params: {
       cardEditYear,
       closeInlineCardEditor,
       manualPatchMissing,
-      manualPatchMode,
       openInlineCardEditor,
       populateManualEditorFromYearData,
-      t,
+      setCardEditYear,
     ],
   );
-
   const handleSwitchToManualEditMode = React.useCallback(() => {
     setManualPatchMode('manualEdit');
     setManualPatchError(null);
@@ -1231,3 +757,5 @@ export function useOverviewManualPatchEditor(params: {
     handleSwitchToManualEditMode,
   };
 }
+
+

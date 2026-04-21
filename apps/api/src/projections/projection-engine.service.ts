@@ -1,270 +1,48 @@
 import { Injectable } from '@nestjs/common';
-import { DriverPaths, resolveDriverValue, round2 } from './driver-paths';
+import { resolveDriverValue, type DriverPaths } from './driver-paths';
+import type { ProjectionYearOverride, ProjectionYearOverrides } from './year-overrides';
 import {
-  ProjectionYearOverride,
-  ProjectionYearOverrides,
-} from './year-overrides';
+  applyLineOverride,
+  type AssumptionMap,
+  type BudgetLineInput,
+  type ComputedYear,
+  type DepreciationRuleConfig,
+  ENERGY_ACCOUNT_PREFIX,
+  getCostCategoryBucket,
+  getCostCategoryRate,
+  OTHER_OPERATING_SUBTOTAL_CATEGORY_KEYS,
+  PERSONNEL_YEAR_OVERRIDE_PREFIX,
+  pickYearOverride,
+  pctToRate,
+  readYearRateOverrides,
+  SALES_REVENUE_CATEGORY_KEYS,
+  stripWaterPriceOverrides,
+  type LinearCohort,
+  type ResidualCohort,
+  type RevenueDriverInput,
+  round2,
+  type ScheduleCohort,
+  type SubtotalInput,
+  weightedCombinedUnitPrice,
+  type UserInvestmentSnapshotRule,
+} from './projection-engine-model';
+import {
+  addDepreciationCohort,
+  computeDriverRevenue,
+  computeRequiredTariffForAnnualResultZero,
+  computeYearCohortDepreciation,
+  readDepreciationRules,
+  readInvestmentSnapshotRule,
+  readYearClassAllocations,
+} from './projection-engine-support';
 
-/**
- * Projection computation engine.
- *
- * V1: All amounts are VAT-free; no VAT multiplier is applied in calculations or outputs.
- *
- * Implements the year-by-year projection logic specified in Plan Section 5.2:
- *
- * For each year n in the horizon:
- *   Revenue (TULOT) = base revenue × (1 + hintakorotus)^n × volume adjustment + other income + financial income
- *   Expenses (KULUT) = costs + depreciation + financial costs
- *   Investments = Σ line.summa × (1 + investointikerroin)^n (shown separately; do not reduce tulos)
- *   Net result (TULOS) = income minus expenses = revenue - expenses
- *   Cumulative = running sum of net results
- */
+export type {
+  AssumptionMap,
+  BudgetLineInput,
+  RevenueDriverInput,
+  SubtotalInput,
+} from './projection-engine-model';
 
-export interface BudgetLineInput {
-  tiliryhma: string;
-  nimi: string;
-  tyyppi: 'kulu' | 'tulo' | 'investointi';
-  summa: number; // base amount (absolute)
-}
-
-export interface RevenueDriverInput {
-  palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-  yksikkohinta: number;
-  myytyMaara: number;
-  perusmaksu: number;
-  liittymamaara: number;
-}
-
-export interface AssumptionMap {
-  inflaatio: number; // e.g. 0.025
-  energiakerroin: number; // e.g. 0.05
-  vesimaaran_muutos: number; // e.g. -0.01
-  hintakorotus: number; // e.g. 0.03
-  investointikerroin: number; // e.g. 0.02
-  [key: string]: number;
-}
-
-export interface ComputedYear {
-  vuosi: number;
-  tulotYhteensa: number;
-  kulutYhteensa: number;
-  investoinnitYhteensa: number;
-  /** Depreciation split: baseline (from base-year inputs). */
-  poistoPerusta: number;
-  /** Depreciation split: investment-driven additional component. */
-  poistoInvestoinneista: number;
-  tulos: number;
-  kumulatiivinenTulos: number;
-  /** Kassaflöde(y) = Tulos(y) − Investoinnit(y) */
-  kassafloede: number;
-  /** Ackumulerad kassa(y) = sum of Kassaflöde(0..y) */
-  ackumuleradKassa: number;
-  vesihinta: number;
-  myytyVesimaara: number;
-  erittelyt: {
-    tulot: Array<{ nimi: string; summa: number }>;
-    kulut: Array<{ tiliryhma: string; nimi: string; summa: number }>;
-    investoinnit: Array<{ tiliryhma: string; nimi: string; summa: number }>;
-    ajurit: Array<{
-      palvelutyyppi: string;
-      yksikkohinta: number;
-      myytyMaara: number;
-      perusmaksu: number;
-      liittymamaara: number;
-      laskettuTulo: number;
-    }>;
-  };
-}
-
-type UserInvestmentSnapshotRule = {
-  assetClassKey: string;
-  assetClassName?: string | null;
-  method:
-    | 'linear'
-    | 'residual'
-    | 'straight-line'
-    | 'custom-annual-schedule'
-    | 'none';
-  linearYears?: number | null;
-  residualPercent?: number | null;
-  annualSchedule?: number[] | null;
-};
-
-/** Input for subtotal-based projections (from TalousarvioValisumma). */
-export interface SubtotalInput {
-  categoryKey: string;
-  tyyppi: string; // tulo, kulu, poisto, rahoitus_tulo, rahoitus_kulu, investointi, tulos
-  summa: number;
-  palvelutyyppi?: string;
-}
-
-/** Well-known energy account groups (tiliryhma starting with 42xx) */
-const ENERGY_ACCOUNT_PREFIX = '42';
-const MATERIALS_SERVICES_SUBTOTAL_CATEGORY_KEYS = new Set([
-  'energy_costs',
-  'materials_services',
-]);
-const PERSONNEL_SUBTOTAL_CATEGORY_KEYS = new Set([
-  'personnel_costs',
-  'henkilostokulut',
-]);
-const OTHER_OPERATING_SUBTOTAL_CATEGORY_KEYS = new Set([
-  'other_costs',
-  'liiketoiminnan_muut_kulut',
-]);
-const SALES_REVENUE_CATEGORY_KEYS = new Set(['sales_revenue', 'liikevaihto']);
-const PERSONNEL_YEAR_OVERRIDE_PREFIX = 'henkilosto_muutos_';
-
-function getCostCategoryBucket(
-  categoryKey: string,
-): 'materialsServices' | 'personnel' | 'opexOther' | null {
-  if (PERSONNEL_SUBTOTAL_CATEGORY_KEYS.has(categoryKey)) return 'personnel';
-  if (MATERIALS_SERVICES_SUBTOTAL_CATEGORY_KEYS.has(categoryKey)) {
-    return 'materialsServices';
-  }
-  if (OTHER_OPERATING_SUBTOTAL_CATEGORY_KEYS.has(categoryKey)) {
-    return 'opexOther';
-  }
-  return null;
-}
-
-function readYearRateOverrides(
-  assumptions: AssumptionMap,
-  prefix: string,
-): Record<number, number> {
-  const out: Record<number, number> = {};
-  for (const [key, raw] of Object.entries(assumptions)) {
-    if (
-      !key.startsWith(prefix) ||
-      typeof raw !== 'number' ||
-      !Number.isFinite(raw)
-    )
-      continue;
-    const yearPart = key.slice(prefix.length);
-    const year = Number.parseInt(yearPart, 10);
-    if (Number.isFinite(year)) {
-      out[year] = raw;
-    }
-  }
-  return out;
-}
-
-function pctToRate(pct: number | undefined): number | undefined {
-  if (typeof pct !== 'number' || !Number.isFinite(pct)) return undefined;
-  return pct / 100;
-}
-
-function pickYearOverride(
-  projectionYearOverrides: ProjectionYearOverrides | undefined,
-  year: number,
-): ProjectionYearOverride | undefined {
-  return projectionYearOverrides?.[year];
-}
-
-function getCostCategoryRate(
-  yearOverride: ProjectionYearOverride | undefined,
-  categoryKey: string,
-): number | undefined {
-  const growth = yearOverride?.categoryGrowthPct;
-  if (!growth) return undefined;
-  const bucket = getCostCategoryBucket(categoryKey);
-  if (bucket === 'personnel') return pctToRate(growth.personnel);
-  if (bucket === 'materialsServices') {
-    const materialsServicesRaw =
-      (growth as Record<string, unknown>).materialsServices ?? growth.energy;
-    const materialsServicesPct =
-      typeof materialsServicesRaw === 'number' &&
-      Number.isFinite(materialsServicesRaw)
-        ? materialsServicesRaw
-        : undefined;
-    return pctToRate(materialsServicesPct);
-  }
-  if (bucket === 'opexOther') return pctToRate(growth.opexOther);
-  return undefined;
-}
-
-function applyLineOverride(
-  lineOverride: { mode: 'percent' | 'absolute'; value: number } | undefined,
-  previousAmount: number,
-): number | undefined {
-  if (!lineOverride) return undefined;
-  if (lineOverride.mode === 'absolute') return round2(lineOverride.value);
-  if (lineOverride.mode === 'percent')
-    return round2(previousAmount * (1 + lineOverride.value / 100));
-  return undefined;
-}
-
-function stripWaterPriceOverrides(
-  projectionYearOverrides: ProjectionYearOverrides | undefined,
-): ProjectionYearOverrides | undefined {
-  if (!projectionYearOverrides) return undefined;
-  const out: ProjectionYearOverrides = {};
-  for (const [yearKey, value] of Object.entries(projectionYearOverrides)) {
-    const year = Number.parseInt(yearKey, 10);
-    if (!Number.isFinite(year) || !value) continue;
-    const next: ProjectionYearOverride = { ...value };
-    delete next.waterPriceEurM3;
-    delete next.waterPriceGrowthPct;
-    delete next.lockMode;
-    if (Object.keys(next).length > 0) out[year] = next;
-  }
-  return Object.keys(out).length > 0 ? out : undefined;
-}
-
-function weightedCombinedUnitPrice(
-  drivers: Array<{
-    palvelutyyppi: string;
-    yksikkohinta: number;
-    myytyMaara: number;
-  }>,
-): number {
-  const waterDrivers = drivers.filter(
-    (driver) =>
-      driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi',
-  );
-  const totalVolume = waterDrivers.reduce(
-    (sum, driver) => sum + driver.myytyMaara,
-    0,
-  );
-  if (totalVolume <= 0) return 0;
-  const totalVolumeRevenue = waterDrivers.reduce(
-    (sum, driver) => sum + driver.yksikkohinta * driver.myytyMaara,
-    0,
-  );
-  return round2(totalVolumeRevenue / totalVolume);
-}
-
-type DepreciationRuleMethod =
-  | 'linear'
-  | 'residual'
-  | 'straight-line'
-  | 'custom-annual-schedule'
-  | 'none';
-
-type DepreciationRuleConfig = {
-  classKey: string;
-  method: DepreciationRuleMethod;
-  linearYears?: number;
-  residualPercent?: number;
-  annualSchedule?: number[];
-};
-
-type LinearCohort = {
-  annualDepreciation: number;
-  remainingYears: number;
-};
-
-type ResidualCohort = {
-  remainingBookValue: number;
-  annualRate: number;
-};
-
-type ScheduleCohort = {
-  annualAmounts: number[];
-  nextIndex: number;
-};
-
-@Injectable()
 export class ProjectionEngine {
   /**
    * Compute a full projection given base budget data and assumptions.
@@ -899,206 +677,7 @@ export class ProjectionEngine {
     return years;
   }
 
-  private readDepreciationRules(
-    assumptions: AssumptionMap,
-  ): Map<string, DepreciationRuleConfig> {
-    const out = new Map<string, DepreciationRuleConfig>();
-    const rawRules =
-      (assumptions as unknown as Record<string, unknown>).depreciationRules ??
-      null;
-    if (!Array.isArray(rawRules)) return out;
 
-    for (const raw of rawRules) {
-      if (!raw || typeof raw !== 'object') continue;
-      const row = raw as Record<string, unknown>;
-      const classKey = String(row.classKey ?? '').trim();
-      const method = String(row.method ?? '')
-        .trim()
-        .toLowerCase();
-      if (!classKey) continue;
-      if (
-        method !== 'linear' &&
-        method !== 'residual' &&
-        method !== 'straight-line' &&
-        method !== 'custom-annual-schedule' &&
-        method !== 'none'
-      ) {
-        continue;
-      }
-
-      const linearYearsRaw = Number(
-        row.linearYears ?? row.usefulLifeYears ?? row.depreciationYears,
-      );
-      const residualPercentRaw = Number(
-        row.residualPercent ?? row.residualRate,
-      );
-      const annualScheduleRaw = Array.isArray(row.annualSchedule)
-        ? row.annualSchedule.map((item) => Number(item))
-        : null;
-
-      const rule: DepreciationRuleConfig = {
-        classKey,
-        method,
-      };
-      if (Number.isFinite(linearYearsRaw) && linearYearsRaw > 0) {
-        rule.linearYears = Math.round(linearYearsRaw);
-      }
-      if (Number.isFinite(residualPercentRaw) && residualPercentRaw >= 0) {
-        rule.residualPercent = residualPercentRaw;
-      }
-      if (
-        annualScheduleRaw &&
-        annualScheduleRaw.length > 0 &&
-        annualScheduleRaw.every((value) => Number.isFinite(value) && value >= 0)
-      ) {
-        rule.annualSchedule = annualScheduleRaw.map((value) => round2(value));
-      }
-      out.set(classKey, rule);
-    }
-
-    return out;
-  }
-
-  private readInvestmentSnapshotRule(
-    item: { depreciationRuleSnapshot?: UserInvestmentSnapshotRule | null },
-  ): DepreciationRuleConfig | null {
-    const snapshot = item.depreciationRuleSnapshot;
-    if (!snapshot) return null;
-    const classKey = String(snapshot.assetClassKey ?? '').trim();
-    if (!classKey) return null;
-    return {
-      classKey,
-      method: snapshot.method,
-      linearYears:
-        snapshot.linearYears == null ? undefined : Math.round(snapshot.linearYears),
-      residualPercent:
-        snapshot.residualPercent == null ? undefined : snapshot.residualPercent,
-      annualSchedule: Array.isArray(snapshot.annualSchedule)
-        ? snapshot.annualSchedule.map((value) => round2(Number(value)))
-        : undefined,
-    };
-  }
-
-  private readYearClassAllocations(
-    yearOverride: ProjectionYearOverride | undefined,
-  ): Array<{ classKey: string; sharePct: number }> {
-    const raw =
-      (yearOverride as unknown as Record<string, unknown> | undefined)
-        ?.investmentClassAllocations ?? null;
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return [];
-
-    const out: Array<{ classKey: string; sharePct: number }> = [];
-    for (const [classKey, shareRaw] of Object.entries(
-      raw as Record<string, unknown>,
-    )) {
-      const key = classKey.trim();
-      const sharePct = Number(shareRaw);
-      if (!key) continue;
-      if (!Number.isFinite(sharePct) || sharePct <= 0) continue;
-      out.push({ classKey: key, sharePct });
-    }
-
-    return out;
-  }
-
-  private addDepreciationCohort(
-    linearCohorts: LinearCohort[],
-    residualCohorts: ResidualCohort[],
-    scheduleCohorts: ScheduleCohort[],
-    rule: DepreciationRuleConfig,
-    amount: number,
-  ) {
-    if (!Number.isFinite(amount) || amount <= 0) return;
-    if (rule.method === 'none') return;
-
-    if (rule.method === 'linear' || rule.method === 'straight-line') {
-      const years = Math.max(1, Math.round(rule.linearYears ?? 0));
-      linearCohorts.push({
-        annualDepreciation: round2(amount / years),
-        remainingYears: years,
-      });
-      return;
-    }
-
-    if (rule.method === 'custom-annual-schedule') {
-      const schedule = (rule.annualSchedule ?? [])
-        .filter((value) => Number.isFinite(value) && value >= 0)
-        .map((value) => round2((amount * value) / 100));
-      if (schedule.length === 0) return;
-      scheduleCohorts.push({
-        annualAmounts: schedule,
-        nextIndex: 0,
-      });
-      return;
-    }
-
-    if (rule.method === 'residual') {
-      const annualRatePct = Number(rule.residualPercent ?? 0);
-      const annualRate = annualRatePct / 100;
-      if (!Number.isFinite(annualRate) || annualRate <= 0) return;
-      residualCohorts.push({
-        remainingBookValue: round2(amount),
-        annualRate,
-      });
-    }
-  }
-
-  private computeYearCohortDepreciation(
-    linearCohorts: LinearCohort[],
-    residualCohorts: ResidualCohort[],
-    scheduleCohorts: ScheduleCohort[],
-  ): number {
-    let total = 0;
-
-    for (const cohort of linearCohorts) {
-      if (cohort.remainingYears <= 0) continue;
-      total += cohort.annualDepreciation;
-      cohort.remainingYears -= 1;
-    }
-
-    for (const cohort of residualCohorts) {
-      if (cohort.remainingBookValue <= 0) continue;
-      if (!Number.isFinite(cohort.annualRate) || cohort.annualRate <= 0)
-        continue;
-      const depreciation = Math.min(
-        cohort.remainingBookValue,
-        round2(cohort.remainingBookValue * cohort.annualRate),
-      );
-      total += depreciation;
-      cohort.remainingBookValue = round2(
-        cohort.remainingBookValue - depreciation,
-      );
-    }
-
-    for (const cohort of scheduleCohorts) {
-      if (cohort.nextIndex >= cohort.annualAmounts.length) continue;
-      total += cohort.annualAmounts[cohort.nextIndex] ?? 0;
-      cohort.nextIndex += 1;
-    }
-
-    for (let i = linearCohorts.length - 1; i >= 0; i -= 1) {
-      if (linearCohorts[i].remainingYears <= 0) {
-        linearCohorts.splice(i, 1);
-      }
-    }
-    for (let i = residualCohorts.length - 1; i >= 0; i -= 1) {
-      if (residualCohorts[i].remainingBookValue <= 0.01) {
-        residualCohorts.splice(i, 1);
-      }
-    }
-    for (let i = scheduleCohorts.length - 1; i >= 0; i -= 1) {
-      if (scheduleCohorts[i].nextIndex >= scheduleCohorts[i].annualAmounts.length) {
-        scheduleCohorts.splice(i, 1);
-      }
-    }
-
-    return round2(total);
-  }
-
-  /**
-   * Compute required tariff P (€/m³) such that min(Ackumulerad kassa over horizon) ≥ 0.
-   * Uses binary search. Returns null if infeasible (zero/negative volume, or no P keeps cash ≥ 0).
-   */
   computeRequiredTariff(
     baseYear: number,
     horizonYears: number,
@@ -1201,6 +780,37 @@ export class ProjectionEngine {
    * Compute required tariff P (€/m³) such that first forecast-year annual result >= 0.
    * Uses binary search and keeps explicit compute semantics (trial pricing only).
    */
+
+  private readDepreciationRules(assumptions: AssumptionMap): Map<string, DepreciationRuleConfig> {
+    return readDepreciationRules(assumptions);
+  }
+
+  private readInvestmentSnapshotRule(item: { depreciationRuleSnapshot?: UserInvestmentSnapshotRule | null }): DepreciationRuleConfig | null {
+    return readInvestmentSnapshotRule(item);
+  }
+
+  private readYearClassAllocations(yearOverride: ProjectionYearOverride | undefined): Array<{ classKey: string; sharePct: number }> {
+    return readYearClassAllocations(yearOverride);
+  }
+
+  private addDepreciationCohort(
+    linearCohorts: LinearCohort[],
+    residualCohorts: ResidualCohort[],
+    scheduleCohorts: ScheduleCohort[],
+    rule: DepreciationRuleConfig,
+    amount: number,
+  ) {
+    return addDepreciationCohort(linearCohorts, residualCohorts, scheduleCohorts, rule, amount);
+  }
+
+  private computeYearCohortDepreciation(
+    linearCohorts: LinearCohort[],
+    residualCohorts: ResidualCohort[],
+    scheduleCohorts: ScheduleCohort[],
+  ): number {
+    return computeYearCohortDepreciation(linearCohorts, residualCohorts, scheduleCohorts);
+  }
+
   computeRequiredTariffForAnnualResultZero(
     baseYear: number,
     horizonYears: number,
@@ -1212,102 +822,25 @@ export class ProjectionEngine {
     userInvestments?: Array<{ year: number; amount: number }>,
     projectionYearOverrides?: ProjectionYearOverrides,
   ): number | null {
-    const solverYearOverrides = stripWaterPriceOverrides(
+    return computeRequiredTariffForAnnualResultZero({
+      baseYear,
+      horizonYears,
+      subtotals,
+      drivers,
+      assumptions,
+      baseFeeOverrides,
+      driverPaths,
+      userInvestments,
       projectionYearOverrides,
-    );
-    const buildTrialPaths = (trialP: number): DriverPaths => {
-      const years = Array.from(
-        { length: horizonYears + 1 },
-        (_, i) => baseYear + i,
-      );
-      const values: Record<number, number> = {};
-      years.forEach((y) => {
-        values[y] = trialP;
-      });
-      const pricePlan = { mode: 'manual' as const, values };
-      return {
-        vesi: { ...driverPaths?.vesi, yksikkohinta: pricePlan },
-        jatevesi: { ...driverPaths?.jatevesi, yksikkohinta: pricePlan },
-      };
-    };
-
-    const runTrial = (trialP: number): ComputedYear[] => {
-      const trialPaths = buildTrialPaths(trialP);
-      return this.computeFromSubtotals(
-        baseYear,
-        horizonYears,
-        subtotals,
-        drivers,
-        assumptions,
-        baseFeeOverrides,
-        trialPaths,
-        userInvestments,
-        solverYearOverrides,
-      );
-    };
-
-    const baselineYears = runTrial(
-      weightedCombinedUnitPrice(
-        drivers.filter(
-          (driver) =>
-            driver.palvelutyyppi === 'vesi' ||
-            driver.palvelutyyppi === 'jatevesi',
-        ),
-      ),
-    );
-    const firstYear = baselineYears[0];
-    if (!firstYear || !Number.isFinite(firstYear.myytyVesimaara)) {
-      return null;
-    }
-    if (firstYear.myytyVesimaara <= 0) {
-      return null;
-    }
-
-    const checkFeasible = (years: ComputedYear[]): boolean => {
-      return years.length > 0 && years[0].tulos >= 0;
-    };
-
-    const P_MAX = 100;
-    const TOL = 0.005;
-    let lo = 0;
-    let hi = P_MAX;
-
-    const atZero = runTrial(0);
-    if (checkFeasible(atZero)) {
-      return round2(0);
-    }
-
-    const atMax = runTrial(P_MAX);
-    if (!checkFeasible(atMax)) {
-      return null;
-    }
-
-    while (hi - lo > TOL) {
-      const mid = (lo + hi) / 2;
-      const years = runTrial(mid);
-      if (checkFeasible(years)) {
-        hi = mid;
-      } else {
-        lo = mid;
-      }
-    }
-
-    return round2(hi);
+      computeFromSubtotals: (...args) => this.computeFromSubtotals(...args),
+    });
   }
 
-  /**
-   * Compute base revenue from drivers (no adjustments).
-   */
   private computeDriverRevenue(
     drivers: RevenueDriverInput[],
     priceFactor: number,
     volumeFactor: number,
   ): number {
-    return drivers.reduce((sum, d) => {
-      const volumeRevenue =
-        d.yksikkohinta * priceFactor * d.myytyMaara * volumeFactor;
-      const baseFeeRevenue = d.perusmaksu * d.liittymamaara;
-      return sum + volumeRevenue + baseFeeRevenue;
-    }, 0);
+    return computeDriverRevenue(drivers, priceFactor, volumeFactor);
   }
 }

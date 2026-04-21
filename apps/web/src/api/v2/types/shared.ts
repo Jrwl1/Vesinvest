@@ -1,8 +1,6 @@
 import type {
   BenchmarkMetric,
-  VeetiConnectResult,
   VeetiLinkStatus,
-  VeetiOrganizationSearchHit,
   VeetiYearInfo,
 } from '../../veeti';
 import type { V2VesinvestPlanSummary } from './vesinvest';

@@ -9,13 +9,13 @@ import {
   type V2WorkbookPreviewResponse,
 } from '../api';
 import type { DocumentImportPreview } from './documentPdfImportModel';
-import type { QdisFieldKey, QdisFieldMatch } from './qdisPdfImport';
+import type { MissingRequirement } from './overviewWorkflow';
+import type { QdisFieldKey,QdisFieldMatch } from './qdisPdfImport';
 import type { StatementOcrMatch } from './statementOcrParse';
 import {
   markPersistedReviewedImportYears,
   resolveNextReviewQueueYear,
 } from './yearReview';
-import type { MissingRequirement } from './overviewWorkflow';
 
 export type StatementImportPreview = {
   fileName: string;
@@ -275,7 +275,6 @@ export async function submitWorkbookImportWorkflow(params: {
     reviewStorageOrgId,
     confirmedImportedYears,
     cardEditContext,
-    baselineReady,
     runSync,
     loadOverview,
     setReviewedImportedYears,

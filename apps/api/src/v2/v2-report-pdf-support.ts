@@ -1,9 +1,9 @@
-import { DEFAULT_VESINVEST_GROUP_DEFINITIONS } from './vesinvest-contract';
 import type {
   BaselineDatasetSource,
   DatasetProvenance,
   ReportSnapshot,
 } from './v2-report-pdf.types';
+import { DEFAULT_VESINVEST_GROUP_DEFINITIONS } from './vesinvest-contract';
 
 const AUTHORITATIVE_VESINVEST_GROUP_LABELS = new Map(
   DEFAULT_VESINVEST_GROUP_DEFINITIONS.map((group) => [group.key, group.label] as const),

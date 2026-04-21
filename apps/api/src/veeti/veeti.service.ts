@@ -1,4 +1,4 @@
-import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
+import { BadGatewayException,Injectable,Logger } from '@nestjs/common';
 import {
   VEETI_IMPORT_CONTRACT,
   VEETI_IMPORT_DATA_TYPES,

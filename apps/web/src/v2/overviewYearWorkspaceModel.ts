@@ -5,6 +5,7 @@ import {
   buildVolumeForm,
   getEffectiveFirstRow,
   getEffectiveRows,
+  getDatasetRowValue,
   getRawFirstRow,
   type ManualFinancialForm,
   type ManualPriceForm,
@@ -219,32 +220,30 @@ export function buildRawValueLookup(
     yearData?.datasets.find((dataset) => dataset.dataType === 'taksa')?.rawRows ??
     [];
   const rawWaterPrice = rawPriceRows.find(
-    (row) => parseOptionalNumber((row as any).Tyyppi_Id) === 1,
+    (row) => parseOptionalNumber(getDatasetRowValue(row, 'Tyyppi_Id')) === 1,
   );
   const rawWastewaterPrice = rawPriceRows.find(
-    (row) => parseOptionalNumber((row as any).Tyyppi_Id) === 2,
+    (row) => parseOptionalNumber(getDatasetRowValue(row, 'Tyyppi_Id')) === 2,
   );
   const rawWaterVolume = getRawFirstRow(yearData, 'volume_vesi');
   const rawWastewaterVolume = getRawFirstRow(yearData, 'volume_jatevesi');
 
   return {
-    liikevaihto: parseOptionalNumber((rawFinancials as any).Liikevaihto),
-    perusmaksuYhteensa: parseOptionalNumber((rawFinancials as any).PerusmaksuYhteensa),
-    aineetJaPalvelut: parseOptionalNumber((rawFinancials as any).AineetJaPalvelut),
-    henkilostokulut: parseOptionalNumber((rawFinancials as any).Henkilostokulut),
-    poistot: parseOptionalNumber((rawFinancials as any).Poistot),
+    liikevaihto: parseOptionalNumber(rawFinancials.Liikevaihto),
+    perusmaksuYhteensa: parseOptionalNumber(rawFinancials.PerusmaksuYhteensa),
+    aineetJaPalvelut: parseOptionalNumber(rawFinancials.AineetJaPalvelut),
+    henkilostokulut: parseOptionalNumber(rawFinancials.Henkilostokulut),
+    poistot: parseOptionalNumber(rawFinancials.Poistot),
     liiketoiminnanMuutKulut: parseOptionalNumber(
-      (rawFinancials as any).LiiketoiminnanMuutKulut,
+      rawFinancials.LiiketoiminnanMuutKulut,
     ),
-    tilikaudenYliJaama: parseOptionalNumber((rawFinancials as any).TilikaudenYliJaama),
-    waterUnitPrice: parseOptionalNumber((rawWaterPrice as any)?.Kayttomaksu),
+    tilikaudenYliJaama: parseOptionalNumber(rawFinancials.TilikaudenYliJaama),
+    waterUnitPrice: parseOptionalNumber(getDatasetRowValue(rawWaterPrice, 'Kayttomaksu')),
     wastewaterUnitPrice: parseOptionalNumber(
-      (rawWastewaterPrice as any)?.Kayttomaksu,
+      getDatasetRowValue(rawWastewaterPrice, 'Kayttomaksu'),
     ),
-    soldWaterVolume: parseOptionalNumber((rawWaterVolume as any).Maara),
-    soldWastewaterVolume: parseOptionalNumber(
-      (rawWastewaterVolume as any).Maara,
-    ),
+    soldWaterVolume: parseOptionalNumber(getDatasetRowValue(rawWaterVolume, 'Maara')),
+    soldWastewaterVolume: parseOptionalNumber(getDatasetRowValue(rawWastewaterVolume, 'Maara')),
   };
 }
 
@@ -254,10 +253,10 @@ export function buildEffectiveValueLookup(
   const effectiveFinancials = getEffectiveFirstRow(yearData, 'tilinpaatos');
   const effectivePriceRows = getEffectiveRows(yearData, 'taksa');
   const effectiveWaterPrice = effectivePriceRows.find(
-    (row) => parseOptionalNumber((row as any).Tyyppi_Id) === 1,
+    (row) => parseOptionalNumber(getDatasetRowValue(row, 'Tyyppi_Id')) === 1,
   );
   const effectiveWastewaterPrice = effectivePriceRows.find(
-    (row) => parseOptionalNumber((row as any).Tyyppi_Id) === 2,
+    (row) => parseOptionalNumber(getDatasetRowValue(row, 'Tyyppi_Id')) === 2,
   );
   const effectiveWaterVolume = getEffectiveFirstRow(yearData, 'volume_vesi');
   const effectiveWastewaterVolume = getEffectiveFirstRow(
@@ -266,30 +265,32 @@ export function buildEffectiveValueLookup(
   );
 
   return {
-    liikevaihto: parseOptionalNumber((effectiveFinancials as any).Liikevaihto),
+    liikevaihto: parseOptionalNumber(effectiveFinancials.Liikevaihto),
     perusmaksuYhteensa: parseOptionalNumber(
-      (effectiveFinancials as any).PerusmaksuYhteensa,
+      effectiveFinancials.PerusmaksuYhteensa,
     ),
     aineetJaPalvelut: parseOptionalNumber(
-      (effectiveFinancials as any).AineetJaPalvelut,
+      effectiveFinancials.AineetJaPalvelut,
     ),
     henkilostokulut: parseOptionalNumber(
-      (effectiveFinancials as any).Henkilostokulut,
+      effectiveFinancials.Henkilostokulut,
     ),
-    poistot: parseOptionalNumber((effectiveFinancials as any).Poistot),
+    poistot: parseOptionalNumber(effectiveFinancials.Poistot),
     liiketoiminnanMuutKulut: parseOptionalNumber(
-      (effectiveFinancials as any).LiiketoiminnanMuutKulut,
+      effectiveFinancials.LiiketoiminnanMuutKulut,
     ),
     tilikaudenYliJaama: parseOptionalNumber(
-      (effectiveFinancials as any).TilikaudenYliJaama,
+      effectiveFinancials.TilikaudenYliJaama,
     ),
-    waterUnitPrice: parseOptionalNumber((effectiveWaterPrice as any)?.Kayttomaksu),
+    waterUnitPrice: parseOptionalNumber(
+      getDatasetRowValue(effectiveWaterPrice, 'Kayttomaksu'),
+    ),
     wastewaterUnitPrice: parseOptionalNumber(
-      (effectiveWastewaterPrice as any)?.Kayttomaksu,
+      getDatasetRowValue(effectiveWastewaterPrice, 'Kayttomaksu'),
     ),
-    soldWaterVolume: parseOptionalNumber((effectiveWaterVolume as any).Maara),
+    soldWaterVolume: parseOptionalNumber(getDatasetRowValue(effectiveWaterVolume, 'Maara')),
     soldWastewaterVolume: parseOptionalNumber(
-      (effectiveWastewaterVolume as any).Maara,
+      getDatasetRowValue(effectiveWastewaterVolume, 'Maara'),
     ),
   };
 }
@@ -300,8 +301,8 @@ export function buildResultBaselineFinancials(
   const rawFinancials = getRawFirstRow(yearData, 'tilinpaatos');
   const effectiveFinancials = getEffectiveFirstRow(yearData, 'tilinpaatos');
   const pickFinancialValue = (key: string): number =>
-    parseOptionalNumber((rawFinancials as any)[key]) ??
-    parseOptionalNumber((effectiveFinancials as any)[key]) ??
+    parseOptionalNumber(rawFinancials[key]) ??
+    parseOptionalNumber(effectiveFinancials[key]) ??
     0;
 
   return {

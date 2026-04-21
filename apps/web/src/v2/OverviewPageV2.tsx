@@ -11,7 +11,6 @@ import { buildOverviewManualPatchViewModel } from './overviewManualPatchModel';
 import { type SetupWizardState } from './overviewWorkflow';
 import { buildOverviewPageViewModel } from './overviewPageViewModel';
 import { useOverviewPageController } from './useOverviewPageController';
-import type { Props as OverviewWorkbookImportWorkflowProps } from './OverviewWorkbookImportWorkflow';
 import type { VesinvestOverviewFocusTarget } from './VesinvestPlanningPanel';
 
 const OverviewImportBoard = React.lazy(async () => {
@@ -63,12 +62,6 @@ type Props = {
   ) => void;
   setupBackSignal?: number;
 };
-type ImportWarningCode =
-  | 'missing_financials'
-  | 'missing_prices'
-  | 'missing_volumes'
-  | 'fallback_zero_used';
-
 export const OverviewPageV2: React.FC<Props> = ({
   onGoToForecast,
   onGoToReports: _onGoToReports,
@@ -94,6 +87,10 @@ export const OverviewPageV2: React.FC<Props> = ({
   });
   const [collapsedPlanningPanelOpenStep, setCollapsedPlanningPanelOpenStep] =
     React.useState<number | null>(null);
+  // The shell keeps the broader controller contract available for lazy child
+  // surfaces and shared view-model builders even when this file does not read
+  // every field directly.
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   const {
     t,
     overview,
@@ -325,6 +322,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     wizardBackLabel,
     handleWizardBack,
   } = controller;
+  /* eslint-enable @typescript-eslint/no-unused-vars */
 
   if (loading)
     return (
@@ -343,12 +341,10 @@ export const OverviewPageV2: React.FC<Props> = ({
     activeVesinvestPlan,
     collapsePlanningPanelInSetup,
     compactSupportingChrome,
-    connectButtonClass,
     correctedYearsLabel,
     demotePlanningPanelInSetup,
     handoffExcludedYearsSorted,
     hasBaselineBudget,
-    importStatus,
     importYearsButtonClass,
     includedPlanningYearsLabel,
     isManageYearsMaintenanceMode,

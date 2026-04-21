@@ -1,5 +1,5 @@
-import type { VeetiDataType } from './veeti.service';
 import { VEETI_IMPORT_DATA_TYPES } from './veeti-import-contract';
+import type { VeetiDataType } from './veeti.service';
 
 export const VEETI_DATA_TYPES: VeetiDataType[] = [...VEETI_IMPORT_DATA_TYPES];
 

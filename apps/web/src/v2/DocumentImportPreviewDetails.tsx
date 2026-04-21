@@ -1,16 +1,16 @@
 import React from 'react';
 
 import type { V2ImportYearDataResponse } from '../api';
-import { formatEur, formatNumber, formatPrice } from './format';
+import type {
+  DocumentImportFieldMatch,
+  DocumentImportPreview,
+} from './documentPdfImportModel';
+import { formatEur,formatNumber,formatPrice } from './format';
 import {
   buildFinancialForm,
   buildPriceForm,
   buildVolumeForm,
 } from './overviewManualForms';
-import type {
-  DocumentImportFieldMatch,
-  DocumentImportPreview,
-} from './documentPdfImportModel';
 
 type Props = {
   preview: DocumentImportPreview;

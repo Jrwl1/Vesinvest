@@ -1,6 +1,5 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
-
+import React from 'react';
 import {
   completeImportYearManuallyV2,
   createPlanningBaselineV2,
@@ -9,22 +8,21 @@ import {
   reconcileImportYearV2,
   restoreImportYearsV2,
 } from '../api';
-import { getSyncBlockReasonLabel as buildSyncBlockReasonLabel } from './overviewLabels';
 import { sendV2OpsEvent } from './opsTelemetry';
+import { getSyncBlockReasonLabel as buildSyncBlockReasonLabel } from './overviewLabels';
 import { submitOverviewWorkbookImport } from './overviewReviewWorkbookImport';
-import type { MissingRequirement, SetupWizardStep } from './overviewWorkflow';
+import type { MissingRequirement,SetupWizardStep } from './overviewWorkflow';
 import type { OverviewImportController } from './useOverviewImportController';
+import type { OverviewManualPatchController } from './useOverviewManualPatchController';
 import type {
   ManualPatchMode,
 } from './useOverviewManualPatchEditor';
-import type { OverviewManualPatchController } from './useOverviewManualPatchController';
 import {
   markPersistedReviewedImportYears,
   resolveApprovedYearStep,
   resolveNextReviewQueueYear,
   resolveReviewContinueTarget,
 } from './yearReview';
-
 type ReviewStatusRow = {
   year: number;
   completeness: Record<string, boolean>;
@@ -37,7 +35,6 @@ type ReviewStatusRow = {
   tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
   sourceStatus?: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
 };
-
 type UseOverviewReviewControllerParams = {
   t: TFunction;
   importController: OverviewImportController;
@@ -60,7 +57,6 @@ type UseOverviewReviewControllerParams = {
   resetManualPatchDialog: () => void;
   onGoToForecast: (scenarioId?: string | null) => void;
 };
-
 export function useOverviewReviewController({
   t,
   importController,
@@ -68,9 +64,6 @@ export function useOverviewReviewController({
   reviewStatusRows,
   reviewStorageOrgId,
   confirmedImportedYears,
-  reviewedImportedYearRows,
-  importedBlockedYearCount,
-  pendingTechnicalReviewYearCount,
   includedPlanningYears,
   excludedYearsSorted,
   correctedPlanningYears,
@@ -94,7 +87,6 @@ export function useOverviewReviewController({
       }),
     [confirmedImportedYears, importController, manualController, openManualPatchDialog, resetManualPatchDialog, reviewStatusRows, reviewStorageOrgId, t],
   );
-
   const submitManualPatch = React.useCallback(
     async (syncAfterSave: boolean) => {
       if (manualController.manualPatchYear == null) {
@@ -106,7 +98,6 @@ export function useOverviewReviewController({
       if (!payload) {
         return;
       }
-
       manualController.setManualPatchBusy(true);
       manualController.setManualPatchError(null);
       importController.setError(null);
@@ -129,7 +120,6 @@ export function useOverviewReviewController({
           nextQueueYear == null
             ? null
             : nextRows.find((row) => row.year === nextQueueYear) ?? null;
-
         if (result.syncReady) {
           importController.setReviewedImportedYears(
             markPersistedReviewedImportYears(
@@ -231,7 +221,6 @@ export function useOverviewReviewController({
       t,
     ],
   );
-
   const handleExcludeYearFromPlan = React.useCallback(
     async (year: number) => {
       const confirmed = window.confirm(
@@ -244,7 +233,6 @@ export function useOverviewReviewController({
       if (!confirmed) {
         return;
       }
-
       importController.setRemovingYear(year);
       importController.setError(null);
       importController.setInfo(null);
@@ -277,7 +265,6 @@ export function useOverviewReviewController({
     },
     [importController, t],
   );
-
   const handleDeleteYear = React.useCallback(
     async (year: number) => {
       const confirmed = window.confirm(
@@ -290,7 +277,6 @@ export function useOverviewReviewController({
       if (!confirmed) {
         return;
       }
-
       importController.setRemovingYear(year);
       importController.setError(null);
       importController.setInfo(null);
@@ -328,7 +314,6 @@ export function useOverviewReviewController({
     },
     [importController, t],
   );
-
   const handleRestoreYearToPlan = React.useCallback(
     async (year: number) => {
       importController.setRemovingYear(year);
@@ -364,7 +349,6 @@ export function useOverviewReviewController({
     },
     [importController, t],
   );
-
   const handleApplyVeetiReconcile = React.useCallback(
     async (year: number, dataTypes: string[]) => {
       importController.setError(null);
@@ -405,7 +389,6 @@ export function useOverviewReviewController({
     },
     [importController, manualController.setYearDataCache, t],
   );
-
   const handleKeepCurrentYearValues = React.useCallback(async () => {
     if (manualController.manualPatchYear == null) {
       return;
@@ -430,7 +413,6 @@ export function useOverviewReviewController({
       nextQueueYear == null
         ? null
         : nextRows.find((row) => row.year === nextQueueYear) ?? null;
-
     importController.setReviewedImportedYears(nextReviewedYears);
     if (nextQueueRow) {
       if (manualController.cardEditContext === 'step3') {
@@ -480,7 +462,6 @@ export function useOverviewReviewController({
     reviewStorageOrgId,
     t,
   ]);
-
   const handleRestoreYearVeeti = React.useCallback(
     async (year: number) =>
       handleApplyVeetiReconcile(year, [
@@ -491,7 +472,6 @@ export function useOverviewReviewController({
       ]),
     [handleApplyVeetiReconcile],
   );
-
   const handleReopenYearReview = React.useCallback(
     async (year: number) => {
       importController.setError(null);
@@ -524,13 +504,11 @@ export function useOverviewReviewController({
       reviewStatusRows,
     ],
   );
-
   const handleManageYears = React.useCallback(() => {
     importController.setError(null);
     importController.setInfo(null);
     importController.setReviewContinueStep(2);
   }, [importController]);
-
   const handleReopenReview = React.useCallback(() => {
     importController.setError(null);
     importController.setInfo(null);

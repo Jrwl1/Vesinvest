@@ -1,9 +1,9 @@
 import { Type } from 'class-transformer';
 import {
   ArrayUnique,
-  IsInt,
   IsArray,
   IsIn,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,

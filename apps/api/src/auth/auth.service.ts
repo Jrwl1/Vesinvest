@@ -1,11 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable,UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { PrismaService } from '../prisma/prisma.service';
 import { AppModeService } from '../app-mode/app-mode.service';
-import { LegalService } from '../legal/legal.service';
-import { TrialService } from '../trial/trial.service';
 import { DEMO_ORG_ID } from '../demo/demo.constants';
+import { LegalService } from '../legal/legal.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { TrialService } from '../trial/trial.service';
 import { DemoService } from './demo.service';
 
 @Injectable()
@@ -118,12 +118,17 @@ export class AuthService {
     return this.issueTokenForUser(user.id, orgId, roles, { expiresIn: '7d' });
   }
 
-  async me(user: any) {
-    const legal = await this.legalService.getUserStatus(user.org_id, user.sub, user.roles ?? []);
+  async me(user?: { sub?: string; org_id?: string; roles?: string[] }) {
+    const authUser = user ?? {};
+    const legal = await this.legalService.getUserStatus(
+      authUser.org_id ?? '',
+      authUser.sub ?? '',
+      authUser.roles ?? [],
+    );
     return {
-      userId: user.sub,
-      orgId: user.org_id,
-      roles: user.roles ?? [],
+      userId: authUser.sub,
+      orgId: authUser.org_id,
+      roles: authUser.roles ?? [],
       legal,
     };
   }

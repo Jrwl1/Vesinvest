@@ -3,8 +3,6 @@ import type {
   V2DocumentImportProfile,
   V2DocumentImportSourceLine,
 } from '../api';
-import type { QdisImportResult } from './qdisPdfImport';
-import type { StatementOcrResult } from './statementOcr';
 import {
   extractFinancialAmount,
   extractPriceAmount,
@@ -16,6 +14,8 @@ import {
   selectPreferredMatches,
   uniqueSourceLines,
 } from './documentPdfImportParsing';
+import type { QdisImportResult } from './qdisPdfImport';
+import type { StatementOcrResult } from './statementOcr';
 
 export type DocumentImportMatchKey =
   | 'liikevaihto'

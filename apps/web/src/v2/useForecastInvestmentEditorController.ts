@@ -1,5 +1,5 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
 import type { V2YearlyInvestmentPlanRow } from '../api';
 import {
@@ -13,8 +13,8 @@ import {
   normalizeInvestmentMappingLabel,
   parseAssumptionPercentInput,
   parseNearTermPercent,
-  REVENUE_ASSUMPTION_KEYS,
   resolveInvestmentProgramTotal,
+  REVENUE_ASSUMPTION_KEYS,
   round4,
   validateNearTermPercent,
   type NearTermExpenseDraftText,

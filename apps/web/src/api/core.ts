@@ -284,7 +284,6 @@ export function getTokenInfo(): DecodedToken | null {
 export async function api<T = unknown>(
   path: string,
   options: RequestInit = {},
-  retryOn401 = true,
 ): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {

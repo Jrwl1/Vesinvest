@@ -463,7 +463,7 @@ async listReports(orgId: string, ennusteId?: string) {
     const reportSections = this.buildReportSections(reportVariant);
     const vesinvestAppendix = await this.buildVesinvestAppendix(
       vesinvestPlan.projects,
-      scenario.years.map((item: any) => item.year),
+      scenario.years.map((item) => item.year),
       orgId,
     );
     const snapshot: SnapshotPayload = {
@@ -649,4 +649,3 @@ async listReports(orgId: string, ennusteId?: string) {
     });
   }
 }
-

@@ -11,14 +11,20 @@ import { createV2ForecastComputationSupport } from './v2-forecast-computation-su
 import { createV2ForecastDepreciationSupport } from './v2-forecast-depreciation-support';
 import { V2ForecastDepreciationStorageSupport } from './v2-forecast-depreciation-storage-support';
 import { V2ForecastInputModelSupport } from './v2-forecast-input-model-support';
-import { V2ForecastPayloadSupport } from './v2-forecast-payload-support';
+import {
+  type ForecastProjectionLike,
+  V2ForecastPayloadSupport,
+} from './v2-forecast-payload-support';
 import { V2ForecastScenarioMetaSupport } from './v2-forecast-scenario-meta-support';
 import { createV2ForecastScenarioSupport } from './v2-forecast-scenario-support';
 import { V2ForecastSeriesSupport } from './v2-forecast-series-support';
 import type {
+  DepreciationRuleView,
   DepreciationRuleInput,
   ScenarioAssumptionKey,
   ScenarioClassAllocationInput,
+  ScenarioPayload,
+  ScenarioYear,
   ScenarioStoredDepreciationRule,
   ScenarioType,
   TrendPoint,
@@ -83,17 +89,84 @@ export class V2ForecastService {
       this.depreciationStorageSupport,
     );
 
-    const ctx = this as any;
-    this.depreciationSupport = createV2ForecastDepreciationSupport(ctx);
-    this.scenarioSupport = createV2ForecastScenarioSupport(ctx);
-    this.computationSupport = createV2ForecastComputationSupport(ctx);
+    this.depreciationSupport = createV2ForecastDepreciationSupport({
+      prisma: this.prisma,
+      projectionsService: this.projectionsService,
+      createDepreciationRule: (orgId, body) => this.createDepreciationRule(orgId, body),
+      getScenarioClassAllocations: (orgId, scenarioId) =>
+        this.getScenarioClassAllocations(orgId, scenarioId),
+      buildScenarioDepreciationRuleSeed: (orgId) =>
+        this.buildScenarioDepreciationRuleSeed(orgId),
+      mapScenarioDepreciationRule: (rule) => this.mapScenarioDepreciationRule(rule),
+      mapDepreciationRule: (row) => this.mapDepreciationRule(row),
+      normalizeDepreciationRuleInput: (body) =>
+        this.normalizeDepreciationRuleInput(body),
+      isPrismaUniqueError: (error) => this.isPrismaUniqueError(error),
+      ensureScenarioDepreciationStorage: (orgId, projection) =>
+        this.ensureScenarioDepreciationStorage(orgId, projection),
+      saveScenarioDepreciationRules: (orgId, scenarioId, rules) =>
+        this.saveScenarioDepreciationRules(orgId, scenarioId, rules),
+      normalizeYearOverrides: (raw) => this.normalizeYearOverrides(raw),
+      toNumber: (value) => this.toNumber(value),
+      normalizeScenarioYearAllocations: (raw) =>
+        this.normalizeScenarioYearAllocations(raw),
+      scenarioAllocationRecordFromArray: (allocations) =>
+        this.scenarioAllocationRecordFromArray(allocations),
+    });
+    this.scenarioSupport = createV2ForecastScenarioSupport({
+      prisma: this.prisma,
+      projectionsService: this.projectionsService,
+      resolveAcceptedPlanningBaselineBudgetIds: (orgId) =>
+        this.resolveAcceptedPlanningBaselineBudgetIds(orgId),
+      resolveLatestAcceptedVeetiBudgetId: (orgId) =>
+        this.resolveLatestAcceptedVeetiBudgetId(orgId),
+      buildDefaultScenarioName: (value) => this.buildDefaultScenarioName(value),
+      resolveScenarioType: (raw, onOletus) =>
+        this.resolveScenarioType(raw, onOletus),
+      resolveScenarioTypeForCreate: (params) =>
+        this.resolveScenarioTypeForCreate(params),
+      withScenarioTypeOverride: (overrides, scenarioType) =>
+        this.withScenarioTypeOverride(overrides, scenarioType),
+      normalizeUserInvestments: (raw) => this.normalizeUserInvestments(raw),
+      normalizeAssumptionOverrides: (raw) => this.normalizeAssumptionOverrides(raw),
+      extractExplicitNearTermExpenseAssumptions: (baseYear, rawOverrides) =>
+        this.extractExplicitNearTermExpenseAssumptions(baseYear, rawOverrides),
+      buildYearOverrides: (investments, nearTermExpenseAssumptions, rawExistingOverrides) =>
+        this.buildYearOverrides(
+          investments,
+          nearTermExpenseAssumptions,
+          rawExistingOverrides,
+        ),
+      mapScenarioPayload: (orgId, projection) =>
+        this.mapScenarioPayload(orgId, projection),
+      getForecastScenario: (orgId, scenarioId) =>
+        this.getForecastScenario(orgId, scenarioId),
+      ensureScenarioDepreciationStorage: (orgId, projection) =>
+        this.ensureScenarioDepreciationStorage(orgId, projection),
+      normalizeScenarioAssumptionOverrides: (raw) =>
+        this.normalizeScenarioAssumptionOverrides(raw),
+      normalizeThereafterExpenseAssumptions: (raw) =>
+        this.normalizeThereafterExpenseAssumptions(raw),
+      normalizeNearTermExpenseAssumptions: (raw, baseYear) =>
+        this.normalizeNearTermExpenseAssumptions(raw, baseYear),
+      round2: (value) => this.round2(value),
+      normalizeScenarioType: (raw) => this.normalizeScenarioType(raw),
+      snapshotDepreciationRule: (rule) => this.snapshotDepreciationRule(rule),
+    });
+    this.computationSupport = createV2ForecastComputationSupport({
+      projectionsService: this.projectionsService,
+      updateForecastScenario: (orgId, scenarioId, body) =>
+        this.updateForecastScenario(orgId, scenarioId, body),
+      getForecastScenario: (orgId, scenarioId) =>
+        this.getForecastScenario(orgId, scenarioId),
+    });
   }
 
   async listForecastScenarios(orgId: string) {
     return this.scenarioSupport.listForecastScenarios(orgId);
   }
 
-  async listDepreciationRules(orgId: string) {
+  async listDepreciationRules(orgId: string): Promise<DepreciationRuleView[]> {
     return this.depreciationSupport.listDepreciationRules(orgId);
   }
 
@@ -188,7 +261,10 @@ export class V2ForecastService {
     return this.scenarioSupport.createForecastScenario(orgId, body);
   }
 
-  async getForecastScenario(orgId: string, scenarioId: string) {
+  async getForecastScenario(
+    orgId: string,
+    scenarioId: string,
+  ): Promise<ScenarioPayload> {
     return this.scenarioSupport.getForecastScenario(orgId, scenarioId);
   }
 
@@ -365,13 +441,16 @@ export class V2ForecastService {
   }
 
   private buildYearlyInvestments(
-    projection: any,
+    projection: ForecastProjectionLike,
     baseYear: number | null,
   ): YearlyInvestment[] {
     return this.inputModelSupport.buildYearlyInvestments(projection, baseYear);
   }
 
-  private mapScenarioPayload(orgId: string, projection: any) {
+  private mapScenarioPayload(
+    orgId: string,
+    projection: ForecastProjectionLike,
+  ): Promise<ScenarioPayload> {
     return this.payloadSupport.mapScenarioPayload(orgId, projection, {
       ensureScenarioDepreciationStorage: (nextOrgId, nextProjection) =>
         this.ensureScenarioDepreciationStorage(nextOrgId, nextProjection),
@@ -382,7 +461,7 @@ export class V2ForecastService {
     });
   }
 
-  private computeRequiredPriceForZeroResult(firstYear: any) {
+  private computeRequiredPriceForZeroResult(firstYear: ScenarioYear | undefined) {
     return this.payloadSupport.computeRequiredPriceForZeroResult(firstYear);
   }
 
@@ -392,11 +471,13 @@ export class V2ForecastService {
     return this.payloadSupport.resolveLatestComparableBaselinePrice(orgId);
   }
 
-  private mapDepreciationRule(row: any) {
+  private mapDepreciationRule(row: Record<string, unknown>) {
     return this.depreciationStorageSupport.mapDepreciationRule(row);
   }
 
-  private mapScenarioDepreciationRule(rule: ScenarioStoredDepreciationRule) {
+  private mapScenarioDepreciationRule(
+    rule: ScenarioStoredDepreciationRule,
+  ): DepreciationRuleView {
     return this.depreciationStorageSupport.mapScenarioDepreciationRule(rule);
   }
 
@@ -404,7 +485,10 @@ export class V2ForecastService {
     return this.depreciationStorageSupport.snapshotDepreciationRule(rule);
   }
 
-  private ensureScenarioDepreciationStorage(orgId: string, projection: any) {
+  private ensureScenarioDepreciationStorage(
+    orgId: string,
+    projection: ForecastProjectionLike,
+  ) {
     return this.depreciationStorageSupport.ensureScenarioDepreciationStorage(
       orgId,
       projection,

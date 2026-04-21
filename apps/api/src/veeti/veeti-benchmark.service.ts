@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { VeetiEffectiveDataService } from './veeti-effective-data.service';
-import { VeetiService } from './veeti.service';
+import { VeetiService, type VeetiDataType } from './veeti.service';
 
 type MetricRow = {
   veetiId: number;
@@ -548,7 +548,7 @@ export class VeetiBenchmarkService {
     const effective = await this.veetiEffectiveDataService.getEffectiveRows(
       orgId,
       vuosi,
-      dataType as any,
+      dataType as VeetiDataType,
     );
     return effective.rows;
   }

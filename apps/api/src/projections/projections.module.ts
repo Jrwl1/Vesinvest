@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
-import { ProjectionsService } from './projections.service';
-import { ProjectionsRepository } from './projections.repository';
 import { ProjectionEngine } from './projection-engine.service';
+import { ProjectionsRepository } from './projections.repository';
+import { ProjectionsService } from './projections.service';
 
 @Module({
   imports: [PrismaModule],

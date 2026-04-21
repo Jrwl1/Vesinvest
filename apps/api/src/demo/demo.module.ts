@@ -1,12 +1,12 @@
-import { Module, OnModuleInit, Logger } from '@nestjs/common';
-import { DemoInfraModule } from './demo-infra.module';
+import { Logger,Module,OnModuleInit } from '@nestjs/common';
 import { DemoBootstrapService } from './demo-bootstrap.service';
+import { DemoInfraModule } from './demo-infra.module';
 import { DemoStatusService } from './demo-status.service';
+import { DEMO_ORG_ID,getDemoModeReason } from './demo.constants';
 import { DemoController } from './demo.controller';
-import { getDemoModeReason, DEMO_ORG_ID } from './demo.constants';
 
 // Re-export for consumers that still import from demo.module (e.g. tests)
-export { DEMO_ORG_ID, isDemoModeEnabled, getDemoModeReason } from './demo.constants';
+export { DEMO_ORG_ID,getDemoModeReason,isDemoModeEnabled } from './demo.constants';
 
 /**
  * Demo Module - Thin shell for /demo HTTP endpoints and startup bootstrap.

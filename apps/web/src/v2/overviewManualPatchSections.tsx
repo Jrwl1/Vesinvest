@@ -1,5 +1,5 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
 export const OverviewManualPatchYearDetailsSection: React.FC<{
   t: TFunction;

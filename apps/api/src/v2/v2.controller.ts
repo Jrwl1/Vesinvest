@@ -1,58 +1,63 @@
 import {
-  Body,
-  ServiceUnavailableException,
   BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
   Header,
+  Param,
   ParseIntPipe,
   ParseUUIDPipe,
-  Param,
   Patch,
   Post,
   Put,
   Query,
   Req,
   Res,
+  ServiceUnavailableException,
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { Request, Response } from 'express';
+import type { Request,Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { TenantGuard } from '../tenant/tenant.guard';
+import { CreatePlanningBaselineDto } from './dto/create-planning-baseline.dto';
 import { CreateReportDto } from './dto/create-report.dto';
 import { CreateScenarioDto } from './dto/create-scenario.dto';
-import { CreatePlanningBaselineDto } from './dto/create-planning-baseline.dto';
-import { ImportClearDto } from './dto/import-clear.dto';
-import { ImportConnectDto } from './dto/import-connect.dto';
-import { ImportYearsDto } from './dto/import-years.dto';
-import { ImportYearReconcileDto } from './dto/import-year-reconcile.dto';
-import { ImportYearsBulkDto } from './dto/import-years-bulk.dto';
-import { ImportSearchQueryDto } from './dto/import-search-query.dto';
-import { ImportSyncDto } from './dto/import-sync.dto';
-import { ListReportsQueryDto } from './dto/list-reports-query.dto';
-import { ManualYearCompletionDto } from './dto/manual-year-completion.dto';
-import { OpsEventDto } from './dto/ops-event.dto';
 import {
   CreateDepreciationRuleDto,
   UpdateDepreciationRuleDto,
 } from './dto/depreciation-rules.dto';
+import { ImportClearDto } from './dto/import-clear.dto';
+import { ImportConnectDto } from './dto/import-connect.dto';
+import { ImportSearchQueryDto } from './dto/import-search-query.dto';
+import { ImportSyncDto } from './dto/import-sync.dto';
+import { ImportYearReconcileDto } from './dto/import-year-reconcile.dto';
+import { ImportYearsBulkDto } from './dto/import-years-bulk.dto';
+import { ImportYearsDto } from './dto/import-years.dto';
+import { ListReportsQueryDto } from './dto/list-reports-query.dto';
+import { ManualYearCompletionDto } from './dto/manual-year-completion.dto';
+import { OpsEventDto } from './dto/ops-event.dto';
 import { RefreshPeerDto } from './dto/refresh-peer.dto';
 import { UpdateScenarioClassAllocationsDto } from './dto/scenario-class-allocations.dto';
 import { UpdateScenarioDto } from './dto/update-scenario.dto';
+import { UpdateVesinvestGroupDto } from './dto/vesinvest-group.dto';
 import {
   CreateVesinvestPlanDto,
   SyncVesinvestPlanDto,
   UpdateVesinvestPlanDto,
 } from './dto/vesinvest-plan.dto';
-import { UpdateVesinvestGroupDto } from './dto/vesinvest-group.dto';
 import { V2Service } from './v2.service';
 
 const WORKBOOK_PREVIEW_MAX_BYTES = 5 * 1024 * 1024;
 const STATEMENT_PREVIEW_MAX_BYTES = 10 * 1024 * 1024;
+const v2ValidationPipeOptions = {
+  transform: true,
+  whitelist: true,
+} as const;
 
 function rejectMultipleFileUploads(
   _req: Request,
@@ -93,34 +98,50 @@ export class V2Controller {
   }
 
   @Post('overview/peer-refresh')
-  async refreshPeer(@Req() req: Request, @Body() body: RefreshPeerDto) {
+  async refreshPeer(
+    @Req() req: Request,
+    @Body(new ValidationPipe(v2ValidationPipeOptions)) body: RefreshPeerDto,
+  ) {
     return this.service.refreshPeerSnapshot(req.orgId!, body?.vuosi);
   }
 
   @Get('import/search')
-  async importSearch(@Query() query: ImportSearchQueryDto) {
+  async importSearch(
+    @Query(new ValidationPipe(v2ValidationPipeOptions))
+    query: ImportSearchQueryDto,
+  ) {
     return this.service.searchOrganizations(query.q ?? '', query.limit ?? 20);
   }
 
   @Post('import/connect')
-  async importConnect(@Req() req: Request, @Body() body: ImportConnectDto) {
+  async importConnect(
+    @Req() req: Request,
+    @Body(new ValidationPipe(v2ValidationPipeOptions)) body: ImportConnectDto,
+  ) {
     return this.service.connectOrganization(req.orgId!, body.veetiId);
   }
 
   @Post('import/sync')
-  async importSync(@Req() req: Request, @Body() body: ImportSyncDto) {
+  async importSync(
+    @Req() req: Request,
+    @Body(new ValidationPipe(v2ValidationPipeOptions)) body: ImportSyncDto,
+  ) {
     return this.service.syncImport(req.orgId!, body?.years ?? []);
   }
 
   @Post('import/years/import')
-  async importYears(@Req() req: Request, @Body() body: ImportYearsDto) {
+  async importYears(
+    @Req() req: Request,
+    @Body(new ValidationPipe(v2ValidationPipeOptions)) body: ImportYearsDto,
+  ) {
     return this.service.importYears(req.orgId!, body?.years ?? []);
   }
 
   @Post('import/planning-baseline')
   async createPlanningBaseline(
     @Req() req: Request,
-    @Body() body: CreatePlanningBaselineDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions))
+    body: CreatePlanningBaselineDto,
   ) {
     return this.service.createPlanningBaseline(req.orgId!, body?.years ?? []);
   }
@@ -141,7 +162,7 @@ export class V2Controller {
   @Post('import/years/bulk-delete')
   async importBulkDeleteYears(
     @Req() req: Request,
-    @Body() body: ImportYearsBulkDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions)) body: ImportYearsBulkDto,
   ) {
     return this.service.removeImportedYears(req.orgId!, body.years);
   }
@@ -149,7 +170,7 @@ export class V2Controller {
   @Post('import/years/exclude')
   async importExcludeYears(
     @Req() req: Request,
-    @Body() body: ImportYearsBulkDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions)) body: ImportYearsBulkDto,
   ) {
     return this.service.excludeImportedYears(req.orgId!, body.years);
   }
@@ -157,7 +178,7 @@ export class V2Controller {
   @Post('import/years/restore')
   async importRestoreYears(
     @Req() req: Request,
-    @Body() body: ImportYearsBulkDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions)) body: ImportYearsBulkDto,
   ) {
     return this.service.restoreImportedYears(req.orgId!, body.years);
   }
@@ -233,7 +254,8 @@ export class V2Controller {
   async reconcileImportYear(
     @Req() req: Request,
     @Param('year', ParseIntPipe) year: number,
-    @Body() body: ImportYearReconcileDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions))
+    body: ImportYearReconcileDto,
   ) {
     const user = req.user as { sub?: string; roles?: string[] };
     return this.service.reconcileImportYear(
@@ -248,7 +270,7 @@ export class V2Controller {
   @Post('import/clear')
   async clearImportAndScenarios(
     @Req() req: Request,
-    @Body() body: ImportClearDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions)) body: ImportClearDto,
   ) {
     const user = req.user as { roles?: string[] };
     // Destructive org-level reset path used by the V2 account drawer.
@@ -262,7 +284,8 @@ export class V2Controller {
   @Post('import/manual-year')
   async completeImportYearManually(
     @Req() req: Request,
-    @Body() body: ManualYearCompletionDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions))
+    body: ManualYearCompletionDto,
   ) {
     const user = req.user as { sub?: string; roles?: string[] };
     return this.service.completeImportYearManually(
@@ -274,7 +297,10 @@ export class V2Controller {
   }
 
   @Post('ops/events')
-  async trackOpsEvent(@Req() req: Request, @Body() body: OpsEventDto) {
+  async trackOpsEvent(
+    @Req() req: Request,
+    @Body(new ValidationPipe(v2ValidationPipeOptions)) body: OpsEventDto,
+  ) {
     const user = req.user as { sub?: string; roles?: string[] };
     return this.service.trackOpsEvent(
       req.orgId!,
@@ -299,7 +325,8 @@ export class V2Controller {
   async updateVesinvestGroup(
     @Req() req: Request,
     @Param('key') key: string,
-    @Body() body: UpdateVesinvestGroupDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions))
+    body: UpdateVesinvestGroupDto,
   ) {
     const user = req.user as { roles?: string[] };
     return this.service.updateInvestmentGroupDefinition(
@@ -318,7 +345,8 @@ export class V2Controller {
   @Post('vesinvest/plans')
   async createVesinvestPlan(
     @Req() req: Request,
-    @Body() body: CreateVesinvestPlanDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions))
+    body: CreateVesinvestPlanDto,
   ) {
     return this.service.createVesinvestPlan(req.orgId!, body);
   }
@@ -335,7 +363,8 @@ export class V2Controller {
   async updateVesinvestPlan(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
-    @Body() body: UpdateVesinvestPlanDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions))
+    body: UpdateVesinvestPlanDto,
   ) {
     return this.service.updateVesinvestPlan(req.orgId!, id, body);
   }
@@ -352,7 +381,7 @@ export class V2Controller {
   async syncVesinvestPlanToForecast(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
-    @Body() body: SyncVesinvestPlanDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions)) body: SyncVesinvestPlanDto,
   ) {
     return this.service.syncVesinvestPlanToForecast(req.orgId!, id, body);
   }
@@ -371,7 +400,8 @@ export class V2Controller {
   @Post('forecast/depreciation-rules')
   async createDepreciationRule(
     @Req() req: Request,
-    @Body() body: CreateDepreciationRuleDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions))
+    body: CreateDepreciationRuleDto,
   ) {
     this.ensureDepreciationFeatureEnabled();
     return this.service.createDepreciationRule(req.orgId!, body);
@@ -381,7 +411,8 @@ export class V2Controller {
   async updateDepreciationRule(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
-    @Body() body: UpdateDepreciationRuleDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions))
+    body: UpdateDepreciationRuleDto,
   ) {
     this.ensureDepreciationFeatureEnabled();
     return this.service.updateDepreciationRule(req.orgId!, id, body);
@@ -409,7 +440,8 @@ export class V2Controller {
   async createScenarioDepreciationRule(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
-    @Body() body: CreateDepreciationRuleDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions))
+    body: CreateDepreciationRuleDto,
   ) {
     this.ensureDepreciationFeatureEnabled();
     return this.service.createScenarioDepreciationRule(req.orgId!, id, body);
@@ -420,7 +452,8 @@ export class V2Controller {
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Param('ruleId') ruleId: string,
-    @Body() body: UpdateDepreciationRuleDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions))
+    body: UpdateDepreciationRuleDto,
   ) {
     this.ensureDepreciationFeatureEnabled();
     return this.service.updateScenarioDepreciationRule(
@@ -442,7 +475,10 @@ export class V2Controller {
   }
 
   @Post('forecast/scenarios')
-  async createScenario(@Req() req: Request, @Body() body: CreateScenarioDto) {
+  async createScenario(
+    @Req() req: Request,
+    @Body(new ValidationPipe(v2ValidationPipeOptions)) body: CreateScenarioDto,
+  ) {
     return this.service.createForecastScenario(req.orgId!, body);
   }
 
@@ -467,7 +503,8 @@ export class V2Controller {
   async putScenarioClassAllocations(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
-    @Body() body: UpdateScenarioClassAllocationsDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions))
+    body: UpdateScenarioClassAllocationsDto,
   ) {
     this.ensureDepreciationFeatureEnabled();
     return this.service.updateScenarioClassAllocations(req.orgId!, id, body);
@@ -477,7 +514,7 @@ export class V2Controller {
   async patchScenario(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
-    @Body() body: UpdateScenarioDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions)) body: UpdateScenarioDto,
   ) {
     return this.service.updateForecastScenario(req.orgId!, id, body);
   }
@@ -499,12 +536,19 @@ export class V2Controller {
   }
 
   @Get('reports')
-  async listReports(@Req() req: Request, @Query() query: ListReportsQueryDto) {
+  async listReports(
+    @Req() req: Request,
+    @Query(new ValidationPipe(v2ValidationPipeOptions))
+    query: ListReportsQueryDto,
+  ) {
     return this.service.listReports(req.orgId!, query.ennusteId);
   }
 
   @Post('reports')
-  async createReport(@Req() req: Request, @Body() body: CreateReportDto) {
+  async createReport(
+    @Req() req: Request,
+    @Body(new ValidationPipe(v2ValidationPipeOptions)) body: CreateReportDto,
+  ) {
     const user = req.user as { sub?: string };
     return this.service.createReport(req.orgId!, user?.sub ?? '', body);
   }

@@ -1,6 +1,6 @@
-import type { QdisFieldKey } from './qdisPdfImport';
 import type { V2DocumentImportSourceLine } from '../api';
 import type { DocumentImportFieldMatch } from './documentPdfImportModel';
+import type { QdisFieldKey } from './qdisPdfImport';
 
 export function extractFinancialAmount(line: string): number | null {
   const values = extractAllAmounts(line).filter((value) => {

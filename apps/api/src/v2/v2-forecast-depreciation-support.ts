@@ -5,9 +5,78 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
+import type { PrismaService } from '../prisma/prisma.service';
+import type { ProjectionsService } from '../projections/projections.service';
+import type {
+  DepreciationRuleView,
+  DepreciationRuleInput,
+  ScenarioClassAllocationInput,
+  ScenarioStoredDepreciationRule,
+} from './v2-forecast.types';
 import { DEFAULT_VESINVEST_GROUP_DEFINITIONS } from './vesinvest-contract';
 
-type ForecastDepreciationContext = any;
+type ForecastProjection = Awaited<ReturnType<ProjectionsService['findById']>>;
+type ScenarioDepreciationStorage = {
+  rules: ScenarioStoredDepreciationRule[];
+};
+type NormalizedDepreciationRule = {
+  id: string;
+  assetClassKey: string;
+  assetClassName: string | null;
+  method: ScenarioStoredDepreciationRule['method'];
+  linearYears: number | null;
+  residualPercent: number | null;
+  annualSchedule: number[] | null;
+};
+
+type ForecastDepreciationContext = {
+  prisma: PrismaService;
+  projectionsService: Pick<ProjectionsService, 'findById'>;
+  createDepreciationRule: (
+    orgId: string,
+    body: DepreciationRuleInput,
+  ) => Promise<DepreciationRuleView>;
+  getScenarioClassAllocations: (
+    orgId: string,
+    scenarioId: string,
+  ) => Promise<{
+    scenarioId: string;
+    years: Array<{
+      year: number;
+      allocations: Array<{ classKey: string; sharePct: number }>;
+    }>;
+  }>;
+  buildScenarioDepreciationRuleSeed: (
+    orgId: string,
+  ) => Promise<ScenarioStoredDepreciationRule[]>;
+  mapScenarioDepreciationRule: (
+    rule: ScenarioStoredDepreciationRule,
+  ) => DepreciationRuleView;
+  mapDepreciationRule: (row: Record<string, unknown>) => DepreciationRuleView;
+  normalizeDepreciationRuleInput: (
+    body: DepreciationRuleInput,
+  ) => NormalizedDepreciationRule;
+  isPrismaUniqueError: (error: unknown) => boolean;
+  ensureScenarioDepreciationStorage: (
+    orgId: string,
+    projection: ForecastProjection,
+  ) => Promise<ScenarioDepreciationStorage>;
+  saveScenarioDepreciationRules: (
+    orgId: string,
+    scenarioId: string,
+    rules: ScenarioStoredDepreciationRule[],
+  ) => Promise<void>;
+  normalizeYearOverrides: (
+    raw: unknown,
+  ) => Record<number, Record<string, unknown>>;
+  toNumber: (value: unknown) => number;
+  normalizeScenarioYearAllocations: (
+    raw: Record<string, unknown>,
+  ) => Array<{ classKey: string; sharePct: number }>;
+  scenarioAllocationRecordFromArray: (
+    allocations: Array<{ classKey?: string; sharePct?: number }>,
+  ) => Record<string, unknown>;
+};
 
 export function createV2ForecastDepreciationSupport(
   ctx: ForecastDepreciationContext,
@@ -15,9 +84,9 @@ export function createV2ForecastDepreciationSupport(
   return {
     async listDepreciationRules(orgId: string) {
       const rules = await ctx.buildScenarioDepreciationRuleSeed(orgId);
-      return DEFAULT_VESINVEST_GROUP_DEFINITIONS.map((group: any) =>
+      return DEFAULT_VESINVEST_GROUP_DEFINITIONS.map((group) =>
         ctx.mapScenarioDepreciationRule(
-          rules.find((rule: any) => rule.assetClassKey === group.key) ?? {
+          rules.find((rule) => rule.assetClassKey === group.key) ?? {
             id: group.key,
             assetClassKey: group.key,
             assetClassName: group.label,
@@ -30,14 +99,16 @@ export function createV2ForecastDepreciationSupport(
       );
     },
 
-    async createDepreciationRule(orgId: string, body: any) {
-      const delegate = (ctx.prisma as any).organizationDepreciationRule;
+    async createDepreciationRule(orgId: string, body: DepreciationRuleInput) {
+      const delegate = ctx.prisma.organizationDepreciationRule;
       const normalized = ctx.normalizeDepreciationRuleInput(body);
-      const {
-        id: _ignoredId,
-        annualSchedule: _ignoredAnnualSchedule,
-        ...orgScopedRule
-      } = normalized;
+      const orgScopedRule = {
+        assetClassKey: normalized.assetClassKey,
+        assetClassName: normalized.assetClassName,
+        method: normalized.method,
+        linearYears: normalized.linearYears,
+        residualPercent: normalized.residualPercent,
+      };
       try {
         const created = await delegate.create({
           data: {
@@ -47,7 +118,7 @@ export function createV2ForecastDepreciationSupport(
               normalized.method === 'straight-line' ? 'linear' : normalized.method,
           },
         });
-        return ctx.mapDepreciationRule(created);
+        return ctx.mapDepreciationRule(created as unknown as Record<string, unknown>);
       } catch (error) {
         if (ctx.isPrismaUniqueError(error)) {
           throw new ConflictException(
@@ -58,13 +129,17 @@ export function createV2ForecastDepreciationSupport(
       }
     },
 
-    async updateDepreciationRule(orgId: string, ruleId: string, body: any) {
-      const delegate = (ctx.prisma as any).organizationDepreciationRule;
+    async updateDepreciationRule(
+      orgId: string,
+      ruleId: string,
+      body: DepreciationRuleInput,
+    ) {
+      const delegate = ctx.prisma.organizationDepreciationRule;
       const existing = await delegate.findFirst({
         where: { id: ruleId, orgId },
       });
       if (!existing) {
-        return ctx.depreciationSupport.createDepreciationRule(orgId, {
+        return ctx.createDepreciationRule(orgId, {
           assetClassKey: body.assetClassKey ?? ruleId,
           assetClassName: body.assetClassName,
           method: body.method ?? 'none',
@@ -79,7 +154,7 @@ export function createV2ForecastDepreciationSupport(
           body.assetClassName !== undefined
             ? body.assetClassName
             : existing.assetClassName,
-        method: (body.method ?? existing.method) as any,
+        method: body.method ?? existing.method,
         linearYears:
           body.linearYears !== undefined
             ? body.linearYears
@@ -87,7 +162,7 @@ export function createV2ForecastDepreciationSupport(
         residualPercent:
           body.residualPercent !== undefined
             ? body.residualPercent
-            : existing.residualPercent,
+            : ctx.toNumber(existing.residualPercent),
       });
 
       try {
@@ -104,7 +179,7 @@ export function createV2ForecastDepreciationSupport(
             residualPercent: normalized.residualPercent,
           },
         });
-        return ctx.mapDepreciationRule(updated);
+        return ctx.mapDepreciationRule(updated as unknown as Record<string, unknown>);
       } catch (error) {
         if (ctx.isPrismaUniqueError(error)) {
           throw new ConflictException(
@@ -116,7 +191,7 @@ export function createV2ForecastDepreciationSupport(
     },
 
     async deleteDepreciationRule(orgId: string, ruleId: string) {
-      const delegate = (ctx.prisma as any).organizationDepreciationRule;
+      const delegate = ctx.prisma.organizationDepreciationRule;
       const result = await delegate.deleteMany({
         where: { id: ruleId, orgId },
       });
@@ -127,28 +202,22 @@ export function createV2ForecastDepreciationSupport(
     },
 
     async listScenarioDepreciationRules(orgId: string, scenarioId: string) {
-      const scenario = (await ctx.projectionsService.findById(
-        orgId,
-        scenarioId,
-      )) as any;
+      const scenario = await ctx.projectionsService.findById(orgId, scenarioId);
       const storage = await ctx.ensureScenarioDepreciationStorage(orgId, scenario);
-      return storage.rules.map((rule: any) => ctx.mapScenarioDepreciationRule(rule));
+      return storage.rules.map((rule) => ctx.mapScenarioDepreciationRule(rule));
     },
 
     async createScenarioDepreciationRule(
       orgId: string,
       scenarioId: string,
-      body: any,
+      body: DepreciationRuleInput,
     ) {
-      const scenario = (await ctx.projectionsService.findById(
-        orgId,
-        scenarioId,
-      )) as any;
+      const scenario = await ctx.projectionsService.findById(orgId, scenarioId);
       const storage = await ctx.ensureScenarioDepreciationStorage(orgId, scenario);
       const normalized = ctx.normalizeDepreciationRuleInput(body);
       if (
         storage.rules.some(
-          (rule: any) => rule.assetClassKey === normalized.assetClassKey,
+          (rule) => rule.assetClassKey === normalized.assetClassKey,
         )
       ) {
         throw new ConflictException(
@@ -163,21 +232,18 @@ export function createV2ForecastDepreciationSupport(
         },
       ];
       await ctx.saveScenarioDepreciationRules(orgId, scenarioId, nextRules);
-      return ctx.mapScenarioDepreciationRule(nextRules[nextRules.length - 1]);
+      return ctx.mapScenarioDepreciationRule(nextRules[nextRules.length - 1]!);
     },
 
     async updateScenarioDepreciationRule(
       orgId: string,
       scenarioId: string,
       ruleId: string,
-      body: any,
+      body: DepreciationRuleInput,
     ) {
-      const scenario = (await ctx.projectionsService.findById(
-        orgId,
-        scenarioId,
-      )) as any;
+      const scenario = await ctx.projectionsService.findById(orgId, scenarioId);
       const storage = await ctx.ensureScenarioDepreciationStorage(orgId, scenario);
-      const existing = storage.rules.find((rule: any) => rule.id === ruleId);
+      const existing = storage.rules.find((rule) => rule.id === ruleId);
       if (!existing) {
         throw new NotFoundException('Depreciation rule not found.');
       }
@@ -201,7 +267,7 @@ export function createV2ForecastDepreciationSupport(
       });
       if (
         storage.rules.some(
-          (rule: any) =>
+          (rule) =>
             rule.id !== ruleId && rule.assetClassKey === normalized.assetClassKey,
         )
       ) {
@@ -209,7 +275,7 @@ export function createV2ForecastDepreciationSupport(
           `Depreciation rule for class "${normalized.assetClassKey}" already exists.`,
         );
       }
-      const nextRules = storage.rules.map((rule: any) =>
+      const nextRules = storage.rules.map((rule) =>
         rule.id === ruleId
           ? {
               ...normalized,
@@ -218,10 +284,10 @@ export function createV2ForecastDepreciationSupport(
           : rule,
       );
       const updated =
-        nextRules.find((rule: any) => rule.id === normalized.assetClassKey) ??
-        nextRules.find((rule: any) => rule.id === ruleId);
+        nextRules.find((rule) => rule.id === normalized.assetClassKey) ??
+        nextRules.find((rule) => rule.id === ruleId);
       await ctx.saveScenarioDepreciationRules(orgId, scenarioId, nextRules);
-      return ctx.mapScenarioDepreciationRule(updated);
+      return ctx.mapScenarioDepreciationRule(updated!);
     },
 
     async deleteScenarioDepreciationRule(
@@ -229,12 +295,9 @@ export function createV2ForecastDepreciationSupport(
       scenarioId: string,
       ruleId: string,
     ) {
-      const scenario = (await ctx.projectionsService.findById(
-        orgId,
-        scenarioId,
-      )) as any;
+      const scenario = await ctx.projectionsService.findById(orgId, scenarioId);
       const storage = await ctx.ensureScenarioDepreciationStorage(orgId, scenario);
-      const nextRules = storage.rules.filter((rule: any) => rule.id !== ruleId);
+      const nextRules = storage.rules.filter((rule) => rule.id !== ruleId);
       if (nextRules.length === storage.rules.length) {
         throw new NotFoundException('Depreciation rule not found.');
       }
@@ -243,10 +306,7 @@ export function createV2ForecastDepreciationSupport(
     },
 
     async getScenarioClassAllocations(orgId: string, scenarioId: string) {
-      const scenario = (await ctx.projectionsService.findById(
-        orgId,
-        scenarioId,
-      )) as any;
+      const scenario = await ctx.projectionsService.findById(orgId, scenarioId);
       const overrides = ctx.normalizeYearOverrides(scenario?.vuosiYlikirjoitukset);
 
       const baseYear = Number.isFinite(Number(scenario?.talousarvio?.vuosi))
@@ -282,12 +342,9 @@ export function createV2ForecastDepreciationSupport(
     async updateScenarioClassAllocations(
       orgId: string,
       scenarioId: string,
-      body: any,
+      body: ScenarioClassAllocationInput,
     ) {
-      const scenario = (await ctx.projectionsService.findById(
-        orgId,
-        scenarioId,
-      )) as any;
+      const scenario = await ctx.projectionsService.findById(orgId, scenarioId);
       const baseYear = Number.isFinite(Number(scenario?.talousarvio?.vuosi))
         ? Number(scenario.talousarvio.vuosi)
         : null;
@@ -320,7 +377,7 @@ export function createV2ForecastDepreciationSupport(
           delete payload.investmentClassAllocations;
         } else {
           payload.investmentClassAllocations = Object.fromEntries(
-            allocations.map((item: any) => [item.classKey, item.sharePct]),
+            allocations.map((item) => [item.classKey, item.sharePct]),
           );
         }
 
@@ -340,7 +397,7 @@ export function createV2ForecastDepreciationSupport(
         },
       });
 
-      return ctx.depreciationSupport.getScenarioClassAllocations(orgId, scenarioId);
+      return ctx.getScenarioClassAllocations(orgId, scenarioId);
     },
   };
 }

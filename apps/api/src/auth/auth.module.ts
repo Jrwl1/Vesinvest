@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { DemoInfraModule } from '../demo/demo-infra.module';
+import { LegalModule } from '../legal/legal.module';
+import { TrialModule } from '../trial/trial.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { DemoService } from './demo.service';
 import { InvitationsService } from './invitations.service';
 import { JwtStrategy } from './jwt.strategy';
-import { DemoInfraModule } from '../demo/demo-infra.module';
-import { LegalModule } from '../legal/legal.module';
-import { TrialModule } from '../trial/trial.module';
 
 @Module({
   imports: [

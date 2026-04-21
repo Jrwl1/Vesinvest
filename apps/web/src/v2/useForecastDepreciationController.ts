@@ -1,5 +1,5 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
 import {
   createScenarioDepreciationRuleV2,
@@ -12,6 +12,7 @@ import {
 } from '../api';
 import {
   buildClassAllocationDraftByYear,
+  type ForecastOperationState,
   normalizeInvestmentMappingLabel,
   resolveSingleMappedDepreciationClass,
   toDepreciationRuleDraft,
@@ -43,7 +44,9 @@ type UseForecastDepreciationControllerParams = {
   >;
   loadingDepreciation: boolean;
   depreciationFeatureEnabled: boolean;
-  setActiveOperation: React.Dispatch<React.SetStateAction<any>>;
+  setActiveOperation: React.Dispatch<
+    React.SetStateAction<ForecastOperationState>
+  >;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
   setInfo: React.Dispatch<React.SetStateAction<string | null>>;
   markScenarioAsNeedsRecompute: () => void;

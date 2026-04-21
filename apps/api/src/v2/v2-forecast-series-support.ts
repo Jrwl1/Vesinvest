@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { VeetiEffectiveDataService } from '../veeti/veeti-effective-data.service';
 import { V2ForecastInputModelSupport } from './v2-forecast-input-model-support';
-import type { SnapshotTrendPoint, TrendPoint } from './v2-forecast.types';
+import type { SnapshotTrendPoint,TrendPoint } from './v2-forecast.types';
 
 export class V2ForecastSeriesSupport {
   constructor(
@@ -12,6 +12,23 @@ export class V2ForecastSeriesSupport {
   ) {}
 
   async getTrendSeries(orgId: string): Promise<TrendPoint[]> {
+    if (!this.prisma.talousarvio?.findMany) {
+      const snapshotByYear = await this.getSnapshotFallbackSeries(orgId);
+      return [...snapshotByYear.values()]
+        .map((point) => ({
+          year: point.year,
+          revenue: point.revenue,
+          operatingCosts: point.operatingCosts,
+          financingNet: point.financingNet,
+          otherResultItems: point.otherResultItems,
+          yearResult: point.yearResult,
+          costs: point.costs,
+          result: point.result,
+          volume: point.volume,
+          combinedPrice: point.combinedPrice,
+        }))
+        .sort((a, b) => a.year - b.year);
+    }
     const budgets = await this.prisma.talousarvio.findMany({
       where: { orgId, lahde: 'veeti' },
       include: {
@@ -55,14 +72,14 @@ export class V2ForecastSeriesSupport {
         .filter((row) => row.tyyppi === 'tulos')
         .reduce((sum, row) => sum + this.toNumber(row.summa), 0);
 
-      let result =
+      const result =
         explicitResult !== 0
           ? explicitResult
           : explicitResultFallback !== 0
             ? explicitResultFallback
             : revenue - operatingCostsFromRows + financingNet;
 
-      let operatingCosts = operatingCostsFromRows;
+      const operatingCosts = operatingCostsFromRows;
       const volume = budget.tuloajurit.reduce(
         (sum, row) => sum + this.toNumber(row.myytyMaara),
         0,
@@ -197,6 +214,12 @@ export class V2ForecastSeriesSupport {
   async getSnapshotFallbackSeries(
     orgId: string,
   ): Promise<Map<number, SnapshotTrendPoint>> {
+    if (
+      typeof this.veetiEffectiveDataService.getAvailableYears !== 'function' ||
+      typeof this.veetiEffectiveDataService.getEffectiveRows !== 'function'
+    ) {
+      return new Map<number, SnapshotTrendPoint>();
+    }
     const yearRows = await this.veetiEffectiveDataService.getAvailableYears(
       orgId,
     );

@@ -1,15 +1,15 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
-import type { V2VesinvestGroupDefinition, V2VesinvestPlan, V2VesinvestPlanSummary } from '../api';
-import { formatDateTime, formatEur } from './format';
+import type { V2VesinvestGroupDefinition,V2VesinvestPlan,V2VesinvestPlanSummary } from '../api';
+import { formatDateTime,formatEur } from './format';
+import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 import {
   buildHorizonYears,
   toneClass,
   type VesinvestDraft,
   type VesinvestWorkspaceView,
 } from './vesinvestPlanningModel';
-import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 
 type ProjectComposerState = {
   open: boolean;

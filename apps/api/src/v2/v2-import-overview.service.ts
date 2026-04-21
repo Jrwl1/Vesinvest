@@ -69,13 +69,24 @@ export class V2ImportOverviewService {
       this.planningWorkspaceSupport,
     );
 
-    const ctx = this as any;
-    this.baselineModel = createV2ImportOverviewBaselineModel(ctx);
-    this.provenanceModel = createV2ImportOverviewProvenanceModel(ctx);
-    this.planningSupport = createV2ImportOverviewPlanningSupport(ctx);
-    this.workspaceSupport = createV2ImportWorkspaceSupport(ctx);
-    this.manualPatchSupport = createV2ImportManualPatchSupport(ctx);
-    this.overviewReadModelSupport = createV2OverviewReadModelSupport(ctx);
+    this.baselineModel = createV2ImportOverviewBaselineModel(
+      this as unknown as Parameters<typeof createV2ImportOverviewBaselineModel>[0],
+    );
+    this.provenanceModel = createV2ImportOverviewProvenanceModel(
+      this as unknown as Parameters<typeof createV2ImportOverviewProvenanceModel>[0],
+    );
+    this.planningSupport = createV2ImportOverviewPlanningSupport(
+      this as unknown as Parameters<typeof createV2ImportOverviewPlanningSupport>[0],
+    );
+    this.workspaceSupport = createV2ImportWorkspaceSupport(
+      this as unknown as Parameters<typeof createV2ImportWorkspaceSupport>[0],
+    );
+    this.manualPatchSupport = createV2ImportManualPatchSupport(
+      this as unknown as Parameters<typeof createV2ImportManualPatchSupport>[0],
+    );
+    this.overviewReadModelSupport = createV2OverviewReadModelSupport(
+      this as unknown as Parameters<typeof createV2OverviewReadModelSupport>[0],
+    );
   }
 
   async searchOrganizations(query: string, limit: number) {

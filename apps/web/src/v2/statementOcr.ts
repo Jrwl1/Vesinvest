@@ -1,16 +1,16 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import {
-  parseStatementText,
-  type StatementOcrFieldKey,
-  type StatementOcrMatch,
-} from './statementOcrParse';
-import {
   extractPdfPageText,
   loadPdfRuntime,
   recognizePdfPageWithOcr,
 } from './pdfOcrRuntime';
+import {
+  parseStatementText,
+  type StatementOcrFieldKey,
+  type StatementOcrMatch,
+} from './statementOcrParse';
 
-export type { StatementOcrFieldKey, StatementOcrMatch } from './statementOcrParse';
+export type { StatementOcrFieldKey,StatementOcrMatch } from './statementOcrParse';
 
 export type StatementOcrResult = {
   fileName: string;

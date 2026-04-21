@@ -14,7 +14,6 @@ import type {
   CreatePlanBody,
   CurrentBaselineSnapshot,
   NormalizedPlanProject,
-  NormalizedPlanPayload,
   PlanProjectAllocationInput,
   PlanProjectInput,
   VesinvestPlanRecord,
@@ -49,7 +48,7 @@ export class V2VesinvestPlanSupport {
       this.getOptionalBoundUtilityIdentity(orgId),
     ]);
     const baselineYears = Array.isArray(planningContext?.baselineYears)
-      ? planningContext.baselineYears.map((row: any) => ({
+      ? planningContext.baselineYears.map((row) => ({
           year: row.year,
           planningRole: row.planningRole ?? null,
           quality: row.quality,

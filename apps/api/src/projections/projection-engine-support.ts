@@ -1,5 +1,4 @@
 import type { DriverPaths } from './driver-paths';
-import type { ProjectionYearOverride, ProjectionYearOverrides } from './year-overrides';
 import {
   type AssumptionMap,
   type ComputedYear,
@@ -10,11 +9,11 @@ import {
   type ScheduleCohort,
   type SubtotalInput,
   type UserInvestmentSnapshotRule,
-  readYearRateOverrides,
+  round2,
   stripWaterPriceOverrides,
   weightedCombinedUnitPrice,
-  round2,
 } from './projection-engine-model';
+import type { ProjectionYearOverride,ProjectionYearOverrides } from './year-overrides';
 
 export function readDepreciationRules(
   assumptions: AssumptionMap,

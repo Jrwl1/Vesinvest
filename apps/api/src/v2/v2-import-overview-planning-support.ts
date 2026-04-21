@@ -2,8 +2,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { VeetiBudgetGenerator } from '../veeti/veeti-budget-generator';
 import { VeetiEffectiveDataService } from '../veeti/veeti-effective-data.service';
 import { VeetiSanityService } from '../veeti/veeti-sanity.service';
-import { VeetiService } from '../veeti/veeti.service';
 import { VeetiSyncService } from '../veeti/veeti-sync.service';
+import { VeetiService } from '../veeti/veeti.service';
 import type {
   BaselineMissingRequirement,
   BaselineWarning,

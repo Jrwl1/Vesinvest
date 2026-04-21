@@ -81,13 +81,6 @@ async function main() {
       );
       process.exit(0);
     }
-
-    if ((await hasHealthyGeneratedClient()) && noEngineResult.status === 0) {
-      console.warn(
-        '[prisma-generate-safe] Prisma generate did not complete cleanly, but the generated client is current and healthy after the no-engine refresh. Continuing.',
-      );
-      process.exit(0);
-    }
   }
 
   process.exit(lastResult?.status ?? 1);
@@ -118,13 +111,6 @@ function runPrismaGenerate(options = {}) {
   if (result.error) {
     console.error('[prisma-generate-safe] Failed to start prisma generate', result.error);
     process.exit(1);
-  }
-
-  if (result.stdout) {
-    process.stdout.write(result.stdout);
-  }
-  if (result.stderr) {
-    process.stderr.write(result.stderr);
   }
 
   return result;

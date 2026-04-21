@@ -1,22 +1,22 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
-import type { V2VesinvestGroupDefinition, V2VesinvestProject } from '../api';
+import type { V2VesinvestGroupDefinition,V2VesinvestProject } from '../api';
 import { formatEur } from './format';
+import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 import {
   allocationFieldLabel,
   formatPlanMatrixAmount,
   resolveInvestmentTypeFromGroupKey,
+  typeLabel,
   type VesinvestDraft,
   type VesinvestGroupedMatrixSection,
-  typeLabel,
 } from './vesinvestPlanningModel';
 import {
   VesinvestMatrixSurface,
   VesinvestProjectDetailsSurface,
   VesinvestRegisterSurface,
 } from './vesinvestPlanningSections';
-import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 
 type UpdateProject = (
   index: number,

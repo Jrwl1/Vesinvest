@@ -10,16 +10,50 @@ import {
   type TrendPoint,
 } from './v2-forecast.types';
 
+type ForecastYearRowLike = {
+  vuosi?: unknown;
+  tulotYhteensa?: unknown;
+  kulutYhteensa?: unknown;
+  tulos?: unknown;
+  investoinnitYhteensa?: unknown;
+  poistoPerusta?: unknown;
+  poistoInvestoinneista?: unknown;
+  vesihinta?: unknown;
+  myytyVesimaara?: unknown;
+  kassafloede?: unknown;
+  ackumuleradKassa?: unknown;
+  erittelyt?: unknown;
+};
+
+export type ForecastProjectionLike = {
+  id?: string;
+  nimi?: string;
+  onOletus?: boolean;
+  talousarvioId?: string;
+  vuodet?: ForecastYearRowLike[];
+  talousarvio?: { vuosi?: number | null } | null;
+  requiredTariff?: number | null;
+  olettamusYlikirjoitukset?: unknown;
+  aikajaksoVuosia?: number;
+  baselineYear?: number | null;
+  userInvestments?: unknown;
+  vuosiYlikirjoitukset?: unknown;
+  computedAt?: Date | string | null;
+  computedFromUpdatedAt?: Date | string | null;
+  updatedAt?: Date | string;
+  createdAt?: Date | string;
+};
+
 type MapScenarioPayloadCallbacks = {
   ensureScenarioDepreciationStorage?: (
     orgId: string,
-    projection: any,
+    projection: ForecastProjectionLike,
   ) => Promise<unknown>;
   resolveLatestComparableBaselinePrice?: (
     orgId: string,
   ) => Promise<number | null>;
   buildYearlyInvestments?: (
-    projection: any,
+    projection: ForecastProjectionLike,
     baseYear: number | null,
   ) => ReturnType<V2ForecastInputModelSupport['buildYearlyInvestments']>;
 };
@@ -48,12 +82,12 @@ export class V2ForecastPayloadSupport {
 
   async mapScenarioPayload(
     orgId: string,
-    projection: any,
+    projection: ForecastProjectionLike,
     callbacks?: MapScenarioPayloadCallbacks,
   ): Promise<ScenarioPayload> {
     const ensureScenarioDepreciationStorage =
       callbacks?.ensureScenarioDepreciationStorage ??
-      ((nextOrgId: string, nextProjection: any) =>
+      ((nextOrgId: string, nextProjection: ForecastProjectionLike) =>
         this.depreciationStorageSupport.ensureScenarioDepreciationStorage(
           nextOrgId,
           nextProjection,
@@ -64,23 +98,28 @@ export class V2ForecastPayloadSupport {
         this.resolveLatestComparableBaselinePrice(nextOrgId));
     const buildYearlyInvestments =
       callbacks?.buildYearlyInvestments ??
-      ((nextProjection: any, baseYear: number | null) =>
+      ((nextProjection: ForecastProjectionLike, baseYear: number | null) =>
         this.inputModelSupport.buildYearlyInvestments(nextProjection, baseYear));
 
     const scenarioDepreciationStorage =
       await ensureScenarioDepreciationStorage(orgId, projection);
     const years: ScenarioYear[] = (projection?.vuodet ?? []).map(
-      (row: any): ScenarioYear => {
+      (entry): ScenarioYear => {
+        const row = (entry ?? {}) as ForecastYearRowLike;
+        const erittelyt =
+          row.erittelyt && typeof row.erittelyt === 'object'
+            ? (row.erittelyt as { ajurit?: Array<Record<string, unknown>> })
+            : null;
         const waterDrivers = this.extractWaterDriverPrices(
-          row?.erittelyt?.ajurit ?? [],
+          Array.isArray(erittelyt?.ajurit) ? erittelyt.ajurit : [],
         );
         const cashflow =
-          typeof row?.kassafloede === 'number'
+          typeof row.kassafloede === 'number'
             ? row.kassafloede
-            : this.inputModelSupport.toNumber(row?.tulos) -
-              this.inputModelSupport.toNumber(row?.investoinnitYhteensa);
+            : this.inputModelSupport.toNumber(row.tulos) -
+              this.inputModelSupport.toNumber(row.investoinnitYhteensa);
         const cumulativeCashflow =
-          typeof row?.ackumuleradKassa === 'number' ? row.ackumuleradKassa : 0;
+          typeof row.ackumuleradKassa === 'number' ? row.ackumuleradKassa : 0;
 
         return {
           year: Number(row.vuosi),
@@ -177,10 +216,12 @@ export class V2ForecastPayloadSupport {
       ),
     );
 
-    const assumptionDefaults = await this.prisma.olettamus.findMany({
-      where: { orgId },
-      select: { avain: true, arvo: true },
-    });
+    const assumptionDefaults = this.prisma.olettamus?.findMany
+      ? await this.prisma.olettamus.findMany({
+          where: { orgId },
+          select: { avain: true, arvo: true },
+        })
+      : [];
 
     const assumptions: Record<string, number> = {};
     for (const row of assumptionDefaults) {
@@ -210,11 +251,14 @@ export class V2ForecastPayloadSupport {
     );
 
     return {
-      id: projection.id,
-      name: this.scenarioMetaSupport.normalizeText(projection.nimi) ?? projection.nimi,
+      id: projection.id ?? '',
+      name:
+        this.scenarioMetaSupport.normalizeText(projection.nimi) ??
+        projection.nimi ??
+        '',
       onOletus: Boolean(projection.onOletus),
       scenarioType,
-      talousarvioId: projection.talousarvioId,
+      talousarvioId: projection.talousarvioId ?? '',
       baselineYear: baseYear,
       horizonYears: this.inputModelSupport.toNumber(projection.aikajaksoVuosia),
       assumptions,
@@ -259,10 +303,10 @@ export class V2ForecastPayloadSupport {
         cashflow: item.cashflow,
         cumulativeCashflow: item.cumulativeCashflow,
       })),
-      computedAt: projection.computedAt ?? null,
-      computedFromUpdatedAt: projection.computedFromUpdatedAt ?? null,
-      updatedAt: projection.updatedAt,
-      createdAt: projection.createdAt,
+      computedAt: this.toDateOrNull(projection.computedAt),
+      computedFromUpdatedAt: this.toDateOrNull(projection.computedFromUpdatedAt),
+      updatedAt: this.toDate(projection.updatedAt),
+      createdAt: this.toDate(projection.createdAt),
     };
   }
 
@@ -334,5 +378,17 @@ export class V2ForecastPayloadSupport {
     return this.inputModelSupport.round2(
       this.inputModelSupport.toNumber(point.combinedPrice),
     );
+  }
+
+  private toDateOrNull(value: Date | string | null | undefined): Date | null {
+    if (value == null) {
+      return null;
+    }
+    const parsed = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private toDate(value: Date | string | null | undefined): Date {
+    return this.toDateOrNull(value) ?? new Date(0);
   }
 }

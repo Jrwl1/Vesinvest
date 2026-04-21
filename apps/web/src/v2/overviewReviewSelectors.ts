@@ -1,6 +1,10 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
+import {
+  getDocumentImportCandidateKeys,
+  requiresDocumentImportConfidenceReview,
+} from './documentPdfImportModel';
 import {
   buildOverviewFinancialComparisonRows,
   buildOverviewPriceComparisonRows,
@@ -8,13 +12,9 @@ import {
   buildOverviewWizardBackLabel,
   buildOverviewWorkbookImportComparisonYears,
 } from './overviewReviewViewModel';
-import {
-  getDocumentImportCandidateKeys,
-  requiresDocumentImportConfidenceReview,
-} from './documentPdfImportModel';
 import type { SetupWizardStep } from './overviewWorkflow';
-import { canReapplyDatasetVeeti } from './yearReview';
 import type { OverviewManualPatchController } from './useOverviewManualPatchController';
+import { canReapplyDatasetVeeti } from './yearReview';
 
 type UseOverviewReviewSelectorsParams = {
   t: TFunction;

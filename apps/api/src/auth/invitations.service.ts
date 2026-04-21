@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { createHash, randomBytes } from 'crypto';
+import { createHash,randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { InviteUserDto } from './dto/invite-user.dto';

@@ -43,7 +43,7 @@ async getCurrentBaselineSnapshot(orgId: string) {
       this.getOptionalBoundUtilityIdentity(orgId),
     ]);
     const baselineYears = Array.isArray(planningContext?.baselineYears)
-      ? planningContext.baselineYears.map((row: any) => ({
+      ? planningContext.baselineYears.map((row) => ({
           year: row.year,
           planningRole: row.planningRole ?? null,
           quality: row.quality,

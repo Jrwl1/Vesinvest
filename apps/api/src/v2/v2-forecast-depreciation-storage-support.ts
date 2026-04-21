@@ -1,5 +1,4 @@
 import { BadRequestException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PTS_SCENARIO_DEPRECIATION_RULE_DEFAULTS } from './pts-depreciation-defaults';
 import {
@@ -9,7 +8,20 @@ import {
 } from './vesinvest-contract';
 import { V2ForecastInputModelSupport } from './v2-forecast-input-model-support';
 import { V2ForecastScenarioMetaSupport } from './v2-forecast-scenario-meta-support';
-import { toCanonicalDepreciationMethod, type DepreciationRuleInput, type ScenarioBaselineDepreciationRow, type ScenarioStoredDepreciationRule } from './v2-forecast.types';
+import {
+  toCanonicalDepreciationMethod,
+  type DepreciationRuleInput,
+  type DepreciationRuleView,
+  type ScenarioBaselineDepreciationRow,
+  type ScenarioStoredDepreciationRule,
+} from './v2-forecast.types';
+
+type ForecastProjectionLike = {
+  id?: string;
+  baselineDepreciation?: unknown;
+  scenarioDepreciationRules?: unknown;
+  vuodet?: unknown[];
+};
 
 export class V2ForecastDepreciationStorageSupport {
   constructor(
@@ -18,14 +30,16 @@ export class V2ForecastDepreciationStorageSupport {
     private readonly scenarioMetaSupport: V2ForecastScenarioMetaSupport,
   ) {}
 
-  mapDepreciationRule(row: any) {
+  mapDepreciationRule(row: Record<string, unknown>): DepreciationRuleView {
     const method = toCanonicalDepreciationMethod(String(row.method ?? '')) ?? 'none';
     return {
-      id: row.id,
+      id: String(row.id ?? row.assetClassKey ?? ''),
       assetClassKey: String(row.assetClassKey ?? ''),
       assetClassName: this.scenarioMetaSupport.resolveAuthoritativeDepreciationClassName(
         String(row.assetClassKey ?? ''),
-        this.scenarioMetaSupport.normalizeText(row.assetClassName) ?? null,
+        this.scenarioMetaSupport.normalizeText(
+          typeof row.assetClassName === 'string' ? row.assetClassName : null,
+        ) ?? null,
       ),
       method,
       linearYears:
@@ -41,12 +55,20 @@ export class V2ForecastDepreciationStorageSupport {
             this.inputModelSupport.round2(this.inputModelSupport.toNumber(item)),
           )
         : null,
-      updatedAt: row.updatedAt,
-      createdAt: row.createdAt,
+      updatedAt:
+        row.updatedAt instanceof Date || typeof row.updatedAt === 'string'
+          ? row.updatedAt
+          : new Date(0),
+      createdAt:
+        row.createdAt instanceof Date || typeof row.createdAt === 'string'
+          ? row.createdAt
+          : new Date(0),
     };
   }
 
-  mapScenarioDepreciationRule(rule: ScenarioStoredDepreciationRule) {
+  mapScenarioDepreciationRule(
+    rule: ScenarioStoredDepreciationRule,
+  ): DepreciationRuleView {
     const now = new Date().toISOString();
     return {
       id: rule.id,
@@ -80,7 +102,7 @@ export class V2ForecastDepreciationStorageSupport {
 
   async ensureScenarioDepreciationStorage(
     orgId: string,
-    projection: any,
+    projection: ForecastProjectionLike,
   ): Promise<{
     baselineDepreciation: ScenarioBaselineDepreciationRow[];
     rules: ScenarioStoredDepreciationRule[];
@@ -112,8 +134,12 @@ export class V2ForecastDepreciationStorageSupport {
       nextData.scenarioDepreciationRules = nextRules;
     }
 
-    if (Object.keys(nextData).length > 0 && projection?.id) {
-      await (this.prisma.ennuste as any).updateMany({
+    if (
+      Object.keys(nextData).length > 0 &&
+      projection?.id &&
+      this.prisma.ennuste?.updateMany
+    ) {
+      await this.prisma.ennuste.updateMany({
         where: { id: projection.id, orgId },
         data: nextData,
       });
@@ -130,7 +156,7 @@ export class V2ForecastDepreciationStorageSupport {
     scenarioId: string,
     rules: ScenarioStoredDepreciationRule[],
   ) {
-    await (this.prisma.ennuste as any).updateMany({
+    await this.prisma.ennuste.updateMany({
       where: { id: scenarioId, orgId },
       data: {
         scenarioDepreciationRules: rules,
@@ -143,7 +169,7 @@ export class V2ForecastDepreciationStorageSupport {
   async buildScenarioDepreciationRuleSeed(
     orgId: string,
   ): Promise<ScenarioStoredDepreciationRule[]> {
-    const delegate = (this.prisma as any).organizationDepreciationRule;
+    const delegate = this.prisma.organizationDepreciationRule;
     const rows = delegate?.findMany
       ? await delegate.findMany({
           where: { orgId },
@@ -236,14 +262,21 @@ export class V2ForecastDepreciationStorageSupport {
   }
 
   buildScenarioBaselineDepreciationSeed(
-    projection: any,
+    projection: ForecastProjectionLike,
   ): ScenarioBaselineDepreciationRow[] {
     if (!Array.isArray(projection?.vuodet)) return [];
     return projection.vuodet
-      .map((row: any) => ({
-        year: Math.round(this.inputModelSupport.toNumber(row?.vuosi)),
-        amount: this.inputModelSupport.round2(this.inputModelSupport.toNumber(row?.poistoPerusta)),
-      }))
+      .map((entry) => {
+        const row = (entry && typeof entry === 'object'
+          ? entry
+          : {}) as Record<string, unknown>;
+        return {
+          year: Math.round(this.inputModelSupport.toNumber(row.vuosi)),
+          amount: this.inputModelSupport.round2(
+            this.inputModelSupport.toNumber(row.poistoPerusta),
+          ),
+        };
+      })
       .filter(
         (row: ScenarioBaselineDepreciationRow) =>
           Number.isFinite(row.year) && Number.isFinite(row.amount),

@@ -1,7 +1,12 @@
-import { Controller, Get, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Controller,Get,Post,Req,UnauthorizedException,UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { TrialService } from './trial.service';
+
+type TrialRequestUser = {
+  org_id?: string;
+  roles?: string[];
+};
 
 @UseGuards(JwtAuthGuard)
 @Controller('trial')
@@ -10,16 +15,15 @@ export class TrialController {
 
   @Get('status')
   async status(@Req() req: Request) {
-    const user = req.user as any;
+    const user = req.user as TrialRequestUser | undefined;
     if (!user?.org_id) throw new UnauthorizedException('Missing org context');
     return this.trialService.getStatus(user.org_id);
   }
 
   @Post('reset-data')
   async resetData(@Req() req: Request) {
-    const user = req.user as any;
+    const user = req.user as TrialRequestUser | undefined;
     if (!user?.org_id) throw new UnauthorizedException('Missing org context');
     return this.trialService.resetData(user.org_id, user.roles ?? []);
   }
 }
-

@@ -1,20 +1,84 @@
 import React from 'react';
 import type { TFunction } from 'i18next';
 
-import { formatDateTime, formatEur, formatNumber, formatPercent, formatPrice } from './format';
-import { getReportDisplayTitle, getScenarioDisplayName } from './displayNames';
+import type {
+  V2BaselineSourceSummary,
+  V2OverrideProvenance,
+  V2ReportDetail,
+  V2ReportListItem,
+} from '../api';
+import { formatEur, formatNumber, formatPercent, formatPrice } from './format';
 import {
   formatDepreciationMethod,
   formatInvestmentSnapshotMethod,
   formatServiceSplitLabel,
   REPORT_VARIANT_OPTIONS,
 } from './reportReadinessModel';
-import { ReportsListColumn } from './reportsListColumn';
 import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 
 export { ReportsListColumn } from './reportsListColumn';
 
-export const ReportsPreviewColumn: React.FC<any> = ({
+type ReportVariantOption = (typeof REPORT_VARIANT_OPTIONS)[number];
+type TariffAssumptionRow = { key: string; label: string; value: string };
+type TariffDriverSummary = {
+  baselineSoldVolume: number | null;
+  openingDepreciation: number | null;
+  peakInvestmentYear: number | null;
+  peakInvestmentAmount: number | null;
+  nearTermExpenseYears?: string | null;
+};
+type ReportPrimaryFeeSignal = { price: number | null; increase: number | null };
+
+type ReportsPreviewColumnProps = {
+  activeVariant: ReportVariantOption;
+  assumptionLabelByKey: (key: string) => string;
+  baselineDatasetSourceLabel: (
+    source: V2BaselineSourceSummary['financials']['source'],
+    provenance: V2OverrideProvenance | null,
+  ) => string;
+  baselineStatusLabel: (
+    status: V2BaselineSourceSummary['sourceStatus'],
+    planningRole?: V2BaselineSourceSummary['planningRole'],
+  ) => string;
+  canDownloadPdf: boolean;
+  dataTypeLabel: (dataType: string) => string;
+  datasetPublicationNote: (dataset: V2BaselineSourceSummary['financials']) => string;
+  downloadingPdf: boolean;
+  emptyStateReportReadinessHint: string;
+  formatAssumptionSnapshotValue: (key: string, value: number) => string;
+  handleDownloadPdf: () => void;
+  hasSelectedReportLayout: boolean;
+  loadingDetail: boolean;
+  onGoToForecast: (scenarioId?: string | null) => void;
+  previewVariant: V2ReportDetail['variant'];
+  reportNearTermExpenseLabel: string;
+  reportVariantLabel: (variant: V2ReportDetail['variant']) => string;
+  reports: V2ReportListItem[];
+  selectedAcceptedBaselineYearsLabel: string;
+  selectedBaselineSourceSummaries: V2BaselineSourceSummary[];
+  selectedInvestmentSummary: {
+    coverageLabel?: string;
+    peakYear: number | null;
+    peakAmount: number | null;
+  } | null;
+  selectedPreviewTitle: string | null;
+  selectedPrimaryBaselineSourceSummary: V2BaselineSourceSummary | null;
+  selectedReport: V2ReportDetail | null;
+  selectedReportExportHint: string | null;
+  selectedReportGeneratedAt: string;
+  selectedReportPrimaryFeeSignal: ReportPrimaryFeeSignal | null;
+  selectedReportScenarioName: string;
+  selectedScenarioBranchLabel: string;
+  selectedScenarioHorizonLabel: string;
+  selectedTariffAssumptionRows: TariffAssumptionRow[];
+  selectedTariffDriverSummary: TariffDriverSummary | null;
+  selectedVesinvestAppendix: V2ReportDetail['snapshot']['vesinvestAppendix'] | null;
+  setPreviewVariant: (variant: V2ReportDetail['variant']) => void;
+  showDetailedInvestmentPlan: boolean;
+  t: TFunction;
+};
+
+export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
   activeVariant,
   assumptionLabelByKey,
   baselineDatasetSourceLabel,
@@ -51,9 +115,7 @@ export const ReportsPreviewColumn: React.FC<any> = ({
   setPreviewVariant,
   showDetailedInvestmentPlan,
   t,
-}: {
-  t: TFunction;
-} & any) => (
+}) => (
   <div className="v2-reports-preview-column">
     <section
       className={`v2-card v2-reports-preview-card${
@@ -305,7 +367,7 @@ export const ReportsPreviewColumn: React.FC<any> = ({
             selectedBaselineSourceSummaries.length > 0 ? (
               <article className="v2-subcard v2-reports-panel-card">
                 <h3>{t('v2Reports.baselineSourcesTitle')}</h3>
-                {selectedBaselineSourceSummaries.map((summary: any) => (
+                {selectedBaselineSourceSummaries.map((summary) => (
                   <React.Fragment key={summary.year}>
                     <div className="v2-reports-provenance-summary">
                       <div>
@@ -362,11 +424,11 @@ export const ReportsPreviewColumn: React.FC<any> = ({
                 <div className="v2-keyvalue-list v2-reports-investment-list">
                   <div className="v2-keyvalue-row">
                     <span>{t('v2Reports.requiredCombinedPriceToday', 'Required combined price today')}</span>
-                    <strong>{formatPrice(selectedReportPrimaryFeeSignal.price)}</strong>
+                    <strong>{formatPrice(selectedReportPrimaryFeeSignal?.price ?? null)}</strong>
                   </div>
                   <div className="v2-keyvalue-row">
                     <span>{t('v2Reports.requiredCombinedIncreaseFromCurrent', 'Required increase from current combined price')}</span>
-                    <strong>{formatPercent(selectedReportPrimaryFeeSignal.increase)}</strong>
+                    <strong>{formatPercent(selectedReportPrimaryFeeSignal?.increase ?? null)}</strong>
                   </div>
                   <div className="v2-keyvalue-row">
                     <span>{t('v2Vesinvest.baselineYearVolume', 'Combined sold volume')}</span>
@@ -399,7 +461,7 @@ export const ReportsPreviewColumn: React.FC<any> = ({
                       <strong>{selectedTariffDriverSummary.nearTermExpenseYears}</strong>
                     </div>
                   ) : null}
-                  {selectedTariffAssumptionRows.map((row: any) => (
+                  {selectedTariffAssumptionRows.map((row) => (
                     <div key={row.key} className="v2-keyvalue-row">
                       <span>{row.label}</span>
                       <strong>{row.value}</strong>
@@ -421,7 +483,7 @@ export const ReportsPreviewColumn: React.FC<any> = ({
                         <strong>{formatAssumptionSnapshotValue(key, value)}</strong>
                       </div>
                     ))}
-                  {selectedReport.snapshot.scenario.nearTermExpenseAssumptions.map((row: any) => (
+                  {selectedReport.snapshot.scenario.nearTermExpenseAssumptions.map((row) => (
                     <div key={`near-term-${row.year}`} className="v2-reports-assumption-item">
                       <span>{`${reportNearTermExpenseLabel} ${row.year}`}</span>
                       <strong>{`${formatPercent(row.personnelPct)} / ${formatPercent(row.energyPct)} / ${formatPercent(row.opexOtherPct)}`}</strong>
@@ -450,7 +512,8 @@ export const ReportsPreviewColumn: React.FC<any> = ({
                   <div>
                     <span>{t('v2Reports.investmentPeakYear', 'Peak year')}</span>
                     <strong>
-                      {selectedInvestmentSummary?.peakYear != null
+                      {selectedInvestmentSummary?.peakYear != null &&
+                      selectedInvestmentSummary.peakAmount != null
                         ? `${selectedInvestmentSummary.peakYear} · ${formatEur(selectedInvestmentSummary.peakAmount)}`
                         : '-'}
                     </strong>
@@ -460,7 +523,7 @@ export const ReportsPreviewColumn: React.FC<any> = ({
                   <>
                     <h4>{t('v2Forecast.investmentAnnualTable', 'Full annual table')}</h4>
                     <div className="v2-keyvalue-list v2-reports-investment-list">
-                      {selectedVesinvestAppendix.yearlyTotals.map((row: any) => (
+                      {selectedVesinvestAppendix.yearlyTotals.map((row) => (
                         <div key={row.year} className="v2-keyvalue-row">
                           <span>{row.year}</span>
                           <strong>{formatEur(row.totalAmount)}</strong>
@@ -473,7 +536,7 @@ export const ReportsPreviewColumn: React.FC<any> = ({
                   <>
                     <h4>{t('v2Vesinvest.fiveYearBands', 'Five-year bands')}</h4>
                     <div className="v2-keyvalue-list v2-reports-investment-list">
-                      {selectedVesinvestAppendix.fiveYearBands.map((band: any) => (
+                      {selectedVesinvestAppendix.fiveYearBands.map((band) => (
                         <div key={`${band.startYear}-${band.endYear}`} className="v2-keyvalue-row">
                           <span>{`${band.startYear}-${band.endYear}`}</span>
                           <strong>{formatEur(band.totalAmount)}</strong>
@@ -497,7 +560,7 @@ export const ReportsPreviewColumn: React.FC<any> = ({
                             </tr>
                           </thead>
                           <tbody>
-                            {selectedVesinvestAppendix.groupedProjects.map((group: any) => (
+                            {selectedVesinvestAppendix.groupedProjects.map((group) => (
                               <React.Fragment key={group.classKey}>
                                 <tr className="v2-vesinvest-matrix-group-row">
                                   <td />
@@ -505,7 +568,7 @@ export const ReportsPreviewColumn: React.FC<any> = ({
                                   <td />
                                   <td>{formatEur(group.totalAmount)}</td>
                                 </tr>
-                                {group.projects.map((project: any) => (
+                                {group.projects.map((project) => (
                                   <tr key={`${group.classKey}-${project.code}`}>
                                     <td>{project.code}</td>
                                     <td>{project.name}</td>
@@ -526,7 +589,7 @@ export const ReportsPreviewColumn: React.FC<any> = ({
                             </tr>
                           </thead>
                           <tbody>
-                            {selectedVesinvestAppendix.groupedProjects.map((group: any) => (
+                            {selectedVesinvestAppendix.groupedProjects.map((group) => (
                               <tr key={`summary-${group.classKey}`}>
                                 <td>{resolveVesinvestGroupLabel(t, group.classKey, group.classLabel)}</td>
                                 <td>{formatEur(group.totalAmount)}</td>
@@ -555,7 +618,7 @@ export const ReportsPreviewColumn: React.FC<any> = ({
                           </tr>
                         </thead>
                         <tbody>
-                          {selectedVesinvestAppendix.depreciationPlan.map((row: any) => (
+                          {selectedVesinvestAppendix.depreciationPlan.map((row) => (
                             <tr key={`depreciation-plan-${row.classKey}`}>
                               <td>{resolveVesinvestGroupLabel(t, row.classKey, row.classLabel)}</td>
                               <td>{row.accountKey ?? '-'}</td>
@@ -585,7 +648,7 @@ export const ReportsPreviewColumn: React.FC<any> = ({
               <article className="v2-subcard v2-reports-panel-card">
                 <h3>{t('v2Reports.yearlyInvestmentsSnapshot')}</h3>
                 <div className="v2-keyvalue-list v2-reports-investment-list">
-                  {selectedReport.snapshot.scenario.yearlyInvestments.map((item: any) => {
+                  {selectedReport.snapshot.scenario.yearlyInvestments.map((item) => {
                     const snapshotLabel = resolveVesinvestGroupLabel(
                       t,
                       item.depreciationRuleSnapshot?.assetClassKey ??

@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable,Logger } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { PrismaService } from '../prisma/prisma.service';
 import { DemoBootstrapService } from '../demo/demo-bootstrap.service';
-import { DEMO_ORG_ID, isDemoModeEnabled } from '../demo/demo.constants';
+import { DEMO_ORG_ID,isDemoModeEnabled } from '../demo/demo.constants';
+import { PrismaService } from '../prisma/prisma.service';
 
 const DEMO_USER_EMAIL = 'admin@vesipolku.dev';
 const DEMO_USER_PASSWORD = 'devpassword';

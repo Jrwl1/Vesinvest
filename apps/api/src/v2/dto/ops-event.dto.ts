@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsObject,IsOptional,IsString,MaxLength } from 'class-validator';
 
 export class OpsEventDto {
   @Type(() => String)

@@ -1,4 +1,4 @@
-import type { V2DepreciationRuleMethod, V2ForecastScenario } from './forecast';
+import type { V2DepreciationRuleMethod,V2ForecastScenario } from './forecast';
 import type { V2BaselineSourceSummary } from './shared';
 import type { V2VesinvestFeeRecommendation } from './vesinvest';
 

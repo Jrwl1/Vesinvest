@@ -191,11 +191,6 @@ async function scanUnknownLayoutDocument(file: File): Promise<GenericScanSummary
   };
 }
 
-export type {
-  DocumentImportFieldMatch,
-  DocumentImportMatchKey,
-  DocumentImportPreview,
-} from './documentPdfImportModel';
 export {
   applyDocumentImportMatchSelection,
   buildDocumentImportPreviewFromQdis,
@@ -207,5 +202,10 @@ export {
   getDocumentImportSelectedSourceLines,
   mergeDocumentImportPreviews,
   parseGenericDocumentText,
-  requiresDocumentImportConfidenceReview,
+  requiresDocumentImportConfidenceReview
+} from './documentPdfImportModel';
+export type {
+  DocumentImportFieldMatch,
+  DocumentImportMatchKey,
+  DocumentImportPreview
 } from './documentPdfImportModel';

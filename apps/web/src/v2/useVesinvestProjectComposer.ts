@@ -1,13 +1,13 @@
 import React from 'react';
 
 import type { V2VesinvestGroupDefinition } from '../api';
+import type { VesinvestProjectComposerState } from './vesinvestPlanningControllerTypes';
 import {
   createProject,
   FALLBACK_GROUP_KEY,
   resolveProjectGroup,
   type VesinvestDraft,
 } from './vesinvestPlanningModel';
-import type { VesinvestProjectComposerState } from './vesinvestPlanningControllerTypes';
 
 export function useVesinvestProjectComposer({
   groups,

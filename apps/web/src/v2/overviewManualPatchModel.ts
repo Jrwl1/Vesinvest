@@ -1,6 +1,6 @@
-import type { OverviewPageController } from './useOverviewPageController';
 import { getFinancialSourceFieldLabel } from './overviewLabels';
-import { canReapplyDatasetVeeti, canReapplyFinancialVeeti } from './yearReview';
+import type { OverviewPageController } from './useOverviewPageController';
+import { canReapplyDatasetVeeti,canReapplyFinancialVeeti } from './yearReview';
 
 type ReviewStatusRow = OverviewPageController['reviewStatusRows'][number];
 type SetupYearStatus = ReviewStatusRow['setupStatus'];

@@ -1,29 +1,26 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException,Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import type { VeetiDataType } from './veeti.service';
-import { getStaticSnapshotYearForDataType } from './veeti-import-contract';
 import {
   VEETI_DATA_TYPES,
   type EffectiveRowsResult,
   type EffectiveYearInfo,
-  type OverrideMeta,
   type OverrideFinancialFieldSource,
+  type OverrideMeta,
   type OverrideProvenance,
   type OverrideProvenanceRef,
   type SyncRequirement,
-  type YearWarningCode,
   type YearSourceStatus,
+  type YearWarningCode,
 } from './veeti-effective-data.types';
-
+import { getStaticSnapshotYearForDataType } from './veeti-import-contract';
+import type { VeetiDataType } from './veeti.service';
 @Injectable()
 export class VeetiEffectiveDataService {
   constructor(private readonly prisma: PrismaService) {}
-
   async getLink(orgId: string) {
     return this.prisma.veetiOrganisaatio.findUnique({ where: { orgId } });
   }
-
   async requireLink(orgId: string) {
     const link = await this.getLink(orgId);
     if (!link) {
@@ -33,13 +30,11 @@ export class VeetiEffectiveDataService {
     }
     return link;
   }
-
   async getExcludedYears(orgId: string): Promise<number[]> {
     const link = await this.getLink(orgId);
     if (!link) return [];
     return this.getExcludedYearsForVeetiId(orgId, link.veetiId);
   }
-
   async getExcludedYearsForVeetiId(
     orgId: string,
     veetiId: number,
@@ -53,7 +48,6 @@ export class VeetiEffectiveDataService {
       select: { vuosi: true },
       orderBy: { vuosi: 'asc' },
     });
-
     const years = new Set<number>();
     for (const row of rows) {
       const year = Math.round(Number(row.vuosi));
@@ -61,14 +55,11 @@ export class VeetiEffectiveDataService {
         years.add(year);
       }
     }
-
     return [...years].sort((a, b) => a - b);
   }
-
   async getAvailableYears(orgId: string): Promise<EffectiveYearInfo[]> {
     const link = await this.getLink(orgId);
     if (!link) return [];
-
     const [snapshots, overrides, excludedYears] = await Promise.all([
       this.prisma.veetiSnapshot.findMany({
         where: { orgId, veetiId: link.veetiId },
@@ -89,18 +80,14 @@ export class VeetiEffectiveDataService {
       }),
       this.getExcludedYearsForVeetiId(orgId, link.veetiId),
     ]);
-
     const excludedYearSet = new Set(excludedYears);
-
     const keyOf = (vuosi: number, dataType: string) => `${vuosi}:${dataType}`;
-
     const snapshotByKey = new Map<string, { rowCount: number }>();
     for (const row of snapshots) {
       snapshotByKey.set(keyOf(row.vuosi, row.dataType), {
         rowCount: this.readRows(row.rawData).length,
       });
     }
-
     const overrideByKey = new Map<
       string,
       { rowCount: number; meta: OverrideMeta }
@@ -116,7 +103,6 @@ export class VeetiEffectiveDataService {
         },
       });
     }
-
     const years = new Set<number>();
     for (const row of snapshots) {
       if (row.vuosi > 0 && !excludedYearSet.has(row.vuosi))
@@ -126,7 +112,6 @@ export class VeetiEffectiveDataService {
       if (row.vuosi > 0 && !excludedYearSet.has(row.vuosi))
         years.add(row.vuosi);
     }
-
     const out: EffectiveYearInfo[] = [];
     for (const year of [...years].sort((a, b) => a - b)) {
       const veetiTypes = new Set<string>();
@@ -134,7 +119,6 @@ export class VeetiEffectiveDataService {
       const mergedTypes = new Set<string>();
       const manualMetaCandidates: OverrideMeta[] = [];
       const datasetCounts = {} as Record<VeetiDataType, number>;
-
       for (const dataType of VEETI_DATA_TYPES) {
         const primaryKey = keyOf(year, dataType);
         const primarySnapshot = snapshotByKey.get(primaryKey);
@@ -148,9 +132,7 @@ export class VeetiEffectiveDataService {
         const staticOverride = staticKey
           ? overrideByKey.get(staticKey)
           : undefined;
-
         let rowCount = 0;
-
         if (primaryOverride) {
           rowCount = primaryOverride.rowCount;
           manualTypes.add(dataType);
@@ -166,13 +148,11 @@ export class VeetiEffectiveDataService {
           rowCount = staticSnapshot.rowCount;
           veetiTypes.add(dataType);
         }
-
         datasetCounts[dataType] = rowCount;
         if (rowCount > 0) {
           mergedTypes.add(dataType);
         }
       }
-
       const completeness = this.resolveCompleteness(mergedTypes);
       const missingRequirements = this.resolveMissingRequirements(completeness);
       const warnings = this.resolveYearWarnings(missingRequirements);
@@ -187,7 +167,6 @@ export class VeetiEffectiveDataService {
           : [...manualMetaCandidates].sort(
               (a, b) => b.editedAt.getTime() - a.editedAt.getTime(),
             )[0];
-
       out.push({
         vuosi: year,
         dataTypes: [...mergedTypes].sort(),
@@ -206,10 +185,8 @@ export class VeetiEffectiveDataService {
         manualProvenance: manualMeta?.provenance ?? null,
       });
     }
-
     return out;
   }
-
   async getEffectiveRows(
     orgId: string,
     vuosi: number,
@@ -225,7 +202,6 @@ export class VeetiEffectiveDataService {
         overrideMeta: null,
       };
     }
-
     return this.getEffectiveRowsForVeetiId(
       orgId,
       link.veetiId,
@@ -233,7 +209,6 @@ export class VeetiEffectiveDataService {
       dataType,
     );
   }
-
   async getEffectiveRowsForVeetiId(
     orgId: string,
     veetiId: number,
@@ -245,7 +220,6 @@ export class VeetiEffectiveDataService {
       staticYear != null && staticYear !== vuosi
         ? [vuosi, staticYear]
         : [vuosi];
-
     const [rawSnapshots, overrides] = await Promise.all([
       this.prisma.veetiSnapshot.findMany({
         where: {
@@ -274,7 +248,6 @@ export class VeetiEffectiveDataService {
         orderBy: { editedAt: 'desc' },
       }),
     ]);
-
     const rawByYear = new Map<number, Prisma.JsonValue | undefined>();
     for (const row of rawSnapshots) {
       if (!rawByYear.has(row.vuosi)) {
@@ -815,12 +788,9 @@ export class VeetiEffectiveDataService {
 
 export type {
   EffectiveRowsResult,
-  EffectiveYearInfo,
-  OverrideMeta,
-  OverrideFinancialFieldSource,
-  OverrideProvenance,
+  EffectiveYearInfo,OverrideFinancialFieldSource,OverrideMeta,OverrideProvenance,
   OverrideProvenanceRef,
   SyncRequirement,
   YearSourceStatus,
-  YearWarningCode,
+  YearWarningCode
 } from './veeti-effective-data.types';

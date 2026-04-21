@@ -13,6 +13,7 @@ import {
 import {
   buildPriceForm,
   buildVolumeForm,
+  getDatasetRowValue,
   getEffectiveFirstRow,
   getEffectiveRows,
   parseManualNumber,
@@ -497,10 +498,10 @@ export function renderOverviewYearValuePreview({
   const volumes = buildVolumeForm(yearData);
   const priceRows = getEffectiveRows(yearData, 'taksa');
   const waterPriceRow = priceRows.find(
-    (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 1,
+    (entry) => parseManualNumber(getDatasetRowValue(entry, 'Tyyppi_Id')) === 1,
   );
   const wastewaterPriceRow = priceRows.find(
-    (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 2,
+    (entry) => parseManualNumber(getDatasetRowValue(entry, 'Tyyppi_Id')) === 2,
   );
   const waterVolumeRow = getEffectiveFirstRow(yearData, 'volume_vesi');
   const wastewaterVolumeRow = getEffectiveFirstRow(yearData, 'volume_jatevesi');

@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 
 import type { V2ImportYearDataResponse } from '../api';
 import type { InlineCardField } from './overviewManualForms';
+import type { ManualPatchMode } from './useOverviewManualPatchEditor';
 import {
   DEFAULT_BASELINE_YEAR_COUNT,
   getDefaultBaselineRunLength,
@@ -11,9 +12,13 @@ import {
   PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
   type MissingRequirement,
 } from './overviewWorkflow';
-import { OverviewImportBoardLanes } from './OverviewImportBoardLanes';
+import {
+  OverviewImportBoardLanes,
+  type OverviewImportBoardRow,
+} from './OverviewImportBoardLanes';
+import type { ImportYearSourceLayer } from './yearReview';
 
-type BoardRow = any;
+type BoardRow = OverviewImportBoardRow;
 
 type Props = {
   t: TFunction;
@@ -23,11 +28,11 @@ type Props = {
   onBack: () => void;
   selectedYears: number[];
   syncing: boolean;
-  readyRows: BoardRow[];
-  suspiciousRows: BoardRow[];
-  blockedRows: BoardRow[];
-  trashbinRows: BoardRow[];
-  currentYearEstimateRows: BoardRow[];
+  readyRows: OverviewImportBoardRow[];
+  suspiciousRows: OverviewImportBoardRow[];
+  blockedRows: OverviewImportBoardRow[];
+  trashbinRows: OverviewImportBoardRow[];
+  currentYearEstimateRows: OverviewImportBoardRow[];
   confirmedImportedYears: number[];
   yearDataCache: Record<number, V2ImportYearDataResponse>;
   cardEditYear: number | null;
@@ -45,7 +50,7 @@ type Props = {
   }>;
   sourceStatusLabel: (status: string | undefined) => string;
   sourceStatusClassName: (status: string | undefined) => string;
-  sourceLayerText: (layer: any) => string;
+  sourceLayerText: (layer: ImportYearSourceLayer) => string;
   renderDatasetCounts: (counts?: Record<string, number>) => string;
   missingRequirementLabel: (
     requirement: MissingRequirement,
@@ -58,14 +63,14 @@ type Props = {
     focusField: InlineCardField | null,
     context?: 'step2' | 'step3',
     missing?: MissingRequirement[],
-    mode?: any,
+    mode?: ManualPatchMode,
   ) => Promise<void> | void;
   openInlineCardEditor: (
     year: number,
     focusField: InlineCardField | null,
     context?: 'step2' | 'step3',
     missing?: MissingRequirement[],
-    mode?: any,
+    mode?: ManualPatchMode,
   ) => Promise<void> | void;
   loadingYearData: number | null;
   manualPatchError: string | null;
@@ -408,7 +413,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
                     primaryRepairRow.vuosi,
                     null,
                     'step2',
-                    primaryRepairRow.missingRequirements,
+                    primaryRepairRow.missingRequirements as MissingRequirement[] | undefined,
                     'manualEdit',
                   )
                 }
@@ -424,7 +429,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
                     primaryRepairRow.vuosi,
                     null,
                     'step2',
-                    primaryRepairRow.missingRequirements,
+                    primaryRepairRow.missingRequirements as MissingRequirement[] | undefined,
                     'documentImport',
                   )
                 }
@@ -440,7 +445,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
                     primaryRepairRow.vuosi,
                     null,
                     'step2',
-                    primaryRepairRow.missingRequirements,
+                    primaryRepairRow.missingRequirements as MissingRequirement[] | undefined,
                     'workbookImport',
                   )
                 }

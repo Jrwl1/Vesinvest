@@ -1,5 +1,5 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
 import type {
   V2ImportYearResultToZeroSignal,
@@ -470,12 +470,10 @@ export const OverviewForecastHandoffStep: React.FC<
   acceptedPlanningYearRows,
   correctedPlanningYears,
   excludedYearsSorted,
-  sourceStatusClassName,
   sourceStatusLabel,
   renderDatasetCounts,
   renderYearValuePreview,
   openForecastButtonClass,
-  onManageYears,
   onReopenYearReview,
   onDeleteYear,
   onExcludeYear,

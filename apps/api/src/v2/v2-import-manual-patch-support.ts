@@ -1,21 +1,14 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { parseKvaWorkbookPreview } from '../budgets/va-import/kva-workbook-preview';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  VeetiEffectiveDataService,
-  type OverrideProvenance,
-} from '../veeti/veeti-effective-data.service';
+import { VeetiEffectiveDataService, type OverrideProvenance } from '../veeti/veeti-effective-data.service';
 import { VeetiSyncService } from '../veeti/veeti-sync.service';
 import { IMPORT_YEAR_SUMMARY_FIELDS } from './v2-import-overview.constants';
 import { createV2ImportManualFinancialSupport } from './v2-import-manual-financial-support';
-import type {
-  OverrideProvenanceCore,
-  StatementPreviewRequest,
-  StatementPreviewResponse,
-  WorkbookPreviewRequest,
-  WorkbookPreviewResponse,
-} from './v2-import-overview.types';
-
+import type { ImportYearReconcileDto } from './dto/import-year-reconcile.dto';
+import type { ManualYearCompletionDto, ManualYearDocumentImportSourceLineDto, ManualYearWorkbookCandidateDto } from './dto/manual-year-completion.dto';
+import type { OverrideProvenanceCore, StatementPreviewRequest, StatementPreviewResponse, WorkbookPreviewRequest, WorkbookPreviewResponse } from './v2-import-overview.types';
+import type { VeetiDataType } from '../veeti/veeti.service';
 type ImportManualPatchContext = {
   prisma: PrismaService;
   veetiEffectiveDataService: VeetiEffectiveDataService;
@@ -100,7 +93,6 @@ type ImportManualPatchContext = {
   summaryValuesDiffer(left: number | null, right: number | null): boolean;
   toNumber(value: unknown): number;
 };
-
 export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) {
   const financialSupport = createV2ImportManualFinancialSupport(ctx);
   return {
@@ -137,7 +129,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
       subrowAvailability: ctx.buildImportYearSubrowAvailability(yearDataset),
     };
   },
-
   async previewWorkbookImport(
     orgId: string,
     input: WorkbookPreviewRequest,
@@ -152,7 +143,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
       throw new BadRequestException('Workbook file is required.');
     }
     ctx.assertWorkbookPreviewUpload(input);
-
     let parsedWorkbook: Awaited<ReturnType<typeof parseKvaWorkbookPreview>>;
     try {
       parsedWorkbook = await parseKvaWorkbookPreview(input.fileBuffer);
@@ -161,7 +151,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
         error instanceof Error ? error.message : 'Workbook preview failed.',
       );
     }
-
     const availableYears = await ctx.veetiEffectiveDataService.getAvailableYears(
       orgId,
     );
@@ -172,7 +161,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
     );
     const workbookYearSet = new Set(parsedWorkbook.workbookYears);
     const matchedYears = importedYears.filter((year) => workbookYearSet.has(year));
-
     const years = await Promise.all(
       matchedYears.map(async (year) => {
         const yearDataset = await ctx.veetiEffectiveDataService.getYearDataset(
@@ -181,7 +169,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
         );
         const summaryRows = ctx.buildImportYearSummaryRows(yearDataset);
         const workbookRows = parsedWorkbook.valuesByYear.get(year) ?? {};
-
         return {
           year,
           sourceStatus: yearDataset.sourceStatus,
@@ -206,7 +193,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
         };
       }),
     );
-
     return {
       document: {
         fileName:
@@ -229,7 +215,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
       canApply: years.length > 0,
     };
   },
-
   async previewStatementImport(
     orgId: string,
     year: number,
@@ -239,18 +224,15 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
     if (!Number.isFinite(targetYear)) {
       throw new BadRequestException('Invalid year.');
     }
-
     if (input.statementType && input.statementType !== 'result_statement') {
       throw new BadRequestException(
         'Only result_statement previews are supported.',
       );
     }
-
     if (!input.fileBuffer || input.sizeBytes <= 0 || !input.fileName) {
       throw new BadRequestException('Statement PDF file is required.');
     }
     ctx.assertStatementPreviewUpload(input);
-
     const yearData = await ctx.veetiEffectiveDataService.getYearDataset(
       orgId,
       targetYear,
@@ -262,7 +244,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
     const effectiveRow = (tilinpaatosDataset?.effectiveRows?.[0] ??
       null) as Record<string, unknown> | null;
     const receivedAt = new Date().toISOString();
-
     return {
       year: targetYear,
       statementType: 'result_statement',
@@ -282,13 +263,12 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
       canApply: false,
     };
   },
-
   async reconcileImportYear(
     orgId: string,
     _userId: string,
     roles: string[],
     year: number,
-    body: any,
+    body: ImportYearReconcileDto,
   ) {
     const isAdmin = roles.some((role) => role.toUpperCase() === 'ADMIN');
     if (!isAdmin) {
@@ -296,12 +276,10 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
         'Only admins can reconcile VEETI year data.',
       );
     }
-
     const targetYear = Math.round(Number(year));
     if (!Number.isFinite(targetYear)) {
       throw new BadRequestException('Invalid year.');
     }
-
     const yearData = await ctx.veetiEffectiveDataService.getYearDataset(
       orgId,
       targetYear,
@@ -312,7 +290,7 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
     const requestedDataTypes = Array.isArray(body?.dataTypes)
       ? body.dataTypes
       : defaultDataTypes;
-    const allowedDataTypes = new Set([
+    const allowedDataTypes = new Set<VeetiDataType>([
       'tilinpaatos',
       'taksa',
       'volume_vesi',
@@ -323,17 +301,17 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
     ]);
     const dataTypes = requestedDataTypes
       .map((item: unknown) => String(item))
-      .filter((item: string) => allowedDataTypes.has(item));
-
+      .filter((item: string): item is VeetiDataType =>
+        allowedDataTypes.has(item as VeetiDataType),
+      );
     if (body.action === 'apply_veeti' && dataTypes.length > 0) {
       await ctx.veetiEffectiveDataService.removeOverrides(
         orgId,
         yearData.veetiId,
         targetYear,
-        dataTypes as any,
+        dataTypes,
       );
     }
-
     return {
       year: targetYear,
       action: body.action,
@@ -345,7 +323,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
       ),
     };
   },
-
   async clearImportAndScenarios(
     orgId: string,
     roles: string[],
@@ -363,7 +340,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
         code: 'CLEAR_CONFIRMATION_INVALID',
       });
     }
-
     // Current destructive scope: all forecast scenarios, VEETI-derived budgets,
     // imported snapshots, override rows, year policies, Vesinvest plan state,
     // and VEETI link state.
@@ -375,7 +351,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
       select: { id: true },
     });
     const veetiBudgetIds = veetiBudgetRows.map((row) => row.id);
-
     const [
       deletedScenarios,
       deletedBudgets,
@@ -410,7 +385,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
         where: { orgId },
       }),
     ]);
-
     return {
       deletedScenarios: deletedScenarios.count,
       deletedVeetiBudgets: deletedBudgets.count,
@@ -422,30 +396,26 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
       status: await ctx.getImportStatus(orgId),
     };
   },
-
   async completeImportYearManually(
     orgId: string,
     userId: string,
     roles: string[],
-    body: any,
+    body: ManualYearCompletionDto,
   ) {
     const isAdmin = roles.some((role) => role.toUpperCase() === 'ADMIN');
     if (!isAdmin) {
       throw new ForbiddenException('Only admins can patch VEETI import years.');
     }
-
     const year = Math.round(Number(body.year));
     if (!Number.isFinite(year)) {
       throw new BadRequestException('Invalid year.');
     }
-
     const link = await ctx.veetiSyncService.getStatus(orgId);
     if (!link) {
       throw new BadRequestException(
         'Organization is not linked to VEETI. Connect first.',
       );
     }
-
     const hasPatchSection =
       body.financials != null ||
       body.prices != null ||
@@ -456,7 +426,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
     if (!hasPatchSection) {
       throw new BadRequestException('Provide at least one patch section.');
     }
-
     const yearRows = await ctx.hydrateYearRowsWithTariffRevenueReadiness(
       orgId,
       await ctx.veetiSyncService.getAvailableYears(orgId),
@@ -472,10 +441,9 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
       typeof ctx.veetiEffectiveDataService.getYearDataset === 'function'
         ? await ctx.veetiEffectiveDataService.getYearDataset(orgId, year)
         : null;
-
     const now = new Date();
     const workbookCandidateRows = body.workbookImport?.candidateRows
-      ?.map((row: Record<string, unknown>) => {
+      ?.map((row: ManualYearWorkbookCandidateDto) => {
         const sourceField = String(row.sourceField ?? '').trim();
         const action =
           row.action === 'keep_veeti' || row.action === 'apply_workbook'
@@ -580,8 +548,8 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
             datasetKinds: body.documentImport.datasetKinds ?? [],
             sourceLines: (
               body.documentImport.sourceLines ?? []
-            ).map((row: { text?: string; pageNumber?: number | null }) => ({
-              text: ctx.normalizeText(row.text) ?? row.text,
+            ).map((row: ManualYearDocumentImportSourceLineDto) => ({
+              text: ctx.normalizeText(row.text) ?? row.text ?? '',
               pageNumber: row.pageNumber ?? null,
             })),
           }
@@ -654,10 +622,8 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
             Boolean(body.prices || body.volumes))
         ? buildSourceMeta(documentImportProvenance)
         : manualEditSourceMeta;
-
     const patchOps: Array<Promise<unknown>> = [];
     const patchedDataTypes = new Set<string>();
-
     const upsertSnapshot = (
       dataType:
         | 'tilinpaatos'
@@ -683,7 +649,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
         }),
       );
     };
-
     if (body.financials) {
       const financialRow = ctx.manualPatchSupport.buildFinancialOverrideRow(
         year,
@@ -693,7 +658,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
       );
       upsertSnapshot('tilinpaatos', financialRow ? [financialRow] : []);
     }
-
     if (body.prices) {
       const p = body.prices;
       upsertSnapshot('taksa', [
@@ -711,7 +675,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
         },
       ]);
     }
-
     if (body.volumes) {
       const v = body.volumes;
       upsertSnapshot('volume_vesi', [
@@ -729,7 +692,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
         },
       ]);
     }
-
     if (body.investments) {
       upsertSnapshot('investointi', [
         {
@@ -744,7 +706,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
         },
       ]);
     }
-
     if (body.energy) {
       upsertSnapshot('energia', [
         {
@@ -756,7 +717,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
         },
       ]);
     }
-
     if (body.network) {
       upsertSnapshot('verkko', [
         {
@@ -768,13 +728,10 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
         },
       ]);
     }
-
     if (patchOps.length === 0) {
       throw new BadRequestException('No patch values to save.');
     }
-
     await Promise.all(patchOps);
-
     const status = await ctx.getImportStatus(orgId);
     const afterRow = status.years.find(
       (row: { vuosi: number; completeness?: Record<string, boolean> }) =>
@@ -783,7 +740,6 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
     const missingAfter = ctx.resolveMissingSyncRequirements(
       afterRow?.completeness ?? ctx.emptyCompleteness(),
     );
-
     return {
       year,
       patchedDataTypes: [...patchedDataTypes].sort(),
@@ -797,6 +753,5 @@ export function createV2ImportManualPatchSupport(ctx: ImportManualPatchContext) 
       status,
     };
   },
-
   };
 }

@@ -1,14 +1,15 @@
+import { Logger,ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import type { NextFunction,Request,Response } from 'express';
 import helmet from 'helmet';
-import { AppModule } from './app.module';
-import { resolveAuthRateLimitMode } from './auth/rate-limit-contract';
-import { LegalService } from './legal/legal.service';
-import { PrismaExceptionFilter } from './prisma/prisma-exception.filter';
 import {
   getAppModeReason,
   resolveAppModeFromEnv,
 } from './app-mode/app-mode.constants';
+import { AppModule } from './app.module';
+import { resolveAuthRateLimitMode } from './auth/rate-limit-contract';
+import { LegalService } from './legal/legal.service';
+import { PrismaExceptionFilter } from './prisma/prisma-exception.filter';
 
 function validateRuntimeEnv(logger: Logger, appMode: string): void {
   const isProd = process.env.NODE_ENV === 'production';
@@ -182,7 +183,7 @@ async function bootstrap() {
     return false;
   }
 
-  app.use((req: any, res: any, next: any) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.method === 'OPTIONS') {
       const origin = req.headers.origin;
       if (isOriginAllowed(origin) && origin) {
@@ -205,7 +206,7 @@ async function bootstrap() {
   });
 
   // Request logging middleware (runs before CORS)
-  app.use((req: any, res: any, next: any) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     const start = Date.now();
     res.on('finish', () => {
       const duration = Date.now() - start;

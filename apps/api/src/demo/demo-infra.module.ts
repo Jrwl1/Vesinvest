@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { Global,Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { DemoBootstrapService } from './demo-bootstrap.service';
 import { DemoResetService } from './demo-reset.service';

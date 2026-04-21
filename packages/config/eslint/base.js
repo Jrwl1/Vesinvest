@@ -38,6 +38,20 @@ module.exports = {
   },
   overrides: [
     {
+      files: [
+        '**/*.spec.ts',
+        '**/*.spec.tsx',
+        '**/*.test.ts',
+        '**/*.test.tsx',
+        '**/test-support/**/*.{ts,tsx,js,jsx}',
+      ],
+      rules: {
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-unused-vars': 'off',
+        '@typescript-eslint/no-require-imports': 'off',
+      },
+    },
+    {
       files: ['src/**/*.{ts,tsx,js,jsx}'],
       excludedFiles: [
         'src/**/*.{test,spec}.{ts,tsx,js,jsx}',

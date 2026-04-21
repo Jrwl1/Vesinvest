@@ -2,12 +2,16 @@ import { PrismaService } from '../prisma/prisma.service';
 import { VeetiEffectiveDataService } from '../veeti/veeti-effective-data.service';
 import { V2ForecastDepreciationStorageSupport } from './v2-forecast-depreciation-storage-support';
 import { V2ForecastInputModelSupport } from './v2-forecast-input-model-support';
-import { V2ForecastPayloadSupport } from './v2-forecast-payload-support';
+import {
+  type ForecastProjectionLike,
+  V2ForecastPayloadSupport,
+} from './v2-forecast-payload-support';
 import { V2ForecastScenarioMetaSupport } from './v2-forecast-scenario-meta-support';
 import { V2ForecastSeriesSupport } from './v2-forecast-series-support';
 import type {
   DepreciationRuleInput,
   ScenarioAssumptionKey,
+  ScenarioYear,
   ScenarioStoredDepreciationRule,
   ScenarioType,
   TrendPoint,
@@ -179,17 +183,17 @@ export class V2ImportOverviewScenarioModel {
   }
 
   buildYearlyInvestments(
-    projection: any,
+    projection: ForecastProjectionLike,
     baseYear: number | null,
   ): YearlyInvestment[] {
     return this.inputModelSupport.buildYearlyInvestments(projection, baseYear);
   }
 
-  mapScenarioPayload(orgId: string, projection: any) {
+  mapScenarioPayload(orgId: string, projection: ForecastProjectionLike) {
     return this.payloadSupport.mapScenarioPayload(orgId, projection);
   }
 
-  computeRequiredPriceForZeroResult(firstYear: any) {
+  computeRequiredPriceForZeroResult(firstYear: ScenarioYear | undefined) {
     return this.payloadSupport.computeRequiredPriceForZeroResult(firstYear);
   }
 
@@ -197,7 +201,7 @@ export class V2ImportOverviewScenarioModel {
     return this.payloadSupport.resolveLatestComparableBaselinePrice(orgId);
   }
 
-  mapDepreciationRule(row: any) {
+  mapDepreciationRule(row: Record<string, unknown>) {
     return this.depreciationStorageSupport.mapDepreciationRule(row);
   }
 
@@ -209,7 +213,10 @@ export class V2ImportOverviewScenarioModel {
     return this.depreciationStorageSupport.snapshotDepreciationRule(rule);
   }
 
-  ensureScenarioDepreciationStorage(orgId: string, projection: any) {
+  ensureScenarioDepreciationStorage(
+    orgId: string,
+    projection: ForecastProjectionLike,
+  ) {
     return this.depreciationStorageSupport.ensureScenarioDepreciationStorage(
       orgId,
       projection,

@@ -5,12 +5,12 @@ import type {
   V2OverrideProvenance,
 } from '../api';
 import { IMPORT_BOARD_CANON_ROWS } from './overviewManualForms';
-import { normalizeImportedFileName } from './provenanceDisplay';
 import {
   getSyncBlockReasonKey,
-  type MissingRequirement,
   type ImportYearLike,
+  type MissingRequirement,
 } from './overviewWorkflow';
+import { normalizeImportedFileName } from './provenanceDisplay';
 import type {
   FinancialComparisonFieldKey,
   ImportYearSourceLayer,

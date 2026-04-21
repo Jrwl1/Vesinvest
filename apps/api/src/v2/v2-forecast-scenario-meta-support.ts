@@ -1,7 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { DEFAULT_VESINVEST_GROUP_DEFINITIONS } from './vesinvest-contract';
-import { V2PlanningWorkspaceSupport } from './v2-planning-workspace-support';
 import {
   SCENARIO_TYPE_CODE_TO_VALUE,
   SCENARIO_TYPE_OVERRIDE_KEY,
@@ -9,6 +7,8 @@ import {
   type ScenarioType,
   type TrendPoint,
 } from './v2-forecast.types';
+import { V2PlanningWorkspaceSupport } from './v2-planning-workspace-support';
+import { DEFAULT_VESINVEST_GROUP_DEFINITIONS } from './vesinvest-contract';
 
 export class V2ForecastScenarioMetaSupport {
   constructor(

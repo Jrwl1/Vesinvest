@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { VeetiEffectiveDataService } from './veeti-effective-data.service';
-import { VeetiService } from './veeti.service';
+import { VeetiService, type VeetiDataType } from './veeti.service';
 
 type ValisummaType =
   | 'tulo'
@@ -218,7 +219,7 @@ export class VeetiBudgetGenerator {
             veetiImportedAt: now,
             perusmaksuYhteensa: preview.perusmaksuYhteensa,
             userEdited: false,
-            inputCompleteness: preview.completeness as any,
+            inputCompleteness: preview.completeness as Prisma.InputJsonValue,
           },
         });
         await this.prisma.talousarvioValisumma.deleteMany({
@@ -242,7 +243,7 @@ export class VeetiBudgetGenerator {
             veetiImportedAt: now,
             perusmaksuYhteensa: preview.perusmaksuYhteensa,
             userEdited: false,
-            inputCompleteness: preview.completeness as any,
+            inputCompleteness: preview.completeness as Prisma.InputJsonValue,
           },
         });
         budgetId = budget.id;
@@ -266,7 +267,7 @@ export class VeetiBudgetGenerator {
           palvelutyyppi: driver.palvelutyyppi,
           yksikkohinta: driver.yksikkohinta,
           myytyMaara: driver.myytyMaara,
-          sourceMeta: driver.sourceMeta as any,
+          sourceMeta: driver.sourceMeta as Prisma.InputJsonValue,
         })),
       });
 
@@ -283,7 +284,7 @@ export class VeetiBudgetGenerator {
 
   mapTilinpaatosToValisummat(
     tilinpaatos: Record<string, unknown>,
-    vuosi?: number,
+    _vuosi?: number,
   ) {
     return Object.entries(TILINPAATOS_MAPPING).map(([field, cfg]) => {
       const amount = this.veetiService.toNumber(tilinpaatos[field]);
@@ -496,7 +497,7 @@ export class VeetiBudgetGenerator {
     const effective = await this.veetiEffectiveDataService.getEffectiveRows(
       orgId,
       vuosi,
-      dataType as any,
+      dataType as VeetiDataType,
     );
     return effective.rows;
   }

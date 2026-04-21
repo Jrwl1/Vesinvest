@@ -7,14 +7,19 @@ import {
   buildPriceForm,
   buildVolumeForm,
   CARD_SUMMARY_FIELD_TO_INLINE_FIELD,
+  getDatasetRowValue,
   getEffectiveFirstRow,
   getEffectiveRows,
   IMPORT_BOARD_CANON_ROWS,
   parseManualNumber,
   type InlineCardField,
 } from './overviewManualForms';
+import type { ManualPatchMode } from './useOverviewManualPatchEditor';
 import type { MissingRequirement } from './overviewWorkflow';
-import { buildImportYearSourceLayers } from './yearReview';
+import {
+  buildImportYearSourceLayers,
+  type ImportYearSourceLayer,
+} from './yearReview';
 
 const STEP2_STANDALONE_INLINE_FIELDS = new Set<InlineCardField>([
   'perusmaksuYhteensa',
@@ -27,10 +32,31 @@ type LaneKey =
   | 'blocked'
   | 'trashbin';
 
+type SummaryMapRow = {
+  effectiveValue: number | null;
+};
+
+export type OverviewImportBoardRow = {
+  vuosi: number;
+  completeness: Record<string, boolean>;
+  datasetCounts?: Record<string, number>;
+  lane?: string;
+  missingCount?: number;
+  missingRequirements?: string[];
+  missingSummary?: { count?: number; fields: string } | null;
+  sourceLayers?: ImportYearSourceLayer[] | null;
+  sourceStatus?: string;
+  summaryMap: Map<string, SummaryMapRow>;
+  tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
+  trustLabel?: string;
+  trustNote?: string | null;
+  trustToneClass?: string;
+};
+
 type Lane = {
   key: LaneKey;
   title: string;
-  rows: any[];
+  rows: OverviewImportBoardRow[];
 };
 
 type Props = {
@@ -39,10 +65,10 @@ type Props = {
   isManageMode: boolean;
   selectedYears: number[];
   syncing: boolean;
-  readyRows: any[];
-  suspiciousRows: any[];
-  blockedRows: any[];
-  trashbinRows: any[];
+  readyRows: OverviewImportBoardRow[];
+  suspiciousRows: OverviewImportBoardRow[];
+  blockedRows: OverviewImportBoardRow[];
+  trashbinRows: OverviewImportBoardRow[];
   confirmedImportedYears: number[];
   yearDataCache: Record<number, V2ImportYearDataResponse>;
   cardEditYear: number | null;
@@ -60,7 +86,7 @@ type Props = {
   }>;
   sourceStatusLabel: (status: string | undefined) => string;
   sourceStatusClassName: (status: string | undefined) => string;
-  sourceLayerText: (layer: any) => string;
+  sourceLayerText: (layer: ImportYearSourceLayer) => string;
   renderDatasetCounts: (counts?: Record<string, number>) => string;
   missingRequirementLabel: (
     requirement: MissingRequirement,
@@ -71,14 +97,14 @@ type Props = {
     focusField: InlineCardField | null,
     context?: 'step2' | 'step3',
     missing?: MissingRequirement[],
-    mode?: any,
+    mode?: ManualPatchMode,
   ) => Promise<void> | void;
   openInlineCardEditor: (
     year: number,
     focusField: InlineCardField | null,
     context?: 'step2' | 'step3',
     missing?: MissingRequirement[],
-    mode?: any,
+    mode?: ManualPatchMode,
   ) => Promise<void> | void;
   loadingYearData: number | null;
   manualPatchError: string | null;
@@ -91,7 +117,7 @@ type Props = {
   onTrashYear: (year: number) => Promise<void> | void;
   onRestoreYear: (year: number) => Promise<void> | void;
   bucketLabel: (missingCount: number) => string;
-  getMissingCount: (row: any) => number;
+  getMissingCount: (row: OverviewImportBoardRow) => number;
 };
 
 export const OverviewImportBoardLanes: React.FC<Props> = ({
@@ -171,10 +197,10 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
             const volumeForm = buildVolumeForm(yearData);
             const priceRows = getEffectiveRows(yearData, 'taksa');
             const waterPriceRow = priceRows.find(
-              (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 1,
+              (entry) => parseManualNumber(getDatasetRowValue(entry, 'Tyyppi_Id')) === 1,
             );
             const wastewaterPriceRow = priceRows.find(
-              (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 2,
+              (entry) => parseManualNumber(getDatasetRowValue(entry, 'Tyyppi_Id')) === 2,
             );
             const waterVolumeRow = getEffectiveFirstRow(yearData, 'volume_vesi');
             const wastewaterVolumeRow = getEffectiveFirstRow(
@@ -241,17 +267,18 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                     : `${formatNumber(volumeForm.soldWastewaterVolume)} m3`,
               },
             ];
-            const repairActions =
-              isAdmin && !isTrashbinLane
-                ? buildRepairActions(row.vuosi, row.missingRequirements)
-                : [];
-            const sourceLayers =
-              row.sourceLayers?.length > 0
+            const sourceLayers: ImportYearSourceLayer[] =
+              Array.isArray(row.sourceLayers) && row.sourceLayers.length > 0
                 ? row.sourceLayers
                 : buildImportYearSourceLayers(yearData);
+            const missingRequirements = (row.missingRequirements ?? []) as MissingRequirement[];
+            const repairActions =
+              isAdmin && !isTrashbinLane
+                ? buildRepairActions(row.vuosi, missingRequirements)
+                : [];
             const provenanceSummary =
               sourceLayers.length > 0
-                ? sourceLayers.map((layer: any) => sourceLayerText(layer)).join(' | ')
+                ? sourceLayers.map((layer) => sourceLayerText(layer)).join(' | ')
                 : renderDatasetCounts(
                     row.datasetCounts as Record<string, number> | undefined,
                   );
@@ -419,7 +446,7 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                                 row.vuosi,
                                 item.focusField,
                                 'step2',
-                                row.missingRequirements,
+                                missingRequirements,
                                 'manualEdit',
                               );
                             }}
@@ -477,14 +504,14 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                         {manualPatchError ? (
                           <div className="v2-alert v2-alert-error">{manualPatchError}</div>
                         ) : null}
-                        {row.missingRequirements.length > 0 ? (
+                        {missingRequirements.length > 0 ? (
                           <p className="v2-manual-required-note">
                             {t(
                               'v2Overview.manualPatchRequiredHint',
                               'Required for sync readiness: {{requirements}}',
                               {
-                                requirements: row.missingRequirements
-                                  .map((item: MissingRequirement) =>
+                                requirements: missingRequirements
+                                  .map((item) =>
                                     missingRequirementLabel(item, {
                                       tariffRevenueReason: row.tariffRevenueReason,
                                     }),
@@ -512,7 +539,7 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                   </summary>
                   {sourceLayers.length > 0 ? (
                     <div className="v2-year-source-list">
-                      {sourceLayers.map((layer: any) => (
+                      {sourceLayers.map((layer) => (
                         <span
                           key={`${row.vuosi}-${layer.key}`}
                           className="v2-year-source-pill"
@@ -539,7 +566,7 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                           row.vuosi,
                           null,
                           'step2',
-                          row.missingRequirements,
+                          missingRequirements,
                           'manualEdit',
                         );
                       }}
@@ -566,7 +593,7 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                             row.vuosi,
                             action.focusField,
                             'step2',
-                            row.missingRequirements,
+                            missingRequirements,
                             'manualEdit',
                           );
                         }}
@@ -588,7 +615,7 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                           row.vuosi,
                           null,
                           'step2',
-                          row.missingRequirements,
+                          missingRequirements,
                           'documentImport',
                         );
                       }}
@@ -604,7 +631,7 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                           row.vuosi,
                           null,
                           'step2',
-                          row.missingRequirements,
+                          missingRequirements,
                           'workbookImport',
                         );
                       }}
@@ -621,7 +648,7 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                       className="v2-btn v2-btn-small"
                       onClick={(event) => {
                         event.stopPropagation();
-                        void onAddCurrentYearEstimate(row.vuosi, row.missingRequirements);
+                        void onAddCurrentYearEstimate(row.vuosi, missingRequirements);
                       }}
                     >
                       {t('v2Overview.currentYearEstimateAction', 'Add as estimate')}
@@ -630,7 +657,7 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                   {isCurrentEstimateLane &&
                   isAdmin &&
                   confirmedImportedYears.includes(row.vuosi) &&
-                  row.missingRequirements.length > 0 ? (
+                  missingRequirements.length > 0 ? (
                     <button
                       type="button"
                       className="v2-btn v2-btn-small"
@@ -640,7 +667,7 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                           row.vuosi,
                           null,
                           'step2',
-                          row.missingRequirements,
+                          missingRequirements,
                           'manualEdit',
                         );
                       }}

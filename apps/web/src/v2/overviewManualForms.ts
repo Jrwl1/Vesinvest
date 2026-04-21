@@ -126,6 +126,14 @@ export const parseManualNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+export type DatasetRow = Record<string, unknown>;
+
+export const asDatasetRow = (value: unknown): DatasetRow =>
+  typeof value === 'object' && value !== null ? (value as DatasetRow) : {};
+
+export const getDatasetRowValue = (row: unknown, key: string): unknown =>
+  asDatasetRow(row)[key];
+
 export const numbersDiffer = (left: number, right: number): boolean =>
   Math.abs(left - right) > MANUAL_NUMERIC_EPSILON;
 
@@ -162,24 +170,18 @@ export function buildFinancialForm(
 ): ManualFinancialForm {
   const financials = getEffectiveFirstRow(yearData, 'tilinpaatos');
   return {
-    liikevaihto: parseManualNumber((financials as any).Liikevaihto),
-    perusmaksuYhteensa: parseManualNumber(
-      (financials as any).PerusmaksuYhteensa,
-    ),
-    aineetJaPalvelut: parseManualNumber((financials as any).AineetJaPalvelut),
-    henkilostokulut: parseManualNumber((financials as any).Henkilostokulut),
-    liiketoiminnanMuutKulut: parseManualNumber(
-      (financials as any).LiiketoiminnanMuutKulut,
-    ),
-    poistot: parseManualNumber((financials as any).Poistot),
-    arvonalentumiset: parseManualNumber((financials as any).Arvonalentumiset),
-    rahoitustuototJaKulut: parseManualNumber(
-      (financials as any).RahoitustuototJaKulut,
-    ),
-    tilikaudenYliJaama: parseManualNumber((financials as any).TilikaudenYliJaama),
-    omistajatuloutus: parseManualNumber((financials as any).Omistajatuloutus),
+    liikevaihto: parseManualNumber(financials.Liikevaihto),
+    perusmaksuYhteensa: parseManualNumber(financials.PerusmaksuYhteensa),
+    aineetJaPalvelut: parseManualNumber(financials.AineetJaPalvelut),
+    henkilostokulut: parseManualNumber(financials.Henkilostokulut),
+    liiketoiminnanMuutKulut: parseManualNumber(financials.LiiketoiminnanMuutKulut),
+    poistot: parseManualNumber(financials.Poistot),
+    arvonalentumiset: parseManualNumber(financials.Arvonalentumiset),
+    rahoitustuototJaKulut: parseManualNumber(financials.RahoitustuototJaKulut),
+    tilikaudenYliJaama: parseManualNumber(financials.TilikaudenYliJaama),
+    omistajatuloutus: parseManualNumber(financials.Omistajatuloutus),
     omistajanTukiKayttokustannuksiin: parseManualNumber(
-      (financials as any).OmistajanTukiKayttokustannuksiin,
+      financials.OmistajanTukiKayttokustannuksiin,
     ),
   };
 }
@@ -211,15 +213,15 @@ export function buildPriceForm(
 ): ManualPriceForm {
   const taksaRows = getEffectiveRows(yearData, 'taksa');
   const waterPriceRow = taksaRows.find(
-    (row) => parseManualNumber((row as any).Tyyppi_Id) === 1,
+    (row) => parseManualNumber(getDatasetRowValue(row, 'Tyyppi_Id')) === 1,
   );
   const wastewaterPriceRow = taksaRows.find(
-    (row) => parseManualNumber((row as any).Tyyppi_Id) === 2,
+    (row) => parseManualNumber(getDatasetRowValue(row, 'Tyyppi_Id')) === 2,
   );
   return {
-    waterUnitPrice: parseManualNumber((waterPriceRow as any)?.Kayttomaksu),
+    waterUnitPrice: parseManualNumber(getDatasetRowValue(waterPriceRow, 'Kayttomaksu')),
     wastewaterUnitPrice: parseManualNumber(
-      (wastewaterPriceRow as any)?.Kayttomaksu,
+      getDatasetRowValue(wastewaterPriceRow, 'Kayttomaksu'),
     ),
   };
 }
@@ -230,8 +232,8 @@ export function buildVolumeForm(
   const waterVolume = getEffectiveFirstRow(yearData, 'volume_vesi');
   const wastewaterVolume = getEffectiveFirstRow(yearData, 'volume_jatevesi');
   return {
-    soldWaterVolume: parseManualNumber((waterVolume as any).Maara),
-    soldWastewaterVolume: parseManualNumber((wastewaterVolume as any).Maara),
+    soldWaterVolume: parseManualNumber(waterVolume.Maara),
+    soldWastewaterVolume: parseManualNumber(wastewaterVolume.Maara),
   };
 }
 
@@ -240,9 +242,9 @@ export function buildInvestmentForm(
 ): ManualInvestmentForm {
   const investments = getEffectiveFirstRow(yearData, 'investointi');
   return {
-    investoinninMaara: parseManualNumber((investments as any).InvestoinninMaara),
+    investoinninMaara: parseManualNumber(investments.InvestoinninMaara),
     korvausInvestoinninMaara: parseManualNumber(
-      (investments as any).KorvausInvestoinninMaara,
+      investments.KorvausInvestoinninMaara,
     ),
   };
 }
@@ -252,9 +254,7 @@ export function buildEnergyForm(
 ): ManualEnergyForm {
   const energy = getEffectiveFirstRow(yearData, 'energia');
   return {
-    prosessinKayttamaSahko: parseManualNumber(
-      (energy as any).ProsessinKayttamaSahko,
-    ),
+    prosessinKayttamaSahko: parseManualNumber(energy.ProsessinKayttamaSahko),
   };
 }
 
@@ -263,7 +263,7 @@ export function buildNetworkForm(
 ): ManualNetworkForm {
   const network = getEffectiveFirstRow(yearData, 'verkko');
   return {
-    verkostonPituus: parseManualNumber((network as any).VerkostonPituus),
+    verkostonPituus: parseManualNumber(network.VerkostonPituus),
   };
 }
 

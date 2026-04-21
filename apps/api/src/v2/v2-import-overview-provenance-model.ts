@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { VeetiEffectiveDataService, type OverrideProvenance } from '../veeti/veeti-effective-data.service';
+import { VeetiEffectiveDataService,type OverrideProvenance } from '../veeti/veeti-effective-data.service';
 import {
   ALLOWED_STATEMENT_CONTENT_TYPES,
   ALLOWED_STATEMENT_EXTENSIONS,
@@ -17,9 +17,8 @@ import type {
   ImportYearSummarySource,
   ImportYearSummarySourceField,
   ImportYearTrustSignal,
-  OverrideProvenanceCore,
-  StatementPreviewResponse,
   StatementPreviewRequest,
+  StatementPreviewResponse,
   WorkbookPreviewRequest,
 } from './v2-import-overview.types';
 

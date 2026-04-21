@@ -1,38 +1,35 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
-import { OverviewReviewCardActions } from './OverviewReviewCardActions';
-import { OverviewReviewCardBody } from './OverviewReviewCardBody';
-import { OverviewYearWorkspace } from './OverviewYearWorkspace';
-import {
-  OverviewWorkbookImportWorkflow,
-  type Props as OverviewWorkbookImportWorkflowProps,
-} from './OverviewWorkbookImportWorkflow';
 import type { V2ImportYearDataResponse } from '../api';
+import {
+  type DocumentImportPreview,
+} from './documentPdfImportModel';
 import type {
   InlineCardField,
   ManualFinancialForm,
   ManualPriceForm,
   ManualVolumeForm,
 } from './overviewManualForms';
-import {
-  PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
-  type MissingRequirement,
-  type SetupYearStatus,
-} from './overviewWorkflow';
+import { OverviewReviewCardActions } from './OverviewReviewCardActions';
+import { OverviewReviewCardBody } from './OverviewReviewCardBody';
 import {
   getReviewMissingRequirementLabel,
-  getReviewRepairActionLabel,
   type ReadinessState,
   type RepairAction,
   type ReviewBucketKey,
   type ReviewStatusRow,
 } from './overviewReviewModel';
-import type { ManualPatchMode } from './useOverviewManualPatchEditor';
 import {
-  getDocumentImportSelectedPageNumbers,
-  type DocumentImportPreview,
-} from './documentPdfImportModel';
+  type Props as OverviewWorkbookImportWorkflowProps,
+} from './OverviewWorkbookImportWorkflow';
+import {
+  PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS,
+  type MissingRequirement,
+  type SetupYearStatus,
+} from './overviewWorkflow';
+import { OverviewYearWorkspace } from './OverviewYearWorkspace';
+import type { ManualPatchMode } from './useOverviewManualPatchEditor';
 
 type Props = {
   t: TFunction;
@@ -325,9 +322,6 @@ export const OverviewReviewBoard: React.FC<Props> = ({
     includedPlanningYearCount > 0 &&
     importedBlockedYearCount === 0 &&
     pendingReviewYearCount > 0;
-  const baselineGateStatusLabel = baselineGateReady
-    ? t('v2Overview.wizardSummaryYes')
-    : t('v2Overview.wizardSummaryNo');
   const baselineGatePrimaryDetail = baselineGateReady
     ? t('v2Overview.baselineReadyHint')
     : t('v2Overview.wizardBaselinePendingHint');

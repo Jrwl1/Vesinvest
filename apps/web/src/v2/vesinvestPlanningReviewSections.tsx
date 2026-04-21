@@ -1,5 +1,5 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
 import type {
   V2EditableDepreciationRuleMethod,
@@ -8,14 +8,14 @@ import type {
   V2VesinvestGroupDefinition,
   V2VesinvestPlanSummary,
 } from '../api';
-import { formatEur, formatPercent, formatPrice } from './format';
 import type { DepreciationRuleDraft } from './forecastModel';
+import { formatEur,formatPercent,formatPrice } from './format';
+import type { VesinvestBaselineYear } from './vesinvestPlanningModel';
 import {
   toneClass,
   type VesinvestDraft,
   type VesinvestLinkedOrg,
 } from './vesinvestPlanningModel';
-import type { VesinvestBaselineYear } from './vesinvestPlanningModel';
 import {
   datasetSourceLabel,
   datasetSourceNote,

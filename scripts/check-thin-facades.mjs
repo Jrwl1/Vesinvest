@@ -13,7 +13,8 @@ function countLines(text) {
   if (text.length === 0) {
     return 0;
   }
-  return text.split(/\r?\n/).length;
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  return lines.at(-1) === '' ? lines.length - 1 : lines.length;
 }
 
 function unwrapExpression(node) {

@@ -1,9 +1,7 @@
 import React from 'react';
-import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar,CartesianGrid,ComposedChart,Legend,Line,ResponsiveContainer,Tooltip,XAxis,YAxis } from 'recharts';
 import type { ForecastPageController } from './useForecastPageController';
-
 type Props = { controller: ForecastPageController };
-
 export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
   const {
     t,
@@ -59,9 +57,7 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
     tariffDriverCards,
     primaryUnderfundingStartYear,
   } = controller;
-
   if (!scenario) return null;
-
   const editableScenarioTypeOptions: Array<typeof draftScenarioType> = scenario.onOletus
     ? ['base']
     : scenarioTypeOptions.filter((option): option is Exclude<typeof draftScenarioType, 'base'> => option !== 'base');
@@ -105,7 +101,6 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
       ),
     },
   ];
-
   return (
     <>
       <div className="v2-scenario-editor-hero">
@@ -286,7 +281,6 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
           </div>
         </div>
       </div>
-
       <section className="v2-card v2-tariff-answer-card">
         <div className="v2-section-header">
           <div>
@@ -315,7 +309,6 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
           ))}
         </div>
       </section>
-
       <section className={`v2-card v2-statement-cockpit${denseAnalystMode ? ' dense' : ''}`}>
         <div className="v2-forecast-workspace-head">
           <div className="v2-forecast-workspace-copy">
@@ -335,7 +328,6 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
             </div>
           </div>
         </div>
-
         <article className="v2-subcard v2-primary-chart-region">
           <div className="v2-section-header">
             <div>
@@ -484,7 +476,6 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
             ) : null}
           </div>
         </article>
-
         <div className="v2-statement-cockpit-grid">
           {denseAnalystMode ? (
             <article className="v2-subcard v2-statement-card">
@@ -514,7 +505,6 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
               </div>
             </article>
           ) : null}
-
           <article className="v2-subcard v2-statement-card">
             <div className="v2-section-header">
               <div>
@@ -608,7 +598,6 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
           ) : null}
         </div>
       </section>
-
       {activeWorkbench === 'cockpit' && denseAnalystMode ? (
         <section className={`v2-grid v2-grid-two v2-forecast-top-grid${denseAnalystMode ? ' dense' : ''}`}>
           <article className="v2-subcard">
@@ -730,7 +719,6 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
               </>
             ) : null}
           </article>
-
           <article className="v2-subcard v2-forecast-summary-card">
             <div className="v2-section-header">
               <div>

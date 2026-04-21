@@ -1,6 +1,10 @@
 import type { TFunction } from 'i18next';
 
-import type { V2ImportYearDataResponse, V2ManualYearPatchPayload } from '../api';
+import type { V2ImportYearDataResponse,V2ManualYearPatchPayload } from '../api';
+import {
+  getDocumentImportSelectedPageNumbers,
+  getDocumentImportSelectedSourceLines,
+} from './documentPdfImportModel';
 import {
   buildEnergyForm,
   buildFinancialForm,
@@ -10,17 +14,12 @@ import {
   buildVolumeForm,
   formsDiffer,
   getEffectiveFirstRow,
-  getEffectiveRows,
   getRawFirstRow,
   numbersDiffer,
   type ManualFinancialForm,
   type ManualPriceForm,
   type ManualVolumeForm,
 } from './overviewManualForms';
-import {
-  getDocumentImportSelectedPageNumbers,
-  getDocumentImportSelectedSourceLines,
-} from './documentPdfImportModel';
 
 type ManualPatchMode = 'review' | 'manualEdit' | 'documentImport' | 'workbookImport';
 

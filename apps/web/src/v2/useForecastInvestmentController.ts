@@ -1,5 +1,5 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
 import {
   updateForecastScenarioV2,
@@ -10,6 +10,7 @@ import {
 import { renderForecastInvestmentProgramRows } from './forecastInvestmentRenderers';
 import {
   mergeSavedScenarioPreservingComputedOutputs,
+  type ForecastOperationState,
   REVENUE_ASSUMPTION_KEYS,
   toNearTermExpenseDraftText,
   toYearlyInvestmentInput,
@@ -65,7 +66,9 @@ export type UseForecastInvestmentControllerParams = {
   depreciationFeatureEnabled: boolean;
   hasUnsavedChanges: boolean;
   revenueAssumptionsChanged: boolean;
-  setActiveOperation: React.Dispatch<React.SetStateAction<any>>;
+  setActiveOperation: React.Dispatch<
+    React.SetStateAction<ForecastOperationState>
+  >;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
   setInfo: React.Dispatch<React.SetStateAction<string | null>>;
   updateScenarioSummary: (updated: V2ForecastScenario) => void;

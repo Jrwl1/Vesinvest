@@ -1,8 +1,7 @@
 import React from 'react';
-
 import {
-  connectImportOrganizationV2,
   cloneVesinvestPlanV2,
+  connectImportOrganizationV2,
   createReportV2,
   createVesinvestPlanV2,
   getForecastScenarioV2,
@@ -18,14 +17,22 @@ import {
   type V2DepreciationRule,
   type V2EditableDepreciationRuleMethod,
   type V2ForecastScenario,
-  type V2VesinvestPlan,
-  type V2VesinvestPlanSummary,
   type V2VesinvestGroupDefinition,
   type V2VesinvestGroupUpdateInput,
+  type V2VesinvestPlan,
+  type V2VesinvestPlanSummary,
   type V2VesinvestProject,
 } from '../api';
 import { buildDefaultReportTitle } from './displayNames';
-import { toDepreciationRuleDraft, type DepreciationRuleDraft } from './forecastModel';
+import { toDepreciationRuleDraft,type DepreciationRuleDraft } from './forecastModel';
+import { useVesinvestFeePathFocus } from './useVesinvestFeePathFocus';
+import { useVesinvestPlanningDerivedState } from './useVesinvestPlanningDerivedState';
+import { useVesinvestProjectComposer } from './useVesinvestProjectComposer';
+import type {
+  VesinvestPlanningControllerParams,
+  VesinvestProjectComposerState,
+  VesinvestVeetiSearchHit,
+} from './vesinvestPlanningControllerTypes';
 import {
   buildDraftFromPlan,
   FALLBACK_GROUP_KEY,
@@ -36,15 +43,6 @@ import {
   toUpdatePlanInput,
   type VesinvestWorkspaceView,
 } from './vesinvestPlanningModel';
-import type {
-  VesinvestPlanningControllerParams,
-  VesinvestProjectComposerState,
-  VesinvestVeetiSearchHit,
-} from './vesinvestPlanningControllerTypes';
-import { useVesinvestFeePathFocus } from './useVesinvestFeePathFocus';
-import { useVesinvestPlanningDerivedState } from './useVesinvestPlanningDerivedState';
-import { useVesinvestProjectComposer } from './useVesinvestProjectComposer';
-
 export const useVesinvestPlanningController = ({
   t,
   isAdmin = false,
@@ -96,9 +94,7 @@ export const useVesinvestPlanningController = ({
     groupKey: FALLBACK_GROUP_KEY,
     name: '',
   });
-
   const useSimplifiedSetup = simplifiedSetup && isAdmin;
-
   const refreshSummaries = React.useCallback(
     async (preferredId?: string | null) => {
       const [groupRows, depreciationRuleRows, planRows] = await Promise.all([
@@ -131,7 +127,6 @@ export const useVesinvestPlanningController = ({
     },
     [planningContext?.vesinvest?.activePlan?.id, planningContext?.vesinvest?.selectedPlan?.id],
   );
-
   React.useEffect(() => {
     let active = true;
     setLoading(true);
@@ -154,7 +149,6 @@ export const useVesinvestPlanningController = ({
       active = false;
     };
   }, [refreshSummaries, t]);
-
   React.useEffect(() => {
     if (!selectedPlanId) {
       setPlan(null);
@@ -190,7 +184,6 @@ export const useVesinvestPlanningController = ({
       active = false;
     };
   }, [linkedOrg, selectedPlanId, t]);
-
   React.useEffect(() => {
     if (!plan?.selectedScenarioId) {
       setLinkedScenario(null);
@@ -219,11 +212,9 @@ export const useVesinvestPlanningController = ({
       active = false;
     };
   }, [plan?.selectedScenarioId]);
-
   React.useEffect(() => {
     setReportConflictCode(null);
   }, [plan?.id, plan?.selectedScenarioId]);
-
   const {
     yearTotals,
     fiveYearBands,
@@ -260,7 +251,6 @@ export const useVesinvestPlanningController = ({
     loadingLinkedScenario,
     reportConflictCode,
   });
-
   useVesinvestFeePathFocus({
     overviewFocusTarget,
     selectedPlanId,
@@ -274,7 +264,6 @@ export const useVesinvestPlanningController = ({
     onOverviewFocusTargetConsumed,
     pendingOverviewFocusPlanIdRef,
   });
-
   const updateProject = React.useCallback(
     (index: number, updater: (project: V2VesinvestProject) => V2VesinvestProject) => {
       setDraft((current) => ({
@@ -286,7 +275,6 @@ export const useVesinvestPlanningController = ({
     },
     [],
   );
-
   const updateGroupDraft = React.useCallback(
     (
       key: string,
@@ -298,7 +286,6 @@ export const useVesinvestPlanningController = ({
     },
     [],
   );
-
   const updateDepreciationRuleDraft = React.useCallback(
     (key: string, updater: (rule: DepreciationRuleDraft) => DepreciationRuleDraft) => {
       setDepreciationRuleDrafts((current) =>
@@ -307,7 +294,6 @@ export const useVesinvestPlanningController = ({
     },
     [],
   );
-
   const handleSaveClassDefinition = React.useCallback(
     async (key: string) => {
       const groupDraft = groupDrafts.find((group) => group.key === key);
@@ -315,14 +301,12 @@ export const useVesinvestPlanningController = ({
       if (!groupDraft || !ruleDraft) {
         return;
       }
-
       const payload: V2VesinvestGroupUpdateInput = {
         label: groupDraft.label,
         defaultAccountKey: groupDraft.defaultAccountKey,
         reportGroupKey: groupDraft.reportGroupKey,
         serviceSplit: groupDraft.serviceSplit,
       };
-
       setSavingClassKey(key);
       setError(null);
       try {
@@ -336,7 +320,6 @@ export const useVesinvestPlanningController = ({
             residualPercent: parseNullableNumberInput(ruleDraft.residualPercent),
           }),
         ]);
-
         setGroups((current) =>
           current.map((group) => (group.key === key ? updatedGroup : group)),
         );
@@ -395,7 +378,6 @@ export const useVesinvestPlanningController = ({
     },
     [depreciationRuleDrafts, groupDrafts, t],
   );
-
   const updateProjectAllocation = React.useCallback(
     (
       projectIndex: number,
@@ -472,7 +454,6 @@ export const useVesinvestPlanningController = ({
     },
     [groups, updateProject],
   );
-
   const runVeetiLookup = React.useCallback(async () => {
     const query = veetiSearchQuery.trim();
     if (query.length < 2) {
@@ -508,7 +489,6 @@ export const useVesinvestPlanningController = ({
       setSearchingVeeti(false);
     }
   }, [t, veetiSearchQuery]);
-
   const applyVeetiSearchHit = React.useCallback(
     async (hit: VesinvestVeetiSearchHit) => {
       if (linkedOrg?.veetiId) {
@@ -538,7 +518,6 @@ export const useVesinvestPlanningController = ({
     },
     [linkedOrg?.veetiId, onPlansChanged, t],
   );
-
   const persist = React.useCallback(
     async (mode: 'create' | 'save' | 'clone' | 'sync') => {
       const invalidProject = draft.projects.find(
@@ -610,7 +589,6 @@ export const useVesinvestPlanningController = ({
     },
     [draft, linkedOrg, onGoToForecast, onPlansChanged, plan?.id, refreshSummaries, t, baselineSnapshot],
   );
-
   const handleCreateReport = React.useCallback(async () => {
     if (!plan?.id || !plan.selectedScenarioId || !linkedScenario) {
       setError(
@@ -713,13 +691,11 @@ export const useVesinvestPlanningController = ({
     reportReadinessReason,
     t,
   ]);
-
   const setDraftField = React.useCallback(
     <K extends keyof typeof draft>(field: K, value: (typeof draft)[K]) =>
       setDraft((current) => ({ ...current, [field]: value })),
     [],
   );
-
   const {
     projectComposerGroupKey,
     openProjectComposer,
@@ -735,7 +711,6 @@ export const useVesinvestPlanningController = ({
     draft,
     pendingAllocationFocusRef,
   });
-
   const shouldLeadAddProject =
     activeWorkspaceView === 'investment' && draft.projects.length === 0;
   const shouldLeadSave = !shouldLeadAddProject && (hasUnsavedChanges || !plan);

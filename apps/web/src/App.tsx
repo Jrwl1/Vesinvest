@@ -1,15 +1,15 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React,{ useCallback,useEffect,useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import './i18n';
 import {
   AUTH_INVALIDATED_EVENT,
   clearToken,
-  type AuthInvalidationReason,
   DecodedToken,
   getLegalStatus,
   getTokenInfo,
   isAuthenticated,
+  type AuthInvalidationReason,
 } from './api';
+import './app-entry.css';
 import { InviteAcceptForm } from './components/InviteAcceptForm';
 import { LegalAcceptanceGate } from './components/LegalAcceptanceGate';
 import { LoginForm } from './components/LoginForm';
@@ -18,7 +18,7 @@ import {
   useDemoEntryState,
   useDemoStatus,
 } from './context/DemoStatusContext';
-import './app-entry.css';
+import './i18n';
 
 const OVERVIEW_RUNTIME_STORAGE_KEY = 'v2_overview_runtime_state';
 

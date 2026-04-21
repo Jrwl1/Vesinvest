@@ -1,8 +1,8 @@
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { V2ForecastService } from './v2-forecast.service';
-import type { ScenarioPayload } from './v2-report.types';
 import { V2ReportBaselineSupport } from './v2-report-baseline-support';
+import type { ScenarioPayload } from './v2-report.types';
 
 export class V2ReportCreationSupport {
   constructor(

@@ -1,5 +1,5 @@
 import type { DemoResetResult } from '../types';
-import { API_BASE, IS_DEV, api, dedupeInFlightGet, setToken, type AppMode } from './core';
+import { API_BASE,IS_DEV,api,dedupeInFlightGet,setToken,type AppMode } from './core';
 
 export type DemoStatusResult =
   | {

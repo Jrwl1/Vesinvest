@@ -1,5 +1,5 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
 import { getImportYearDataV2 } from '../api';
 import {
@@ -19,10 +19,10 @@ import {
   renderOverviewStep2InlineFieldEditor,
   renderOverviewYearValuePreview,
 } from './overviewRenderers';
-import { buildImportYearSourceLayers } from './yearReview';
 import { type MissingRequirement } from './overviewWorkflow';
 import type { useOverviewImportController } from './useOverviewImportController';
 import type { useOverviewManualPatchController } from './useOverviewManualPatchController';
+import { buildImportYearSourceLayers } from './yearReview';
 
 type Params = {
   t: TFunction;

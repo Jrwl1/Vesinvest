@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import {
   AppMode,
-  getAuthBypassKey,
   getAppModeReason,
-  resolveAppModeFromEnv,
+  getAuthBypassKey,
   isAuthBypassEnabled,
+  resolveAppModeFromEnv,
 } from './app-mode.constants';
 
 @Injectable()

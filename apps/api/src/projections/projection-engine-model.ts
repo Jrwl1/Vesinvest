@@ -1,5 +1,5 @@
 export { round2 } from './driver-paths';
-import { DriverPaths, resolveDriverValue, round2 } from './driver-paths';
+import { round2 } from './driver-paths';
 import {
   type ProjectionYearOverride,
   type ProjectionYearOverrides,

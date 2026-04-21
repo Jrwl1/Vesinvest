@@ -1,8 +1,8 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
 import type { V2YearlyInvestmentPlanRow } from '../api';
-import { MAX_YEARLY_INVESTMENT_EUR, resolveInvestmentProgramTotal } from './forecastModel';
+import { MAX_YEARLY_INVESTMENT_EUR,resolveInvestmentProgramTotal } from './forecastModel';
 import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 
 type InvestmentRow = V2YearlyInvestmentPlanRow;

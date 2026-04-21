@@ -1,9 +1,7 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
 import type { V2PlanningContextResponse } from '../api';
-import { VesinvestRevisionSurface } from './vesinvestPlanningSections';
-import { type VesinvestLinkedOrg } from './vesinvestPlanningModel';
 import { useVesinvestPlanningController } from './useVesinvestPlanningController';
 import {
   VesinvestDerivedTotalsStrip,
@@ -14,12 +12,14 @@ import {
   VesinvestRevisionSummary,
   VesinvestWorkspaceTabs,
 } from './vesinvestPlanningChrome';
+import { VesinvestPlanningInvestmentWorkspace } from './vesinvestPlanningInvestmentWorkspace';
+import { type VesinvestLinkedOrg } from './vesinvestPlanningModel';
 import {
   VesinvestBaselineReviewSection,
   VesinvestDepreciationPlanSection,
   VesinvestUtilityBindingSection,
 } from './vesinvestPlanningReviewSections';
-import { VesinvestPlanningInvestmentWorkspace } from './vesinvestPlanningInvestmentWorkspace';
+import { VesinvestRevisionSurface } from './vesinvestPlanningSections';
 
 type Props = {
   t: TFunction;

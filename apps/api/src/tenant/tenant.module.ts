@@ -1,8 +1,8 @@
-import { Global, Module } from '@nestjs/common';
-import { TenantGuard } from './tenant.guard';
+import { Global,Module } from '@nestjs/common';
 import { DemoInfraModule } from '../demo/demo-infra.module';
 import { LegalModule } from '../legal/legal.module';
 import { TrialModule } from '../trial/trial.module';
+import { TenantGuard } from './tenant.guard';
 
 /**
  * Provides TenantGuard for tenant-scoped controllers.

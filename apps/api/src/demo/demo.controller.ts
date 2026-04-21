@@ -1,8 +1,8 @@
-import { Controller, Post, Get, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Controller,ForbiddenException,Get,NotFoundException,Post } from '@nestjs/common';
+import { DemoBootstrapService } from './demo-bootstrap.service';
 import { DemoResetService } from './demo-reset.service';
 import { DemoStatusService } from './demo-status.service';
-import { DemoBootstrapService } from './demo-bootstrap.service';
-import { DEMO_ORG_ID, isDemoModeEnabled } from './demo.constants';
+import { DEMO_ORG_ID,isDemoModeEnabled } from './demo.constants';
 
 /**
  * Controller for demo status, reset, and optional seed. No auth required for GET /demo/status.

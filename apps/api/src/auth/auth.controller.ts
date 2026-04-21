@@ -9,14 +9,15 @@ import {
   Post,
   Req,
   UseGuards,
+  ValidationPipe,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { AppModeService } from '../app-mode/app-mode.service';
 import { AuthService } from './auth.service';
 import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { InviteUserDto } from './dto/invite-user.dto';
-import { InvitationsService } from './invitations.service';
 import { LoginDto } from './dto/login.dto';
+import { InvitationsService } from './invitations.service';
 import { JwtAuthGuard } from './jwt.guard';
 import {
   AUTH_EDGE_RATE_LIMIT_HEADER,
@@ -43,6 +44,15 @@ const AUTH_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const LOGIN_RATE_LIMIT_MAX = 25;
 const LOGIN_FAILED_RATE_LIMIT_MAX = 5;
 const INVITE_ACCEPT_RATE_LIMIT_MAX = 20;
+const authValidationPipeOptions = {
+  transform: true,
+  whitelist: true,
+} as const;
+type AuthRequestUser = {
+  sub?: string;
+  org_id?: string;
+  roles?: string[];
+};
 
 function getRequestIp(req: Request): string {
   return req.ip || req.socket?.remoteAddress || 'unknown';
@@ -136,7 +146,10 @@ export class AuthController {
   ) {}
 
   @Post('login')
-  async login(@Req() req: Request, @Body() dto: LoginDto) {
+  async login(
+    @Req() req: Request,
+    @Body(new ValidationPipe(authValidationPipeOptions)) dto: LoginDto,
+  ) {
     const rateLimitMode = resolveAuthRateLimitMode();
     this.assertEdgeRateLimitVerified(req, rateLimitMode, 'auth-login');
     const ip = getRequestIp(req);
@@ -197,7 +210,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('me')
-  async me(@Req() req: any) {
+  async me(@Req() req: Request) {
     return this.authService.me(req.user);
   }
 
@@ -246,8 +259,11 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('invitations')
-  async createInvitation(@Req() req: any, @Body() dto: InviteUserDto) {
-    const user = req.user;
+  async createInvitation(
+    @Req() req: Request,
+    @Body(new ValidationPipe(authValidationPipeOptions)) dto: InviteUserDto,
+  ) {
+    const user = req.user as AuthRequestUser | undefined;
     if (!user?.sub || !user?.org_id) {
       throw new ForbiddenException('Missing user context');
     }
@@ -262,7 +278,7 @@ export class AuthController {
   @Post('invitations/accept')
   async acceptInvitation(
     @Req() req: Request,
-    @Body() dto: AcceptInvitationDto,
+    @Body(new ValidationPipe(authValidationPipeOptions)) dto: AcceptInvitationDto,
   ) {
     const rateLimitMode = resolveAuthRateLimitMode();
     this.assertEdgeRateLimitVerified(req, rateLimitMode, 'invite-accept');

@@ -501,7 +501,7 @@ export class V2VesinvestFoundationSupport {
       scenarioFingerprint,
       baselineCombinedPrice: scenario.baselinePriceTodayCombined,
       totalInvestments: investmentSeries.reduce(
-        (sum: number, item: any) => sum + this.toNumber(item.amount),
+        (sum: number, item) => sum + this.toNumber(item.amount),
         0,
       ),
       combined: {
@@ -523,14 +523,14 @@ export class V2VesinvestFoundationSupport {
       },
       water: {
         currentPrice: firstYear?.waterPrice ?? null,
-        forecastPath: priceSeries.map((item: any) => ({
+        forecastPath: priceSeries.map((item) => ({
           year: item.year,
           price: item.waterPrice,
         })),
       },
       wastewater: {
         currentPrice: firstYear?.wastewaterPrice ?? null,
-        forecastPath: priceSeries.map((item: any) => ({
+        forecastPath: priceSeries.map((item) => ({
           year: item.year,
           price: item.wastewaterPrice,
         })),
@@ -539,7 +539,7 @@ export class V2VesinvestFoundationSupport {
         currentRevenue: firstYear?.baseFeeRevenue ?? null,
         connectionCount: firstYear?.connectionCount ?? null,
       },
-      annualResults: years.map((item: any) => ({
+      annualResults: years.map((item) => ({
         year: item.year,
         result: item.result,
         cashflow: item.cashflow,

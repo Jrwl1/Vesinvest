@@ -1,8 +1,8 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import en from './locales/en.json';
 import fi from './locales/fi.json';
 import sv from './locales/sv.json';
-import en from './locales/en.json';
 
 const LANGUAGE_KEY = 'va_language';
 const LANGUAGE_SOURCE_KEY = 'va_language_source';
@@ -135,4 +135,4 @@ export async function applyOrganizationDefaultLanguage(
   return normalized;
 }
 
-export { LANGUAGE_KEY, LANGUAGE_SOURCE_KEY, normalizeLanguage };
+export { LANGUAGE_KEY,LANGUAGE_SOURCE_KEY,normalizeLanguage };

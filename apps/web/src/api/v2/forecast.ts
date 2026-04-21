@@ -1,4 +1,4 @@
-import { api, getCachedGet, type GetRequestOptions } from '../core';
+import { api,getCachedGet,type GetRequestOptions } from '../core';
 import type {
   V2DepreciationRule,
   V2EditableDepreciationRuleMethod,

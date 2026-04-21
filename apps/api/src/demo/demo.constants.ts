@@ -1,4 +1,4 @@
-import { getAppModeReason, isInternalDemoMode } from '../app-mode/app-mode.constants';
+import { getAppModeReason,isInternalDemoMode } from '../app-mode/app-mode.constants';
 
 /**
  * Demo constants are kept for backwards compatibility with existing imports.

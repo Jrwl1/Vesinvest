@@ -2,26 +2,24 @@ import React from 'react';
 import type { TFunction } from 'i18next';
 
 import {
-  completeImportYearManuallyV2,
   getImportYearDataV2,
   type V2ImportYearDataResponse,
   type V2ManualYearPatchPayload,
 } from '../api';
 import {
   buildEnergyForm,
-  deriveAdjustedYearResult,
   buildFinancialForm,
   buildInvestmentForm,
   buildNetworkForm,
   buildPriceForm,
   buildVolumeForm,
   CARD_SUMMARY_FIELD_TO_INLINE_FIELD,
+  getDatasetRowValue,
   formsDiffer,
   getEffectiveFirstRow,
   getEffectiveRows,
   getRawFirstRow,
   IMPORT_BOARD_CANON_ROWS,
-  numbersDiffer,
   parseManualNumber,
   type ManualFinancialForm,
   type ManualPriceForm,
@@ -29,19 +27,7 @@ import {
   type InlineCardField,
 } from './overviewManualForms';
 import type { MissingRequirement, SetupWizardStep } from './overviewWorkflow';
-import {
-  getSyncBlockReasonLabel as buildSyncBlockReasonLabel,
-} from './overviewLabels';
-import {
-  buildImportYearSummaryRows,
-  markPersistedReviewedImportYears,
-  resolveNextReviewQueueYear,
-} from './yearReview';
-import {
-  getDocumentImportSelectedPageNumbers,
-  getDocumentImportSelectedSourceLines,
-} from './documentPdfImportModel';
-import { sendV2OpsEvent } from './opsTelemetry';
+import { buildImportYearSummaryRows } from './yearReview';
 import { buildOverviewManualPatchPayload } from './overviewManualPatchPayload';
 import { saveOverviewInlineCardEdit } from './overviewManualPatchSave';
 
@@ -283,7 +269,7 @@ export function useOverviewManualPatchEditor(params: {
       ): boolean =>
         rows.some(
           (row) =>
-            parseManualNumber((row as any).Tyyppi_Id) === typeId &&
+            parseManualNumber(getDatasetRowValue(row, 'Tyyppi_Id')) === typeId &&
             hasOwnNonNullValue(row, 'Kayttomaksu'),
         );
       return (
@@ -427,10 +413,10 @@ export function useOverviewManualPatchEditor(params: {
         } else if (missing.includes('prices')) {
           const priceRows = getEffectiveRows(yearDataCache[year], 'taksa');
           const hasWaterPrice = priceRows.some(
-            (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 1,
+            (entry) => parseManualNumber(getDatasetRowValue(entry, 'Tyyppi_Id')) === 1,
           );
           const hasWastewaterPrice = priceRows.some(
-            (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 2,
+            (entry) => parseManualNumber(getDatasetRowValue(entry, 'Tyyppi_Id')) === 2,
           );
           resolvedFocusField = !hasWaterPrice
             ? 'waterUnitPrice'
@@ -510,13 +496,13 @@ export function useOverviewManualPatchEditor(params: {
       if (target === 'prices') {
         const priceRows = getEffectiveRows(yearData, 'taksa');
         const hasWaterPrice = priceRows.some(
-          (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 1,
+          (entry) => parseManualNumber(getDatasetRowValue(entry, 'Tyyppi_Id')) === 1,
         );
         if (!hasWaterPrice) {
           return 'waterUnitPrice';
         }
         const hasWastewaterPrice = priceRows.some(
-          (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 2,
+          (entry) => parseManualNumber(getDatasetRowValue(entry, 'Tyyppi_Id')) === 2,
         );
         return hasWastewaterPrice ? 'waterUnitPrice' : 'wastewaterUnitPrice';
       }
@@ -540,7 +526,7 @@ export function useOverviewManualPatchEditor(params: {
       const yearData = yearDataCache[year];
       const priceRows = getEffectiveRows(yearData, 'taksa');
       const hasAnyPrice = priceRows.some((entry) => {
-        const typeId = parseManualNumber((entry as any).Tyyppi_Id);
+        const typeId = parseManualNumber(getDatasetRowValue(entry, 'Tyyppi_Id'));
         return typeId === 1 || typeId === 2;
       });
       const hasMissingPrices =
@@ -757,5 +743,3 @@ export function useOverviewManualPatchEditor(params: {
     handleSwitchToManualEditMode,
   };
 }
-
-

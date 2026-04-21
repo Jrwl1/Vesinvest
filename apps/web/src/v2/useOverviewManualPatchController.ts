@@ -1,24 +1,10 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
 import {
-  type V2ImportYearDataResponse,
   type V2ManualYearPatchPayload,
   type V2WorkbookPreviewResponse,
 } from '../api';
-import {
-  WORKBOOK_SOURCE_FIELD_TO_FINANCIAL_KEY,
-} from './overviewManualForms';
-import {
-  createDocumentImportState,
-  createWorkbookImportState,
-} from './overviewImportWorkflows';
-import {
-  useOverviewManualPatchEditor,
-  type ManualPatchMode,
-} from './useOverviewManualPatchEditor';
-import { sendV2OpsEvent } from './opsTelemetry';
-import type { MissingRequirement } from './overviewWorkflow';
 import {
   applyDocumentImportMatchSelection,
   clearDocumentImportMatchSelections,
@@ -27,6 +13,19 @@ import {
   type DocumentImportFieldMatch,
   type DocumentImportPreview,
 } from './documentPdfImportModel';
+import { sendV2OpsEvent } from './opsTelemetry';
+import {
+  createDocumentImportState,
+  createWorkbookImportState,
+} from './overviewImportWorkflows';
+import {
+  WORKBOOK_SOURCE_FIELD_TO_FINANCIAL_KEY,
+} from './overviewManualForms';
+import type { MissingRequirement } from './overviewWorkflow';
+import {
+  useOverviewManualPatchEditor,
+  type ManualPatchMode,
+} from './useOverviewManualPatchEditor';
 
 export type GenericDocumentImportPreview = DocumentImportPreview;
 

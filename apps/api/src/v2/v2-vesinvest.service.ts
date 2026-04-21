@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException,ForbiddenException,Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { V2ForecastService } from './v2-forecast.service';
@@ -6,16 +6,16 @@ import { V2ImportOverviewService } from './v2-import-overview.service';
 import { V2PlanningWorkspaceSupport } from './v2-planning-workspace-support';
 import { V2VesinvestFoundationSupport } from './v2-vesinvest-foundation-support';
 import { V2VesinvestPlanSupport } from './v2-vesinvest-plan-support';
-import {
-  computeVesinvestScenarioFingerprint,
-  normalizeVesinvestDepreciationClassKey,
-} from './vesinvest-contract';
 import type {
   CreatePlanBody,
   SyncPlanBody,
   UpdateGroupDefinitionBody,
   UpdatePlanBody,
 } from './v2-vesinvest.types';
+import {
+  computeVesinvestScenarioFingerprint,
+  normalizeVesinvestDepreciationClassKey,
+} from './vesinvest-contract';
 
 @Injectable()
 export class V2VesinvestService {

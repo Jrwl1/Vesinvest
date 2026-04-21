@@ -1,8 +1,10 @@
 import type { TFunction } from 'i18next';
+import type { StatementOcrMatch } from './statementOcrParse';
 import {
   buildPriceForm,
   buildVolumeForm,
   getEffectiveFirstRow,
+  getDatasetRowValue,
   getRawFirstRow,
   parseManualNumber,
 } from './overviewManualForms';
@@ -45,7 +47,7 @@ export function buildOverviewStatementImportComparisonRows(params: {
   statementImportPreview:
     | {
         fields: Partial<Record<string, number>>;
-        matches: Array<any>;
+        matches: StatementOcrMatch[];
       }
     | null;
   currentYearData: V2ImportYearDataResponse | undefined;
@@ -55,8 +57,8 @@ export function buildOverviewStatementImportComparisonRows(params: {
     return [];
   }
   return buildStatementOcrComparisonRows({
-    fields: statementImportPreview.fields as any,
-    matches: statementImportPreview.matches as any,
+    fields: statementImportPreview.fields,
+    matches: statementImportPreview.matches,
     veetiFinancials: getRawFirstRow(currentYearData, 'tilinpaatos'),
     currentFinancials: getEffectiveFirstRow(currentYearData, 'tilinpaatos'),
   });
@@ -118,10 +120,10 @@ export function buildOverviewQdisImportComparisonRows(params: {
   const currentPrices = buildPriceForm(currentYearData);
   const currentVolumes = buildVolumeForm(currentYearData);
   const rawWaterPrice = rawPriceRows.find(
-    (row) => parseManualNumber((row as any).Tyyppi_Id) === 1,
+    (row) => parseManualNumber(getDatasetRowValue(row, 'Tyyppi_Id')) === 1,
   );
   const rawWastewaterPrice = rawPriceRows.find(
-    (row) => parseManualNumber((row as any).Tyyppi_Id) === 2,
+    (row) => parseManualNumber(getDatasetRowValue(row, 'Tyyppi_Id')) === 2,
   );
   const rawWaterVolume = getRawFirstRow(currentYearData, 'volume_vesi');
   const rawWastewaterVolume = getRawFirstRow(currentYearData, 'volume_jatevesi');
@@ -129,28 +131,30 @@ export function buildOverviewQdisImportComparisonRows(params: {
     {
       key: 'waterUnitPrice',
       label: labels.waterPrice,
-      veetiValue: parseManualNumber((rawWaterPrice as any)?.Kayttomaksu),
+      veetiValue: parseManualNumber(getDatasetRowValue(rawWaterPrice, 'Kayttomaksu')),
       pdfValue: qdisImportPreview.fields.waterUnitPrice ?? null,
       currentValue: currentPrices.waterUnitPrice,
     },
     {
       key: 'wastewaterUnitPrice',
       label: labels.wastewaterPrice,
-      veetiValue: parseManualNumber((rawWastewaterPrice as any)?.Kayttomaksu),
+      veetiValue: parseManualNumber(
+        getDatasetRowValue(rawWastewaterPrice, 'Kayttomaksu'),
+      ),
       pdfValue: qdisImportPreview.fields.wastewaterUnitPrice ?? null,
       currentValue: currentPrices.wastewaterUnitPrice,
     },
     {
       key: 'soldWaterVolume',
       label: labels.waterVolume,
-      veetiValue: parseManualNumber((rawWaterVolume as any).Maara),
+      veetiValue: parseManualNumber(getDatasetRowValue(rawWaterVolume, 'Maara')),
       pdfValue: qdisImportPreview.fields.soldWaterVolume ?? null,
       currentValue: currentVolumes.soldWaterVolume,
     },
     {
       key: 'soldWastewaterVolume',
       label: labels.wastewaterVolume,
-      veetiValue: parseManualNumber((rawWastewaterVolume as any).Maara),
+      veetiValue: parseManualNumber(getDatasetRowValue(rawWastewaterVolume, 'Maara')),
       pdfValue: qdisImportPreview.fields.soldWastewaterVolume ?? null,
       currentValue: currentVolumes.soldWastewaterVolume,
     },

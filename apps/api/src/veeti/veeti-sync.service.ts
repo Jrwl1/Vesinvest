@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { VeetiEffectiveDataService } from './veeti-effective-data.service';
 import { VeetiDataType, VeetiService } from './veeti.service';
 import { getStaticSnapshotYearForDataType } from './veeti-import-contract';
@@ -178,11 +179,11 @@ export class VeetiSyncService {
             veetiId,
             vuosi,
             dataType,
-            rawData: items as any,
+            rawData: items as Prisma.InputJsonValue,
             fetchedAt: new Date(),
           },
           update: {
-            rawData: items as any,
+            rawData: items as Prisma.InputJsonValue,
             fetchedAt: new Date(),
           },
         });

@@ -1,11 +1,49 @@
 import React from 'react';
 import type { TFunction } from 'i18next';
 
+import type { V2ReportListItem } from '../api';
 import { formatDateTime } from './format';
 import { getReportDisplayTitle, getScenarioDisplayName } from './displayNames';
 import { formatScenarioUpdatedAt } from './reportReadinessModel';
 
-export const ReportsListColumn: React.FC<any> = ({
+type ScenarioOption = {
+  id: string;
+  name: string;
+};
+
+type EmptyStateScenario = {
+  name: string;
+  updatedAt: string;
+};
+
+type ReportsListColumnProps = {
+  emptyStateComputedVersionLabel: string;
+  emptyStateCtaLabel: string;
+  emptyStateForecastLabel: string;
+  emptyStateForecastToneClass: string;
+  emptyStateReportReadinessHint: string;
+  emptyStateReportReadinessLabel: string;
+  emptyStateReportReadinessToneClass: string;
+  emptyStateScenario: EmptyStateScenario | null;
+  handleEmptyStateAction: () => void;
+  handleSavedFeePathAction: () => void;
+  hasSelectedReportLayout: boolean;
+  loadReports: (scenarioId?: string, force?: boolean) => void;
+  loadingList: boolean;
+  reportVariantLabel: (variant: V2ReportListItem['variant']) => string;
+  reports: V2ReportListItem[];
+  reportsHeaderHint: string;
+  savedFeePathPlanId?: string | null;
+  savedFeePathReportConflictActive: boolean;
+  scenarioFilter: string;
+  scenarioOptions: ScenarioOption[];
+  selectedReportId: string | null;
+  setScenarioFilter: (scenarioId: string) => void;
+  setSelectedReportId: (reportId: string) => void;
+  t: TFunction;
+};
+
+export const ReportsListColumn: React.FC<ReportsListColumnProps> = ({
   emptyStateComputedVersionLabel,
   emptyStateCtaLabel,
   emptyStateForecastLabel,
@@ -30,9 +68,7 @@ export const ReportsListColumn: React.FC<any> = ({
   setScenarioFilter,
   setSelectedReportId,
   t,
-}: {
-  t: TFunction;
-} & any) => (
+}) => (
   <div className="v2-reports-list-column">
     <section
       className={`v2-card v2-reports-list-card${
@@ -56,7 +92,7 @@ export const ReportsListColumn: React.FC<any> = ({
               onChange={(event) => setScenarioFilter(event.target.value)}
             >
               <option value="">{t('v2Reports.allScenarios', 'All')}</option>
-              {scenarioOptions.map((option: any) => (
+              {scenarioOptions.map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.name}
                 </option>
@@ -86,12 +122,13 @@ export const ReportsListColumn: React.FC<any> = ({
         </article>
         <article>
           <span>{t('projection.scenario', 'Scenario')}</span>
-          <strong>
-            {scenarioFilter
-              ? scenarioOptions.find((option: any) => option.id === scenarioFilter)?.name ?? scenarioFilter
-              : t('v2Reports.allScenarios', 'All')}
-          </strong>
-        </article>
+            <strong>
+              {scenarioFilter
+                ? scenarioOptions.find((option) => option.id === scenarioFilter)?.name ??
+                  scenarioFilter
+                : t('v2Reports.allScenarios', 'All')}
+            </strong>
+          </article>
       </div>
 
       {loadingList ? (
@@ -153,7 +190,7 @@ export const ReportsListColumn: React.FC<any> = ({
 
       {reports.length > 0 ? (
         <div className="v2-report-table v2-report-list">
-          {reports.map((row: any) => {
+          {reports.map((row) => {
             const rowTitle =
               row.title?.trim() ||
               getReportDisplayTitle({

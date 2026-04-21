@@ -1,10 +1,10 @@
-import { VeetiEffectiveDataService, type OverrideProvenance } from '../veeti/veeti-effective-data.service';
-import { MANUAL_YEAR_FINANCIAL_FIELD_MAPPINGS, IMPORT_YEAR_SUMMARY_FIELDS, STATEMENT_PREVIEW_FIELDS } from './v2-import-overview.constants';
+import { VeetiEffectiveDataService,type OverrideProvenance } from '../veeti/veeti-effective-data.service';
+import { ManualYearCompletionDto } from './dto/manual-year-completion.dto';
+import { IMPORT_YEAR_SUMMARY_FIELDS,MANUAL_YEAR_FINANCIAL_FIELD_MAPPINGS,STATEMENT_PREVIEW_FIELDS } from './v2-import-overview.constants';
 import type {
   ImportYearSummarySourceField,
   OverrideProvenanceCore,
 } from './v2-import-overview.types';
-import { ManualYearCompletionDto } from './dto/manual-year-completion.dto';
 
 type ImportManualFinancialContext = {
   round2(value: number): number;
@@ -142,8 +142,8 @@ export function createV2ImportManualFinancialSupport(
     stripFieldSources(
       provenance: OverrideProvenance | OverrideProvenanceCore,
     ): OverrideProvenanceCore {
-      const { fieldSources: _fieldSources, ...core } =
-        provenance as OverrideProvenance;
+      const core = { ...(provenance as OverrideProvenance) };
+      delete core.fieldSources;
       return core;
     },
 

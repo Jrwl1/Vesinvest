@@ -1,4 +1,4 @@
-import { Workbook, type Worksheet } from 'exceljs';
+import { Workbook,type Worksheet } from 'exceljs';
 
 export type KvaWorkbookSourceField =
   | 'Liikevaihto'

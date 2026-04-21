@@ -1,8 +1,8 @@
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
-  IsIn,
   IsArray,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,

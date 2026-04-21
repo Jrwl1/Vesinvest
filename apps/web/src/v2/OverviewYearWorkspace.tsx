@@ -1,9 +1,8 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
-
+import React from 'react';
 import type { V2ImportYearDataResponse } from '../api';
-import { getSourceLayerText } from './overviewLabels';
 import { formatEur } from './format';
+import { getSourceLayerText } from './overviewLabels';
 import {
   deriveAdjustedYearResult,
   numbersDiffer,
@@ -12,7 +11,7 @@ import {
   type ManualPriceForm,
   type ManualVolumeForm,
 } from './overviewManualForms';
-import type { MissingRequirement, SetupYearStatus } from './overviewWorkflow';
+import type { MissingRequirement } from './overviewWorkflow';
 import {
   DEFAULT_WORKSPACE_FIELDS,
   RESULT_FIELD,
@@ -29,9 +28,8 @@ import {
   type WorkspaceSaveState,
   type WorkspaceTouchedFields,
 } from './overviewYearWorkspaceModel';
-import { buildImportYearSourceLayers } from './yearReview';
 import type { ManualPatchMode } from './useOverviewManualPatchEditor';
-
+import { buildImportYearSourceLayers } from './yearReview';
 type Props = {
   t: TFunction;
   reviewStatusRows: ReviewStatusRow[];
@@ -71,7 +69,6 @@ type Props = {
   }) => Promise<{ yearData: V2ImportYearDataResponse }>;
   busy?: boolean;
 };
-
 export const OverviewYearWorkspace: React.FC<Props> = ({
   t,
   reviewStatusRows,
@@ -104,7 +101,6 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
         .filter((row): row is ReviewStatusRow => row != null),
     [reviewStatusRows, workspaceYears],
   );
-
   React.useEffect(() => {
     setDrafts((prev) => {
       let changed = false;
@@ -127,7 +123,6 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
       return changed ? next : prev;
     });
   }, [reviewStatusRows, yearDataCache]);
-
   const updateDraft = React.useCallback(
     <T extends 'financials' | 'prices' | 'volumes'>(
       year: number,
@@ -163,7 +158,6 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
     },
     [],
   );
-
   const getExplicitMissingGroups = React.useCallback(
     (year: number, draft: WorkspaceDraft | undefined) => {
       const emptyGroups = {
@@ -206,7 +200,6 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
     },
     [touchedFields, yearDataCache],
   );
-
   const handleSave = React.useCallback(
     async (year: number, syncAfterSave: boolean) => {
       const draft = drafts[year];
@@ -261,7 +254,6 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
     },
     [drafts, getExplicitMissingGroups, saveYear, t],
   );
-
   const hasExplicitMissingEntry = React.useCallback(
     (year: number, draft: WorkspaceDraft | undefined) => {
       const explicitMissing = getExplicitMissingGroups(year, draft);
@@ -273,7 +265,6 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
     },
     [getExplicitMissingGroups],
   );
-
   const showYearDecisionActions = React.useMemo(
     () =>
       pinnedRows.some((row) => {
@@ -287,7 +278,6 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
       }),
     [drafts, hasExplicitMissingEntry, pinnedRows, saveState],
   );
-
   if (reviewStatusRows.length === 0) {
     return null;
   }

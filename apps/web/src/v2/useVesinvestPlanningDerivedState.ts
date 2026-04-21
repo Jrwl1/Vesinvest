@@ -1,5 +1,5 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
 import type {
   V2ForecastScenario,
@@ -10,6 +10,7 @@ import type {
   V2VesinvestPlan,
   V2VesinvestPlanSummary,
 } from '../api';
+import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 import {
   buildDraftFromPlan,
   FALLBACK_GROUP_KEY,
@@ -23,7 +24,6 @@ import {
   buildBaselineSourceSnapshot,
   readSavedBaselineYears,
 } from './vesinvestPlanningProvenance';
-import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 
 type ReportReadinessReason =
   | 'missingScenario'

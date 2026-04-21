@@ -17,13 +17,13 @@ import {
   type V2ReportListItem,
   type VeetiOrganizationSearchHit,
 } from '../api';
+import { sendV2OpsEvent } from './opsTelemetry';
 import {
   getAvailableImportYears,
   getConfirmedImportedYears,
   getExcludedYears,
   type ImportYearLike,
 } from './overviewWorkflow';
-import { sendV2OpsEvent } from './opsTelemetry';
 
 type PickDefaultSyncYears = (rows: ImportYearLike[]) => number[];
 

@@ -1,25 +1,24 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 import type {
   V2ForecastScenario,
   V2ReportDetail,
   V2ReportListItem,
 } from '../api';
 import {
-  formatDateTime,
-  formatNumber,
-} from './format';
-import {
   getReportDisplayTitle,
   getScenarioDisplayName,
 } from './displayNames';
+import {
+  formatDateTime,
+  formatNumber,
+} from './format';
 import {
   ASSUMPTION_LABEL_KEYS,
   deriveForecastFreshnessState,
   deriveReportReadinessReason,
   formatScenarioUpdatedAt,
   REPORT_VARIANT_OPTIONS,
-  type ReportReadinessReason,
   type ReportVariant,
   resolveAcceptedBaselineYears,
   stripTrailingParenthetical,
@@ -27,8 +26,8 @@ import {
 import {
   createBaselineDatasetSourceLabel,
   createBaselineStatusLabel,
-  createDataTypeLabel,
   createDatasetPublicationNote,
+  createDataTypeLabel,
 } from './reportsPageProvenance';
 
 type Params = {

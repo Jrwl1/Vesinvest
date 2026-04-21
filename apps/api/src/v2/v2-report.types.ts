@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import type { OverrideProvenance } from '../veeti/veeti-effective-data.service';
 import { DEFAULT_VESINVEST_GROUP_DEFINITIONS } from './vesinvest-contract';
 

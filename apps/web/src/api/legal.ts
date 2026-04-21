@@ -1,4 +1,4 @@
-import { api, dedupeInFlightGet } from './core';
+import { api,dedupeInFlightGet } from './core';
 
 export async function getLegalCurrent(): Promise<{
   termsVersion: string;

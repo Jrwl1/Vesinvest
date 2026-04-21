@@ -1,10 +1,9 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
-import type { DecodedToken } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { applyManualLanguagePreference } from '../i18n';
-import { TABS, preloadTab, type OrgLanguageNotice, type TabId } from './appShellV2Routing';
+import { TABS,preloadTab,type OrgLanguageNotice,type TabId } from './appShellV2Routing';
 
 export function AppShellV2Header({
   t,

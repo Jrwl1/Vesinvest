@@ -1,5 +1,5 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
 import type {
   V2ImportYearDataResponse,
@@ -16,10 +16,10 @@ import {
   getMissingSyncRequirements,
   resolvePreviousSetupStep,
   resolveSetupWizardState,
-  type SetupWizardStep,
   type SetupWizardState,
+  type SetupWizardStep,
 } from './overviewWorkflow';
-import { getExactEditedFieldLabels, useOverviewSetupDerivedRows } from './useOverviewSetupDerivedRows';
+import { useOverviewSetupDerivedRows } from './useOverviewSetupDerivedRows';
 
 export { getExactEditedFieldLabels } from './useOverviewSetupDerivedRows';
 

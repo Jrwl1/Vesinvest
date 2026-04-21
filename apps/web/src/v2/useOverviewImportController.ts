@@ -1,12 +1,5 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
-import i18n, {
-  applyOrganizationDefaultLanguage,
-  hasManualLanguageOverride,
-  normalizeLanguage,
-  type SupportedLanguage,
-} from '../i18n';
-
+import React from 'react';
 import {
   getImportYearDataV2,
   syncImportV2,
@@ -17,6 +10,20 @@ import {
   type V2ReportListItem,
   type VeetiOrganizationSearchHit,
 } from '../api';
+import i18n,{
+  applyOrganizationDefaultLanguage,
+  hasManualLanguageOverride,
+  normalizeLanguage,
+  type SupportedLanguage,
+} from '../i18n';
+import { sendV2OpsEvent } from './opsTelemetry';
+import {
+  getAutoSearchDelayMs,
+  getAutoSearchMinLength,
+  normalizeOrganizationSearchQuery,
+  OVERVIEW_RUNTIME_STORAGE_KEY,
+  readOverviewRuntimeState,
+} from './overviewImportPersistence';
 import {
   connectOverviewOrganization,
   ensureOverviewPlanContext,
@@ -27,20 +34,11 @@ import {
   recordOverviewImportFailure,
   recordOverviewSearchFailure,
 } from './overviewOrchestration';
-import { sendV2OpsEvent } from './opsTelemetry';
 import {
   getConfirmedImportedYears,
   type SetupWizardStep,
 } from './overviewWorkflow';
-import {
-  getAutoSearchDelayMs,
-  getAutoSearchMinLength,
-  normalizeOrganizationSearchQuery,
-  OVERVIEW_RUNTIME_STORAGE_KEY,
-  readOverviewRuntimeState,
-} from './overviewImportPersistence';
 import { useOverviewImportMaintenance } from './useOverviewImportMaintenance';
-
 export type UseOverviewImportControllerParams = {
   t: TFunction;
   pickDefaultSyncYears: (
@@ -63,7 +61,6 @@ export type UseOverviewImportControllerParams = {
       | null,
   ) => void;
 };
-
 export function useOverviewImportController({
   t,
   pickDefaultSyncYears,
@@ -129,7 +126,6 @@ export function useOverviewImportController({
   const previewFetchYearsRef = React.useRef<Set<number>>(new Set());
   const handledSetupBackSignalRef = React.useRef(0);
   const hydratedRuntimeWorkspaceKeyRef = React.useRef<string | null>(null);
-
   const runtimeWorkspaceKey = React.useMemo(() => {
     const linkedBusinessId =
       typeof overview?.importStatus.link?.ytunnus === 'string' &&
@@ -153,7 +149,6 @@ export function useOverviewImportController({
     const selectedVeetiId = Number((selectedOrg as { Id?: unknown } | null)?.Id);
     return Number.isFinite(selectedVeetiId) ? `veeti:${selectedVeetiId}` : null;
   }, [overview?.importStatus.link?.veetiId, overview?.importStatus.link?.ytunnus, selectedOrg]);
-
   const baselineReady = React.useMemo(
     () => {
       const confirmedImportedYears = overview
@@ -168,7 +163,6 @@ export function useOverviewImportController({
       const baselineCoversImportedWorkspaceYears =
         confirmedImportedYears.length === 0 ||
         confirmedImportedYears.every((year) => acceptedPlanningYears.has(year));
-
       return (
         ((planningContext?.canCreateScenario ?? false) ||
           (overview?.importStatus.planningBaselineYears?.length ?? 0) > 0 ||
@@ -187,7 +181,6 @@ export function useOverviewImportController({
       planningContext?.canCreateScenario,
     ],
   );
-
   const backendAcceptedPlanningYears = React.useMemo(
     () =>
       [
@@ -200,7 +193,6 @@ export function useOverviewImportController({
       ].sort((a, b) => b - a),
     [overview?.importStatus.planningBaselineYears, planningContext?.baselineYears],
   );
-
   const pruneYearFromSelections = React.useCallback((year: number) => {
     setSelectedYears((prev) => prev.filter((item) => item !== year));
     setSelectedYearsForDelete((prev) => prev.filter((item) => item !== year));
@@ -213,7 +205,6 @@ export function useOverviewImportController({
       (item) => item !== year,
     );
   }, []);
-
   React.useEffect(() => {
     selectedYearsRef.current = selectedYears;
   }, [selectedYears]);
@@ -241,7 +232,6 @@ export function useOverviewImportController({
       }),
     );
   }, [runtimeWorkspaceKey, selectedYears]);
-
   React.useEffect(() => {
     if (!overview || !runtimeWorkspaceKey) {
       return;
@@ -250,7 +240,6 @@ export function useOverviewImportController({
       return;
     }
     hydratedRuntimeWorkspaceKeyRef.current = runtimeWorkspaceKey;
-
     const availableYears = new Set(
       (overview.importStatus.years ?? [])
         .map((row) => Number(row.vuosi))
@@ -276,7 +265,6 @@ export function useOverviewImportController({
       );
     }
   }, [overview, runtimeWorkspaceKey]);
-
   const loadOverviewInternal = React.useCallback(
     async (options?: {
       preserveVisibleState?: boolean;
@@ -347,7 +335,6 @@ export function useOverviewImportController({
     },
     [pickDefaultSyncYears, t],
   );
-
   const loadOverview = React.useCallback(
     async (options?: {
       preserveVisibleState?: boolean;
@@ -361,15 +348,12 @@ export function useOverviewImportController({
     },
     [loadOverviewInternal],
   );
-
   React.useEffect(() => {
     void loadOverview();
   }, [loadOverview]);
-
   const performOrganizationSearch = React.useCallback(
     async (searchValue: string) => {
       if (searchValue.length < 2) return;
-
       const requestSeq = searchRequestSeq.current + 1;
       searchRequestSeq.current = requestSeq;
       setSearching(true);
@@ -402,11 +386,9 @@ export function useOverviewImportController({
     },
     [t],
   );
-
   React.useEffect(() => {
     const searchValue = normalizeOrganizationSearchQuery(query);
     const connected = overview?.importStatus.connected ?? false;
-
     if (connected || searchValue.length < getAutoSearchMinLength(searchValue)) {
       searchRequestSeq.current += 1;
       setSearching(false);
@@ -414,7 +396,6 @@ export function useOverviewImportController({
       setInfo(null);
       return;
     }
-
     const timer = window.setTimeout(() => {
       void performOrganizationSearch(searchValue);
     }, getAutoSearchDelayMs(searchValue));

@@ -1,13 +1,7 @@
 import React from 'react';
-
 import { DocumentImportPreviewDetails } from './DocumentImportPreviewDetails';
 import { getDocumentImportSelectedPageNumbers } from './documentPdfImportModel';
-import { formatEur, formatNumber, formatPrice } from './format';
-import {
-  OverviewWorkbookImportWorkflow,
-  type Props as OverviewWorkbookImportWorkflowProps,
-} from './OverviewWorkbookImportWorkflow';
-import type { OverviewPageController } from './useOverviewPageController';
+import { formatEur,formatNumber,formatPrice } from './format';
 import type { OverviewManualPatchViewModel } from './overviewManualPatchModel';
 import {
   ComparisonSection,
@@ -15,20 +9,16 @@ import {
   OverviewManualPatchFooterActions,
   OverviewManualPatchYearDetailsSection,
 } from './overviewManualPatchSections';
-
+import {
+  OverviewWorkbookImportWorkflow,
+  type Props as OverviewWorkbookImportWorkflowProps,
+} from './OverviewWorkbookImportWorkflow';
+import type { OverviewPageController } from './useOverviewPageController';
 type Props = {
   controller: OverviewPageController;
   manualPatchViewModel: OverviewManualPatchViewModel;
   workbookImportWorkflowProps: Omit<OverviewWorkbookImportWorkflowProps, 'yearLabel'>;
 };
-
-type ComparisonRow = {
-  key: string;
-  label: string;
-  veetiValue: number;
-  effectiveValue: number;
-};
-
 function renderDocumentImportPageValue(
   pageNumber: number | null,
   matches: Array<{ pageNumber: number | null }>,
@@ -40,7 +30,6 @@ function renderDocumentImportPageValue(
   }
   return pageNumber != null ? String(pageNumber) : missingLabel;
 }
-
 export const OverviewManualPatchPanel: React.FC<Props> = ({
   controller,
   manualPatchViewModel,
@@ -129,7 +118,6 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
     keepYearButtonClass,
     fixYearButtonClass,
   } = manualPatchViewModel;
-
   if (
     (wizardDisplayStep !== 4 && wizardDisplayStep !== 6) ||
     manualPatchYear == null ||
@@ -137,7 +125,6 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
   ) {
     return null;
   }
-
   const closeDisabled =
     manualPatchBusy || documentImportBusy || workbookImportBusy;
   const saveDisabled =
@@ -146,14 +133,12 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
     workbookImportBusy ||
     !canConfirmImportWorkflow;
   const showManualSaveActions = !isReviewMode && !isWorkbookImportMode;
-
   return (
     <div className="v2-modal-backdrop" role="dialog" aria-modal="true">
       <div className="v2-modal-card">
         <h3>{manualPatchDialogTitle}</h3>
         <p className="v2-muted">{manualPatchDialogBody}</p>
         <span className="v2-chip v2-status-provenance">{manualPatchYear}</span>
-
         {manualPatchError ? (
           <div className="v2-alert v2-alert-error">{manualPatchError}</div>
         ) : null}
@@ -177,7 +162,6 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
             )}
           </p>
         ) : null}
-
         <OverviewManualPatchYearDetailsSection
           t={t}
           currentFinancialSourceLabel={currentFinancialSourceLabel}
@@ -187,7 +171,6 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
           setupStatusLabel={setupStatusLabel}
           currentFinancialFieldSources={currentFinancialFieldSources}
         />
-
         <details className="v2-manual-optional" open={isReviewMode}>
           <summary>
             {t(
@@ -300,7 +283,6 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
             </section>
           ) : null}
         </details>
-
         <input
           ref={documentFileInputRef}
           type="file"
@@ -309,7 +291,6 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
           disabled={documentImportBusy || manualPatchBusy}
           hidden
         />
-
         {isDocumentImportMode ? (
           <section className="v2-manual-section v2-statement-import-panel">
             <div className="v2-manual-section-head">

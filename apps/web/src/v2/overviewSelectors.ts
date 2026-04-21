@@ -1,4 +1,4 @@
-import type { SetupWizardStep, SetupYearStatus } from './overviewWorkflow';
+import type { SetupWizardStep,SetupYearStatus } from './overviewWorkflow';
 
 export const YEAR_PREVIEW_PREFETCH_LIMIT = 4;
 export const DEFAULT_BASELINE_YEAR_COUNT = 4;

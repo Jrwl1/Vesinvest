@@ -9,7 +9,7 @@ import {
   parseApiErrorResponse,
   type GetRequestOptions,
 } from '../core';
-import type { V2ReportDetail, V2ReportListItem } from './types';
+import type { V2ReportDetail,V2ReportListItem } from './types';
 export async function listReportsV2(
   ennusteId?: string,
   options?: GetRequestOptions,

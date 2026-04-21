@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { Global,Module } from '@nestjs/common';
 import { DemoInfraModule } from '../demo/demo-infra.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { TrialController } from './trial.controller';

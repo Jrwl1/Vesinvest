@@ -1,6 +1,5 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-
 import {
   completeImportYearManuallyV2,
   getImportYearDataV2,
@@ -9,7 +8,6 @@ import {
 import {
   getSyncBlockReasonLabel as buildSyncBlockReasonLabel,
 } from './overviewLabels';
-import { renderOverviewHighlightedSearchMatch } from './overviewRenderers';
 import {
   buildFinancialForm,
   buildPriceForm,
@@ -21,23 +19,23 @@ import {
   type ManualPriceForm,
   type ManualVolumeForm,
 } from './overviewManualForms';
-import { useOverviewImportController } from './useOverviewImportController';
-import { useOverviewManualPatchController } from './useOverviewManualPatchController';
-import { useOverviewReviewController } from './useOverviewReviewController';
+import { renderOverviewHighlightedSearchMatch } from './overviewRenderers';
 import { useOverviewReviewSelectors } from './overviewReviewSelectors';
-import { useOverviewSetupState } from './useOverviewSetupState';
 import { pickDefaultBaselineYears } from './overviewSelectors';
 import {
-  resolveVesinvestWorkflowState,
   resolveSetupWizardStateFromImportStatus,
+  resolveVesinvestWorkflowState,
   type MissingRequirement,
   type SetupWizardState,
 } from './overviewWorkflow';
+import { useOverviewImportController } from './useOverviewImportController';
+import { useOverviewManualPatchController } from './useOverviewManualPatchController';
+import { useOverviewPagePresentation } from './useOverviewPagePresentation';
+import { useOverviewReviewController } from './useOverviewReviewController';
+import { useOverviewSetupState } from './useOverviewSetupState';
 import {
   markPersistedReviewedImportYears,
 } from './yearReview';
-import { useOverviewPagePresentation } from './useOverviewPagePresentation';
-
 export type OverviewPageControllerProps = {
   onGoToForecast: (scenarioId?: string | null) => void;
   onGoToReports: () => void;
@@ -65,7 +63,6 @@ export type OverviewPageControllerProps = {
   ) => void;
   setupBackSignal?: number;
 };
-
 type ReviewWorkspaceYearSaveParams = {
   year: number;
   financials: ManualFinancialForm;
@@ -79,12 +76,10 @@ type ReviewWorkspaceYearSaveParams = {
   };
   syncAfterSave?: boolean;
 };
-
 type ReviewWorkspaceYearSaveResult = {
   syncReady: boolean;
   yearData: V2ImportYearDataResponse;
 };
-
 function getPersistedManualReason(
   yearData: V2ImportYearDataResponse | undefined,
 ): string {
@@ -94,7 +89,6 @@ function getPersistedManualReason(
       .find((reason) => reason.trim().length > 0) ?? ''
   );
 }
-
 export function useOverviewPageController({
   onGoToForecast,
   onGoToReports: _onGoToReports,
@@ -106,7 +100,6 @@ export function useOverviewPageController({
   setupBackSignal,
 }: OverviewPageControllerProps) {
   const { t } = useTranslation();
-
   const resolveSyncBlockReason = React.useCallback(
     (row: {
       completeness: Record<string, boolean>;
@@ -120,7 +113,6 @@ export function useOverviewPageController({
       }),
     [t],
   );
-
   const pickDefaultSyncYears = React.useCallback(
     (rows: Array<{
       vuosi: number;
@@ -129,7 +121,6 @@ export function useOverviewPageController({
     }>) => pickDefaultBaselineYears(rows),
     [],
   );
-
   const buildManualPatchInfoMessage = React.useCallback(
     (
       year: number,
@@ -163,7 +154,6 @@ export function useOverviewPageController({
     },
     [resolveSyncBlockReason, t],
   );
-
   const manualController = useOverviewManualPatchController({ t });
   const importController = useOverviewImportController({
     t,
@@ -171,7 +161,6 @@ export function useOverviewPageController({
     setYearDataCache: manualController.setYearDataCache,
     onOrgLanguageNoticeChange,
   });
-
   const {
     importableYearRows, repairOnlyYearRows, blockedYearCount, blockedYearRows,
     recommendedYears, readyTrustBoardRows, suspiciousTrustBoardRows,
@@ -201,7 +190,6 @@ export function useOverviewPageController({
     baselineReady: importController.baselineReady,
     t,
   });
-
   const activeVesinvestPlan = React.useMemo(
     () =>
       importController.planningContext?.vesinvest?.activePlan ??
@@ -209,7 +197,6 @@ export function useOverviewPageController({
       null,
     [importController.planningContext?.vesinvest?.activePlan, importController.planningContext?.vesinvest?.selectedPlan],
   );
-
   const activeVesinvestScenario = React.useMemo(
     () => {
       if (activeVesinvestPlan?.selectedScenarioId == null) {
@@ -260,7 +247,6 @@ export function useOverviewPageController({
   const shouldKeepSavedWorkspaceStep =
     hasSavedWorkspaceTruth &&
     (isManageYearsMaintenanceMode || importController.baselineReady);
-
   const shellSetupWizardState = React.useMemo(() => {
     if (!importController.overview) {
       return null;
@@ -279,7 +265,6 @@ export function useOverviewPageController({
     importController.overview,
     importController.planningContext,
   ]);
-
   const displayedWorkflowStep = React.useMemo(() => {
     if (!shellSetupWizardState || !importController.overview) {
       return wizardDisplayStep;
@@ -317,14 +302,12 @@ export function useOverviewPageController({
     shouldKeepSavedWorkspaceStep,
     wizardDisplayStep,
   ]);
-
   const summaryBaselineReady =
     importController.baselineReady &&
     reviewStatusRows.every(
       (row) =>
         row.setupStatus === 'reviewed' || row.setupStatus === 'excluded_from_plan',
     );
-
   const presentedSetupWizardState = React.useMemo(() => {
     if (!shellSetupWizardState) {
       return null;
@@ -363,7 +346,6 @@ export function useOverviewPageController({
     shellSetupWizardState,
     summaryBaselineReady,
   ]);
-
   const saveInlineCardEdit = React.useCallback(
     async (syncAfterSave = false) =>
       manualController.saveInlineCardEdit({
@@ -387,7 +369,6 @@ export function useOverviewPageController({
       reviewStorageOrgId,
     ],
   );
-
   const handleInlineCardKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (event.key === 'Escape') {
@@ -406,20 +387,16 @@ export function useOverviewPageController({
     },
     [manualController, saveInlineCardEdit],
   );
-
   const renderHighlightedSearchMatch = React.useCallback(
     (value: string): React.ReactNode =>
       renderOverviewHighlightedSearchMatch(value, importController.searchTerm),
     [importController.searchTerm],
   );
-
   const openManualPatchDialog = manualController.openManualPatchDialog;
-
   const resetManualPatchDialog = React.useCallback(() => {
     importController.setReviewContinueStep(null);
     manualController.resetManualPatchDialogState();
   }, [importController.setReviewContinueStep, manualController]);
-
   const closeManualPatchDialog = React.useCallback(() => {
     if (
       manualController.manualPatchBusy ||
@@ -430,7 +407,6 @@ export function useOverviewPageController({
     }
     resetManualPatchDialog();
   }, [manualController, resetManualPatchDialog]);
-
   const handleAddCurrentYearEstimate = React.useCallback(
     async (year: number, missingRequirements: MissingRequirement[]) => {
       try {
@@ -448,7 +424,6 @@ export function useOverviewPageController({
     },
     [importController, isAdmin, manualController],
   );
-
   const {
     datasetSourceLabel,
     financialComparisonLabel,
@@ -474,7 +449,6 @@ export function useOverviewPageController({
     handleInlineCardKeyDown,
     saveInlineCardEdit,
   });
-
   const saveReviewWorkspaceYear = React.useCallback(
     async ({
       year,
@@ -492,7 +466,6 @@ export function useOverviewPageController({
           ),
         );
       }
-
       const cachedYearData =
         manualController.yearDataCache[year] ?? (await getImportYearDataV2(year));
       if (!manualController.yearDataCache[year]) {
@@ -501,7 +474,6 @@ export function useOverviewPageController({
           [year]: cachedYearData,
         }));
       }
-
       const originalFinancials = buildFinancialForm(cachedYearData);
       const originalPrices = buildPriceForm(cachedYearData);
       const originalVolumes = buildVolumeForm(cachedYearData);
@@ -509,7 +481,6 @@ export function useOverviewPageController({
         year,
         reason: getPersistedManualReason(cachedYearData) || undefined,
       } as const;
-
       const nextPayload: {
         year: number;
         reason?: string;
@@ -517,7 +488,6 @@ export function useOverviewPageController({
         prices?: ManualPriceForm;
         volumes?: ManualVolumeForm;
       } = { ...payload };
-
       if (formsDiffer(financials, originalFinancials) || explicitMissing?.financials) {
         const nextFinancials: Partial<ManualFinancialForm> = {};
         const explicitFinancialFields = new Set(
@@ -561,7 +531,6 @@ export function useOverviewPageController({
             financials.omistajanTukiKayttokustannuksiin,
             originalFinancials.omistajanTukiKayttokustannuksiin,
           );
-
         for (const field of financialKeys) {
           if (
             numbersDiffer(financials[field], originalFinancials[field]) ||
@@ -570,27 +539,22 @@ export function useOverviewPageController({
             nextFinancials[field] = financials[field];
           }
         }
-
         if (!resultFieldChanged && visibleFinanceFieldsChanged) {
           nextFinancials.tilikaudenYliJaama = deriveAdjustedYearResult(
             originalFinancials,
             financials,
           );
         }
-
         if (Object.keys(nextFinancials).length > 0) {
           nextPayload.financials = nextFinancials as ManualFinancialForm;
         }
       }
-
       if (formsDiffer(prices, originalPrices) || explicitMissing?.prices) {
         nextPayload.prices = { ...prices };
       }
-
       if (formsDiffer(volumes, originalVolumes) || explicitMissing?.volumes) {
         nextPayload.volumes = { ...volumes };
       }
-
       if (
         !nextPayload.financials &&
         !nextPayload.prices &&
@@ -603,10 +567,8 @@ export function useOverviewPageController({
           ),
         );
       }
-
       importController.setError(null);
       importController.setInfo(null);
-
       const result = await completeImportYearManuallyV2(nextPayload);
       if (result.syncReady) {
         importController.setReviewedImportedYears(
@@ -617,7 +579,6 @@ export function useOverviewPageController({
           ),
         );
       }
-
       if (syncAfterSave && result.syncReady) {
         await importController.runSync([year]);
       } else {
@@ -629,13 +590,11 @@ export function useOverviewPageController({
         });
         importController.setInfo(buildManualPatchInfoMessage(year, result));
       }
-
       const refreshedYearData = await getImportYearDataV2(year);
       manualController.setYearDataCache((prev) => ({
         ...prev,
         [year]: refreshedYearData,
       }));
-
       return {
         syncReady: result.syncReady,
         yearData: refreshedYearData,
@@ -650,7 +609,6 @@ export function useOverviewPageController({
       t,
     ],
   );
-
   const reviewController = useOverviewReviewController({
     t,
     importController,
@@ -669,7 +627,6 @@ export function useOverviewPageController({
     resetManualPatchDialog,
     onGoToForecast,
   });
-
   const reviewSelectors = useOverviewReviewSelectors({
     t,
     isAdmin,
@@ -679,13 +636,11 @@ export function useOverviewPageController({
     priceComparisonLabel,
     volumeComparisonLabel,
   });
-
   React.useEffect(() => {
     for (const year of previewPrefetchYears) {
       void loadYearPreviewData(year);
     }
   }, [loadYearPreviewData, previewPrefetchYears]);
-
   React.useEffect(() => {
     if (!presentedSetupWizardState) {
       return;
@@ -695,7 +650,6 @@ export function useOverviewPageController({
     onSetupWizardStateChange,
     presentedSetupWizardState,
   ]);
-
   const presentedPlanState = React.useMemo(() => {
     if (!activeVesinvestPlan) {
       return null;
@@ -712,11 +666,9 @@ export function useOverviewPageController({
         activeVesinvestPlan.investmentPlanChangedSinceFeeRecommendation === true,
     };
   }, [activeVesinvestPlan]);
-
   React.useEffect(() => {
     onSetupPlanStateChange?.(presentedPlanState);
   }, [onSetupPlanStateChange, presentedPlanState]);
-
   React.useEffect(() => {
     if (!setupBackSignal) {
       return;
@@ -727,7 +679,6 @@ export function useOverviewPageController({
     importController.handledSetupBackSignalRef.current = setupBackSignal;
     reviewController.handleWizardBack();
   }, [reviewController, importController.handledSetupBackSignalRef, setupBackSignal]);
-
   React.useEffect(() => {
     if (importController.loading) {
       return;

@@ -1,10 +1,10 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
 import type { InlineCardField } from './overviewManualForms';
-import type { ManualPatchMode } from './useOverviewManualPatchEditor';
+import type { RepairAction,ReviewStatusRow } from './overviewReviewModel';
 import type { MissingRequirement } from './overviewWorkflow';
-import type { RepairAction, ReviewStatusRow } from './overviewReviewModel';
+import type { ManualPatchMode } from './useOverviewManualPatchEditor';
 
 type OverviewReviewCardActionsProps = {
   t: TFunction;

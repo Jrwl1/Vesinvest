@@ -1,11 +1,11 @@
 import React from 'react';
 import type { TFunction } from 'i18next';
 
+import type { V2OverrideProvenance } from '../api';
 import { formatEur, formatNumber, formatPercent, formatPrice } from './format';
 import {
   ASSUMPTION_LABEL_KEYS,
   formatSignedEur,
-  type RiskPresetDefinition,
   toPercentPoints,
 } from './forecastModel';
 import {
@@ -228,7 +228,10 @@ export function useForecastPageDerivedState({
     [scenarioController.scenario],
   );
   const baselineDatasetSourceLabel = React.useCallback(
-    (source: 'veeti' | 'manual' | 'none', provenance: any) =>
+    (
+      source: 'veeti' | 'manual' | 'none',
+      provenance: V2OverrideProvenance | null,
+    ) =>
       buildForecastBaselineDatasetSourceLabel({ t, source, provenance }),
     [t],
   );

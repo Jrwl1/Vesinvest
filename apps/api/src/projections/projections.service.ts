@@ -33,7 +33,6 @@ import {
   type ProjectionWithBudget,
   waterDriverRevenue,
   waterSalesRevenueFromSubtotals,
-  shouldUseSubtotalFallbackForImportedDrivers,
 } from './projections-support';
 
 @Injectable()
@@ -109,7 +108,6 @@ export class ProjectionsService {
       driverPaths,
       budget.vuosi,
     );
-    const hasExplicitDriverPaths = Boolean(driverPaths);
     const subtotalFallbackDrivers = hasValisummat
       ? synthesizeDriversFromSubtotals(
           (budget.valisummat ?? []).map((v) => ({
@@ -275,7 +273,7 @@ export class ProjectionsService {
     vuosiYlikirjoitukset?: ProjectionYearOverrides,
   ) {
     // Verify budget exists and belongs to org
-    const budget = await this.repo.requireBudgetOwnership(orgId, talousarvioId);
+    await this.repo.requireBudgetOwnership(orgId, talousarvioId);
 
     // Find existing projection for this budget (prefer default, then newest)
     let projection = await this.prisma.ennuste.findFirst({
@@ -289,8 +287,7 @@ export class ProjectionsService {
         where: { id: talousarvioId, orgId },
         select: { vuosi: true },
       });
-      projection = await this.prisma.ennuste.create({
-        data: {
+      const createData: Prisma.EnnusteUncheckedCreateInput = {
           orgId,
           talousarvioId,
           nimi: `Perusskenaario ${
@@ -304,8 +301,8 @@ export class ProjectionsService {
           vuosiYlikirjoitukset:
             (vuosiYlikirjoitukset as Prisma.InputJsonValue | undefined) ??
             undefined,
-        } as any,
-      });
+      };
+      projection = await this.prisma.ennuste.create({ data: createData });
     } else {
       const updates: Record<string, unknown> = {};
       if (
@@ -654,7 +651,7 @@ export class ProjectionsService {
 
     const addPage = () => {
       const page = doc.addPage([842, 595]); // A4 landscape
-      let y = 560;
+      const y = 560;
       return { page, y };
     };
 
@@ -794,4 +791,3 @@ export class ProjectionsService {
     return Buffer.concat([Buffer.from(pdfBytes), marker]);
   }
 }
-

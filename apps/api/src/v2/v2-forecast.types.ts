@@ -365,6 +365,18 @@ export type DepreciationRuleInput = {
   annualSchedule?: number[] | null;
 };
 
+export type DepreciationRuleView = {
+  id: string;
+  assetClassKey: string;
+  assetClassName: string | null;
+  method: 'residual' | 'straight-line' | 'none';
+  linearYears: number | null;
+  residualPercent: number | null;
+  annualSchedule: number[] | null;
+  updatedAt: string | Date;
+  createdAt: string | Date;
+};
+
 export type ScenarioStoredDepreciationRule = {
   id: string;
   assetClassKey: string;
@@ -527,4 +539,3 @@ export const ALLOWED_STATEMENT_CONTENT_TYPES = new Set([
   'application/pdf',
   'application/octet-stream',
 ]);
-

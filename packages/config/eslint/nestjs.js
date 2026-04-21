@@ -24,5 +24,12 @@ module.exports = {
     'nestjs/use-validation-pipe': 'warn',
     'prefer-const': 'warn',
   },
-  overrides: [],
+  overrides: [
+    {
+      files: ['src/v2/v2-forecast.service.ts', 'src/v2/v2-import-overview.service.ts'],
+      rules: {
+        '@typescript-eslint/no-this-alias': 'off',
+      },
+    },
+  ],
 };

@@ -128,6 +128,11 @@ const parseNullableNumber = (value: unknown): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const getRowValue = (row: unknown, key: string): unknown =>
+  typeof row === 'object' && row !== null
+    ? (row as Record<string, unknown>)[key]
+    : undefined;
+
 const numbersDiffer = (left: number, right: number): boolean =>
   Math.abs(left - right) > MANUAL_NUMERIC_EPSILON;
 
@@ -564,16 +569,16 @@ export function buildPriceComparisonRows(
   const rawRows = getDatasetRows(yearData, 'taksa', 'rawRows');
   const effectiveRows = getDatasetRows(yearData, 'taksa', 'effectiveRows');
   const rawWaterRow = rawRows.find(
-    (row) => parseNumber((row as any).Tyyppi_Id) === 1,
+    (row) => parseNumber(getRowValue(row, 'Tyyppi_Id')) === 1,
   );
   const rawWastewaterRow = rawRows.find(
-    (row) => parseNumber((row as any).Tyyppi_Id) === 2,
+    (row) => parseNumber(getRowValue(row, 'Tyyppi_Id')) === 2,
   );
   const effectiveWaterRow = effectiveRows.find(
-    (row) => parseNumber((row as any).Tyyppi_Id) === 1,
+    (row) => parseNumber(getRowValue(row, 'Tyyppi_Id')) === 1,
   );
   const effectiveWastewaterRow = effectiveRows.find(
-    (row) => parseNumber((row as any).Tyyppi_Id) === 2,
+    (row) => parseNumber(getRowValue(row, 'Tyyppi_Id')) === 2,
   );
 
   if (
@@ -588,20 +593,22 @@ export function buildPriceComparisonRows(
   const rows: Array<ValueComparisonRow<PriceComparisonFieldKey>> = [
     {
       key: 'waterUnitPrice',
-      veetiValue: parseNumber((rawWaterRow as any)?.Kayttomaksu),
-      effectiveValue: parseNumber((effectiveWaterRow as any)?.Kayttomaksu),
+      veetiValue: parseNumber(getRowValue(rawWaterRow, 'Kayttomaksu')),
+      effectiveValue: parseNumber(getRowValue(effectiveWaterRow, 'Kayttomaksu')),
       changed: numbersDiffer(
-        parseNumber((rawWaterRow as any)?.Kayttomaksu),
-        parseNumber((effectiveWaterRow as any)?.Kayttomaksu),
+        parseNumber(getRowValue(rawWaterRow, 'Kayttomaksu')),
+        parseNumber(getRowValue(effectiveWaterRow, 'Kayttomaksu')),
       ),
     },
     {
       key: 'wastewaterUnitPrice',
-      veetiValue: parseNumber((rawWastewaterRow as any)?.Kayttomaksu),
-      effectiveValue: parseNumber((effectiveWastewaterRow as any)?.Kayttomaksu),
+      veetiValue: parseNumber(getRowValue(rawWastewaterRow, 'Kayttomaksu')),
+      effectiveValue: parseNumber(
+        getRowValue(effectiveWastewaterRow, 'Kayttomaksu'),
+      ),
       changed: numbersDiffer(
-        parseNumber((rawWastewaterRow as any)?.Kayttomaksu),
-        parseNumber((effectiveWastewaterRow as any)?.Kayttomaksu),
+        parseNumber(getRowValue(rawWastewaterRow, 'Kayttomaksu')),
+        parseNumber(getRowValue(effectiveWastewaterRow, 'Kayttomaksu')),
       ),
     },
   ];
@@ -641,20 +648,20 @@ export function buildVolumeComparisonRows(
   return [
     {
       key: 'soldWaterVolume',
-      veetiValue: parseNumber((rawWater as any).Maara),
-      effectiveValue: parseNumber((effectiveWater as any).Maara),
+      veetiValue: parseNumber(getRowValue(rawWater, 'Maara')),
+      effectiveValue: parseNumber(getRowValue(effectiveWater, 'Maara')),
       changed: numbersDiffer(
-        parseNumber((rawWater as any).Maara),
-        parseNumber((effectiveWater as any).Maara),
+        parseNumber(getRowValue(rawWater, 'Maara')),
+        parseNumber(getRowValue(effectiveWater, 'Maara')),
       ),
     },
     {
       key: 'soldWastewaterVolume',
-      veetiValue: parseNumber((rawWastewater as any).Maara),
-      effectiveValue: parseNumber((effectiveWastewater as any).Maara),
+      veetiValue: parseNumber(getRowValue(rawWastewater, 'Maara')),
+      effectiveValue: parseNumber(getRowValue(effectiveWastewater, 'Maara')),
       changed: numbersDiffer(
-        parseNumber((rawWastewater as any).Maara),
-        parseNumber((effectiveWastewater as any).Maara),
+        parseNumber(getRowValue(rawWastewater, 'Maara')),
+        parseNumber(getRowValue(effectiveWastewater, 'Maara')),
       ),
     },
   ];

@@ -53,18 +53,20 @@ export class ProjectionsRepository extends BaseRepository {
     onOletus?: boolean;
   }) {
     const org = this.requireOrgId(orgId);
+    const createData: Prisma.EnnusteUncheckedCreateInput = {
+      orgId: org,
+      talousarvioId: data.talousarvioId,
+      nimi: data.nimi,
+      aikajaksoVuosia: data.aikajaksoVuosia,
+      olettamusYlikirjoitukset: data.olettamusYlikirjoitukset ?? undefined,
+      ajuriPolut: (data.ajuriPolut as Prisma.InputJsonValue | undefined) ?? undefined,
+      userInvestments: (data.userInvestments as Prisma.InputJsonValue | undefined) ?? undefined,
+      vuosiYlikirjoitukset:
+        (data.vuosiYlikirjoitukset as Prisma.InputJsonValue | undefined) ?? undefined,
+      onOletus: data.onOletus ?? undefined,
+    };
     return this.prisma.ennuste.create({
-      data: {
-        orgId: org,
-        talousarvioId: data.talousarvioId,
-        nimi: data.nimi,
-        aikajaksoVuosia: data.aikajaksoVuosia,
-        olettamusYlikirjoitukset: data.olettamusYlikirjoitukset ?? undefined,
-        ajuriPolut: (data.ajuriPolut as Prisma.InputJsonValue | undefined) ?? undefined,
-        userInvestments: (data.userInvestments as Prisma.InputJsonValue | undefined) ?? undefined,
-        vuosiYlikirjoitukset: (data.vuosiYlikirjoitukset as Prisma.InputJsonValue | undefined) ?? undefined,
-        onOletus: data.onOletus ?? undefined,
-      } as any,
+      data: createData,
       include: {
         talousarvio: { select: { id: true, vuosi: true, nimi: true } },
         vuodet: { orderBy: { vuosi: 'asc' } },
@@ -141,7 +143,7 @@ export class ProjectionsRepository extends BaseRepository {
     kumulatiivinenTulos: number;
     vesihinta?: number;
     myytyVesimaara?: number;
-    erittelyt?: any;
+    erittelyt?: Prisma.InputJsonValue;
   }>) {
     return this.prisma.$transaction(async (tx) => {
       await tx.ennusteVuosi.deleteMany({ where: { ennusteId } });

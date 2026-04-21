@@ -1,29 +1,26 @@
-import { Injectable } from '@nestjs/common';
-import { resolveDriverValue, type DriverPaths } from './driver-paths';
-import type { ProjectionYearOverride, ProjectionYearOverrides } from './year-overrides';
+import { resolveDriverValue,type DriverPaths } from './driver-paths';
 import {
   applyLineOverride,
+  ENERGY_ACCOUNT_PREFIX,
+  getCostCategoryBucket,
+  getCostCategoryRate,
+  pctToRate,
+  PERSONNEL_YEAR_OVERRIDE_PREFIX,
+  pickYearOverride,
+  readYearRateOverrides,
+  round2,
+  SALES_REVENUE_CATEGORY_KEYS,
+  stripWaterPriceOverrides,
+  weightedCombinedUnitPrice,
   type AssumptionMap,
   type BudgetLineInput,
   type ComputedYear,
   type DepreciationRuleConfig,
-  ENERGY_ACCOUNT_PREFIX,
-  getCostCategoryBucket,
-  getCostCategoryRate,
-  OTHER_OPERATING_SUBTOTAL_CATEGORY_KEYS,
-  PERSONNEL_YEAR_OVERRIDE_PREFIX,
-  pickYearOverride,
-  pctToRate,
-  readYearRateOverrides,
-  SALES_REVENUE_CATEGORY_KEYS,
-  stripWaterPriceOverrides,
   type LinearCohort,
   type ResidualCohort,
   type RevenueDriverInput,
-  round2,
   type ScheduleCohort,
   type SubtotalInput,
-  weightedCombinedUnitPrice,
   type UserInvestmentSnapshotRule,
 } from './projection-engine-model';
 import {
@@ -35,14 +32,13 @@ import {
   readInvestmentSnapshotRule,
   readYearClassAllocations,
 } from './projection-engine-support';
-
+import type { ProjectionYearOverride,ProjectionYearOverrides } from './year-overrides';
 export type {
   AssumptionMap,
   BudgetLineInput,
   RevenueDriverInput,
-  SubtotalInput,
+  SubtotalInput
 } from './projection-engine-model';
-
 export class ProjectionEngine {
   /**
    * Compute a full projection given base budget data and assumptions.
@@ -74,27 +70,20 @@ export class ProjectionEngine {
       typeof assumptions.perusmaksuMuutos === 'number'
         ? assumptions.perusmaksuMuutos
         : 0;
-
     // Separate lines by type
     const expenses = lines.filter((l) => l.tyyppi === 'kulu');
     const manualRevenue = lines.filter((l) => l.tyyppi === 'tulo');
     const investments = lines.filter((l) => l.tyyppi === 'investointi');
-
     // Base revenue from drivers (year 0 values)
-    const baseDriverRevenue = this.computeDriverRevenue(drivers, 1, 1);
-
     // Base totals for year 0 (not included in output — we start from year baseYear)
     const years: ComputedYear[] = [];
     let cumulative = 0;
     let ackumCumulative = 0;
-
     for (let n = 0; n <= horizonYears; n++) {
       const year = baseYear + n;
-
       // ── Revenue ──
       const priceFactor = Math.pow(1 + hintakorotus, n);
       const volumeFactor = Math.pow(1 + vesimaaran_muutos, n);
-
       // Base-fee total: ADR-013 yearly percent change or override
       const baseFeeYear0 = drivers.reduce(
         (s, d) => s + d.perusmaksu * (d.liittymamaara ?? 0),
@@ -103,7 +92,6 @@ export class ProjectionEngine {
       const baseFeeForYear =
         baseFeeOverrides?.[year] ??
         baseFeeYear0 * Math.pow(1 + perusmaksuMuutos, n);
-
       // Computed revenue from drivers with price + volume adjustments; base fee uses yearly total (percent change or override)
       let totalVolumeRevenue = 0;
       const shareDenom = baseFeeYear0 > 0 ? baseFeeYear0 : 1;
@@ -141,7 +129,6 @@ export class ProjectionEngine {
         };
       });
       const totalDriverRevenue = round2(totalVolumeRevenue + baseFeeForYear);
-
       // Manual revenue lines grow with inflation
       const manualRevenueDetails = manualRevenue.map((l) => ({
         nimi: l.nimi,
@@ -151,9 +138,7 @@ export class ProjectionEngine {
         (sum, l) => sum + l.summa,
         0,
       );
-
       const tulotYhteensa = round2(totalDriverRevenue + totalManualRevenue);
-
       // ── Expenses ──
       const expenseDetails = expenses.map((l) => {
         const isEnergy = l.tiliryhma.startsWith(ENERGY_ACCOUNT_PREFIX);
@@ -167,7 +152,6 @@ export class ProjectionEngine {
       const kulutYhteensa = round2(
         expenseDetails.reduce((sum, l) => sum + l.summa, 0),
       );
-
       // ── Investments ──
       const investmentDetails = investments.map((l) => ({
         tiliryhma: l.tiliryhma,
@@ -177,15 +161,12 @@ export class ProjectionEngine {
       const investoinnitYhteensa = round2(
         investmentDetails.reduce((sum, l) => sum + l.summa, 0),
       );
-
       // ── Net result: income minus expenses (investments shown separately, do not reduce tulos) ──
       const tulos = round2(tulotYhteensa - kulutYhteensa);
       cumulative = round2(cumulative + tulos);
-
       // Kassaflöde = Tulos − Investoinnit; Ackumulerad kassa = running sum
       const kassafloede = round2(tulos - investoinnitYhteensa);
       ackumCumulative = round2(ackumCumulative + kassafloede);
-
       // Combined water price is volume-weighted across vesi + jatevesi.
       const avgWaterPrice = weightedCombinedUnitPrice(driverDetails);
       const totalVolume = round2(
@@ -197,7 +178,6 @@ export class ProjectionEngine {
           )
           .reduce((sum, driver) => sum + driver.myytyMaara, 0),
       );
-
       years.push({
         vuosi: year,
         tulotYhteensa,
@@ -219,10 +199,8 @@ export class ProjectionEngine {
         },
       });
     }
-
     return years;
   }
-
   /**
    * Compute projection from subtotal-level P&L data (KVA import path).
    *
@@ -276,7 +254,6 @@ export class ProjectionEngine {
       assumptions,
       PERSONNEL_YEAR_OVERRIDE_PREFIX,
     );
-
     // Separate subtotals by type (exclude result types and sales_revenue which comes from drivers)
     const costSubtotals = subtotals.filter((s) => s.tyyppi === 'kulu');
     const depreciationSubtotals = subtotals.filter(
@@ -300,7 +277,6 @@ export class ProjectionEngine {
         !SALES_REVENUE_CATEGORY_KEYS.has(s.categoryKey) &&
         !RESULT_CATEGORIES.has(s.categoryKey),
     );
-
     const years: ComputedYear[] = [];
     let cumulative = 0;
     let ackumCumulative = 0;
@@ -317,15 +293,12 @@ export class ProjectionEngine {
           driver.palvelutyyppi === 'jatevesi',
       ),
     );
-
     for (let n = 0; n <= horizonYears; n++) {
       const year = baseYear + n;
       const yearOverride = pickYearOverride(projectionYearOverrides, year);
-
       // ── Revenue (from drivers) ──
       const priceFactor = Math.pow(1 + hintakorotus, n);
       const volumeFactor = Math.pow(1 + vesimaaran_muutos, n);
-
       // Base-fee total: ADR-013 yearly percent change or override
       const baseFeeYear0 = drivers.reduce(
         (s, d) => s + d.perusmaksu * (d.liittymamaara ?? 0),
@@ -334,7 +307,6 @@ export class ProjectionEngine {
       const baseFeeForYear =
         baseFeeOverrides?.[year] ??
         baseFeeYear0 * Math.pow(1 + perusmaksuMuutos, n);
-
       let totalVolumeRevenue = 0;
       const shareDenom = baseFeeYear0 > 0 ? baseFeeYear0 : 1;
       let driverDetails = drivers.map((d) => {
@@ -424,9 +396,7 @@ export class ProjectionEngine {
           0,
         ),
       );
-
       const totalDriverRevenue = round2(totalVolumeRevenue + baseFeeForYear);
-
       // Non-driver income grows with inflation unless year/category overrides are set.
       const otherIncomeGrowthRate = pctToRate(
         yearOverride?.categoryGrowthPct?.otherIncome,
@@ -456,17 +426,14 @@ export class ProjectionEngine {
         (sum, l) => sum + l.summa,
         0,
       );
-
       // Financial income (flat)
       const totalFinancialIncome = financialIncome.reduce(
         (sum, s) => sum + s.summa,
         0,
       );
-
       const tulotYhteensa = round2(
         totalDriverRevenue + totalOtherIncome + totalFinancialIncome,
       );
-
       // ── Operating costs (grow with inflation) ──
       const costDetails = costSubtotals.map((s) => {
         const previousAmount =
@@ -507,17 +474,14 @@ export class ProjectionEngine {
       const totalCosts = round2(
         costDetails.reduce((sum, l) => sum + l.summa, 0),
       );
-
       // ── Depreciation: baseline from base-year poisto inputs (flat) ──
       const poistoPerusta = round2(
         depreciationSubtotals.reduce((sum, s) => sum + s.summa, 0),
       );
-
       // ── Financial costs (flat) ──
       const totalFinancialCosts = round2(
         financialCosts.reduce((sum, s) => sum + s.summa, 0),
       );
-
       // ── Investments (grow with investointikerroin) + user investments merged per year ──
       const investmentGrowthRate = pctToRate(
         yearOverride?.categoryGrowthPct?.investments,
@@ -563,7 +527,6 @@ export class ProjectionEngine {
       totalInvestments = round2(
         totalInvestments + (yearOverrideInvestment ?? userInvForYear),
       );
-
       // ── Investment-driven additional depreciation (ADR: additional from investment plan) ──
       // Supports class-based cohorts when rules + class allocations are provided.
       const classAllocations = this.readYearClassAllocations(yearOverride);
@@ -612,7 +575,6 @@ export class ProjectionEngine {
           legacyInvestmentBase * (unallocatedShare / 100),
         );
       }
-
       const cohortDepreciation = this.computeYearCohortDepreciation(
         linearCohorts,
         residualCohorts,
@@ -624,7 +586,6 @@ export class ProjectionEngine {
       const poistoInvestoinneista = round2(
         cohortDepreciation + legacyDepreciation,
       );
-
       // ── Expenses total (costs + baseline depreciation + investment depreciation + financial costs) ──
       const kulutYhteensa = round2(
         totalCosts +
@@ -632,15 +593,12 @@ export class ProjectionEngine {
           poistoInvestoinneista +
           totalFinancialCosts,
       );
-
       // ── Net result: TULOS = income minus expenses (TULOT - KULUT). Investments shown separately. ──
       const tulos = round2(tulotYhteensa - kulutYhteensa);
       cumulative = round2(cumulative + tulos);
-
       // Kassaflöde = Tulos − Investoinnit; Ackumulerad kassa = running sum
       const kassafloede = round2(tulos - totalInvestments);
       ackumCumulative = round2(ackumCumulative + kassafloede);
-
       // Water price/volume for display
       const totalVolume = round2(
         driverDetails
@@ -651,7 +609,6 @@ export class ProjectionEngine {
           )
           .reduce((sum, driver) => sum + driver.myytyMaara, 0),
       );
-
       years.push({
         vuosi: year,
         tulotYhteensa,
@@ -673,11 +630,8 @@ export class ProjectionEngine {
         },
       });
     }
-
     return years;
   }
-
-
   computeRequiredTariff(
     baseYear: number,
     horizonYears: number,
@@ -708,7 +662,6 @@ export class ProjectionEngine {
         jatevesi: { ...driverPaths?.jatevesi, yksikkohinta: pricePlan },
       };
     };
-
     const runTrial = (trialP: number): ComputedYear[] => {
       const trialPaths = buildTrialPaths(trialP);
       return this.computeFromSubtotals(

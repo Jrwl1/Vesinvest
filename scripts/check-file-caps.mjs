@@ -13,7 +13,8 @@ function countLines(text) {
   if (text.length === 0) {
     return 0;
   }
-  return text.split(/\r?\n/).filter((line) => line.trim().length > 0).length;
+  const lines = text.split(/\r\n|\r|\n/);
+  return /(?:\r\n|\r|\n)$/.test(text) ? lines.length - 1 : lines.length;
 }
 
 function walk(dirPath, findings) {

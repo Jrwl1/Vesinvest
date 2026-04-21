@@ -1,7 +1,7 @@
-import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { Controller,Get,HttpException,HttpStatus } from '@nestjs/common';
 import { AppModeService } from '../app-mode/app-mode.service';
 import { DEMO_ORG_ID } from '../demo/demo.constants';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('health')
 export class HealthController {

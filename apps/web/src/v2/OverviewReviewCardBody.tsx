@@ -1,25 +1,25 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 
-import { DocumentImportPreviewDetails } from './DocumentImportPreviewDetails';
-import {
-  OverviewWorkbookImportWorkflow,
-  type Props as OverviewWorkbookImportWorkflowProps,
-} from './OverviewWorkbookImportWorkflow';
 import type { V2ImportYearDataResponse } from '../api';
+import { DocumentImportPreviewDetails } from './DocumentImportPreviewDetails';
+import type { DocumentImportPreview } from './documentPdfImportModel';
 import type {
   InlineCardField,
   ManualFinancialForm,
   ManualPriceForm,
   ManualVolumeForm,
 } from './overviewManualForms';
-import type { MissingRequirement } from './overviewWorkflow';
-import type { ManualPatchMode } from './useOverviewManualPatchEditor';
-import type { DocumentImportPreview } from './documentPdfImportModel';
 import {
   renderDocumentImportPageValue,
   type ReviewStatusRow,
 } from './overviewReviewModel';
+import {
+  OverviewWorkbookImportWorkflow,
+  type Props as OverviewWorkbookImportWorkflowProps,
+} from './OverviewWorkbookImportWorkflow';
+import type { MissingRequirement } from './overviewWorkflow';
+import type { ManualPatchMode } from './useOverviewManualPatchEditor';
 
 type OverviewReviewCardBodyProps = {
   t: TFunction;
@@ -79,7 +79,6 @@ export const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
   handleSelectDocumentImportMatch,
   currentYearData,
   documentFileInputRef,
-  workbookImportBusy,
   canConfirmImportWorkflow,
   isInlineCardDirty,
   setInlineCardFieldRef,

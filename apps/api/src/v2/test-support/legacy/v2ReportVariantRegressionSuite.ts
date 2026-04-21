@@ -100,7 +100,6 @@ const buildFacadeService = (deps: {
   } as any);
 };
 
-
 export function registerV2ReportVariantRegressionSuite() {
 describe('V2Service report variant regression', () => {
   const ORG_ID = 'org-1';
@@ -367,7 +366,6 @@ describe('V2Service report variant regression', () => {
     const veetiEffectiveDataService = {
       getYearDataset: jest.fn().mockResolvedValue(buildYearDataset()),
     } as any;
-
     const service = buildFacadeFromArgs(
       prisma,
       {} as any,
@@ -378,7 +376,6 @@ describe('V2Service report variant regression', () => {
       {} as any,
       {} as any,
     );
-
     jest
       .spyOn((service as any).reportService, 'getForecastScenario')
       .mockResolvedValue({
@@ -589,7 +586,6 @@ describe('V2Service report variant regression', () => {
 
     const result = await service.getImportYearData(ORG_ID, 2024);
     const resultRow = result.summaryRows.find((row: any) => row.key === 'result');
-
     expect(resultRow).toMatchObject({
       sourceField: 'TilikaudenYliJaama',
       rawValue: 25,
@@ -713,7 +709,6 @@ describe('V2Service report variant regression', () => {
     );
 
     const result = await service.getImportYearData(ORG_ID, 2024);
-
     expect(result.summaryRows).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -918,7 +913,6 @@ describe('V2Service report variant regression', () => {
     }
 
     const listedReports = await service.listReports(ORG_ID);
-
     const createArgs = (prisma.ennusteReport.create as jest.Mock).mock.calls[0][0];
     const snapshot = createArgs.data.snapshotJson as any;
 
@@ -959,7 +953,6 @@ describe('V2Service report variant regression', () => {
     expect(listedReports[0]?.requiredAnnualIncreasePct).toBe(14);
 
     const report = await service.getReport(ORG_ID, 'report-1');
-
     expect(report.variant).toBe('public_summary');
     expect(report.snapshot.reportSections).toMatchObject({
       baselineSources: true,
@@ -1028,7 +1021,6 @@ describe('V2Service report variant regression', () => {
 
     expect(prisma.ennusteReport.create).toHaveBeenCalledTimes(1);
   });
-
   it('still blocks report creation when yearly investment inputs no longer match the computed series', async () => {
     const { prisma, service } = buildReportCreateHarness({
       yearlyInvestments: [
@@ -1506,4 +1498,3 @@ describe('V2Service report variant regression', () => {
   });
 });
 }
-

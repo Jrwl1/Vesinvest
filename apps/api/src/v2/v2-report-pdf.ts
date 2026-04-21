@@ -1,11 +1,10 @@
-import { PDFDocument, StandardFonts } from 'pdf-lib';
-import type { BuildV2ReportPdfInput, ReportSnapshot } from './v2-report-pdf.types';
+import { PDFDocument,StandardFonts } from 'pdf-lib';
 import {
   createPdfReportSupport,
   formatAcceptedBaselineYears,
   normalizeVesinvestClassLabel,
-  resolveAcceptedBaselineYears,
 } from './v2-report-pdf-support';
+import type { BuildV2ReportPdfInput } from './v2-report-pdf.types';
 
 export async function buildV2ReportPdf({
   report,

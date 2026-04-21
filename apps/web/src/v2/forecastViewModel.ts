@@ -1,8 +1,8 @@
 import type { TFunction } from 'i18next';
 
-import type { V2ForecastScenario, V2OverrideProvenance } from '../api';
-import { normalizeImportedFileName } from './provenanceDisplay';
+import type { V2ForecastScenario,V2OverrideProvenance } from '../api';
 import { toPercentPoints } from './forecastModel';
+import { normalizeImportedFileName } from './provenanceDisplay';
 
 type ScenarioYearSnapshot = V2ForecastScenario['years'][number] | null | undefined;
 type BaselineContext = {

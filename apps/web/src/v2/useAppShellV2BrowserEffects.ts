@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { FORECAST_RUNTIME_STORAGE_KEY, resolveTabFromPath, syncBrowserPath, type ForecastRuntimeState, type TabId, type WorkspaceBootstrapSnapshot } from './appShellV2Routing';
+import { FORECAST_RUNTIME_STORAGE_KEY,resolveTabFromPath,syncBrowserPath,type ForecastRuntimeState,type TabId,type WorkspaceBootstrapSnapshot } from './appShellV2Routing';
 import type { SetupWizardState } from './overviewWorkflow';
 
 export function useAppShellV2BrowserEffects({

@@ -1,7 +1,7 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { ForbiddenException,Injectable,NotFoundException } from '@nestjs/common';
 import { AppModeService } from '../app-mode/app-mode.service';
 import { DemoResetService } from '../demo/demo-reset.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class TrialService {

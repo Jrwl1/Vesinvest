@@ -492,7 +492,7 @@ export class V2ForecastInputModelSupport {
   }
 
   buildYearlyInvestments(
-    projection: any,
+    projection: { aikajaksoVuosia?: unknown; userInvestments?: unknown },
     baseYear: number | null,
   ): YearlyInvestment[] {
     if (!baseYear) return [];

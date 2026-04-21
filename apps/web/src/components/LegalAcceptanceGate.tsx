@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React,{ useEffect,useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { acceptLegal, getLegalCurrent, getLegalStatus } from '../api';
+import { acceptLegal,getLegalCurrent,getLegalStatus } from '../api';
 
 interface LegalAcceptanceGateProps {
   onUnlocked: () => void;

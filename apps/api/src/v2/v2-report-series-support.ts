@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { VeetiEffectiveDataService } from '../veeti/veeti-effective-data.service';
-import type { SnapshotTrendPoint, TrendPoint } from './v2-report.types';
+import type { SnapshotTrendPoint,TrendPoint } from './v2-report.types';
 
 export class V2ReportSeriesSupport {
   constructor(
@@ -69,14 +69,14 @@ computeCombinedPrice(
         .filter((row) => row.tyyppi === 'tulos')
         .reduce((sum, row) => sum + this.toNumber(row.summa), 0);
 
-      let result =
+      const result =
         explicitResult !== 0
           ? explicitResult
           : explicitResultFallback !== 0
           ? explicitResultFallback
           : revenue - operatingCostsFromRows + financingNet;
 
-      let operatingCosts = operatingCostsFromRows;
+      const operatingCosts = operatingCostsFromRows;
       const volume = budget.tuloajurit.reduce(
         (sum, row) => sum + this.toNumber(row.myytyMaara),
         0,

@@ -1,11 +1,11 @@
 import type { TFunction } from 'i18next';
 
-import { completeImportYearManuallyV2, getImportYearDataV2, type V2ImportYearDataResponse, type V2ManualYearPatchPayload } from '../api';
-import { getSyncBlockReasonLabel as buildSyncBlockReasonLabel } from './overviewLabels';
-import { markPersistedReviewedImportYears, resolveNextReviewQueueYear } from './yearReview';
+import { completeImportYearManuallyV2,getImportYearDataV2,type V2ImportYearDataResponse,type V2ManualYearPatchPayload } from '../api';
 import { sendV2OpsEvent } from './opsTelemetry';
-import type { MissingRequirement, SetupWizardStep } from './overviewWorkflow';
+import { getSyncBlockReasonLabel as buildSyncBlockReasonLabel } from './overviewLabels';
 import type { InlineCardField } from './overviewManualForms';
+import type { MissingRequirement,SetupWizardStep } from './overviewWorkflow';
+import { markPersistedReviewedImportYears,resolveNextReviewQueueYear } from './yearReview';
 
 type ReviewStatusRowLike = {
   year: number;

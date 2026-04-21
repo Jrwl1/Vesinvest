@@ -1,18 +1,147 @@
 import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
-type ForecastScenarioContext = any;
+import type { PrismaService } from '../prisma/prisma.service';
+import type { ProjectionsService } from '../projections/projections.service';
+import type {
+  NearTermExpenseAssumption,
+  ScenarioPayload,
+  ScenarioAssumptionKey,
+  ScenarioStoredDepreciationRule,
+  ScenarioType,
+  YearlyInvestment,
+} from './v2-forecast.types';
+
+type ForecastScenarioListItem = Awaited<
+  ReturnType<ProjectionsService['list']>
+>[number];
+type ForecastProjection = Awaited<ReturnType<ProjectionsService['findById']>>;
+type ForecastCreateBody = {
+  name?: string;
+  talousarvioId?: string;
+  horizonYears?: number;
+  copyFromScenarioId?: string;
+  scenarioType?: ScenarioType;
+  compute?: boolean;
+};
+type ForecastUpdateBody = {
+  name?: string;
+  horizonYears?: number;
+  scenarioType?: ScenarioType;
+  yearlyInvestments?: Array<{ year: number; amount: number }>;
+  scenarioAssumptions?: Partial<Record<ScenarioAssumptionKey, number>>;
+  nearTermExpenseAssumptions?: Array<{
+    year: number;
+    personnelPct?: number;
+    energyPct?: number;
+    opexOtherPct?: number;
+  }>;
+  thereafterExpenseAssumptions?: {
+    personnelPct?: number;
+    energyPct?: number;
+    opexOtherPct?: number;
+  };
+};
+type ForecastScenarioStorage = {
+  rules: ScenarioStoredDepreciationRule[];
+};
+
+type ForecastScenarioContext = {
+  prisma: PrismaService;
+  projectionsService: Pick<
+    ProjectionsService,
+    'list' | 'findById' | 'create' | 'compute' | 'update' | 'delete'
+  >;
+  resolveAcceptedPlanningBaselineBudgetIds: (orgId: string) => Promise<string[]>;
+  resolveLatestAcceptedVeetiBudgetId: (
+    orgId: string,
+  ) => Promise<string | null>;
+  buildDefaultScenarioName: (value: Date | string) => string;
+  resolveScenarioType: (raw: unknown, onOletus: boolean) => ScenarioType;
+  resolveScenarioTypeForCreate: (params: {
+    requestedScenarioType?: ScenarioType;
+    existingBaseScenarioExists: boolean;
+    sourceScenarioType: ScenarioType | null;
+  }) => ScenarioType;
+  withScenarioTypeOverride: (
+    overrides: Record<string, number> | undefined,
+    scenarioType: ScenarioType,
+  ) => Record<string, number>;
+  normalizeUserInvestments: (raw: unknown) => YearlyInvestment[];
+  normalizeAssumptionOverrides: (raw: unknown) => Record<string, number>;
+  extractExplicitNearTermExpenseAssumptions: (
+    baseYear: number | null,
+    rawOverrides: unknown,
+  ) => NearTermExpenseAssumption[];
+  buildYearOverrides: (
+    investments: YearlyInvestment[],
+    nearTermExpenseAssumptions: NearTermExpenseAssumption[],
+    rawExistingOverrides?: unknown,
+  ) => Record<number, Record<string, unknown>>;
+  mapScenarioPayload: (
+    orgId: string,
+    projection: ForecastProjection,
+  ) => Promise<ScenarioPayload>;
+  getForecastScenario?: (
+    orgId: string,
+    scenarioId: string,
+  ) => Promise<ScenarioPayload>;
+  ensureScenarioDepreciationStorage: (
+    orgId: string,
+    projection: ForecastProjection,
+  ) => Promise<ForecastScenarioStorage>;
+  normalizeScenarioAssumptionOverrides: (
+    raw: Partial<Record<ScenarioAssumptionKey, unknown>>,
+  ) => Partial<Record<ScenarioAssumptionKey, number>>;
+  normalizeThereafterExpenseAssumptions: (raw: {
+    personnelPct?: number;
+    energyPct?: number;
+    opexOtherPct?: number;
+  }) => {
+    personnelPct: number;
+    energyPct: number;
+    opexOtherPct: number;
+  };
+  normalizeNearTermExpenseAssumptions: (
+    raw: Array<{
+      year: number;
+      personnelPct?: number;
+      energyPct?: number;
+      opexOtherPct?: number;
+    }>,
+    baseYear: number | null,
+  ) => NearTermExpenseAssumption[];
+  round2: (value: number) => number;
+  normalizeScenarioType: (raw: unknown) => ScenarioType;
+  snapshotDepreciationRule: (
+    rule: ScenarioStoredDepreciationRule,
+  ) => YearlyInvestment['depreciationRuleSnapshot'];
+};
 
 export function createV2ForecastScenarioSupport(ctx: ForecastScenarioContext) {
+  const resolveScenarioPayload = async (
+    orgId: string,
+    scenarioId: string,
+  ): Promise<ScenarioPayload> => {
+    if (typeof ctx.projectionsService.findById === 'function') {
+      const projection = await ctx.projectionsService.findById(orgId, scenarioId);
+      return ctx.mapScenarioPayload(orgId, projection);
+    }
+    if (ctx.getForecastScenario) {
+      return ctx.getForecastScenario(orgId, scenarioId);
+    }
+    throw new BadRequestException('Forecast scenario payload resolver is unavailable.');
+  };
+
   return {
     async listForecastScenarios(orgId: string) {
       const scenarios = await ctx.projectionsService.list(orgId);
-      return scenarios.map((scenario: any) => ({
+      return scenarios.map((scenario: ForecastScenarioListItem) => ({
         id: scenario.id,
         name: scenario.nimi,
         onOletus: Boolean(scenario.onOletus),
         scenarioType: ctx.resolveScenarioType(
-          scenario?.olettamusYlikirjoitukset,
+          scenario.olettamusYlikirjoitukset,
           Boolean(scenario.onOletus),
         ),
         horizonYears: Number(scenario.aikajaksoVuosia),
@@ -25,7 +154,7 @@ export function createV2ForecastScenarioSupport(ctx: ForecastScenarioContext) {
       }));
     },
 
-    async createForecastScenario(orgId: string, body: any) {
+    async createForecastScenario(orgId: string, body: ForecastCreateBody) {
       const acceptedBaselineBudgetIds =
         await ctx.resolveAcceptedPlanningBaselineBudgetIds(orgId);
       const baselineBudgetId =
@@ -51,7 +180,7 @@ export function createV2ForecastScenarioSupport(ctx: ForecastScenarioContext) {
         nimi: string;
         aikajaksoVuosia: number;
         olettamusYlikirjoitukset?: Record<string, number>;
-        userInvestments?: any[];
+        userInvestments?: YearlyInvestment[];
         vuosiYlikirjoitukset?: Record<number, Record<string, unknown>>;
         ajuriPolut?: Record<string, unknown>;
         onOletus?: boolean;
@@ -64,16 +193,16 @@ export function createV2ForecastScenarioSupport(ctx: ForecastScenarioContext) {
       };
 
       const existingScenarios = await ctx.projectionsService.list(orgId);
-      const existingBaseScenario = existingScenarios.find((row: any) =>
+      const existingBaseScenario = existingScenarios.find((row) =>
         Boolean(row.onOletus),
       );
-      let sourceScenarioType: any = null;
+      let sourceScenarioType: ScenarioType | null = null;
 
       if (body.copyFromScenarioId) {
-        const source = (await ctx.projectionsService.findById(
+        const source = await ctx.projectionsService.findById(
           orgId,
           body.copyFromScenarioId,
-        )) as any;
+        );
         sourceScenarioType = ctx.resolveScenarioType(
           source?.olettamusYlikirjoitukset,
           Boolean(source?.onOletus),
@@ -118,29 +247,26 @@ export function createV2ForecastScenarioSupport(ctx: ForecastScenarioContext) {
         await ctx.projectionsService.compute(orgId, created.id);
       }
 
-      return ctx.getForecastScenario(orgId, created.id);
+      return resolveScenarioPayload(orgId, created.id);
     },
 
     async getForecastScenario(orgId: string, scenarioId: string) {
-      const projection = (await ctx.projectionsService.findById(
-        orgId,
-        scenarioId,
-      )) as any;
-      return ctx.mapScenarioPayload(orgId, projection);
+      return resolveScenarioPayload(orgId, scenarioId);
     },
 
-    async updateForecastScenario(orgId: string, scenarioId: string, body: any) {
-      const current = (await ctx.projectionsService.findById(
-        orgId,
-        scenarioId,
-      )) as any;
+    async updateForecastScenario(
+      orgId: string,
+      scenarioId: string,
+      body: ForecastUpdateBody,
+    ) {
+      const current = await ctx.projectionsService.findById(orgId, scenarioId);
       const scenarioDepreciationStorage =
         await ctx.ensureScenarioDepreciationStorage(orgId, current);
       const update: {
         nimi?: string;
         aikajaksoVuosia?: number;
         olettamusYlikirjoitukset?: Record<string, number>;
-        userInvestments?: any[];
+        userInvestments?: YearlyInvestment[];
         vuosiYlikirjoitukset?: Record<number, Record<string, unknown>>;
         computedAt?: Date | null;
         computedFromUpdatedAt?: Date | null;
@@ -204,19 +330,19 @@ export function createV2ForecastScenarioSupport(ctx: ForecastScenarioContext) {
       const normalizedInvestments = Array.isArray(body.yearlyInvestments)
         ? ctx.normalizeUserInvestments(body.yearlyInvestments)
         : ctx.normalizeUserInvestments(current.userInvestments);
-      const currentInvestmentByRowId = new Map<string, any>(
-        ctx.normalizeUserInvestments(current.userInvestments).map((row: any) => [
+      const currentInvestmentByRowId = new Map<string, YearlyInvestment>(
+        ctx.normalizeUserInvestments(current.userInvestments).map((row) => [
           row.rowId ?? String(row.year),
           row,
         ]),
       );
-      const scenarioRuleByKey = new Map(
-        scenarioDepreciationStorage.rules.map((rule: any) => [
+      const scenarioRuleByKey = new Map<string, ScenarioStoredDepreciationRule>(
+        scenarioDepreciationStorage.rules.map((rule) => [
           rule.assetClassKey,
           rule,
-        ] as const),
+        ]),
       );
-      const enrichedInvestments = normalizedInvestments.map((row: any) => {
+      const enrichedInvestments = normalizedInvestments.map((row) => {
         if (!row.depreciationClassKey) {
           return { ...row, depreciationRuleSnapshot: null };
         }
@@ -274,7 +400,7 @@ export function createV2ForecastScenarioSupport(ctx: ForecastScenarioContext) {
           computedFromUpdatedAt: null,
         },
       });
-      return ctx.getForecastScenario(orgId, scenarioId);
+      return resolveScenarioPayload(orgId, scenarioId);
     },
 
     async deleteForecastScenario(orgId: string, scenarioId: string) {

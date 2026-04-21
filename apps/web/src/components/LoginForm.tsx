@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React,{ useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { login, demoLogin, getApiBaseUrl } from '../api';
+import { demoLogin,getApiBaseUrl,login } from '../api';
 import type { DemoEntryState } from '../context/DemoStatusContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
@@ -28,7 +28,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const demoEnabled = demoState === 'available';
   const demoUnreachable = demoState === 'unreachable';
   const demoStatusLoading = demoState === 'loading';
-  const demoUnavailable = demoState === 'unavailable';
   const demoStatusText = demoEnabled
     ? t('auth.demoStatusAvailable', 'Available')
     : demoStatusLoading

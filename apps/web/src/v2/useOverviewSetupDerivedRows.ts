@@ -13,7 +13,13 @@ import {
 } from './overviewLabels';
 import { IMPORT_BOARD_CANON_ROWS } from './overviewManualForms';
 import { isHistoricalPlanningYear } from './overviewSelectors';
-import { getMissingSyncRequirements, getSetupReadinessChecks, getSetupYearStatus, type MissingRequirement } from './overviewWorkflow';
+import {
+  getMissingSyncRequirements,
+  getSetupReadinessChecks,
+  getSetupYearStatus,
+  type MissingRequirement,
+  type SetupYearStatus,
+} from './overviewWorkflow';
 import {
   buildPriceComparisonRows,
   buildImportYearResultToZeroSignal,
@@ -29,6 +35,35 @@ type ImportWarningCode =
   | 'missing_prices'
   | 'missing_volumes'
   | 'fallback_zero_used';
+
+type SelectableImportYearRow = {
+  baselineMissingRequirements?: Array<'prices' | 'volumes' | 'financialBaseline'>;
+  baselineReady?: boolean;
+  baselineWarnings?: Array<'tariffRevenueMismatch'>;
+  changed?: boolean;
+  completeness: Record<string, boolean>;
+  datasetCounts?: Record<string, number>;
+  isExcludedFromPlan?: boolean;
+  key?: string;
+  lane?: string;
+  manualEditedAt?: string | null;
+  manualProvenance?: unknown;
+  manualReason?: string | null;
+  missingRequirements?: MissingRequirement[];
+  planningRole?: 'historical' | 'current_year_estimate';
+  readinessChecks?: string[];
+  setupStatus?: SetupYearStatus;
+  sourceBreakdown?: {
+    veetiDataTypes: string[];
+    manualDataTypes: string[];
+  };
+  sourceStatus?: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
+  syncBlockedReason?: string | null;
+  tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;
+  vuosi: number;
+  warnings?: string[];
+  year?: number;
+};
 
 function getEditedFinancialFieldLabel(t: TFunction, sourceField: string): string {
   if (sourceField === 'Liikevaihto') return t('v2Overview.previewAccountingRevenueLabel', 'Revenue');
@@ -154,8 +189,8 @@ export function useOverviewSetupDerivedRows(params: {
   planningContext?: V2PlanningContextResponse | null;
   yearDataCache: Record<number, V2ImportYearDataResponse>;
   selectedYears: number[];
-  selectableImportYearRows: Array<any>;
-  syncYearRows: Array<any>;
+  selectableImportYearRows: SelectableImportYearRow[];
+  syncYearRows: SelectableImportYearRow[];
   defaultBaselineYearSet: Set<number>;
   excludedYearSet: Set<number>;
   excludedYearsSorted: number[];
@@ -311,8 +346,8 @@ export function useOverviewSetupDerivedRows(params: {
           : row.syncBlockedReason != null
             ? t('v2Overview.yearMissingLabel', 'Missing requirements: {{requirements}}', {
                 requirements:
-                  row.missingRequirements.length > 0
-                    ? row.missingRequirements
+                  (row.missingRequirements ?? []).length > 0
+                    ? (row.missingRequirements ?? [])
                         .map((item: MissingRequirement) => buildRequirementDatasetLabel(t, item))
                         .join(', ')
                     : t('v2Overview.setupStatusNeedsAttention'),
@@ -364,7 +399,7 @@ export function useOverviewSetupDerivedRows(params: {
         resultToZero,
         missingCoreCostStructure,
         missingSummary,
-        missingCount: missingSummary?.count ?? row.missingRequirements.length ?? 0,
+        missingCount: missingSummary?.count ?? row.missingRequirements?.length ?? 0,
         sourceLayers,
       };
     });
@@ -480,7 +515,7 @@ export function useOverviewSetupDerivedRows(params: {
       tariffRevenueReason: row.tariffRevenueReason ?? null,
       readinessChecks: row.readinessChecks,
       missingRequirements: row.missingRequirements,
-      warnings: (row.warnings ?? []) as ImportWarningCode[],
+      warnings: row.warnings ?? [],
       setupStatus: getSetupYearStatus(
         {
           ...row,

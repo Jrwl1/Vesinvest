@@ -1,5 +1,5 @@
-import React from 'react';
 import type { TFunction } from 'i18next';
+import React from 'react';
 import { PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS } from './overviewWorkflow';
 
 type SummaryMetaBlock = {

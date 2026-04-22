@@ -9,6 +9,7 @@ import { markPersistedReviewedImportYears,resolveNextReviewQueueYear } from './y
 
 type ReviewStatusRowLike = {
   year: number;
+  planningRole?: 'historical' | 'current_year_estimate';
   setupStatus: 'reviewed' | 'ready_for_review' | 'needs_attention' | 'excluded_from_plan';
   missingRequirements: MissingRequirement[];
 };
@@ -92,6 +93,7 @@ export async function saveOverviewInlineCardEdit(params: {
     const reopenCurrentYearForFollowup = false;
     const nextRows = reviewStatusRows.map((row) => ({
       year: row.year,
+      planningRole: row.planningRole,
       setupStatus:
         row.year === currentYear && result.syncReady && !reopenCurrentYearForFollowup
           ? ('reviewed' as const)

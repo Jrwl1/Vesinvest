@@ -831,6 +831,79 @@ export function registerOverviewWorkspaceHandoffDetailsSuite() {
     });
   });
 
+  it('keeps forecast unlocked when only the imported current-year estimate is incomplete', async () => {
+    const currentYear = new Date().getFullYear();
+    const templateYear = buildOverviewResponse().importStatus.years[0];
+    const onSetupWizardStateChange = vi.fn();
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [currentYear, 2024],
+        planningBaselineYears: [2024],
+        years: [
+          {
+            ...templateYear,
+            vuosi: currentYear,
+            planningRole: 'current_year_estimate',
+            completeness: {
+              tilinpaatos: true,
+              taksa: false,
+              volume_vesi: true,
+              volume_jatevesi: false,
+            },
+            baselineReady: false,
+            baselineMissingRequirements: ['prices'],
+            baselineWarnings: [],
+            sourceStatus: 'VEETI',
+            sourceBreakdown: {
+              veetiDataTypes: ['tilinpaatos', 'volume_vesi'],
+              manualDataTypes: [],
+            },
+            warnings: ['missing_prices'],
+            manualEditedAt: null,
+            manualEditedBy: null,
+            manualReason: null,
+            manualProvenance: null,
+          },
+          {
+            ...templateYear,
+            vuosi: 2024,
+            planningRole: 'historical',
+            baselineReady: true,
+            baselineMissingRequirements: [],
+            baselineWarnings: [],
+            warnings: [],
+          },
+        ],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: true,
+        baselineYears: [{ year: 2024 }],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+        onSetupWizardStateChange={onSetupWizardStateChange}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getLatestSetupWizardState(onSetupWizardStateChange)).toMatchObject({
+        forecastUnlocked: true,
+        summary: {
+          blockedYearCount: 0,
+          pendingReviewCount: 0,
+          baselineReady: true,
+        },
+      });
+    });
+  });
+
   it('does not collapse to the baseline handoff when only one imported workspace year is accepted', async () => {
     const onSetupWizardStateChange = vi.fn();
     const years = [
@@ -1354,4 +1427,3 @@ export function registerOverviewWorkspaceHandoffDetailsSuite() {
   });
   });
 }
-

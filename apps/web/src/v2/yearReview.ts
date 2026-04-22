@@ -671,15 +671,20 @@ export function resolveReviewContinueTarget(
   rows: Array<{
     year: number;
     setupStatus: SetupYearStatus;
+    planningRole?: 'historical' | 'current_year_estimate';
   }>,
 ): {
   nextStep: 4 | 5;
   selectedProblemYear: number | null;
   yearsToMarkReviewed: number[];
 } {
+  const requiredRows = rows.filter(
+    (row) => row.planningRole !== 'current_year_estimate',
+  );
+  const candidateRows = requiredRows.length > 0 ? requiredRows : rows;
   const selectedProblemYear =
-    rows.find((row) => row.setupStatus === 'needs_attention')?.year ??
-    rows.find((row) => row.setupStatus === 'ready_for_review')?.year ??
+    candidateRows.find((row) => row.setupStatus === 'needs_attention')?.year ??
+    candidateRows.find((row) => row.setupStatus === 'ready_for_review')?.year ??
     null;
 
   return selectedProblemYear == null
@@ -695,10 +700,15 @@ export function resolveApprovedYearStep(
   rows: Array<{
     year: number;
     setupStatus: SetupYearStatus;
+    planningRole?: 'historical' | 'current_year_estimate';
   }>,
   approvedYear: number,
 ): 3 | 5 {
-  const unresolvedRows = rows.some((row) => {
+  const requiredRows = rows.filter(
+    (row) => row.planningRole !== 'current_year_estimate',
+  );
+  const candidateRows = requiredRows.length > 0 ? requiredRows : rows;
+  const unresolvedRows = candidateRows.some((row) => {
     if (row.year === approvedYear && row.setupStatus === 'ready_for_review') {
       return false;
     }
@@ -715,11 +725,16 @@ export function resolveNextReviewQueueYear(
   rows: Array<{
     year: number;
     setupStatus: SetupYearStatus;
+    planningRole?: 'historical' | 'current_year_estimate';
   }>,
 ): number | null {
+  const requiredRows = rows.filter(
+    (row) => row.planningRole !== 'current_year_estimate',
+  );
+  const candidateRows = requiredRows.length > 0 ? requiredRows : rows;
   return (
-    rows.find((row) => row.setupStatus === 'needs_attention')?.year ??
-    rows.find((row) => row.setupStatus === 'ready_for_review')?.year ??
+    candidateRows.find((row) => row.setupStatus === 'needs_attention')?.year ??
+    candidateRows.find((row) => row.setupStatus === 'ready_for_review')?.year ??
     null
   );
 }

@@ -39,6 +39,7 @@ export type QdisImportPreview = {
 
 type ReviewStatusRowLike = {
   year: number;
+  planningRole?: 'historical' | 'current_year_estimate';
   setupStatus: 'reviewed' | 'ready_for_review' | 'needs_attention' | 'excluded_from_plan';
   missingRequirements: MissingRequirement[];
 };
@@ -290,6 +291,7 @@ export async function submitWorkbookImportWorkflow(params: {
   const reviewedYearSet = new Set(reviewedYears);
   const nextRows = reviewStatusRows.map((row) => ({
     year: row.year,
+    planningRole: row.planningRole,
     setupStatus: reviewedYearSet.has(row.year)
       ? ('reviewed' as const)
       : row.setupStatus,

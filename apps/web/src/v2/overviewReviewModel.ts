@@ -14,6 +14,7 @@ export type ReadinessState = {
 
 export type ReviewStatusRow = {
   year: number;
+  planningRole?: 'historical' | 'current_year_estimate';
   sourceStatus: string | undefined;
   baselineWarnings?: Array<'tariffRevenueMismatch'>;
   tariffRevenueReason?: 'missing_fixed_revenue' | 'mismatch' | null;

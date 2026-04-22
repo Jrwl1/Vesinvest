@@ -35,7 +35,7 @@ import {
   recordOverviewSearchFailure,
 } from './overviewOrchestration';
 import {
-  getConfirmedImportedYears,
+  getRequiredImportedBaselineYears,
   type SetupWizardStep,
 } from './overviewWorkflow';
 import { useOverviewImportMaintenance } from './useOverviewImportMaintenance';
@@ -151,8 +151,8 @@ export function useOverviewImportController({
   }, [overview?.importStatus.link?.veetiId, overview?.importStatus.link?.ytunnus, selectedOrg]);
   const baselineReady = React.useMemo(
     () => {
-      const confirmedImportedYears = overview
-        ? getConfirmedImportedYears(overview.importStatus)
+      const requiredImportedBaselineYears = overview
+        ? getRequiredImportedBaselineYears(overview.importStatus)
         : [];
       const acceptedPlanningYears = new Set<number>([
         ...((overview?.importStatus.planningBaselineYears ?? []).map((year) =>
@@ -161,8 +161,10 @@ export function useOverviewImportController({
         ...((planningContext?.baselineYears ?? []).map((row) => Number(row.year))),
       ]);
       const baselineCoversImportedWorkspaceYears =
-        confirmedImportedYears.length === 0 ||
-        confirmedImportedYears.every((year) => acceptedPlanningYears.has(year));
+        requiredImportedBaselineYears.length === 0 ||
+        requiredImportedBaselineYears.every((year) =>
+          acceptedPlanningYears.has(year),
+        );
       return (
         ((planningContext?.canCreateScenario ?? false) ||
           (overview?.importStatus.planningBaselineYears?.length ?? 0) > 0 ||

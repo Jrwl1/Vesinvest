@@ -25,6 +25,7 @@ import {
 } from './yearReview';
 type ReviewStatusRow = {
   year: number;
+  planningRole?: 'historical' | 'current_year_estimate';
   completeness: Record<string, boolean>;
   setupStatus:
     | 'reviewed'
@@ -107,6 +108,7 @@ export function useOverviewReviewController({
         const result = await completeImportYearManuallyV2(payload);
         const nextRows = reviewStatusRows.map((row) => ({
           year: row.year,
+          planningRole: row.planningRole,
           setupStatus:
             row.year === currentYear && result.syncReady
               ? ('reviewed' as const)
@@ -396,6 +398,7 @@ export function useOverviewReviewController({
     const approvedYear = manualController.manualPatchYear;
     const nextRows = reviewStatusRows.map((row) => ({
       year: row.year,
+      planningRole: row.planningRole,
       setupStatus:
         row.year === approvedYear && row.setupStatus === 'ready_for_review'
           ? ('reviewed' as const)
@@ -652,6 +655,7 @@ export function useOverviewReviewController({
     const target = resolveReviewContinueTarget(
       reviewStatusRows.map((row) => ({
         year: row.year,
+        planningRole: row.planningRole,
         setupStatus: row.setupStatus,
       })),
     );

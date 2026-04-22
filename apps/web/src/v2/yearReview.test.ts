@@ -696,4 +696,34 @@ describe('yearReview helpers', () => {
       ]),
     ).toBeNull();
   });
+
+  it('ignores current-year estimates when resolving the mandatory review queue', () => {
+    expect(
+      resolveReviewContinueTarget([
+        { year: 2026, planningRole: 'current_year_estimate', setupStatus: 'needs_attention' },
+        { year: 2024, setupStatus: 'reviewed' },
+      ]),
+    ).toEqual({
+      nextStep: 5,
+      selectedProblemYear: null,
+      yearsToMarkReviewed: [],
+    });
+
+    expect(
+      resolveApprovedYearStep(
+        [
+          { year: 2026, planningRole: 'current_year_estimate', setupStatus: 'needs_attention' },
+          { year: 2024, setupStatus: 'ready_for_review' },
+        ],
+        2024,
+      ),
+    ).toBe(5);
+
+    expect(
+      resolveNextReviewQueueYear([
+        { year: 2024, setupStatus: 'reviewed' },
+        { year: 2026, planningRole: 'current_year_estimate', setupStatus: 'needs_attention' },
+      ]),
+    ).toBeNull();
+  });
 });

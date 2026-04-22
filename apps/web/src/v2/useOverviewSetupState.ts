@@ -195,6 +195,20 @@ export function useOverviewSetupState(params: {
   }, [persistedReviewedImportedYears, setReviewedImportedYears]);
 
   const pendingReviewYearCount = pendingTechnicalReviewYearCount;
+  const requiredImportedYearCount = React.useMemo(
+    () =>
+      importYearRows.filter(
+        (row) => row.planningRole !== 'current_year_estimate',
+      ).length,
+    [importYearRows],
+  );
+  const requiredReviewedImportedYearCount = React.useMemo(
+    () =>
+      reviewedImportedYearRows.filter(
+        (row) => row.planningRole !== 'current_year_estimate',
+      ).length,
+    [reviewedImportedYearRows],
+  );
   const setupWizardState = React.useMemo<SetupWizardState | null>(() => {
     if (!overview) {
       return null;
@@ -214,8 +228,8 @@ export function useOverviewSetupState(params: {
     }
     return resolveSetupWizardState({
       connected: overview.importStatus.connected,
-      importedYearCount: confirmedImportedYears.length,
-      reviewedYearCount: reviewedImportedYearRows.length,
+      importedYearCount: requiredImportedYearCount,
+      reviewedYearCount: requiredReviewedImportedYearCount,
       blockedYearCount: importedBlockedYearCount,
       pendingReviewCount: pendingTechnicalReviewYearCount,
       excludedYearCount: excludedYearsSorted.length,
@@ -225,13 +239,13 @@ export function useOverviewSetupState(params: {
   }, [
     baselineReady,
     cardEditContext,
-    confirmedImportedYears.length,
     excludedYearsSorted.length,
     importedBlockedYearCount,
     manualPatchYear,
     overview,
     pendingTechnicalReviewYearCount,
-    reviewedImportedYearRows.length,
+    requiredImportedYearCount,
+    requiredReviewedImportedYearCount,
     backendAcceptedPlanningYears.length,
   ]);
 

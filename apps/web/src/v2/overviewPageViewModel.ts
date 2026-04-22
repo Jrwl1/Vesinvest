@@ -139,10 +139,14 @@ export function buildOverviewPageViewModel({
     ? 6
     : vesinvestWorkflowState.currentStep;
   const hasBlockedReviewRows = controller.reviewStatusRows.some(
-    (row) => row.setupStatus === 'needs_attention',
+    (row) =>
+      row.planningRole !== 'current_year_estimate' &&
+      row.setupStatus === 'needs_attention',
   );
   const hasPendingReviewRows = controller.reviewStatusRows.some(
-    (row) => row.setupStatus === 'ready_for_review',
+    (row) =>
+      row.planningRole !== 'current_year_estimate' &&
+      row.setupStatus === 'ready_for_review',
   );
   const baselineReadyForSummary =
     controller.baselineReady && !hasBlockedReviewRows && !hasPendingReviewRows;
@@ -353,7 +357,11 @@ export function buildOverviewPageViewModel({
           title: t('v2Overview.blockedYearsTitle'),
           body:
             controller.reviewStatusRows
-              .filter((row) => row.setupStatus === 'needs_attention')
+              .filter(
+                (row) =>
+                  row.planningRole !== 'current_year_estimate' &&
+                  row.setupStatus === 'needs_attention',
+              )
               .map((row) => String(row.year))
               .join(', ') || t('v2Overview.noYearsSelected'),
         };

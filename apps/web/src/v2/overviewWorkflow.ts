@@ -315,15 +315,18 @@ export function resolveVesinvestWorkflowState(
   const activePlan = planningContext?.vesinvest?.activePlan ?? null;
   const selectedPlan = planningContext?.vesinvest?.selectedPlan ?? null;
   const workflowPlan = activePlan ?? selectedPlan;
-  const confirmedImportedYears = getConfirmedImportedYears(importStatus);
+  const requiredImportedBaselineYears =
+    getRequiredImportedBaselineYears(importStatus);
   const baselinePlanningYears = getAcceptedPlanningBaselineYears(
     importStatus,
     planningContext,
   );
   const baselinePlanningYearSet = new Set(baselinePlanningYears);
   const baselineCoversImportedWorkspaceYears =
-    confirmedImportedYears.length === 0 ||
-    confirmedImportedYears.every((year) => baselinePlanningYearSet.has(year));
+    requiredImportedBaselineYears.length === 0 ||
+    requiredImportedBaselineYears.every((year) =>
+      baselinePlanningYearSet.has(year),
+    );
   const hasPlan =
     planningContext?.vesinvest?.hasPlan === true ||
     activePlan != null ||
@@ -344,7 +347,7 @@ export function resolveVesinvestWorkflowState(
       (typeof workflowPlan.businessId === 'string' &&
         workflowPlan.businessId.trim().length > 0));
   const utilityIdentified = linkedUtilityIdentified || planUtilityIdentified;
-  const hasImportedWorkspaceYears = confirmedImportedYears.length > 0;
+  const hasImportedWorkspaceYears = requiredImportedBaselineYears.length > 0;
   const investmentPlanReady =
     (workflowPlan?.projectCount ?? 0) > 0 &&
     (workflowPlan?.totalInvestmentAmount ?? 0) > 0;
@@ -437,6 +440,21 @@ export function getConfirmedImportedYears(importStatus: V2ImportStatus): number[
     .sort((a, b) => b - a);
 }
 
+export function getRequiredImportedBaselineYears(
+  importStatus: V2ImportStatus,
+): number[] {
+  const planningRoleByYear = new Map(
+    getAvailableImportYears(importStatus).map((row) => [
+      row.vuosi,
+      row.planningRole ?? 'historical',
+    ]),
+  );
+
+  return getConfirmedImportedYears(importStatus).filter(
+    (year) => planningRoleByYear.get(year) !== 'current_year_estimate',
+  );
+}
+
 export function getExcludedYears(importStatus: V2ImportStatus): number[] {
   return [...(importStatus.excludedYears ?? [])]
     .map((year) => Number(year))
@@ -468,8 +486,11 @@ export function resolveSetupWizardStateFromImportStatus(
   },
 ): SetupWizardState {
   const availableYears = getAvailableImportYears(importStatus);
-  const confirmedImportedYears = getConfirmedImportedYears(importStatus);
-  const confirmedImportedYearSet = new Set(confirmedImportedYears);
+  const requiredImportedBaselineYears =
+    getRequiredImportedBaselineYears(importStatus);
+  const requiredImportedBaselineYearSet = new Set(
+    requiredImportedBaselineYears,
+  );
   const excludedYears = getExcludedYears(importStatus);
   const excludedYearSet = new Set(excludedYears);
   const baselinePlanningYears = getAcceptedPlanningBaselineYears(
@@ -478,25 +499,27 @@ export function resolveSetupWizardStateFromImportStatus(
   );
   const baselinePlanningYearSet = new Set(baselinePlanningYears);
   const baselineCoversImportedWorkspaceYears =
-    confirmedImportedYears.length === 0 ||
-    confirmedImportedYears.every((year) => baselinePlanningYearSet.has(year));
+    requiredImportedBaselineYears.length === 0 ||
+    requiredImportedBaselineYears.every((year) =>
+      baselinePlanningYearSet.has(year),
+    );
   const reviewedYearCount = availableYears.filter(
     (row) =>
-      confirmedImportedYearSet.has(row.vuosi) &&
+      requiredImportedBaselineYearSet.has(row.vuosi) &&
       getSetupYearStatus(row, {
         excluded: excludedYearSet.has(row.vuosi),
       }) === 'reviewed',
   ).length;
   const pendingReviewCount = availableYears.filter(
     (row) =>
-      confirmedImportedYearSet.has(row.vuosi) &&
+      requiredImportedBaselineYearSet.has(row.vuosi) &&
       getSetupYearStatus(row, {
         excluded: excludedYearSet.has(row.vuosi),
       }) === 'ready_for_review',
   ).length;
   const blockedYearCount = availableYears.filter(
     (row) =>
-      confirmedImportedYearSet.has(row.vuosi) &&
+      requiredImportedBaselineYearSet.has(row.vuosi) &&
       getSetupYearStatus(row, {
         excluded: excludedYearSet.has(row.vuosi),
       }) === 'needs_attention',
@@ -507,7 +530,7 @@ export function resolveSetupWizardStateFromImportStatus(
     baselineCoversImportedWorkspaceYears;
   const effectiveImportedYearCount = baselineReady
     ? baselinePlanningYears.length
-    : confirmedImportedYears.length;
+    : requiredImportedBaselineYears.length;
   const effectiveReviewedYearCount = baselineReady
     ? baselinePlanningYears.length
     : reviewedYearCount;

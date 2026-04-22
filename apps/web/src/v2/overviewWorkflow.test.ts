@@ -341,6 +341,128 @@ describe('overviewWorkflow setup wizard state', () => {
     });
   });
 
+  it('does not let an imported current-year estimate block forecast unlock when historical baseline years are covered', () => {
+    const currentYear = 2026;
+    const importStatus = {
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1535,
+        nimi: 'Kronoby vatten och avlopp ab',
+        ytunnus: '0180030-9',
+      },
+      years: [
+        {
+          vuosi: 2025,
+          planningRole: 'historical' as const,
+          completeness: {
+            tilinpaatos: true,
+            taksa: true,
+            tariff_revenue: true,
+            volume_vesi: true,
+            volume_jatevesi: true,
+          },
+          baselineReady: true,
+          baselineMissingRequirements: [],
+          baselineWarnings: [],
+        },
+        {
+          vuosi: currentYear,
+          planningRole: 'current_year_estimate' as const,
+          completeness: {
+            tilinpaatos: true,
+            taksa: false,
+            tariff_revenue: false,
+            volume_vesi: true,
+            volume_jatevesi: false,
+          },
+          baselineReady: false,
+          baselineMissingRequirements: ['prices'],
+          baselineWarnings: [],
+        },
+      ],
+      availableYears: [
+        {
+          vuosi: 2025,
+          planningRole: 'historical' as const,
+          completeness: {
+            tilinpaatos: true,
+            taksa: true,
+            tariff_revenue: true,
+            volume_vesi: true,
+            volume_jatevesi: true,
+          },
+          baselineReady: true,
+          baselineMissingRequirements: [],
+          baselineWarnings: [],
+        },
+        {
+          vuosi: currentYear,
+          planningRole: 'current_year_estimate' as const,
+          completeness: {
+            tilinpaatos: true,
+            taksa: false,
+            tariff_revenue: false,
+            volume_vesi: true,
+            volume_jatevesi: false,
+          },
+          baselineReady: false,
+          baselineMissingRequirements: ['prices'],
+          baselineWarnings: [],
+        },
+      ],
+      workspaceYears: [currentYear, 2025],
+      excludedYears: [],
+      planningBaselineYears: [2025],
+    };
+    const planningContext = {
+      canCreateScenario: true,
+      vesinvest: {
+        hasPlan: false,
+        planCount: 0,
+        activePlan: null,
+        selectedPlan: null,
+      },
+      baselineYears: [
+        {
+          year: 2025,
+        },
+      ],
+      operations: {
+        latestYear: null,
+        energySeries: [],
+        networkRehabSeries: [],
+        networkAssetsCount: 0,
+        toimintakertomusCount: 0,
+        toimintakertomusLatestYear: null,
+        vedenottolupaCount: 0,
+        activeVedenottolupaCount: 0,
+      },
+    };
+
+    expect(
+      resolveVesinvestWorkflowState(importStatus as any, planningContext as any),
+    ).toMatchObject({
+      baselineVerified: true,
+      currentStep: 5,
+    });
+
+    expect(
+      resolveSetupWizardStateFromImportStatus(
+        importStatus as any,
+        planningContext as any,
+      ),
+    ).toMatchObject({
+      forecastUnlocked: true,
+      summary: {
+        blockedYearCount: 0,
+        pendingReviewCount: 0,
+        baselineReady: true,
+      },
+    });
+  });
+
   it('keeps reports blocked while Vesinvest classification review is still required', () => {
     expect(
       resolveVesinvestWorkflowState(

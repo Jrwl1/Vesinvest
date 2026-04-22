@@ -140,14 +140,21 @@ function sameYearOrder(left: number[], right: number[]): boolean {
   );
 }
 
+function isRequiredReviewRow(row: ReviewStatusRow): boolean {
+  return row.planningRole !== 'current_year_estimate';
+}
+
 function resolvePrimaryReviewYear(
   reviewStatusRows: ReviewStatusRow[],
 ): number | null {
+  const requiredRows = reviewStatusRows.filter(isRequiredReviewRow);
+  const candidateRows =
+    requiredRows.length > 0 ? requiredRows : reviewStatusRows;
   return (
-    reviewStatusRows.find((row) => row.setupStatus === 'needs_attention')?.year ??
-    reviewStatusRows.find((row) => row.setupStatus === 'ready_for_review')?.year ??
-    reviewStatusRows.find((row) => row.setupStatus === 'reviewed')?.year ??
-    reviewStatusRows.find((row) => row.setupStatus === 'excluded_from_plan')?.year ??
+    candidateRows.find((row) => row.setupStatus === 'needs_attention')?.year ??
+    candidateRows.find((row) => row.setupStatus === 'ready_for_review')?.year ??
+    candidateRows.find((row) => row.setupStatus === 'reviewed')?.year ??
+    candidateRows.find((row) => row.setupStatus === 'excluded_from_plan')?.year ??
     null
   );
 }
@@ -304,13 +311,17 @@ export const OverviewReviewBoard: React.FC<Props> = ({
     [cardEditContext, cardEditYear, manualPatchYear, reviewStatusRows],
   );
   const includedPlanningYearCount = React.useMemo(
-    () => reviewStatusRows.filter((row) => row.setupStatus === 'reviewed').length,
+    () =>
+      reviewStatusRows.filter(
+        (row) => isRequiredReviewRow(row) && row.setupStatus === 'reviewed',
+      ).length,
     [reviewStatusRows],
   );
   const actionableReviewRowCount = React.useMemo(
     () =>
       reviewStatusRows.filter(
-        (row) => row.setupStatus !== 'excluded_from_plan',
+        (row) =>
+          isRequiredReviewRow(row) && row.setupStatus !== 'excluded_from_plan',
       ).length,
     [reviewStatusRows],
   );

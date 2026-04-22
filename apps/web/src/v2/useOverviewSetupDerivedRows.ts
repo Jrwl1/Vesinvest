@@ -507,6 +507,7 @@ export function useOverviewSetupDerivedRows(params: {
   const importReviewStatusRows = React.useMemo(() => {
     const rows = importYearRows.map((row) => ({
       year: row.vuosi,
+      planningRole: row.planningRole ?? 'historical',
       sourceStatus: row.sourceStatus,
       completeness: row.completeness,
       baselineReady: row.baselineReady,
@@ -530,6 +531,7 @@ export function useOverviewSetupDerivedRows(params: {
       if (visibleYears.has(year)) continue;
       rows.push({
         year,
+        planningRole: 'historical' as const,
         sourceStatus: undefined,
         completeness: {
           tilinpaatos: false,
@@ -581,6 +583,7 @@ export function useOverviewSetupDerivedRows(params: {
         if (importYearRow) {
           return {
             vuosi: importYearRow.vuosi,
+            planningRole: importYearRow.planningRole ?? 'historical',
             sourceStatus: baselineYear.sourceStatus ?? importYearRow.sourceStatus,
             datasetCounts: importYearRow.datasetCounts ?? deriveDatasetCounts(yearDataCache[importYearRow.vuosi]),
             baselineReady: true,
@@ -602,6 +605,7 @@ export function useOverviewSetupDerivedRows(params: {
         if (!syncRow) {
           return {
             vuosi: baselineYear.year,
+            planningRole: 'historical' as const,
             sourceStatus: baselineYear.sourceStatus,
             datasetCounts: deriveDatasetCounts(yearDataCache[baselineYear.year]),
             baselineReady: true,
@@ -621,6 +625,7 @@ export function useOverviewSetupDerivedRows(params: {
 
         return {
           vuosi: syncRow.vuosi,
+          planningRole: syncRow.planningRole ?? 'historical',
           sourceStatus: baselineYear.sourceStatus ?? syncRow.sourceStatus,
           datasetCounts: syncRow.datasetCounts ?? deriveDatasetCounts(yearDataCache[syncRow.vuosi]),
           baselineReady: true,
@@ -653,6 +658,7 @@ export function useOverviewSetupDerivedRows(params: {
         if (importYearRow) {
           return {
             vuosi: importYearRow.vuosi,
+            planningRole: importYearRow.planningRole ?? 'historical',
             sourceStatus: importYearRow.sourceStatus,
             datasetCounts: importYearRow.datasetCounts ?? deriveDatasetCounts(yearDataCache[importYearRow.vuosi]),
             baselineReady: importYearRow.baselineReady,
@@ -670,6 +676,7 @@ export function useOverviewSetupDerivedRows(params: {
         }
         return {
           vuosi: syncRow.vuosi,
+          planningRole: syncRow.planningRole ?? 'historical',
           sourceStatus: syncRow.sourceStatus,
           datasetCounts: syncRow.datasetCounts ?? deriveDatasetCounts(yearDataCache[syncRow.vuosi]),
           baselineReady: syncRow.baselineReady,
@@ -700,6 +707,7 @@ export function useOverviewSetupDerivedRows(params: {
       if (visibleYears.has(row.vuosi)) continue;
       rows.push({
         year: row.vuosi,
+        planningRole: row.planningRole ?? 'historical',
         sourceStatus: row.sourceStatus,
         completeness: {
           ...row.completeness,
@@ -732,15 +740,33 @@ export function useOverviewSetupDerivedRows(params: {
   }, [acceptedPlanningYearRows, importReviewStatusRows]);
 
   const importedBlockedYearCount = React.useMemo(
-    () => reviewStatusRows.filter((row) => row.setupStatus === 'needs_attention').length,
+    () =>
+      reviewStatusRows.filter(
+        (row) =>
+          row.planningRole !== 'current_year_estimate' &&
+          row.setupStatus === 'needs_attention',
+      ).length,
     [reviewStatusRows],
   );
   const pendingTechnicalReviewYearCount = React.useMemo(
-    () => reviewStatusRows.filter((row) => row.setupStatus === 'ready_for_review').length,
+    () =>
+      reviewStatusRows.filter(
+        (row) =>
+          row.planningRole !== 'current_year_estimate' &&
+          row.setupStatus === 'ready_for_review',
+      ).length,
     [reviewStatusRows],
   );
   const includedPlanningYears = React.useMemo(
-    () => reviewStatusRows.filter((row) => row.setupStatus === 'reviewed').map((row) => row.year).sort((a, b) => b - a),
+    () =>
+      reviewStatusRows
+        .filter(
+          (row) =>
+            row.planningRole !== 'current_year_estimate' &&
+            row.setupStatus === 'reviewed',
+        )
+        .map((row) => row.year)
+        .sort((a, b) => b - a),
     [reviewStatusRows],
   );
   const correctedPlanningYears = React.useMemo(

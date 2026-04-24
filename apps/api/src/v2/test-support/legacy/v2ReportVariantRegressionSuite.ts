@@ -4,6 +4,7 @@ import { V2ForecastService } from '../../v2-forecast.service';
 import { V2ImportOverviewService } from '../../v2-import-overview.service';
 import { V2ReportService } from '../../v2-report.service';
 import { V2Service } from '../../v2.service';
+import { computeVesinvestScenarioFingerprint } from '../../vesinvest-contract';
 
 const buildFacadeFromArgs = (
   prisma: any,
@@ -250,6 +251,33 @@ describe('V2Service report variant regression', () => {
     createdAt: NOW,
   });
 
+  const buildAcceptedTariffPlan = (
+    scenario: ReturnType<typeof buildScenario> = buildScenario(),
+    baselineFingerprint = 'baseline-1',
+  ) => ({
+    id: 'tariff-1',
+    orgId: ORG_ID,
+    vesinvestPlanId: '11111111-1111-4111-8111-111111111111',
+    scenarioId: scenario.id,
+    status: 'accepted',
+    baselineInput: {},
+    allocationPolicy: {},
+    recommendation: {
+      baselineFingerprint,
+      scenarioFingerprint: computeVesinvestScenarioFingerprint({
+        scenarioId: scenario.id,
+        updatedAt: scenario.updatedAt,
+        computedFromUpdatedAt: scenario.computedFromUpdatedAt,
+        yearlyInvestments: scenario.yearlyInvestments,
+        years: scenario.years,
+      }),
+    },
+    readinessChecklist: { isReady: true },
+    acceptedAt: NOW,
+    createdAt: NOW,
+    updatedAt: NOW,
+  });
+
   const buildYearDataset = () => ({
     year: 2024,
     veetiId: 1535,
@@ -315,6 +343,10 @@ describe('V2Service report variant regression', () => {
   const buildReportCreateHarness = (
     scenarioOverrides: Partial<ReturnType<typeof buildScenario>> = {},
   ) => {
+    const scenario = {
+      ...buildScenario(),
+      ...scenarioOverrides,
+    };
     const prisma = {
       ennusteReport: {
         create: jest.fn().mockImplementation(async ({ data }: any) => ({
@@ -333,6 +365,9 @@ describe('V2Service report variant regression', () => {
       },
       vesinvestGroupDefinition: {
         findMany: jest.fn().mockResolvedValue([]),
+      },
+      vesinvestTariffPlan: {
+        findFirst: jest.fn().mockResolvedValue(buildAcceptedTariffPlan(scenario)),
       },
       vesinvestPlan: {
         findFirst: jest.fn().mockResolvedValue({
@@ -378,10 +413,7 @@ describe('V2Service report variant regression', () => {
     );
     jest
       .spyOn((service as any).reportService, 'getForecastScenario')
-      .mockResolvedValue({
-        ...buildScenario(),
-        ...scenarioOverrides,
-      } as any);
+      .mockResolvedValue(scenario as any);
     jest
       .spyOn((service as any).reportService, 'getCurrentBaselineSnapshot')
       .mockResolvedValue({
@@ -825,6 +857,9 @@ describe('V2Service report variant regression', () => {
           },
         ]),
       },
+      vesinvestTariffPlan: {
+        findFirst: jest.fn().mockResolvedValue(buildAcceptedTariffPlan()),
+      },
       vesinvestPlan: {
         findFirst: jest.fn().mockResolvedValue({
           id: '11111111-1111-4111-8111-111111111111',
@@ -1095,6 +1130,11 @@ describe('V2Service report variant regression', () => {
       },
       vesinvestGroupDefinition: {
         findMany: jest.fn().mockResolvedValue([]),
+      },
+      vesinvestTariffPlan: {
+        findFirst: jest.fn().mockResolvedValue(
+          buildAcceptedTariffPlan(buildScenario(), 'baseline-2'),
+        ),
       },
       vesinvestPlan: {
         findFirst: jest.fn().mockResolvedValue({

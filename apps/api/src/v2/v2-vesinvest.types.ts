@@ -88,6 +88,15 @@ export type VesinvestPlanRecord = Prisma.VesinvestPlanGetPayload<{
         computedFromUpdatedAt: true;
       };
     };
+    tariffPlans: {
+      select: {
+        id: true;
+        scenarioId: true;
+        status: true;
+        acceptedAt: true;
+        updatedAt: true;
+      };
+    };
   };
 }>;
 

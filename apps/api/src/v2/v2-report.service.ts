@@ -389,7 +389,7 @@ async listReports(orgId: string, ennusteId?: string) {
       throw new ConflictException({
         code: 'VESINVEST_SCENARIO_STALE',
         message:
-          'Vesinvest pricing snapshot is out of date. Re-open fee path before creating report.',
+          'Vesinvest pricing snapshot is out of date. Re-open Tariff Plan before creating report.',
       });
     }
     if (vesinvestPlan.baselineFingerprint) {
@@ -409,9 +409,31 @@ async listReports(orgId: string, ennusteId?: string) {
       throw new ConflictException({
         code: 'VESINVEST_BASELINE_STALE',
         message:
-          'Legacy Vesinvest baseline snapshot does not match the current utility binding and accepted baseline. Re-verify baseline before creating report.',
+        'Legacy Vesinvest baseline snapshot does not match the current utility binding and accepted baseline. Re-verify baseline before creating report.',
       });
     }
+
+    const acceptedTariffPlan = await this.prisma.vesinvestTariffPlan.findFirst({
+      where: {
+        orgId,
+        vesinvestPlanId: vesinvestPlan.id,
+        scenarioId,
+        status: 'accepted',
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    if (!acceptedTariffPlan) {
+      throw new ConflictException({
+        code: 'TARIFF_PLAN_REQUIRED',
+        message:
+          'Accept the tariff plan before creating a report snapshot.',
+      });
+    }
+    this.assertAcceptedTariffPlanCurrent(
+      acceptedTariffPlan.recommendation,
+      currentBaseline.fingerprint,
+      liveScenarioFingerprint,
+    );
 
     const savedBaselineSourceState = this.readSavedBaselineSourceState(
       vesinvestPlan.baselineSourceState,
@@ -488,6 +510,15 @@ async listReports(orgId: string, ennusteId?: string) {
           (vesinvestPlan.feeRecommendation as Record<string, unknown> | null) ?? null,
       },
       vesinvestAppendix,
+      tariffPlan: {
+        id: acceptedTariffPlan.id,
+        status: acceptedTariffPlan.status,
+        acceptedAt: acceptedTariffPlan.acceptedAt?.toISOString() ?? null,
+        baselineInput: acceptedTariffPlan.baselineInput as any,
+        allocationPolicy: acceptedTariffPlan.allocationPolicy as any,
+        recommendation: acceptedTariffPlan.recommendation as any,
+        readinessChecklist: acceptedTariffPlan.readinessChecklist as any,
+      },
       reportVariant,
       reportSections,
     };
@@ -628,6 +659,42 @@ async listReports(orgId: string, ennusteId?: string) {
       yearlyInvestments: true,
       riskSummary: true,
     };
+  }
+
+  private assertAcceptedTariffPlanCurrent(
+    recommendationRaw: unknown,
+    currentBaselineFingerprint: string | null,
+    liveScenarioFingerprint: string,
+  ) {
+    const recommendation = this.asRecord(recommendationRaw);
+    const tariffBaselineFingerprint = this.normalizeTextValue(
+      recommendation.baselineFingerprint,
+    );
+    const tariffScenarioFingerprint = this.normalizeTextValue(
+      recommendation.scenarioFingerprint,
+    );
+
+    if (
+      tariffBaselineFingerprint !== currentBaselineFingerprint ||
+      tariffScenarioFingerprint !== liveScenarioFingerprint
+    ) {
+      throw new ConflictException({
+        code: 'TARIFF_PLAN_STALE',
+        message:
+          'Accepted tariff plan is out of date. Re-open Tariff Plan and accept the current package before creating a report.',
+      });
+    }
+  }
+
+  private asRecord(value: unknown): Record<string, unknown> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return {};
+    }
+    return value as Record<string, unknown>;
+  }
+
+  private normalizeTextValue(value: unknown): string | null {
+    return typeof value === 'string' ? this.normalizeText(value) : null;
   }
 
   async buildReportPdf(orgId: string, reportId: string): Promise<Buffer> {

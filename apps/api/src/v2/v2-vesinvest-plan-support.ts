@@ -98,6 +98,16 @@ export class V2VesinvestPlanSupport {
             computedFromUpdatedAt: true,
           },
         },
+        tariffPlans: {
+          select: {
+            id: true,
+            scenarioId: true,
+            status: true,
+            acceptedAt: true,
+            updatedAt: true,
+          },
+          orderBy: { updatedAt: 'desc' },
+        },
       },
     });
     if (!plan) {
@@ -362,6 +372,7 @@ export class V2VesinvestPlanSupport {
       baselineChangedSinceAcceptedRevision,
       investmentPlanChangedSinceFeeRecommendation:
         plan.investmentPlanChangedSinceFeeRecommendation,
+      tariffPlanStatus: this.resolveTariffPlanStatus(plan),
       baselineFingerprint: plan.baselineFingerprint,
       scenarioFingerprint: plan.scenarioFingerprint,
       updatedAt: plan.updatedAt.toISOString(),
@@ -530,6 +541,22 @@ export class V2VesinvestPlanSupport {
       return 'verified' as const;
     }
     return 'provisional' as const;
+  }
+
+  resolveTariffPlanStatus(
+    plan: VesinvestPlanRecord,
+  ): 'draft' | 'accepted' | 'stale' | null {
+    const tariffPlans = Array.isArray((plan as any).tariffPlans)
+      ? ((plan as any).tariffPlans as Array<{
+          scenarioId: string | null;
+          status: 'draft' | 'accepted' | 'stale';
+          updatedAt: Date;
+        }>)
+      : [];
+    const relevant = tariffPlans.filter(
+      (item) => !plan.selectedScenarioId || item.scenarioId === plan.selectedScenarioId,
+    );
+    return relevant[0]?.status ?? null;
   }
 
   hasBaselineRevisionDrift(

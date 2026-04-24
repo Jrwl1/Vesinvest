@@ -1,5 +1,11 @@
 import type { OverrideProvenance } from '../veeti/veeti-effective-data.service';
 import { DEFAULT_VESINVEST_GROUP_DEFINITIONS } from './vesinvest-contract';
+import type {
+  TariffAllocationPolicy,
+  TariffBaselineInput,
+  TariffReadinessChecklist,
+  TariffRecommendation,
+} from './v2-tariff-plan.types';
 
 export type SyncRequirement = 'financials' | 'prices' | 'volumes';
 export type PlanningRole = 'historical' | 'current_year_estimate';
@@ -347,6 +353,15 @@ export type SnapshotPayload = {
       linearYears: number | null;
       residualPercent: number | null;
     }>;
+  } | null;
+  tariffPlan?: {
+    id: string;
+    status: 'draft' | 'accepted' | 'stale';
+    acceptedAt: string | null;
+    baselineInput: TariffBaselineInput;
+    allocationPolicy: TariffAllocationPolicy;
+    recommendation: TariffRecommendation;
+    readinessChecklist: TariffReadinessChecklist;
   } | null;
   reportVariant: ReportVariant;
   reportSections: ReportSections;

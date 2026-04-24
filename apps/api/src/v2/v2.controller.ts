@@ -44,6 +44,7 @@ import { OpsEventDto } from './dto/ops-event.dto';
 import { RefreshPeerDto } from './dto/refresh-peer.dto';
 import { UpdateScenarioClassAllocationsDto } from './dto/scenario-class-allocations.dto';
 import { UpdateScenarioDto } from './dto/update-scenario.dto';
+import { UpsertTariffPlanDto } from './dto/tariff-plan.dto';
 import { UpdateVesinvestGroupDto } from './dto/vesinvest-group.dto';
 import {
   CreateVesinvestPlanDto,
@@ -384,6 +385,32 @@ export class V2Controller {
     @Body(new ValidationPipe(v2ValidationPipeOptions)) body: SyncVesinvestPlanDto,
   ) {
     return this.service.syncVesinvestPlanToForecast(req.orgId!, id, body);
+  }
+
+  @Get('vesinvest/plans/:id/tariff-plan')
+  async getTariffPlan(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.getTariffPlan(req.orgId!, id);
+  }
+
+  @Put('vesinvest/plans/:id/tariff-plan')
+  async upsertTariffPlan(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body(new ValidationPipe(v2ValidationPipeOptions))
+    body: UpsertTariffPlanDto,
+  ) {
+    return this.service.upsertTariffPlan(req.orgId!, id, body);
+  }
+
+  @Post('vesinvest/plans/:id/tariff-plan/accept')
+  async acceptTariffPlan(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.acceptTariffPlan(req.orgId!, id);
   }
 
   @Get('forecast/scenarios')

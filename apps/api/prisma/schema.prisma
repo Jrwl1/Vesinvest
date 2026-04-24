@@ -83,6 +83,12 @@ enum VesinvestFeeRecommendationStatus {
   verified
 }
 
+enum VesinvestTariffPlanStatus {
+  draft
+  accepted
+  stale
+}
+
 enum VesinvestIdentitySource {
   manual
   veeti
@@ -129,6 +135,7 @@ model Organization {
   vesinvestPlanSeries VesinvestPlanSeries[]
   vesinvestGroupOverrides VesinvestGroupOverride[]
   vesinvestPlans VesinvestPlan[]
+  vesinvestTariffPlans VesinvestTariffPlan[]
   invitations   Invitation[]
   legalAcceptances LegalAcceptance[]
 }
@@ -471,6 +478,7 @@ model Ennuste {
   vuodet EnnusteVuosi[]
   reports EnnusteReport[]
   selectedByVesinvestPlans VesinvestPlan[] @relation("VesinvestSelectedScenario")
+  vesinvestTariffPlans VesinvestTariffPlan[]
 
   @@unique([orgId, nimi])
   @@index([orgId])
@@ -556,6 +564,7 @@ model VesinvestPlan {
 
   projects VesinvestProject[]
   reports  EnnusteReport[]                  @relation("VesinvestPlanReports")
+  tariffPlans VesinvestTariffPlan[]
 
   @@index([orgId, updatedAt])
   @@index([orgId, status])
@@ -563,6 +572,29 @@ model VesinvestPlan {
   @@index([seriesId, status])
   @@unique([seriesId, versionNumber])
   @@map("vesinvest_plan")
+}
+
+model VesinvestTariffPlan {
+  id                 String                    @id @default(uuid())
+  orgId              String                    @map("org_id")
+  org                Organization              @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  vesinvestPlanId    String                    @map("vesinvest_plan_id")
+  vesinvestPlan      VesinvestPlan             @relation(fields: [vesinvestPlanId], references: [id], onDelete: Cascade)
+  scenarioId         String                    @map("scenario_id")
+  scenario           Ennuste                   @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  status             VesinvestTariffPlanStatus @default(draft)
+  baselineInput      Json                      @map("baseline_input")
+  allocationPolicy   Json                      @map("allocation_policy")
+  recommendation     Json                      @map("recommendation")
+  readinessChecklist Json                      @map("readiness_checklist")
+  acceptedAt         DateTime?                 @map("accepted_at")
+  createdAt          DateTime                  @default(now()) @map("created_at")
+  updatedAt          DateTime                  @updatedAt @map("updated_at")
+
+  @@index([orgId, updatedAt])
+  @@index([vesinvestPlanId, status])
+  @@index([scenarioId, status])
+  @@map("vesinvest_tariff_plan")
 }
 
 model VesinvestProject {

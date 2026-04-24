@@ -155,6 +155,32 @@ export type ReportSnapshot = {
       residualPercent?: number | null;
     }>;
   } | null;
+  tariffPlan?: {
+    status?: 'draft' | 'accepted' | 'stale';
+    acceptedAt?: string | null;
+    recommendation?: {
+      targetAdditionalAnnualRevenue?: number | null;
+      baselineAnnualRevenue?: number | null;
+      proposedAnnualRevenue?: number | null;
+      averageAnnualIncreasePct?: number | null;
+      smoothingYears?: number | null;
+      fees?: Record<
+        string,
+        {
+          currentUnit?: number | null;
+          proposedUnit?: number | null;
+          revenueImpact?: number | null;
+          annualIncreasePct?: number | null;
+        }
+      >;
+      lawReadiness?: {
+        smoothingStatus?: 'ok' | 'exceeds_15_pct' | 'missing';
+        regionalVariationFlag?: boolean;
+        stormwaterFlag?: boolean;
+        unresolvedManualAssumptions?: string[];
+      };
+    } | null;
+  } | null;
 } | null;
 
 export type ReportRecord = {

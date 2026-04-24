@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { V2ForecastService } from './v2-forecast.service';
 import { V2ImportOverviewService } from './v2-import-overview.service';
 import { V2ReportService } from './v2-report.service';
+import { V2TariffPlanService } from './v2-tariff-plan.service';
 import { V2VesinvestService } from './v2-vesinvest.service';
 
 @Injectable()
@@ -11,6 +12,7 @@ export class V2Service {
     readonly forecastService: V2ForecastService,
     readonly reportService: V2ReportService,
     readonly vesinvestService: V2VesinvestService,
+    readonly tariffPlanService?: V2TariffPlanService,
   ) {}
 
   searchOrganizations(...args: Parameters<V2ImportOverviewService['searchOrganizations']>) {
@@ -206,6 +208,18 @@ export class V2Service {
     ...args: Parameters<V2VesinvestService['syncPlanToForecast']>
   ) {
     return this.vesinvestService.syncPlanToForecast(...args);
+  }
+
+  getTariffPlan(...args: Parameters<V2TariffPlanService['getTariffPlan']>) {
+    return this.tariffPlanService!.getTariffPlan(...args);
+  }
+
+  upsertTariffPlan(...args: Parameters<V2TariffPlanService['upsertTariffPlan']>) {
+    return this.tariffPlanService!.upsertTariffPlan(...args);
+  }
+
+  acceptTariffPlan(...args: Parameters<V2TariffPlanService['acceptTariffPlan']>) {
+    return this.tariffPlanService!.acceptTariffPlan(...args);
   }
 
   listReports(...args: Parameters<V2ReportService['listReports']>) {

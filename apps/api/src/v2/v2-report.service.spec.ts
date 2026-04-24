@@ -1,3 +1,4 @@
+import { ConflictException } from '@nestjs/common';
 import { V2ReportService } from './v2-report.service';
 import { registerV2ReportVariantRegressionSuite } from './test-support/legacy/v2ReportVariantRegressionSuite';
 
@@ -108,6 +109,21 @@ describe('V2ReportService collaborator helpers', () => {
         provenance: 'qdis',
       },
     });
+  });
+
+  it('rejects accepted tariff packages whose fingerprints no longer match live report inputs', () => {
+    const service = buildReportService();
+
+    expect(() =>
+      (service as any).assertAcceptedTariffPlanCurrent(
+        {
+          baselineFingerprint: 'old-baseline',
+          scenarioFingerprint: 'live-scenario',
+        },
+        'live-baseline',
+        'live-scenario',
+      ),
+    ).toThrow(ConflictException);
   });
 });
 

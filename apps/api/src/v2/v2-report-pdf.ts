@@ -173,6 +173,22 @@ export async function buildV2ReportPdf({
   const savedTariffAssumptionRows = Object.entries(scenario?.assumptions ?? {}).filter(
     ([key]) => key !== SCENARIO_TYPE_OVERRIDE_KEY,
   );
+  const acceptedTariffPlan = snapshot?.tariffPlan ?? null;
+  const acceptedTariffFees = acceptedTariffPlan?.recommendation?.fees ?? {};
+  const tariffFeeLabels: Record<string, string> = {
+    connectionFee: 'Connection fee',
+    baseFee: 'Base fee',
+    waterUsageFee: 'Water usage fee',
+    wastewaterUsageFee: 'Wastewater usage fee',
+  };
+  const formatTariffUnit = (key: string, value: number | null | undefined) => {
+    if (value == null || !Number.isFinite(value)) {
+      return '-';
+    }
+    return key === 'waterUsageFee' || key === 'wastewaterUsageFee'
+      ? formatPrice(value)
+      : formatMoney(value);
+  };
 
   const drawTariffTableHeader = () => {
     draw('Year', 30, y, 8, true);
@@ -339,6 +355,34 @@ export async function buildV2ReportPdf({
     false,
     26,
   );
+  if (acceptedTariffPlan?.recommendation) {
+    drawLine(
+      `Accepted tariff package: ${formatMoney(acceptedTariffPlan.recommendation.proposedAnnualRevenue ?? 0)} annual revenue after ${acceptedTariffPlan.recommendation.smoothingYears ?? '-'} years.`,
+      MARGIN_LEFT,
+      10,
+      true,
+      14,
+    );
+    drawLine(
+      `Average annual customer impact: ${formatPct(acceptedTariffPlan.recommendation.averageAnnualIncreasePct ?? null)} | 15% status: ${acceptedTariffPlan.recommendation.lawReadiness?.smoothingStatus ?? '-'}`,
+      MARGIN_LEFT,
+      10,
+      false,
+      14,
+    );
+    for (const [key, fee] of Object.entries(acceptedTariffFees)) {
+      drawLine(
+        `${tariffFeeLabels[key] ?? key}: ${formatTariffUnit(
+          key,
+          fee.currentUnit,
+        )} -> ${formatTariffUnit(key, fee.proposedUnit)} | impact ${formatMoney(fee.revenueImpact ?? 0)}`,
+        MARGIN_LEFT,
+        10,
+        false,
+        14,
+      );
+    }
+  }
 
   if (reportSections.riskSummary) {
     drawSectionHeading('Risk summary');

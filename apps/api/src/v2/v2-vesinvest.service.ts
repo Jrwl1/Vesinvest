@@ -66,6 +66,16 @@ async getPlanningContextSummary(orgId: string) {
               computedFromUpdatedAt: true,
             },
           },
+          tariffPlans: {
+            select: {
+              id: true,
+              scenarioId: true,
+              status: true,
+              acceptedAt: true,
+              updatedAt: true,
+            },
+            orderBy: { updatedAt: 'desc' },
+          },
         },
         orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
       }),
@@ -186,6 +196,16 @@ async getPlanningContextSummary(orgId: string) {
               computedFromUpdatedAt: true,
             },
           },
+          tariffPlans: {
+            select: {
+              id: true,
+              scenarioId: true,
+              status: true,
+              acceptedAt: true,
+              updatedAt: true,
+            },
+            orderBy: { updatedAt: 'desc' },
+          },
         },
         orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
       }),
@@ -258,6 +278,16 @@ async getPlanningContextSummary(orgId: string) {
             computedAt: true,
             computedFromUpdatedAt: true,
           },
+        },
+        tariffPlans: {
+          select: {
+            id: true,
+            scenarioId: true,
+            status: true,
+            acceptedAt: true,
+            updatedAt: true,
+          },
+          orderBy: { updatedAt: 'desc' },
         },
       },
     });
@@ -497,6 +527,16 @@ async getPlanningContextSummary(orgId: string) {
             computedFromUpdatedAt: true,
           },
         },
+        tariffPlans: {
+          select: {
+            id: true,
+            scenarioId: true,
+            status: true,
+            acceptedAt: true,
+            updatedAt: true,
+          },
+          orderBy: { updatedAt: 'desc' },
+        },
       },
     });
     const currentBaseline = await this.currentPlanSupport().getCurrentBaselineSnapshot(orgId);
@@ -579,6 +619,9 @@ async getPlanningContextSummary(orgId: string) {
       body?.baselineSourceState,
       currentBaseline,
     );
+    const tariffPlanFingerprintChanged =
+      plan.baselineFingerprint !== currentBaseline.fingerprint ||
+      plan.scenarioFingerprint !== scenarioFingerprint;
 
     await this.prisma.$transaction(async (tx) => {
       await tx.vesinvestPlan.updateMany({
@@ -614,6 +657,16 @@ async getPlanningContextSummary(orgId: string) {
           investmentPlanChangedSinceFeeRecommendation: false,
         },
       });
+      if (tariffPlanFingerprintChanged) {
+        await tx.vesinvestTariffPlan.updateMany({
+          where: {
+            orgId,
+            vesinvestPlanId: planId,
+            status: 'accepted',
+          },
+          data: { status: 'stale' },
+        });
+      }
     });
 
     return {

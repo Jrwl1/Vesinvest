@@ -38,6 +38,7 @@ type Params = {
   loadReports: () => Promise<void> | void;
   loadingDetail: boolean;
   loadingList: boolean;
+  onGoToAssetManagement?: () => void;
   onGoToForecast: (scenarioId?: string | null) => void;
   onGoToOverviewFeePath?: (planId?: string | null) => void;
   previewVariant: ReportVariant;
@@ -46,7 +47,9 @@ type Params = {
   savedFeePathClassificationReviewRequired: boolean;
   savedFeePathInvestmentPlanChangedSinceFeeRecommendation: boolean;
   savedFeePathPlanId?: string | null;
+  savedFeePathPlanRequired: boolean;
   savedFeePathPricingStatus?: 'blocked' | 'provisional' | 'verified' | null;
+  savedFeePathTariffPlanStatus?: 'draft' | 'accepted' | 'stale' | null;
   savedFeePathReportConflictActive: boolean;
   savedFeePathScenarioId?: string | null;
   scenarioFilter: string;
@@ -65,6 +68,7 @@ export function useReportsPageViewModel({
   loadReports,
   loadingDetail,
   loadingList,
+  onGoToAssetManagement,
   onGoToForecast,
   onGoToOverviewFeePath,
   previewVariant,
@@ -73,7 +77,9 @@ export function useReportsPageViewModel({
   savedFeePathClassificationReviewRequired,
   savedFeePathInvestmentPlanChangedSinceFeeRecommendation,
   savedFeePathPlanId,
+  savedFeePathPlanRequired,
   savedFeePathPricingStatus,
+  savedFeePathTariffPlanStatus,
   savedFeePathReportConflictActive,
   savedFeePathScenarioId,
   scenarioFilter,
@@ -122,13 +128,16 @@ export function useReportsPageViewModel({
 
   const savedFeePathReportReadinessReason = React.useMemo(() => {
     if (!savedFeePathPlanId) {
-      return null;
+      return savedFeePathPlanRequired ? 'missingActivePlan' as const : null;
     }
     if (savedFeePathReportConflictActive) {
       return 'staleSavedFeePath' as const;
     }
     if (savedFeePathClassificationReviewRequired) {
       return 'classificationReviewRequired' as const;
+    }
+    if (savedFeePathTariffPlanStatus !== 'accepted') {
+      return 'missingAcceptedTariffPlan' as const;
     }
     if (
       (savedFeePathPricingStatus != null &&
@@ -144,7 +153,9 @@ export function useReportsPageViewModel({
     savedFeePathClassificationReviewRequired,
     savedFeePathInvestmentPlanChangedSinceFeeRecommendation,
     savedFeePathPlanId,
+    savedFeePathPlanRequired,
     savedFeePathPricingStatus,
+    savedFeePathTariffPlanStatus,
     savedFeePathReportConflictActive,
   ]);
 
@@ -202,6 +213,8 @@ export function useReportsPageViewModel({
     if (emptyStateCanCreateReport) return 'v2-status-positive';
     if (
       emptyStateReportReadinessReason === 'staleSavedFeePath' ||
+      emptyStateReportReadinessReason === 'missingActivePlan' ||
+      emptyStateReportReadinessReason === 'missingAcceptedTariffPlan' ||
       emptyStateReportReadinessReason === 'staleComputeResults' ||
       emptyStateReportReadinessReason === 'unsavedChanges'
     ) {
@@ -237,6 +250,16 @@ export function useReportsPageViewModel({
           'v2Forecast.classificationReviewRequired',
           'Review and save the Vesinvest class plan before creating a report.',
         );
+      case 'missingActivePlan':
+        return t(
+          'v2Vesinvest.workflowCreatePlanBody',
+          'After the VEETI utility is connected, create the first plan revision and carry the linked identity into Vesinvest.',
+        );
+      case 'missingAcceptedTariffPlan':
+        return t(
+          'v2TariffPlan.acceptBeforeReports',
+          'Accept the tariff plan before creating reports.',
+        );
       case 'staleSavedFeePath':
       case 'missingScenario':
         if (emptyStateReportReadinessReason === 'staleSavedFeePath') {
@@ -259,7 +282,10 @@ export function useReportsPageViewModel({
 
   const emptyStateCtaLabel = React.useMemo(() => {
     switch (emptyStateReportReadinessReason) {
+      case 'missingActivePlan':
+        return t('v2Shell.tabs.assetManagement', 'Asset Management');
       case 'classificationReviewRequired':
+      case 'missingAcceptedTariffPlan':
       case 'staleSavedFeePath':
         return t('v2Shell.tabs.tariffPlan', 'Tariff Plan');
       case 'unsavedChanges':
@@ -285,8 +311,13 @@ export function useReportsPageViewModel({
   }, [emptyStateReportReadinessReason, t]);
 
   const handleEmptyStateAction = React.useCallback(() => {
+    if (emptyStateReportReadinessReason === 'missingActivePlan') {
+      onGoToAssetManagement?.();
+      return;
+    }
     if (
       (emptyStateReportReadinessReason === 'classificationReviewRequired' ||
+        emptyStateReportReadinessReason === 'missingAcceptedTariffPlan' ||
         emptyStateReportReadinessReason === 'staleSavedFeePath') &&
       savedFeePathPlanId
     ) {
@@ -297,6 +328,7 @@ export function useReportsPageViewModel({
   }, [
     emptyStateReportReadinessReason,
     emptyStateScenario?.id,
+    onGoToAssetManagement,
     onGoToForecast,
     onGoToOverviewFeePath,
     savedFeePathPlanId,

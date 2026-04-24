@@ -744,7 +744,7 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
     });
   });
 
-  it('shows a report-stage blocker message instead of startup copy when direct /reports is blocked after forecast unlock', async () => {
+  it('opens direct /reports after forecast unlock and leaves report readiness to the Reports surface', async () => {
     window.history.replaceState({}, '', '/reports');
     getImportStatusV2Mock.mockResolvedValue({
       connected: true,
@@ -813,23 +813,18 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
       />,
     );
 
-    expect(await screen.findByText('tariff-plan-content')).toBeTruthy();
-    expect(screen.getByRole('status').textContent).toContain(
-      'Accept the tariff plan before creating reports.',
+    expect(await screen.findByText('reports-content:-')).toBeTruthy();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Reports' }).getAttribute('title')).toContain(
+      'Reports: Needs work',
     );
-    fireEvent.click(
-      within(screen.getByRole('status')).getByRole('button', {
-        name: 'Tariff Plan',
-      }),
-    );
-    expect(await screen.findByText('tariff-plan-content')).toBeTruthy();
     expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
     await waitFor(() => {
-      expect(window.location.pathname).toBe('/tariff-plan');
+      expect(window.location.pathname).toBe('/reports');
     });
   });
 
-  it('keeps the locked Reports tab clickable so the later-stage blocker message is reachable from nav', async () => {
+  it('opens Reports from nav after forecast unlock so readiness blockers can be shown there', async () => {
     render(
       <AppShellV2
         tokenInfo={{
@@ -848,15 +843,14 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
     await clickOverviewButton('unlock-forecast-only');
     fireEvent.click(screen.getByRole('button', { name: 'Reports' }));
 
-    expect(screen.getByRole('status').textContent).toContain(
-      'Accept the tariff plan before creating reports.',
+    expect(await screen.findByText('reports-content:-')).toBeTruthy();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Reports' }).getAttribute('title')).toContain(
+      'Reports: Needs work',
     );
-    fireEvent.click(
-      within(screen.getByRole('status')).getByRole('button', {
-        name: 'Tariff Plan',
-      }),
-    );
-    expect(await screen.findByText('tariff-plan-content')).toBeTruthy();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/reports');
+    });
   });
 
   it('does not show a redundant Overview recovery button when a locked Forecast route lands on Overview', async () => {
@@ -888,7 +882,7 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
     expect(within(blocker).getByRole('button', { name: 'Close' })).toBeTruthy();
   });
 
-  it('shows the classification-review blocker when Reports is locked by class-plan work', async () => {
+  it('opens Reports after forecast unlock while marking classification review as a hard blocker', async () => {
     window.history.replaceState({}, '', '/reports');
     getImportStatusV2Mock.mockResolvedValueOnce({
       connected: true,
@@ -958,15 +952,17 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
       />,
     );
 
-    expect(await screen.findByText('asset-management-content')).toBeTruthy();
-    expect(screen.getByRole('status').textContent).toContain(
-      'Review and save the Vesinvest class plan before creating a report.',
+    expect(await screen.findByText('reports-content:-')).toBeTruthy();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Reports' }).getAttribute('title')).toContain(
+      'Reports: Blocked',
     );
-    expect(
-      within(screen.getByRole('status')).getByRole('button', {
-        name: 'Asset Management',
-      }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Asset Management' }).getAttribute('title')).toContain(
+      'Asset Management: Blocked',
+    );
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/reports');
+    });
   });
 
   it('keeps the shell in workflow-step mode while Forecast is unlocked but Reports are still locked', async () => {

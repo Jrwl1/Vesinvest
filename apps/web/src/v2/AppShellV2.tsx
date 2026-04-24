@@ -23,6 +23,7 @@ import {
   type ForecastRuntimeState,
   type OrgLanguageNotice,
   type OverviewFocusTarget,
+  type TabStatus,
   type TabId,
   type WorkspaceBootstrapSnapshot,
 } from './appShellV2Routing';
@@ -40,6 +41,40 @@ type Props = {
   tokenInfo: DecodedToken | null;
   isDemoMode: boolean;
   onLogout: () => void;
+};
+
+type BootstrapScenario = {
+  updatedAt?: string | null;
+  computedFromUpdatedAt?: string | null;
+  years?: unknown[];
+  computedYears?: number | null;
+  yearlyInvestments?: Array<{
+    amount?: number | null;
+    depreciationRuleSnapshot?: unknown;
+  }>;
+};
+
+const isBootstrapScenarioComputedFresh = (scenario: BootstrapScenario | null): boolean => {
+  if (!scenario) {
+    return false;
+  }
+  const hasComputedRows =
+    Array.isArray(scenario.years)
+      ? scenario.years.length > 0
+      : (scenario.computedYears ?? 0) > 0;
+  if (
+    !hasComputedRows ||
+    !scenario.updatedAt ||
+    !scenario.computedFromUpdatedAt ||
+    scenario.computedFromUpdatedAt !== scenario.updatedAt
+  ) {
+    return false;
+  }
+  return !(
+    scenario.yearlyInvestments?.some(
+      (row) => (row.amount ?? 0) > 0 && !row.depreciationRuleSnapshot,
+    ) ?? false
+  );
 };
 
 export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout }) => {
@@ -103,22 +138,18 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     typeof forecastRuntimeState.selectedScenarioId === 'string' &&
     forecastRuntimeState.selectedScenarioId.length > 0 &&
     forecastRuntimeState.selectedScenarioId !== linkedSavedFeePathScenarioId;
-  const reportWorkspaceReadyWithoutPlanState =
-    activeTab === 'reports' &&
-    setupWizardState?.reportsUnlocked === true &&
-    setupPlanState == null &&
-    savedFeePathReportConflictPlanId == null;
-  const savedFeePathReportReady =
-    reportWorkspaceReadyWithoutPlanState ||
-    (setupWizardState?.forecastUnlocked === true &&
-      setupPlanState != null &&
-      !runtimeScenarioOffLinkedFeePath &&
-      savedFeePathReportConflictPlanId !== setupPlanState?.activePlanId &&
-      setupPlanState.classificationReviewRequired !== true &&
-      setupPlanState.pricingStatus === 'verified' &&
-      setupPlanState.tariffPlanStatus === 'accepted' &&
-      setupPlanState.baselineChangedSinceAcceptedRevision !== true &&
-      setupPlanState.investmentPlanChangedSinceFeeRecommendation !== true);
+  const currentReportReady =
+    setupWizardState?.forecastUnlocked === true &&
+    setupPlanState != null &&
+    !runtimeScenarioOffLinkedFeePath &&
+    savedFeePathReportConflictPlanId !== setupPlanState.activePlanId &&
+    setupPlanState.classificationReviewRequired !== true &&
+    setupPlanState.pricingStatus === 'verified' &&
+    setupPlanState.tariffPlanStatus === 'accepted' &&
+    setupPlanState.linkedScenarioComputedFresh === true &&
+    setupPlanState.baselineChangedSinceAcceptedRevision !== true &&
+    setupPlanState.investmentPlanChangedSinceFeeRecommendation !== true;
+  const savedFeePathReportReady = currentReportReady;
   const shellSetupStep = setupWizardState?.currentStep ?? 1;
   const shellPresentedStep = getPresentedOverviewWorkflowStep(shellSetupStep);
   const showCompletedOverviewWorkspace =
@@ -173,7 +204,82 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
         ? t('v2Shell.backToInvestmentPlan', 'Back to investment plan')
         : shellBackStep === 5
           ? t('v2Shell.backToBaseline', 'Back to baseline')
-          : null;
+        : null;
+
+  const tabStatuses = React.useMemo<Record<TabId, TabStatus>>(() => {
+    const statusLabels = {
+      notStarted: t('v2Shell.statusNotStarted', 'Not started'),
+      needsWork: t('v2Shell.statusNeedsWork', 'Needs work'),
+      ready: t('v2Shell.statusReady', 'Ready'),
+      blocked: t('v2Shell.statusBlocked', 'Blocked'),
+      accepted: t('v2Shell.statusAccepted', 'Accepted'),
+      stale: t('v2Shell.statusStale', 'Stale'),
+    };
+    const status = (tone: TabStatus['tone'], label: string): TabStatus => ({
+      tone,
+      label,
+    });
+    const baselineVerified = setupWizardState?.forecastUnlocked === true;
+    const hasBlockingBaselineYears =
+      (setupWizardState?.summary.blockedYearCount ?? 0) > 0 && !baselineVerified;
+    const hasPlan = setupPlanState?.activePlanId != null;
+    const hasHardPlanBlocker = setupPlanState?.classificationReviewRequired === true;
+
+    return {
+      overview: !hasSelectedUtility
+        ? status('neutral', statusLabels.notStarted)
+        : baselineVerified
+          ? status('positive', statusLabels.ready)
+          : hasBlockingBaselineYears
+            ? status('danger', statusLabels.blocked)
+            : status('warning', statusLabels.needsWork),
+      asset_management: !hasPlan
+        ? status('neutral', statusLabels.notStarted)
+        : hasHardPlanBlocker
+          ? status('danger', statusLabels.blocked)
+          : setupPlanState?.investmentPlanReady === true
+            ? status('positive', statusLabels.ready)
+            : status('warning', statusLabels.needsWork),
+      ennuste: !baselineVerified
+        ? status('neutral', statusLabels.notStarted)
+        : runtimeScenarioOffLinkedFeePath
+          ? status('warning', statusLabels.stale)
+          : setupPlanState?.linkedScenarioComputedFresh === true
+            ? status('positive', statusLabels.ready)
+            : setupPlanState?.linkedScenarioId
+              ? status('warning', statusLabels.stale)
+              : status('warning', statusLabels.needsWork),
+      tariff_plan: !baselineVerified
+        ? status('neutral', statusLabels.notStarted)
+        : hasHardPlanBlocker
+          ? status('danger', statusLabels.blocked)
+          : setupPlanState?.tariffPlanStatus === 'accepted'
+            ? status('positive', statusLabels.accepted)
+            : setupPlanState?.tariffPlanStatus === 'stale'
+              ? status('warning', statusLabels.stale)
+              : status('warning', statusLabels.needsWork),
+      reports: !baselineVerified
+        ? status('neutral', statusLabels.notStarted)
+        : hasHardPlanBlocker
+          ? status('danger', statusLabels.blocked)
+          : currentReportReady
+            ? status('positive', statusLabels.ready)
+            : status('warning', statusLabels.needsWork),
+    };
+  }, [
+    currentReportReady,
+    hasSelectedUtility,
+    runtimeScenarioOffLinkedFeePath,
+    setupPlanState?.activePlanId,
+    setupPlanState?.classificationReviewRequired,
+    setupPlanState?.investmentPlanReady,
+    setupPlanState?.linkedScenarioComputedFresh,
+    setupPlanState?.linkedScenarioId,
+    setupPlanState?.tariffPlanStatus,
+    setupWizardState?.forecastUnlocked,
+    setupWizardState?.summary.blockedYearCount,
+    t,
+  ]);
 
   const closeDrawer = React.useCallback(() => {
     setDrawerOpen(false);
@@ -219,6 +325,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
         if (
           nextState.pricingStatus === 'verified' &&
           nextState.tariffPlanStatus === 'accepted' &&
+          nextState.linkedScenarioComputedFresh === true &&
           nextState.classificationReviewRequired !== true &&
           nextState.baselineChangedSinceAcceptedRevision !== true &&
           nextState.investmentPlanChangedSinceFeeRecommendation !== true
@@ -238,6 +345,8 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
       if (
         prev?.activePlanId === nextState?.activePlanId &&
         prev?.linkedScenarioId === nextState?.linkedScenarioId &&
+        prev?.investmentPlanReady === nextState?.investmentPlanReady &&
+        prev?.linkedScenarioComputedFresh === nextState?.linkedScenarioComputedFresh &&
         prev?.classificationReviewRequired === nextState?.classificationReviewRequired &&
         prev?.pricingStatus === nextState?.pricingStatus &&
         prev?.tariffPlanStatus === nextState?.tariffPlanStatus &&
@@ -290,6 +399,11 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
         ? {
             activePlanId: workflowPlan.id ?? null,
             linkedScenarioId: workflowPlan.selectedScenarioId ?? null,
+            investmentPlanReady:
+              (workflowPlan.projectCount ?? 0) > 0 &&
+              (workflowPlan.totalInvestmentAmount ?? 0) > 0,
+            linkedScenarioComputedFresh:
+              isBootstrapScenarioComputedFresh(selectedScenario),
             classificationReviewRequired: workflowPlan.classificationReviewRequired === true,
             pricingStatus: workflowPlan.pricingStatus ?? null,
             tariffPlanStatus: workflowPlan.tariffPlanStatus ?? null,
@@ -315,29 +429,8 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     if (tab === 'overview' || !state) {
       return false;
     }
-    if (tab === 'asset_management' || tab === 'ennuste' || tab === 'tariff_plan') {
-      return !state.forecastUnlocked;
-    }
-    if (!state.forecastUnlocked) {
-      return true;
-    }
-    if (!setupPlanState) {
-      return !state.reportsUnlocked;
-    }
-    return (
-      setupPlanState.classificationReviewRequired === true ||
-      setupPlanState.pricingStatus !== 'verified' ||
-      setupPlanState.tariffPlanStatus !== 'accepted' ||
-      setupPlanState.baselineChangedSinceAcceptedRevision === true ||
-      setupPlanState.investmentPlanChangedSinceFeeRecommendation === true
-    );
-  }, [
-    setupPlanState?.baselineChangedSinceAcceptedRevision,
-    setupPlanState?.classificationReviewRequired,
-    setupPlanState?.investmentPlanChangedSinceFeeRecommendation,
-    setupPlanState?.pricingStatus,
-    setupPlanState?.tariffPlanStatus,
-  ]);
+    return !state.forecastUnlocked;
+  }, []);
 
   const isTabLocked = React.useCallback((tab: TabId) => isTabLockedForState(tab, setupWizardState), [isTabLockedForState, setupWizardState]);
 
@@ -346,22 +439,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
       if (tab === 'overview') {
         return false;
       }
-      if (tab === 'asset_management' || tab === 'ennuste' || tab === 'tariff_plan') {
-        return !snapshot.wizardState.forecastUnlocked;
-      }
-      if (!snapshot.wizardState.forecastUnlocked) {
-        return true;
-      }
-      if (!snapshot.planState) {
-        return !snapshot.wizardState.reportsUnlocked;
-      }
-      return (
-        snapshot.planState.classificationReviewRequired === true ||
-        snapshot.planState.pricingStatus !== 'verified' ||
-        snapshot.planState.tariffPlanStatus !== 'accepted' ||
-        snapshot.planState.baselineChangedSinceAcceptedRevision === true ||
-        snapshot.planState.investmentPlanChangedSinceFeeRecommendation === true
-      );
+      return !snapshot.wizardState.forecastUnlocked;
     },
     [],
   );
@@ -780,6 +858,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
         t={t}
         activeTab={activeTab}
         tabLabels={tabLabels}
+        tabStatuses={tabStatuses}
         shellBackLabel={shellBackLabel}
         onBack={() => setSetupBackSignal((prev) => prev + 1)}
         pageIndicatorCaption={pageIndicatorCaption}
@@ -907,11 +986,14 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
                   <ReportsPageV2
                     refreshToken={reportsRefreshTick}
                     focusedReportId={focusedReportId}
+                    onGoToAssetManagement={handleGoToAssetManagement}
                     onGoToForecast={handleGoToForecastFromReport}
                     onGoToOverviewFeePath={handleGoToOverviewFeePath}
+                    savedFeePathPlanRequired={setupWizardState?.forecastUnlocked === true}
                     savedFeePathPlanId={setupPlanState?.activePlanId ?? null}
                     savedFeePathScenarioId={setupPlanState?.linkedScenarioId ?? null}
                     savedFeePathPricingStatus={setupPlanState?.pricingStatus ?? null}
+                    savedFeePathTariffPlanStatus={setupPlanState?.tariffPlanStatus ?? null}
                     savedFeePathClassificationReviewRequired={
                       setupPlanState?.classificationReviewRequired ?? false
                     }

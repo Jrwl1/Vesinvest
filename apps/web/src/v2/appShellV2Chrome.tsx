@@ -3,12 +3,19 @@ import React from 'react';
 
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { applyManualLanguagePreference } from '../i18n';
-import { TABS,preloadTab,type OrgLanguageNotice,type TabId } from './appShellV2Routing';
+import {
+  TABS,
+  preloadTab,
+  type OrgLanguageNotice,
+  type TabId,
+  type TabStatus,
+} from './appShellV2Routing';
 
 export function AppShellV2Header({
   t,
   activeTab,
   tabLabels,
+  tabStatuses,
   shellBackLabel,
   onBack,
   pageIndicatorCaption,
@@ -26,6 +33,7 @@ export function AppShellV2Header({
   t: TFunction;
   activeTab: TabId;
   tabLabels: Record<TabId, string>;
+  tabStatuses: Record<TabId, TabStatus>;
   shellBackLabel: string | null;
   onBack: () => void;
   pageIndicatorCaption: string;
@@ -64,18 +72,33 @@ export function AppShellV2Header({
         <nav className="v2-main-nav" aria-label={t('v2Shell.mainNavigation', 'Main navigation')}>
           {TABS.map((tab) => {
             const locked = isTabLocked(tab);
+            const status = tabStatuses[tab];
+            const statusTitle = `${tabLabels[tab]}: ${status.label}`;
+            const statusDescriptionId = `v2-tab-status-${tab}`;
+            const buttonTitle = locked
+              ? `${lockedTabMessage(tab)} ${statusTitle}`
+              : statusTitle;
             return (
               <button
                 key={tab}
                 type="button"
-                className={`v2-nav-btn ${activeTab === tab ? 'active' : ''}`}
+                className={`v2-nav-btn ${activeTab === tab ? 'active' : ''} v2-nav-status-${status.tone}`}
                 onClick={() => handleTabChange(tab)}
                 onMouseEnter={() => preloadTab(tab)}
                 aria-current={activeTab === tab ? 'page' : undefined}
                 aria-disabled={locked || undefined}
-                title={locked ? lockedTabMessage(tab) : undefined}
+                aria-label={tabLabels[tab]}
+                aria-describedby={statusDescriptionId}
+                title={buttonTitle}
               >
-                {tabLabels[tab]}
+                <span
+                  className="v2-nav-status-dot"
+                  aria-hidden="true"
+                />
+                <span>{tabLabels[tab]}</span>
+                <span id={statusDescriptionId} className="v2-sr-only">
+                  {statusTitle}
+                </span>
               </button>
             );
           })}

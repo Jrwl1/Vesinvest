@@ -253,6 +253,9 @@
 
 .v2-nav-btn {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--v2-muted);
@@ -279,6 +282,48 @@
 
 .v2-nav-btn[aria-disabled='true'] {
   opacity: 0.58;
+}
+
+.v2-nav-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #a8b0bb;
+  border: 1px solid transparent;
+  box-shadow: 0 0 0 1px rgba(17, 24, 39, 0.08);
+}
+
+.v2-nav-status-neutral .v2-nav-status-dot {
+  background: transparent;
+  border-color: #a8b0bb;
+}
+
+.v2-nav-status-warning .v2-nav-status-dot {
+  background: #c68121;
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
+.v2-nav-status-positive .v2-nav-status-dot {
+  background: #2c7a57;
+}
+
+.v2-nav-status-danger .v2-nav-status-dot {
+  background: transparent;
+  border-color: var(--v2-danger);
+  box-shadow: 0 0 0 2px rgba(178, 59, 46, 0.16);
+}
+
+.v2-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .v2-nav-btn:focus-visible,

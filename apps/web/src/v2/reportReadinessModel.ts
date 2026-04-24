@@ -21,6 +21,8 @@ export type ReportReadinessReason =
   | 'missingDepreciationSnapshots'
   | 'staleComputeResults'
   | 'classificationReviewRequired'
+  | 'missingActivePlan'
+  | 'missingAcceptedTariffPlan'
   | 'staleSavedFeePath';
 
 export type ForecastRuntimeState = {

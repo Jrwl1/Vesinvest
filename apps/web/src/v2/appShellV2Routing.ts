@@ -7,6 +7,13 @@ export type TabId =
   | 'tariff_plan'
   | 'reports';
 
+export type TabStatusTone = 'neutral' | 'warning' | 'positive' | 'danger';
+
+export type TabStatus = {
+  tone: TabStatusTone;
+  label: string;
+};
+
 export type ForecastRuntimeState = {
   selectedScenarioId: string | null;
 };
@@ -17,6 +24,8 @@ export type WorkspaceBootstrapSnapshot = {
   planState: {
     activePlanId: string | null;
     linkedScenarioId: string | null;
+    investmentPlanReady?: boolean;
+    linkedScenarioComputedFresh?: boolean;
     classificationReviewRequired: boolean;
     pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
     tariffPlanStatus: 'draft' | 'accepted' | 'stale' | null;

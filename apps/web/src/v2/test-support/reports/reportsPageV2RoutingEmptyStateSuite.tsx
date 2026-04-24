@@ -394,6 +394,52 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
     ).toBeTruthy();
   });
 
+  it('blocks the report empty-state CTA when the shell requires an active Vesinvest plan', async () => {
+    listReportsV2.mockResolvedValueOnce([]);
+    listForecastScenariosV2.mockResolvedValueOnce([
+      {
+        id: 'scenario-1',
+        name: 'Water Utility Vesinvest v2',
+      },
+    ]);
+    getForecastScenarioV2.mockResolvedValueOnce({
+      id: 'scenario-1',
+      name: 'Water Utility Vesinvest v2',
+      baselineYear: 2024,
+      updatedAt: '2026-04-09T08:00:00.000Z',
+      computedAt: '2026-04-09T08:00:00.000Z',
+      computedFromUpdatedAt: '2026-04-09T08:00:00.000Z',
+      years: [{ year: 2026 }],
+      yearlyInvestments: [],
+    });
+    const onGoToAssetManagement = vi.fn();
+    const onGoToForecast = vi.fn();
+
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToAssetManagement={onGoToAssetManagement}
+        onGoToForecast={onGoToForecast}
+        savedFeePathPlanRequired
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    expect(
+      (
+        await screen.findAllByText(
+          'Kun VEETI-vesilaitos on yhdistetty, luo ensimmäinen suunnitelmarevisio ja tuo linkitetty tunnistetieto Vesinvestiin.',
+        )
+      ).length,
+    ).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Omaisuudenhallinta' }));
+
+    expect(onGoToAssetManagement).toHaveBeenCalledTimes(1);
+    expect(onGoToForecast).not.toHaveBeenCalled();
+  });
+
   it('prefers the saved fee-path scenario over stale runtime session state in the empty-state CTA', async () => {
     window.sessionStorage.setItem(
       'v2_forecast_runtime_state',
@@ -423,6 +469,7 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
         onGoToForecast={onGoToForecast}
         savedFeePathPlanId="plan-1"
         savedFeePathScenarioId="base-1"
+        savedFeePathTariffPlanStatus="accepted"
         onFocusedReportChange={() => undefined}
       />,
     );

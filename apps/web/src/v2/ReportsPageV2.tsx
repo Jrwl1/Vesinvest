@@ -8,11 +8,14 @@ import { useReportsPageViewModel } from './useReportsPageViewModel';
 type Props = {
   refreshToken: number;
   focusedReportId: string | null;
+  onGoToAssetManagement?: () => void;
   onGoToForecast: (scenarioId?: string | null) => void;
   onGoToOverviewFeePath?: (planId?: string | null) => void;
+  savedFeePathPlanRequired?: boolean;
   savedFeePathPlanId?: string | null;
   savedFeePathScenarioId?: string | null;
   savedFeePathPricingStatus?: 'blocked' | 'provisional' | 'verified' | null;
+  savedFeePathTariffPlanStatus?: 'draft' | 'accepted' | 'stale' | null;
   savedFeePathClassificationReviewRequired?: boolean;
   savedFeePathBaselineChangedSinceAcceptedRevision?: boolean;
   savedFeePathInvestmentPlanChangedSinceFeeRecommendation?: boolean;
@@ -26,11 +29,14 @@ type Props = {
 export const ReportsPageV2: React.FC<Props> = ({
   refreshToken,
   focusedReportId,
+  onGoToAssetManagement,
   onGoToForecast,
   onGoToOverviewFeePath,
+  savedFeePathPlanRequired = false,
   savedFeePathPlanId,
   savedFeePathScenarioId,
   savedFeePathPricingStatus,
+  savedFeePathTariffPlanStatus,
   savedFeePathClassificationReviewRequired = false,
   savedFeePathBaselineChangedSinceAcceptedRevision = false,
   savedFeePathInvestmentPlanChangedSinceFeeRecommendation = false,
@@ -68,6 +74,7 @@ export const ReportsPageV2: React.FC<Props> = ({
       loadReports,
       loadingDetail,
       loadingList,
+      onGoToAssetManagement,
       onGoToForecast,
       onGoToOverviewFeePath,
       previewVariant,
@@ -76,7 +83,9 @@ export const ReportsPageV2: React.FC<Props> = ({
       savedFeePathClassificationReviewRequired,
       savedFeePathInvestmentPlanChangedSinceFeeRecommendation,
       savedFeePathPlanId,
+      savedFeePathPlanRequired,
       savedFeePathPricingStatus,
+      savedFeePathTariffPlanStatus,
       savedFeePathReportConflictActive,
       savedFeePathScenarioId,
       scenarioFilter,

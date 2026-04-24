@@ -476,7 +476,11 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
 
     expect((await screen.findAllByText('Saved fee path scenario')).length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Avaa maksupolku' })[0]!);
+    fireEvent.click(
+      screen.getAllByRole('button', {
+        name: /Tariff Plan|Maksusuunnitelma|Avgiftsplan/,
+      })[0]!,
+    );
 
     expect(onGoToOverviewFeePath).toHaveBeenCalledWith('plan-1');
     expect(onGoToForecast).not.toHaveBeenCalled();
@@ -523,7 +527,11 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
       ),
     ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Avaa maksupolku' }));
+    fireEvent.click(
+      screen.getAllByRole('button', {
+        name: /Tariff Plan|Maksusuunnitelma|Avgiftsplan/,
+      })[0]!,
+    );
 
     expect(onGoToOverviewFeePath).toHaveBeenCalledWith('plan-1');
   });
@@ -572,5 +580,3 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
 
   });
 }
-
-

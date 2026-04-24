@@ -617,3 +617,18 @@ Source: OS simplification pass (2026-03-25), `AGENTS.md`, `docs/CANONICAL.md`, `
 - If a row genuinely depends on customer truth that is not already surfaced in canonical docs, PLAN must stop with a blocker rather than spelunking through customer materials on its own.
 
 Source: user instruction and OS hardening follow-up (2026-03-25), `AGENTS.md`, `docs/CANONICAL.md`, `docs/ROADMAP.md`
+
+---
+
+## ADR-046: Asset-management planning and tariff-package updates become the canonical post-baseline product path
+
+**Date:** 2026-04-24
+**Decision:** The canonical post-baseline product path is now `Yhteenveto` baseline evidence -> asset-management plan -> `Ennuste` forecast -> tariff plan -> reports. `Yhteenveto` remains the trusted historical baseline and VEETI/manual evidence desk. The investment plan should belong to a dedicated asset-management planning environment, not be treated as a minor Overview step. Pricing needs its own tariff-plan environment that explains a full fee package across `liittymismaksu`, `perusmaksu`, water usage price, and wastewater usage price.
+**Context:** Renewed Water Services Act guidance ties fee formation to the utility's asset-management plan and requires cost-recovery reasoning across the fee structure, not only one required combined water price. The previous product direction already had Vesinvest plans, investment projects, depreciation classes, fee recommendations, baseline fingerprints, and scenario fingerprints, but the IA still framed pricing mostly through forecast sufficiency. The user clarified that the asset-management plan should affect all price categories and that price updating needs its own environment.
+**Consequences:**
+- ADR-014 is superseded for planning recommendations: a billing-grade connection-fee engine is still not required, but `liittymismaksu` must be represented in the tariff-package recommendation.
+- ADR-013 remains valid as an implementation detail for base-fee totals, but `perusmaksu` is now one part of a broader tariff package.
+- Future PLAN passes should create executable rows for the asset-management environment, the tariff-plan environment, and the data contract that links investment need to fee-package allocation.
+- Reports should eventually present whether the proposed fee package covers future costs and investments, not only whether one combined usage price is sufficient.
+
+Source: user direction on renewed Water Services Act guidance (2026-04-24), `docs/ROADMAP.md`, current Vesinvest plan and forecast contracts

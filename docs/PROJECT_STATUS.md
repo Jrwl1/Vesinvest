@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-03-25
+Last updated: 2026-04-24
 
 ## Goal
 
@@ -8,32 +8,29 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Active milestone
 
-**M0: Scope and operating-contract lock** (see `docs/ROADMAP.md`).
+**M1: Asset-management and tariff policy lock** (see `docs/ROADMAP.md`).
 
 ## Current state
 
-- The security/performance remediation queue `S-149..S-156` remains accepted history except for the deployment-only `S-156` header-verification hold.
-- `S-157..S-183` are now accepted history, but the March 25, 2026 live prod audit proved the shipped result still misses the real product bar on the surfaces users actually hit first.
-- Production currently serves new bundles but still shows the old authenticated wizard/review UI, and `GET /v2/forecast/scenarios` can return a real scenario while the frontend still routes `/forecast` back into setup.
-- The active local target is now `S-184..S-192`: recover live route/readiness truth first, then redesign the actual live wizard and forecast surfaces around the intended `Yhteenveto` verification desk and `Ennuste` operator board.
-- Current code reality still contains org-level depreciation defaults, scenario-scoped rule variants, and compute support for class-based depreciation, but live product truth is broken by frontend gating and by overgrown wizard/forecast layouts.
-- The current local execution surface spans `apps/web/src/v2/**`, the directly coupled `apps/api/src/v2/**`, `apps/api/src/projections/**`, and the scenario/depreciation storage contracts needed to make forecast access and forecast outputs truthful on live prod.
+- The live route/readiness and V2 surface recovery queue `S-184..S-192` is accepted history.
+- The next product direction is driven by renewed Water Services Act guidance: the app must connect asset-management planning to a defendable tariff package, not only compute one required combined water price.
+- `Yhteenveto` remains the trusted historical baseline and VEETI/manual evidence desk.
+- `Ennuste` remains the forecast and scenario computation environment, but `Investointiohjelma` should graduate into a dedicated asset-management planning environment rather than stay as one step inside Overview.
+- A new pricing/tariff environment is needed to update and justify `liittymismaksu`, `perusmaksu`, water usage price, and wastewater usage price together.
+- Existing code already has planning primitives for Vesinvest plans, project allocations, depreciation classes, fee recommendations, baseline fingerprints, and scenario fingerprints; the next planning pass must turn those primitives into a coherent IA and contract.
 
 ## Top blockers
 
-1. Live prod route/access truth is broken: `/forecast` can bounce the user back into setup even when backend scenario state already exists.
-2. The live wizard states users actually hit first are still the old tall, repetitive, rail-heavy layouts instead of one-screen primary tasks.
-3. `Yhteenveto` is still not a verification desk on prod; the current shipped states still repeat summary blocks and helper copy instead of centering the year cards.
-4. `Ennuste` is still either unreachable from live prod state or still too vertically stacked to function as a real operator board.
-5. `Poistosuunnitelmat` still needs the simpler org-default + one-class-per-investment mental model to become understandable.
-6. `S-156` remains a deployment-only header-verification hold outside this workspace.
+1. Canonical IA must be updated from Overview -> Forecast -> Reports to Overview -> Asset Management Plan -> Forecast -> Tariff Plan -> Reports.
+2. The tariff model must decide what is planning-grade V1 scope versus billing-grade tariff administration.
+3. The older "connection fees out of V1" decision is superseded for planning recommendations: connection fees are not a full billing engine, but they must be represented in the fee-package story.
+4. `S-156` remains a deployment-only header-verification hold outside this workspace.
 
 ## Next actions
 
-1. Execute `S-184` immediately to fix live forecast route/access truth and make frontend readiness match backend baseline/scenario reality.
-2. Execute `S-185..S-187` to recover the actual prod wizard and `Yhteenveto` surfaces into one-screen, verification-first layouts before any wider visual polish.
-3. Execute `S-188..S-191` to rebuild the real `Ennuste` and `Poistosuunnitelmat` experience around the intended operator-board and item-level depreciation model.
-4. Execute `S-192` as a final live re-audit on the same end-to-end prod flow, not just a local happy path.
+1. Run PLAN to materialize the asset-management and tariff-path IA into executable sprint rows.
+2. Scope the data contract for fee-package recommendations across `liittymismaksu`, `perusmaksu`, water usage price, and wastewater usage price.
+3. Decide whether the investment-plan environment is a new top-level workspace or a renamed/expanded Vesinvest workspace inside the current V2 shell.
 
 ## Customer TBD tracking
 

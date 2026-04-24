@@ -1837,3 +1837,28 @@ Conflicts found and resolved:
    - Winner: prod-first recovery. `S-184` now starts with route and readiness truth before broader IA and visual work.
 3. The user explicitly wants the final bar judged on the live prod-style journey, not only on local or idealized later states.
    - Winner: explicit user direction. `S-192` re-runs the same class of live audit and becomes the final acceptance gate.
+
+## Canonical direction update (asset-management-to-tariff path)
+
+Date: 2026-04-24
+Mode: normal chat with explicit repo-doc write request
+
+Why this pass ran:
+
+- The user asked to make the new product path canonical after discussing renewed Water Services Act guidance and the need for asset-management-plan-driven pricing.
+- The guidance changes the product center of gravity from one required combined water price toward a defendable fee package across `liittymismaksu`, `perusmaksu`, water usage price, and wastewater usage price.
+- The user also raised that the current investment plan should likely have its own environment instead of remaining a small step inside Overview.
+
+What changed:
+
+- `docs/ROADMAP.md`: records the new canonical workflow as trusted baseline -> asset management plan -> forecast -> tariff plan -> reports.
+- `docs/ROADMAP.md`: changes M1 from narrow financial-model policy to asset-management and tariff-policy lock.
+- `docs/PROJECT_STATUS.md`: updates the current snapshot and blockers around the new IA and tariff-package direction.
+- `docs/DECISIONS.md`: appends ADR-046 to make the asset-management and tariff-package path durable canon.
+
+Conflicts found and resolved:
+
+1. Earlier canon said connection fees were out of V1 scope.
+   - Winner: tariff-package planning truth. A billing-grade connection-fee engine remains out of scope, but `liittymismaksu` must be represented in fee-package recommendations.
+2. Earlier IA treated `Yhteenveto` -> `Ennuste` -> Reports as the main path.
+   - Winner: new product direction. `Yhteenveto` stays the evidence desk, while asset-management planning and tariff planning become distinct post-baseline environments.

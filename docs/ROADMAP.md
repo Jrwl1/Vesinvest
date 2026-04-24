@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-03-25
+Last updated: 2026-04-24
 
 Planning baseline for V1:
 
@@ -8,6 +8,9 @@ Planning baseline for V1:
 - V1 calculations are VAT-free.
 - Financial decision support is the core outcome.
 - Security checks are required during build and before release.
+- The renewed Water Services Act direction changes the product path from single-price sufficiency to a defendable asset-management-to-tariff workflow: trusted baseline -> asset management plan -> forecast -> tariff plan -> reports.
+- Pricing work must account for the full fee package, not only combined usage price: `liittymismaksu`, `perusmaksu`, water usage price, and wastewater usage price.
+- The investment plan belongs under a dedicated asset-management planning environment; Overview remains the trusted historical baseline and VEETI/manual evidence desk.
 
 ## M0: Lock V1 scope and operating contract
 
@@ -24,17 +27,18 @@ Planning baseline for V1:
 
 **Dependencies:** Customer clarification baseline and canonical consistency.
 
-## M1: Lock financial model policy for V1
+## M1: Lock asset-management and tariff policy for V1
 
 **Status:** Planned.
 
 **Done criteria:**
 
 1. VAT-free policy is locked.
-2. Base fee model is locked as annual total + yearly change/override.
-3. Connection fees are explicitly out of V1 scope.
+2. Asset management plan workflow is locked as the owner of `Investointiohjelma`, depreciation classes, service splits, renewal backlog, and physical investment rationale.
+3. Tariff plan workflow is locked as the owner of fee-package updates across `liittymismaksu`, `perusmaksu`, water usage price, and wastewater usage price.
 4. Minimum 20-year horizon is locked.
 5. Depreciation split requirement is locked.
+6. V1 pricing output can stay planning-grade, but it must explain how the required funding need is allocated across fee types rather than presenting only one combined required price.
 
 **Dependencies:** M0 complete.
 
@@ -56,7 +60,7 @@ Planning baseline for V1:
 
 **Done criteria:**
 
-1. PDF answers whether pricing covers future costs + investments.
+1. PDF answers whether the proposed fee package covers future costs + investments.
 2. Report contains cashflow diagram + compact table.
 3. Multi-page layout is allowed for readability.
 4. Customer signs off PDF acceptance criteria.
@@ -89,6 +93,6 @@ Planning baseline for V1:
 
 ## Explicitly out of V1
 
-1. Dedicated connection-fee engine.
+1. Billing-system-grade tariff administration beyond the defendable planning recommendation.
 2. Multi-budget comparison UX.
 3. Additional regulatory export variants before pilot acceptance.

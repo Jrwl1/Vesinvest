@@ -1,6 +1,11 @@
 import React from 'react';
 
-export type TabId = 'overview' | 'ennuste' | 'reports';
+export type TabId =
+  | 'overview'
+  | 'asset_management'
+  | 'ennuste'
+  | 'tariff_plan'
+  | 'reports';
 
 export type ForecastRuntimeState = {
   selectedScenarioId: string | null;
@@ -14,6 +19,7 @@ export type WorkspaceBootstrapSnapshot = {
     linkedScenarioId: string | null;
     classificationReviewRequired: boolean;
     pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
+    tariffPlanStatus: 'draft' | 'accepted' | 'stale' | null;
     baselineChangedSinceAcceptedRevision: boolean;
     investmentPlanChangedSinceFeeRecommendation: boolean;
   } | null;
@@ -31,7 +37,9 @@ export type OrgLanguageNotice = {
 };
 
 let overviewPageModulePromise: Promise<typeof import('./OverviewPageV2')> | null = null;
+let assetManagementPageModulePromise: Promise<typeof import('./AssetManagementPageV2')> | null = null;
 let ennustePageModulePromise: Promise<typeof import('./EnnustePageV2')> | null = null;
+let tariffPlanPageModulePromise: Promise<typeof import('./TariffPlanPageV2')> | null = null;
 let reportsPageModulePromise: Promise<typeof import('./ReportsPageV2')> | null = null;
 
 function loadOverviewPageModule() {
@@ -41,11 +49,25 @@ function loadOverviewPageModule() {
   return overviewPageModulePromise;
 }
 
+function loadAssetManagementPageModule() {
+  if (!assetManagementPageModulePromise) {
+    assetManagementPageModulePromise = import('./AssetManagementPageV2');
+  }
+  return assetManagementPageModulePromise;
+}
+
 function loadEnnustePageModule() {
   if (!ennustePageModulePromise) {
     ennustePageModulePromise = import('./EnnustePageV2');
   }
   return ennustePageModulePromise;
+}
+
+function loadTariffPlanPageModule() {
+  if (!tariffPlanPageModulePromise) {
+    tariffPlanPageModulePromise = import('./TariffPlanPageV2');
+  }
+  return tariffPlanPageModulePromise;
 }
 
 function loadReportsPageModule() {
@@ -60,9 +82,19 @@ export const OverviewPageV2 = React.lazy(async () => {
   return { default: mod.OverviewPageV2 };
 });
 
+export const AssetManagementPageV2 = React.lazy(async () => {
+  const mod = await loadAssetManagementPageModule();
+  return { default: mod.AssetManagementPageV2 };
+});
+
 export const EnnustePageV2 = React.lazy(async () => {
   const mod = await loadEnnustePageModule();
   return { default: mod.EnnustePageV2 };
+});
+
+export const TariffPlanPageV2 = React.lazy(async () => {
+  const mod = await loadTariffPlanPageModule();
+  return { default: mod.TariffPlanPageV2 };
 });
 
 export const ReportsPageV2 = React.lazy(async () => {
@@ -71,8 +103,14 @@ export const ReportsPageV2 = React.lazy(async () => {
 });
 
 export function preloadTab(tab: TabId): void {
+  if (tab === 'asset_management') {
+    void loadAssetManagementPageModule();
+  }
   if (tab === 'ennuste') {
     void loadEnnustePageModule();
+  }
+  if (tab === 'tariff_plan') {
+    void loadTariffPlanPageModule();
   }
   if (tab === 'reports') {
     void loadReportsPageModule();
@@ -81,11 +119,19 @@ export function preloadTab(tab: TabId): void {
 
 export const TAB_PATHS: Record<TabId, string> = {
   overview: '/',
+  asset_management: '/asset-management',
   ennuste: '/forecast',
+  tariff_plan: '/tariff-plan',
   reports: '/reports',
 };
 
-export const TABS: TabId[] = ['overview', 'ennuste', 'reports'];
+export const TABS: TabId[] = [
+  'overview',
+  'asset_management',
+  'ennuste',
+  'tariff_plan',
+  'reports',
+];
 
 export const FORECAST_RUNTIME_STORAGE_KEY = 'v2_forecast_runtime_state';
 
@@ -101,8 +147,14 @@ export function resolveTabFromPath(pathname: string): TabId {
   if (normalized === '/reports') {
     return 'reports';
   }
+  if (normalized === '/tariff-plan' || normalized === '/tariffs') {
+    return 'tariff_plan';
+  }
   if (normalized === '/forecast' || normalized === '/ennuste') {
     return 'ennuste';
+  }
+  if (normalized === '/asset-management' || normalized === '/assets') {
+    return 'asset_management';
   }
   return 'overview';
 }

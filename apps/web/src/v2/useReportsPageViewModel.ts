@@ -261,7 +261,7 @@ export function useReportsPageViewModel({
     switch (emptyStateReportReadinessReason) {
       case 'classificationReviewRequired':
       case 'staleSavedFeePath':
-        return t('v2Vesinvest.openPricing', 'Open fee path');
+        return t('v2Shell.tabs.tariffPlan', 'Tariff Plan');
       case 'unsavedChanges':
         return t(
           'v2Reports.openForecastToSaveAndCompute',

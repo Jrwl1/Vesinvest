@@ -614,10 +614,15 @@ export const useVesinvestPlanningController = ({
                   'v2Forecast.depreciationSnapshotsMissingHint',
                   'Refresh the synced Vesinvest class plan and recompute results before creating report.',
                 )
-              : reportReadinessReason === 'staleComputeToken'
+            : reportReadinessReason === 'staleComputeToken'
+              ? t(
+                  'v2Forecast.staleComputeHint',
+                  'Saved inputs changed after the last calculation. Recompute results before creating report.',
+                )
+              : reportReadinessReason === 'missingTariffPlan'
                 ? t(
-                    'v2Forecast.staleComputeHint',
-                    'Saved inputs changed after the last calculation. Recompute results before creating report.',
+                    'v2TariffPlan.acceptBeforeReports',
+                    'Accept the tariff plan before creating reports.',
                   )
                 : t(
                     'v2Forecast.computeBeforeReport',
@@ -656,7 +661,7 @@ export const useVesinvestPlanningController = ({
           code === 'VESINVEST_BASELINE_STALE'
             ? t(
                 'v2Vesinvest.baselineChangedSincePricing',
-                'Accepted baseline changed after the saved fee-path result.',
+                'Accepted baseline changed after the saved tariff-plan result.',
               )
             : code === 'VESINVEST_SCENARIO_STALE'
               ? t(

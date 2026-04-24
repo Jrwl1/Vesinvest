@@ -247,18 +247,18 @@ export function buildOverviewPageViewModel({
         badge: step3WizardHero.badge,
       },
       4: {
-        title: t('v2Vesinvest.workflowOpenFeePath', 'Open fee path'),
+        title: t('v2Vesinvest.workflowOpenFeePath', 'Open Tariff Plan'),
         body: t(
           'v2Vesinvest.workflowOpenFeePathBody',
           'When the baseline is verified, sync the plan to forecast to review price pressure, financing gaps, and the saved recommendation.',
         ),
-        badge: t('v2Vesinvest.feePathEyebrow', 'Fee path'),
+        badge: t('v2Vesinvest.feePathEyebrow', 'Tariff plan'),
       },
       5: {
         title: t('v2Vesinvest.workflowCreateReport', 'Create report'),
         body: t(
           'v2Vesinvest.workflowCreateReportBody',
-          'Create the report after the fee path is saved and the linked scenario is up to date.',
+          'Create the report after the tariff plan is accepted and the linked scenario is up to date.',
         ),
         badge: t('v2Shell.tabs.reports', 'Reports'),
       },

@@ -186,3 +186,16 @@
 .v2-vesinvest-maintenance-actions {
   padding-top: 2px;
 }
+
+.v2-checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--v2-text);
+  font-size: 0.9rem;
+}
+
+.v2-checkbox-row input {
+  width: 16px;
+  height: 16px;
+}

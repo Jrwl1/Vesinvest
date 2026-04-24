@@ -12,12 +12,14 @@ import {
 import { applyOrganizationDefaultLanguage } from '../i18n';
 import { AppShellV2AccountDrawer,AppShellV2BlockedTabNotice,AppShellV2Header,AppShellV2LanguageNotice } from './appShellV2Chrome';
 import {
+  AssetManagementPageV2,
   EnnustePageV2,
   getInitialTabFromLocation,
   OverviewPageV2,
   readForecastRuntimeState,
   ReportsPageV2,
   syncBrowserPath,
+  TariffPlanPageV2,
   type ForecastRuntimeState,
   type OrgLanguageNotice,
   type OverviewFocusTarget,
@@ -80,7 +82,9 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
 
   const tabLabels: Record<TabId, string> = {
     overview: t('v2Shell.tabs.overview', 'Overview'),
+    asset_management: t('v2Shell.tabs.assetManagement', 'Asset Management'),
     ennuste: t('v2Shell.tabs.forecast', 'Forecast'),
+    tariff_plan: t('v2Shell.tabs.tariffPlan', 'Tariff Plan'),
     reports: t('v2Shell.tabs.reports', 'Reports'),
   };
 
@@ -99,15 +103,22 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     typeof forecastRuntimeState.selectedScenarioId === 'string' &&
     forecastRuntimeState.selectedScenarioId.length > 0 &&
     forecastRuntimeState.selectedScenarioId !== linkedSavedFeePathScenarioId;
-  const savedFeePathReportReady =
+  const reportWorkspaceReadyWithoutPlanState =
+    activeTab === 'reports' &&
     setupWizardState?.reportsUnlocked === true &&
-    !runtimeScenarioOffLinkedFeePath &&
-    savedFeePathReportConflictPlanId !== setupPlanState?.activePlanId &&
-    (setupPlanState == null ||
-      (setupPlanState.classificationReviewRequired !== true &&
-        setupPlanState.pricingStatus === 'verified' &&
-        setupPlanState.baselineChangedSinceAcceptedRevision !== true &&
-        setupPlanState.investmentPlanChangedSinceFeeRecommendation !== true));
+    setupPlanState == null &&
+    savedFeePathReportConflictPlanId == null;
+  const savedFeePathReportReady =
+    reportWorkspaceReadyWithoutPlanState ||
+    (setupWizardState?.forecastUnlocked === true &&
+      setupPlanState != null &&
+      !runtimeScenarioOffLinkedFeePath &&
+      savedFeePathReportConflictPlanId !== setupPlanState?.activePlanId &&
+      setupPlanState.classificationReviewRequired !== true &&
+      setupPlanState.pricingStatus === 'verified' &&
+      setupPlanState.tariffPlanStatus === 'accepted' &&
+      setupPlanState.baselineChangedSinceAcceptedRevision !== true &&
+      setupPlanState.investmentPlanChangedSinceFeeRecommendation !== true);
   const shellSetupStep = setupWizardState?.currentStep ?? 1;
   const shellPresentedStep = getPresentedOverviewWorkflowStep(shellSetupStep);
   const showCompletedOverviewWorkspace =
@@ -118,7 +129,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
       ? 'v2-status-info'
       : !hasSelectedUtility
         ? 'v2-status-warning'
-        : setupWizardState?.reportsUnlocked && !runtimeScenarioOffLinkedFeePath
+        : savedFeePathReportReady
           ? 'v2-status-positive'
           : 'v2-status-info';
   const connectionChipLabel = isBootstrappingPathTruth
@@ -207,6 +218,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
         }
         if (
           nextState.pricingStatus === 'verified' &&
+          nextState.tariffPlanStatus === 'accepted' &&
           nextState.classificationReviewRequired !== true &&
           nextState.baselineChangedSinceAcceptedRevision !== true &&
           nextState.investmentPlanChangedSinceFeeRecommendation !== true
@@ -228,6 +240,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
         prev?.linkedScenarioId === nextState?.linkedScenarioId &&
         prev?.classificationReviewRequired === nextState?.classificationReviewRequired &&
         prev?.pricingStatus === nextState?.pricingStatus &&
+        prev?.tariffPlanStatus === nextState?.tariffPlanStatus &&
         prev?.baselineChangedSinceAcceptedRevision ===
           nextState?.baselineChangedSinceAcceptedRevision &&
         prev?.investmentPlanChangedSinceFeeRecommendation ===
@@ -279,6 +292,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
             linkedScenarioId: workflowPlan.selectedScenarioId ?? null,
             classificationReviewRequired: workflowPlan.classificationReviewRequired === true,
             pricingStatus: workflowPlan.pricingStatus ?? null,
+            tariffPlanStatus: workflowPlan.tariffPlanStatus ?? null,
             baselineChangedSinceAcceptedRevision:
               workflowPlan.baselineChangedSinceAcceptedRevision === true,
             investmentPlanChangedSinceFeeRecommendation:
@@ -301,10 +315,56 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     if (tab === 'overview' || !state) {
       return false;
     }
-    return tab === 'ennuste' ? !state.forecastUnlocked : !state.reportsUnlocked;
-  }, []);
+    if (tab === 'asset_management' || tab === 'ennuste' || tab === 'tariff_plan') {
+      return !state.forecastUnlocked;
+    }
+    if (!state.forecastUnlocked) {
+      return true;
+    }
+    if (!setupPlanState) {
+      return !state.reportsUnlocked;
+    }
+    return (
+      setupPlanState.classificationReviewRequired === true ||
+      setupPlanState.pricingStatus !== 'verified' ||
+      setupPlanState.tariffPlanStatus !== 'accepted' ||
+      setupPlanState.baselineChangedSinceAcceptedRevision === true ||
+      setupPlanState.investmentPlanChangedSinceFeeRecommendation === true
+    );
+  }, [
+    setupPlanState?.baselineChangedSinceAcceptedRevision,
+    setupPlanState?.classificationReviewRequired,
+    setupPlanState?.investmentPlanChangedSinceFeeRecommendation,
+    setupPlanState?.pricingStatus,
+    setupPlanState?.tariffPlanStatus,
+  ]);
 
   const isTabLocked = React.useCallback((tab: TabId) => isTabLockedForState(tab, setupWizardState), [isTabLockedForState, setupWizardState]);
+
+  const isTabLockedForSnapshot = React.useCallback(
+    (tab: TabId, snapshot: WorkspaceBootstrapSnapshot) => {
+      if (tab === 'overview') {
+        return false;
+      }
+      if (tab === 'asset_management' || tab === 'ennuste' || tab === 'tariff_plan') {
+        return !snapshot.wizardState.forecastUnlocked;
+      }
+      if (!snapshot.wizardState.forecastUnlocked) {
+        return true;
+      }
+      if (!snapshot.planState) {
+        return !snapshot.wizardState.reportsUnlocked;
+      }
+      return (
+        snapshot.planState.classificationReviewRequired === true ||
+        snapshot.planState.pricingStatus !== 'verified' ||
+        snapshot.planState.tariffPlanStatus !== 'accepted' ||
+        snapshot.planState.baselineChangedSinceAcceptedRevision === true ||
+        snapshot.planState.investmentPlanChangedSinceFeeRecommendation === true
+      );
+    },
+    [],
+  );
 
   const handleLockedTabAttempt = React.useCallback((tab: TabId) => {
     setBlockedTabNotice(tab);
@@ -317,6 +377,41 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
       },
     });
   }, [setupWizardState]);
+
+  const getLockedPathFallbackTab = React.useCallback(
+    (tab: TabId, state: SetupWizardState | null): TabId => {
+      if (tab === 'reports' && state?.forecastUnlocked) {
+        if (setupPlanState?.classificationReviewRequired) {
+          return 'asset_management';
+        }
+        if (setupPlanState?.tariffPlanStatus !== 'accepted') {
+          return 'tariff_plan';
+        }
+        return 'ennuste';
+      }
+      return 'overview';
+    },
+    [
+      setupPlanState?.classificationReviewRequired,
+      setupPlanState?.tariffPlanStatus,
+    ],
+  );
+
+  const getLockedPathFallbackTabForSnapshot = React.useCallback(
+    (tab: TabId, snapshot: WorkspaceBootstrapSnapshot): TabId => {
+      if (tab === 'reports' && snapshot.wizardState.forecastUnlocked) {
+        if (snapshot.planState?.classificationReviewRequired) {
+          return 'asset_management';
+        }
+        if (snapshot.planState?.tariffPlanStatus !== 'accepted') {
+          return 'tariff_plan';
+        }
+        return 'ennuste';
+      }
+      return 'overview';
+    },
+    [],
+  );
 
   const reportsNeedFeePathRecovery =
     blockedTabNotice === 'reports' &&
@@ -336,16 +431,27 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
       );
     }
     if (tab === 'reports' && setupWizardState?.forecastUnlocked) {
+      if (setupPlanState?.tariffPlanStatus !== 'accepted') {
+        return t(
+          'v2TariffPlan.acceptBeforeReports',
+          'Accept the tariff plan before creating reports.',
+        );
+      }
       return t(
         'v2Vesinvest.workflowCreateReportBody',
-        'Create the report after the fee path is saved and the linked scenario is up to date.',
+        'Create the report after the tariff plan is accepted and the linked scenario is up to date.',
       );
     }
     return t(
       'v2Shell.tabLockedHint',
       'Complete the setup steps before opening this workspace.',
     );
-  }, [setupPlanState?.classificationReviewRequired, setupWizardState?.forecastUnlocked, t]);
+  }, [
+    setupPlanState?.classificationReviewRequired,
+    setupPlanState?.tariffPlanStatus,
+    setupWizardState?.forecastUnlocked,
+    t,
+  ]);
 
   const handleGoToForecast = React.useCallback((scenarioId?: string | null) => {
     const hasScenarioTarget = typeof scenarioId === 'string' && scenarioId.trim().length > 0;
@@ -383,6 +489,34 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     syncBrowserPath('ennuste');
   }, [closeDrawer, handleLockedTabAttempt, isTabLocked]);
 
+  const handleGoToAssetManagement = React.useCallback(() => {
+    if (isTabLocked('asset_management')) {
+      handleLockedTabAttempt('asset_management');
+      return;
+    }
+    closeDrawer();
+    setBlockedTabNotice(null);
+    setActiveTab('asset_management');
+    syncBrowserPath('asset_management');
+  }, [closeDrawer, handleLockedTabAttempt, isTabLocked]);
+
+  const handleGoToTariffPlan = React.useCallback((scenarioId?: string | null) => {
+    if (isTabLocked('tariff_plan')) {
+      handleLockedTabAttempt('tariff_plan');
+      return;
+    }
+    closeDrawer();
+    setBlockedTabNotice(null);
+    if (scenarioId) {
+      setForecastRuntimeState((prev) =>
+        prev.selectedScenarioId === scenarioId ? prev : { ...prev, selectedScenarioId: scenarioId },
+      );
+    }
+    setActiveTab('tariff_plan');
+    syncBrowserPath('tariff_plan');
+    void refreshWorkspaceTruth().catch(() => undefined);
+  }, [closeDrawer, handleLockedTabAttempt, isTabLocked, refreshWorkspaceTruth]);
+
   const handleGoToReports = React.useCallback(() => {
     if (isTabLocked('reports')) {
       handleLockedTabAttempt('reports');
@@ -408,25 +542,45 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
       );
     }
     setOverviewFocusTarget(targetPlanId ? { kind: 'saved_fee_path', planId: targetPlanId } : null);
-    setActiveTab('overview');
-    syncBrowserPath('overview');
+    setActiveTab('tariff_plan');
+    syncBrowserPath('tariff_plan');
   }, [closeDrawer, setupPlanState?.activePlanId, setupPlanState?.linkedScenarioId]);
 
   const lockedTabActionLabel = React.useCallback((tab: TabId) => {
+    if (tab === 'reports' && setupWizardState?.forecastUnlocked && setupPlanState?.classificationReviewRequired) {
+      return t('v2Shell.tabs.assetManagement', 'Asset Management');
+    }
+    if (tab === 'reports' && setupWizardState?.forecastUnlocked && setupPlanState?.tariffPlanStatus !== 'accepted') {
+      return t('v2Shell.tabs.tariffPlan', 'Tariff Plan');
+    }
     if (tab === 'reports' && setupWizardState?.forecastUnlocked && reportsNeedFeePathRecovery) {
-      return t('v2Vesinvest.openPricing', 'Open fee path');
+      return t('v2Shell.tabs.tariffPlan', 'Tariff Plan');
     }
     if (tab === 'reports' && setupWizardState?.forecastUnlocked) {
       return t('v2Reports.openForecast', 'Open Forecast');
     }
     return t('v2Shell.tabs.overview', 'Overview');
-  }, [reportsNeedFeePathRecovery, setupWizardState?.forecastUnlocked, t]);
+  }, [
+    reportsNeedFeePathRecovery,
+    setupPlanState?.classificationReviewRequired,
+    setupPlanState?.tariffPlanStatus,
+    setupWizardState?.forecastUnlocked,
+    t,
+  ]);
 
   const handleLockedTabRecovery = React.useCallback(() => {
     if (!blockedTabNotice) {
       return;
     }
     if (blockedTabNotice === 'reports' && setupWizardState?.forecastUnlocked) {
+      if (setupPlanState?.classificationReviewRequired) {
+        handleGoToAssetManagement();
+        return;
+      }
+      if (setupPlanState?.tariffPlanStatus !== 'accepted') {
+        handleGoToTariffPlan(setupPlanState?.linkedScenarioId ?? null);
+        return;
+      }
       if (reportsNeedFeePathRecovery && setupPlanState?.activePlanId) {
         handleGoToOverviewFeePath(setupPlanState.activePlanId);
         return;
@@ -445,9 +599,12 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     blockedTabNotice,
     closeDrawer,
     handleGoToForecast,
+    handleGoToTariffPlan,
+    handleGoToAssetManagement,
     handleGoToOverviewFeePath,
     reportsNeedFeePathRecovery,
     setupPlanState?.activePlanId,
+    setupPlanState?.classificationReviewRequired,
     setupPlanState?.linkedScenarioId,
     setupWizardState?.forecastUnlocked,
   ]);
@@ -583,6 +740,9 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     setActiveTab,
     setBlockedTabNotice,
     isTabLockedForState,
+    isTabLockedForSnapshot,
+    getLockedPathFallbackTab,
+    getLockedPathFallbackTabForSnapshot,
     isTabLocked,
     refreshWorkspaceTruth,
     loadWorkspaceBootstrapSnapshot,
@@ -697,6 +857,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
               <div key={`${activeTab}:${workspaceResetVersion}`} className="v2-tab-panel">
                 {activeTab === 'overview' ? (
                   <OverviewPageV2
+                    onGoToAssetManagement={handleGoToAssetManagement}
                     onGoToForecast={handleGoToForecast}
                     onGoToReports={handleGoToReports}
                     isAdmin={isAdmin}
@@ -710,6 +871,17 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
                     setupBackSignal={setupBackSignal}
                   />
                 ) : null}
+                {activeTab === 'asset_management' ? (
+                  <AssetManagementPageV2
+                    isAdmin={isAdmin}
+                    onGoToForecast={handleGoToForecast}
+                    onGoToTariffPlan={handleGoToTariffPlan}
+                    onGoToReports={handleGoToReports}
+                    onWorkspaceChanged={() => {
+                      void refreshWorkspaceTruth().catch(() => undefined);
+                    }}
+                  />
+                ) : null}
                 {activeTab === 'ennuste' ? (
                   <EnnustePageV2
                     onReportCreated={handleReportCreated}
@@ -717,6 +889,16 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
                     onScenarioSelectionChange={handleForecastScenarioSelection}
                     onGoToOverviewFeePath={handleGoToOverviewFeePath}
                     onComputedVersionChange={() => {
+                      void refreshWorkspaceTruth().catch(() => undefined);
+                    }}
+                  />
+                ) : null}
+                {activeTab === 'tariff_plan' ? (
+                  <TariffPlanPageV2
+                    onGoToAssetManagement={handleGoToAssetManagement}
+                    onGoToForecast={handleGoToForecast}
+                    onGoToReports={handleGoToReports}
+                    onTariffPlanAccepted={() => {
                       void refreshWorkspaceTruth().catch(() => undefined);
                     }}
                   />

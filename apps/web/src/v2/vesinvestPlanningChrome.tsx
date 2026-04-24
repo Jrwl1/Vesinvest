@@ -279,7 +279,7 @@ export function VesinvestPlanningActionRow({
               onClick={() => void persist('sync')}
               disabled={busy || !plan || !pricingReady}
             >
-              {t('v2Vesinvest.openPricing', 'Open fee path')}
+              {t('v2TariffPlan.openTariffPlan', 'Open Tariff Plan')}
             </button>
             <button
               type="button"
@@ -416,7 +416,7 @@ export function VesinvestPlanStatusStrip({
       </article>
       {showDownstreamActions ? (
         <article>
-          <h3>{t('v2Vesinvest.pricingState', 'Pricing output')}</h3>
+          <h3>{t('v2Vesinvest.pricingState', 'Forecast sync')}</h3>
           <p>
             <span className={`v2-badge ${toneClass(pricingTone)}`}>
               {pricingStatus === 'verified'
@@ -432,16 +432,16 @@ export function VesinvestPlanStatusStrip({
               : pricingReady
                 ? t(
                     'v2Vesinvest.pricingReadyHint',
-                    'Sync the plan to open fee-path and financing results.',
+                    'Sync the plan to open tariff planning.',
                   )
                 : baselineVerified
                   ? t(
                       'v2Vesinvest.pricingPlanMissingHint',
-                      'Add investment rows and yearly allocations before fee-path and financing output can be opened.',
+                      'Add investment rows and yearly allocations before tariff-plan and financing output can be opened.',
                     )
                   : t(
                       'v2Vesinvest.pricingBlockedHint',
-                      'Fee-path and financing output stay blocked until the baseline is verified.',
+                      'Tariff-plan and financing output stay blocked until the baseline is verified.',
                     )}
           </small>
         </article>

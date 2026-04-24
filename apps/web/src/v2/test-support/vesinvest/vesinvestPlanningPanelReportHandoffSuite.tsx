@@ -313,6 +313,7 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
       makeSummary({
         selectedScenarioId: 'scenario-1',
         pricingStatus: 'verified',
+        tariffPlanStatus: 'accepted',
         baselineStatus: 'verified',
         investmentPlanChangedSinceFeeRecommendation: false,
       }),
@@ -360,6 +361,7 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
       makeSummary({
         selectedScenarioId: 'scenario-1',
         pricingStatus: 'verified',
+        tariffPlanStatus: 'accepted',
         baselineStatus: 'verified',
         investmentPlanChangedSinceFeeRecommendation: false,
       }),
@@ -425,6 +427,7 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
       makeSummary({
         selectedScenarioId: 'scenario-1',
         pricingStatus: 'verified',
+        tariffPlanStatus: 'accepted',
         baselineStatus: 'verified',
         investmentPlanChangedSinceFeeRecommendation: false,
       }),
@@ -462,11 +465,11 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
 
     expect(
       await screen.findByText(
-        'Accepted baseline changed after the saved fee-path result.',
+        'Accepted baseline changed after the saved tariff-plan result.',
       ),
     ).toBeTruthy();
     expect(
-      screen.queryByText('Saved fee-path result still matches this revision.'),
+      screen.queryByText('Saved tariff-plan result still matches this revision.'),
     ).toBeNull();
   });
 
@@ -475,6 +478,7 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
       makeSummary({
         selectedScenarioId: 'scenario-1',
         pricingStatus: 'verified',
+        tariffPlanStatus: 'accepted',
         baselineStatus: 'verified',
         investmentPlanChangedSinceFeeRecommendation: false,
       }),
@@ -504,7 +508,7 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
     expect(screen.getByText('2023')).toBeTruthy();
 
     const newRevisionButton = await screen.findByRole('button', { name: 'New revision' });
-    const openFeePathButton = await screen.findByRole('button', { name: 'Open fee path' });
+    const openFeePathButton = await screen.findByRole('button', { name: 'Open Tariff Plan' });
     expect(newRevisionButton.closest('.v2-vesinvest-maintenance-actions')).toBeTruthy();
     expect(openFeePathButton.closest('.v2-vesinvest-workflow-actions')).toBeTruthy();
   });
@@ -531,6 +535,7 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
         id: 'plan-1',
         selectedScenarioId: 'scenario-1',
         pricingStatus: 'verified',
+        tariffPlanStatus: 'accepted',
         baselineStatus: 'verified',
         investmentPlanChangedSinceFeeRecommendation: false,
       }),
@@ -540,6 +545,7 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
         versionNumber: 2,
         selectedScenarioId: 'scenario-2',
         pricingStatus: 'verified',
+        tariffPlanStatus: 'accepted',
         baselineStatus: 'verified',
         investmentPlanChangedSinceFeeRecommendation: false,
       }),
@@ -552,6 +558,7 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
             versionNumber: 2,
             selectedScenarioId: 'scenario-2',
             pricingStatus: 'verified',
+            tariffPlanStatus: 'accepted',
             feeRecommendationStatus: 'verified',
             feeRecommendation: {
               savedAt: '2026-04-09T08:00:00.000Z',
@@ -622,7 +629,7 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
     );
 
     const feePathHeading = await screen.findByRole('heading', {
-      name: 'Saved fee-path recommendation',
+      name: 'Saved tariff-plan recommendation',
     });
     await waitFor(() => {
       expect(document.activeElement).toBe(feePathHeading);
@@ -666,5 +673,3 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
 
   });
 }
-
-

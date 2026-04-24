@@ -350,7 +350,7 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
     expect(screen.queryByRole('heading', { name: 'Class-owned depreciation plan' })).toBeNull();
     expect(screen.queryByText('Grouped horizon layout')).toBeNull();
     expect(screen.queryByText('Editable project rows')).toBeNull();
-    expect(screen.queryByText('Saved fee-path recommendation')).toBeNull();
+    expect(screen.queryByText('Saved tariff-plan recommendation')).toBeNull();
   });
 
   it('keeps the full plan surface available for non-admin simplified setup users', async () => {
@@ -415,7 +415,7 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
     fireEvent.change(projectNameInput, {
       target: { value: 'Updated rehabilitation' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Open fee path' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open Tariff Plan' }));
 
     await waitFor(() => {
       expect(updateVesinvestPlanV2).toHaveBeenCalledWith(
@@ -595,14 +595,14 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
       name: 'Create report',
     });
     const openPricingButton = screen.getByRole('button', {
-      name: 'Open fee path',
+      name: 'Open Tariff Plan',
     });
     const newRevisionButton = screen.getByRole('button', {
       name: 'New revision',
     });
 
     expect(createReportButton.className).not.toContain('v2-btn-primary');
-    expect(openPricingButton.className).not.toContain('v2-btn-primary');
+    expect(openPricingButton.className).toContain('v2-btn-primary');
     expect(createReportButton.closest('.v2-actions-row')).not.toBe(
       newRevisionButton.closest('.v2-actions-row'),
     );
@@ -716,12 +716,12 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
 
     await screen.findByDisplayValue('Main rehabilitation');
     expect(
-      (screen.getByRole('button', { name: 'Open fee path' }) as HTMLButtonElement)
+      (screen.getByRole('button', { name: 'Open Tariff Plan' }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
     expect(
       screen.getByText(
-        'Add investment rows and yearly allocations before fee-path and financing output can be opened.',
+        'Add investment rows and yearly allocations before tariff-plan and financing output can be opened.',
       ),
     ).toBeTruthy();
   });
@@ -849,7 +849,7 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
       />,
     );
 
-    const feePathTitle = await screen.findByText('Saved fee-path recommendation');
+    const feePathTitle = await screen.findByText('Saved tariff-plan recommendation');
     expect(screen.queryByText('Linked accepted budget budget-2024')).toBeNull();
     expect(screen.getByText('Statement import (bokslut-2024.pdf)')).toBeTruthy();
     expect(screen.getAllByText('Accepted baseline years').length).toBeGreaterThan(0);
@@ -858,10 +858,10 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
     ).toBeNull();
     expect(within(feePathTitle.closest('section')!).getByText('Verified')).toBeTruthy();
     expect(
-      screen.getByText('Saved fee-path result still matches this revision.'),
+      screen.getByText('Saved tariff-plan result still matches this revision.'),
     ).toBeTruthy();
     expect(
-      screen.queryByText('Sync the plan to open fee-path and financing results.'),
+      screen.queryByText('Sync the plan to open tariff-plan and financing results.'),
     ).toBeNull();
   });
 
@@ -936,12 +936,12 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
       />,
     );
 
-    await screen.findByText('Saved fee-path recommendation');
+    await screen.findByText('Saved tariff-plan recommendation');
     expect(
-      screen.getByText('Investment plan changed since the last fee-path result.'),
+      screen.getByText('Investment plan changed since the last tariff-plan result.'),
     ).toBeTruthy();
     expect(
-      screen.queryByText('Sync the plan to open fee-path and financing results.'),
+      screen.queryByText('Sync the plan to open tariff-plan and financing results.'),
     ).toBeNull();
   });
 
@@ -1321,5 +1321,3 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
 
   });
 }
-
-

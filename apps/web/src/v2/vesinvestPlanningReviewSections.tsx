@@ -375,9 +375,9 @@ export function VesinvestBaselineReviewSection({
     >
       <div className="v2-section-header">
         <div>
-          <p className="v2-overview-eyebrow">{t('v2Vesinvest.feePathEyebrow', 'Fee path')}</p>
+          <p className="v2-overview-eyebrow">{t('v2Vesinvest.feePathEyebrow', 'Tariff plan')}</p>
           <h3 ref={feePathHeadingRef as React.RefObject<HTMLHeadingElement>} tabIndex={-1}>
-            {t('v2Vesinvest.feePathTitle', 'Saved fee-path recommendation')}
+            {t('v2Vesinvest.feePathTitle', 'Saved tariff-plan recommendation')}
           </h3>
         </div>
         <span className={`v2-badge ${toneClass(pricingTone)}`}>

@@ -370,6 +370,7 @@ export function resolveVesinvestWorkflowState(
     forecastReady === true &&
     classificationReviewComplete &&
     workflowPlan?.pricingStatus === 'verified' &&
+    workflowPlan?.tariffPlanStatus === 'accepted' &&
     isSelectedScenarioReadyForReports(options?.selectedScenario);
 
   let currentStep: SetupWizardStep;
@@ -386,6 +387,7 @@ export function resolveVesinvestWorkflowState(
   } else if (
     !forecastReady ||
     workflowPlan?.pricingStatus !== 'verified' ||
+    workflowPlan?.tariffPlanStatus !== 'accepted' ||
     !classificationReviewComplete
   ) {
     currentStep = 5;

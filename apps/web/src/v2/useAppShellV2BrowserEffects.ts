@@ -14,6 +14,9 @@ export function useAppShellV2BrowserEffects({
   setActiveTab,
   setBlockedTabNotice,
   isTabLockedForState,
+  isTabLockedForSnapshot,
+  getLockedPathFallbackTab,
+  getLockedPathFallbackTabForSnapshot,
   isTabLocked,
   refreshWorkspaceTruth,
   loadWorkspaceBootstrapSnapshot,
@@ -36,6 +39,12 @@ export function useAppShellV2BrowserEffects({
   setActiveTab: React.Dispatch<React.SetStateAction<TabId>>;
   setBlockedTabNotice: React.Dispatch<React.SetStateAction<TabId | null>>;
   isTabLockedForState: (tab: TabId, state: SetupWizardState | null) => boolean;
+  isTabLockedForSnapshot?: (tab: TabId, snapshot: WorkspaceBootstrapSnapshot) => boolean;
+  getLockedPathFallbackTab?: (tab: TabId, state: SetupWizardState | null) => TabId;
+  getLockedPathFallbackTabForSnapshot?: (
+    tab: TabId,
+    snapshot: WorkspaceBootstrapSnapshot,
+  ) => TabId;
   isTabLocked: (tab: TabId) => boolean;
   refreshWorkspaceTruth: () => Promise<WorkspaceBootstrapSnapshot>;
   loadWorkspaceBootstrapSnapshot: () => Promise<WorkspaceBootstrapSnapshot>;
@@ -68,6 +77,17 @@ export function useAppShellV2BrowserEffects({
         applySetupWizardState(snapshot.wizardState);
         applySetupPlanState(snapshot.planState);
         applySetupOrgName(snapshot.orgName);
+        if (
+          pendingPathTab != null &&
+          isTabLockedForSnapshot?.(pendingPathTab, snapshot)
+        ) {
+          const fallbackTab =
+            getLockedPathFallbackTabForSnapshot?.(pendingPathTab, snapshot) ?? 'overview';
+          setBlockedTabNotice(pendingPathTab);
+          setActiveTab(fallbackTab);
+          syncBrowserPath(fallbackTab, 'replace');
+          setPendingPathTab(null);
+        }
       } catch {
         // Overview will refresh truth once mounted.
       } finally {
@@ -81,7 +101,7 @@ export function useAppShellV2BrowserEffects({
     return () => {
       cancelled = true;
     };
-  }, [applySetupOrgName, applySetupPlanState, applySetupWizardState, loadWorkspaceBootstrapSnapshot, pendingPathTab, setSetupTruthBootstrapped]);
+  }, [applySetupOrgName, applySetupPlanState, applySetupWizardState, getLockedPathFallbackTabForSnapshot, isTabLockedForSnapshot, loadWorkspaceBootstrapSnapshot, pendingPathTab, setActiveTab, setBlockedTabNotice, setPendingPathTab, setSetupTruthBootstrapped]);
 
   React.useEffect(() => {
     if (pendingPathTab != null || !initialOverviewBootstrapPendingRef.current) {
@@ -149,17 +169,22 @@ export function useAppShellV2BrowserEffects({
     if (!setupTruthBootstrapped || !pendingPathTab || !setupWizardState) {
       return;
     }
-    if (isTabLockedForState(pendingPathTab, setupWizardState)) {
+    if (
+      isTabLocked(pendingPathTab) ||
+      isTabLockedForState(pendingPathTab, setupWizardState)
+    ) {
+      const fallbackTab =
+        getLockedPathFallbackTab?.(pendingPathTab, setupWizardState) ?? 'overview';
       setBlockedTabNotice(pendingPathTab);
-      setActiveTab('overview');
-      syncBrowserPath('overview', 'replace');
+      setActiveTab(fallbackTab);
+      syncBrowserPath(fallbackTab, 'replace');
     } else {
       setActiveTab(pendingPathTab);
       setBlockedTabNotice(null);
       syncBrowserPath(pendingPathTab, 'replace');
     }
     setPendingPathTab(null);
-  }, [isTabLockedForState, pendingPathTab, setActiveTab, setBlockedTabNotice, setPendingPathTab, setupTruthBootstrapped, setupWizardState]);
+  }, [getLockedPathFallbackTab, isTabLocked, isTabLockedForState, pendingPathTab, setActiveTab, setBlockedTabNotice, setPendingPathTab, setupTruthBootstrapped, setupWizardState]);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') {
@@ -174,11 +199,15 @@ export function useAppShellV2BrowserEffects({
       }
       if (
         tabFromPath !== 'overview' &&
-        (!setupWizardState || isTabLockedForState(tabFromPath, setupWizardState))
+        (!setupWizardState ||
+          isTabLocked(tabFromPath) ||
+          isTabLockedForState(tabFromPath, setupWizardState))
       ) {
+        const fallbackTab =
+          getLockedPathFallbackTab?.(tabFromPath, setupWizardState) ?? 'overview';
         setBlockedTabNotice(tabFromPath);
-        setActiveTab('overview');
-        syncBrowserPath('overview', 'replace');
+        setActiveTab(fallbackTab);
+        syncBrowserPath(fallbackTab, 'replace');
         return;
       }
       setBlockedTabNotice(null);
@@ -190,7 +219,7 @@ export function useAppShellV2BrowserEffects({
     return () => {
       window.removeEventListener('popstate', onPopState);
     };
-  }, [isTabLockedForState, setActiveTab, setBlockedTabNotice, setPendingPathTab, setupTruthBootstrapped, setupWizardState]);
+  }, [getLockedPathFallbackTab, isTabLocked, isTabLockedForState, setActiveTab, setBlockedTabNotice, setPendingPathTab, setupTruthBootstrapped, setupWizardState]);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {

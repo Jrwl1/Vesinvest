@@ -94,6 +94,7 @@ vi.mock('../../OverviewPageV2', () => ({
       linkedScenarioId: string | null;
       classificationReviewRequired: boolean;
       pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
+      tariffPlanStatus?: 'draft' | 'accepted' | 'stale' | null;
       baselineChangedSinceAcceptedRevision: boolean;
       investmentPlanChangedSinceFeeRecommendation: boolean;
     } | null) => void;
@@ -327,6 +328,7 @@ vi.mock('../../OverviewPageV2', () => ({
               linkedScenarioId: 'scenario-1',
               classificationReviewRequired: false,
               pricingStatus: 'verified',
+              tariffPlanStatus: 'accepted',
               baselineChangedSinceAcceptedRevision: false,
               investmentPlanChangedSinceFeeRecommendation: false,
             })
@@ -347,6 +349,17 @@ vi.mock('../../OverviewPageV2', () => ({
       </div>
     );
   },
+}));
+
+vi.mock('../../AssetManagementPageV2', () => ({
+  AssetManagementPageV2: ({ onGoToTariffPlan }: { onGoToTariffPlan?: (scenarioId?: string | null) => void }) => (
+    <div>
+      <div>asset-management-content</div>
+      <button type="button" onClick={() => onGoToTariffPlan?.('scenario-1')}>
+        asset-to-tariff-plan
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock('../../EnnustePageV2', () => ({
@@ -387,6 +400,26 @@ vi.mock('../../EnnustePageV2', () => ({
       </button>
       <button type="button" onClick={() => onReportCreated('report-123')}>
         create-report
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock('../../TariffPlanPageV2', () => ({
+  TariffPlanPageV2: ({
+    onTariffPlanAccepted,
+    onGoToReports,
+  }: {
+    onTariffPlanAccepted?: () => void;
+    onGoToReports: () => void;
+  }) => (
+    <div>
+      <div>tariff-plan-content</div>
+      <button type="button" onClick={() => onTariffPlanAccepted?.()}>
+        accept-tariff-plan
+      </button>
+      <button type="button" onClick={() => onGoToReports()}>
+        tariff-to-reports
       </button>
     </div>
   ),
@@ -445,6 +478,7 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
     status: 'draft',
     baselineStatus: 'draft',
     pricingStatus: 'blocked',
+    tariffPlanStatus: null,
     selectedScenarioId: null,
     projectCount: 1,
     totalInvestmentAmount: 100000,
@@ -521,6 +555,7 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
   const unlockSetupThroughOverview = async () => {
     fireEvent.click(await screen.findByRole('button', { name: 'set-org-name' }));
     fireEvent.click(await screen.findByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'set-plan-verified' }));
     await waitFor(() => {
       expect(
         (screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement)
@@ -600,7 +635,7 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
     cleanup();
   });
 
-  it('renders only the 3-tab navigation', () => {
+  it('renders only the 5-tab navigation', () => {
     render(
       <AppShellV2
         tokenInfo={{
@@ -616,7 +651,9 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
     );
 
     expect(screen.getByRole('button', { name: 'Overview' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Asset Management' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Forecast' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Tariff Plan' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Reports' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Dashboard' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Connect' })).toBeNull();
@@ -709,7 +746,7 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
 
   it('shows a report-stage blocker message instead of startup copy when direct /reports is blocked after forecast unlock', async () => {
     window.history.replaceState({}, '', '/reports');
-    getImportStatusV2Mock.mockResolvedValueOnce({
+    getImportStatusV2Mock.mockResolvedValue({
       connected: true,
       link: {
         connected: true,
@@ -725,7 +762,7 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
       excludedYears: [],
       planningBaselineYears: [2024],
     });
-    getPlanningContextV2Mock.mockResolvedValueOnce(
+    getPlanningContextV2Mock.mockResolvedValue(
       buildPlanningContext({
         canCreateScenario: true,
         baselineYears: [
@@ -760,7 +797,7 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
         },
       }),
     );
-    getForecastScenarioV2Mock.mockResolvedValueOnce(buildReadyScenario());
+    getForecastScenarioV2Mock.mockResolvedValue(buildReadyScenario());
 
     render(
       <AppShellV2
@@ -776,15 +813,19 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
       />,
     );
 
-    expect(await screen.findByText('overview-content')).toBeTruthy();
+    expect(await screen.findByText('tariff-plan-content')).toBeTruthy();
     expect(screen.getByRole('status').textContent).toContain(
-      'Create the report after the fee path is saved and the linked scenario is up to date.',
+      'Accept the tariff plan before creating reports.',
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Open fee path' }));
-    expect(screen.getByText('overview-focus-target:plan-1')).toBeTruthy();
+    fireEvent.click(
+      within(screen.getByRole('status')).getByRole('button', {
+        name: 'Tariff Plan',
+      }),
+    );
+    expect(await screen.findByText('tariff-plan-content')).toBeTruthy();
     expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
     await waitFor(() => {
-      expect(window.location.pathname).toBe('/');
+      expect(window.location.pathname).toBe('/tariff-plan');
     });
   });
 
@@ -808,11 +849,14 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
     fireEvent.click(screen.getByRole('button', { name: 'Reports' }));
 
     expect(screen.getByRole('status').textContent).toContain(
-      'Create the report after the fee path is saved and the linked scenario is up to date.',
+      'Accept the tariff plan before creating reports.',
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Open Forecast' }));
-    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
-    expect(window.location.pathname).toBe('/forecast');
+    fireEvent.click(
+      within(screen.getByRole('status')).getByRole('button', {
+        name: 'Tariff Plan',
+      }),
+    );
+    expect(await screen.findByText('tariff-plan-content')).toBeTruthy();
   });
 
   it('does not show a redundant Overview recovery button when a locked Forecast route lands on Overview', async () => {
@@ -914,12 +958,14 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
       />,
     );
 
-    expect(await screen.findByText('overview-content')).toBeTruthy();
+    expect(await screen.findByText('asset-management-content')).toBeTruthy();
     expect(screen.getByRole('status').textContent).toContain(
       'Review and save the Vesinvest class plan before creating a report.',
     );
     expect(
-      screen.getByRole('button', { name: 'Open fee path' }),
+      within(screen.getByRole('status')).getByRole('button', {
+        name: 'Asset Management',
+      }),
     ).toBeTruthy();
   });
 
@@ -1221,4 +1267,3 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
 
   });
 }
-

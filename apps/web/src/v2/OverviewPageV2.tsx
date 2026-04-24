@@ -11,7 +11,10 @@ import { buildOverviewManualPatchViewModel } from './overviewManualPatchModel';
 import { type SetupWizardState } from './overviewWorkflow';
 import { buildOverviewPageViewModel } from './overviewPageViewModel';
 import { useOverviewPageController } from './useOverviewPageController';
-import type { VesinvestOverviewFocusTarget } from './VesinvestPlanningPanel';
+type VesinvestOverviewFocusTarget = {
+  kind: 'saved_fee_path';
+  planId: string;
+};
 
 const OverviewImportBoard = React.lazy(async () => {
   const mod = await import('./OverviewImportBoard');
@@ -28,11 +31,8 @@ const OverviewManualPatchPanel = React.lazy(async () => {
   return { default: mod.OverviewManualPatchPanel };
 });
 
-const VesinvestPlanningPanel = React.lazy(async () => {
-  const mod = await import('./VesinvestPlanningPanel');
-  return { default: mod.VesinvestPlanningPanel };
-});
 type Props = {
+  onGoToAssetManagement?: () => void;
   onGoToForecast: (scenarioId?: string | null) => void;
   onGoToReports: () => void;
   isAdmin: boolean;
@@ -48,6 +48,7 @@ type Props = {
       pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
       baselineChangedSinceAcceptedRevision: boolean;
       investmentPlanChangedSinceFeeRecommendation: boolean;
+      tariffPlanStatus: 'draft' | 'accepted' | 'stale' | null;
     } | null,
   ) => void;
   onSetupOrgNameChange?: (name: string | null) => void;
@@ -63,6 +64,7 @@ type Props = {
   setupBackSignal?: number;
 };
 export const OverviewPageV2: React.FC<Props> = ({
+  onGoToAssetManagement,
   onGoToForecast,
   onGoToReports: _onGoToReports,
   isAdmin,
@@ -377,6 +379,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     overview,
     t,
   });
+  const openAssetManagement = onGoToAssetManagement ?? (() => onGoToForecast());
 
   const setWorkbookSelection = (
     year: number,
@@ -505,80 +508,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     />
   ) : null;
 
-  const planningPanelDisclosureOpen =
-    collapsedPlanningPanelOpenStep === overviewVisualStep ||
-    overviewFocusTarget != null;
-
-  const planningPanelContent = (
-    <React.Suspense
-      fallback={<div className="v2-loading">{t('common.loading', 'Loading...')}</div>}
-    >
-      <VesinvestPlanningPanel
-        t={t}
-        isAdmin={isAdmin}
-        simplifiedSetup={showSimplifiedPostChoiceSetup}
-        compactReviewMode={shouldCompactPlanningPanel}
-        planningContext={planningContext}
-        linkedOrg={overview?.importStatus.link ?? null}
-        onGoToForecast={onGoToForecast}
-        onGoToReports={_onGoToReports}
-        overviewFocusTarget={overviewFocusTarget}
-        onOverviewFocusTargetConsumed={() => {
-          if (collapsePlanningPanelInSetup) {
-            setCollapsedPlanningPanelOpenStep(overviewVisualStep);
-          }
-          onOverviewFocusTargetConsumed?.();
-        }}
-        onSavedFeePathReportConflict={onSavedFeePathReportConflict}
-        onPlansChanged={() =>
-          loadOverview({
-            preserveVisibleState: true,
-            preserveSelectionState: true,
-            preserveReviewContinueStep: true,
-            refreshPlanningContext: true,
-          })
-        }
-      />
-    </React.Suspense>
-  );
-  const planningPanel = shouldShowVesinvestPanel ? (
-    <div
-      className={`v2-overview-planning-shell${
-        demotePlanningPanelInSetup
-          ? ' v2-overview-planning-shell-secondary'
-          : ''
-      }`}
-    >
-      {collapsePlanningPanelInSetup ? (
-        <details
-          className="v2-overview-planning-shell-toggle"
-          open={planningPanelDisclosureOpen}
-          onToggle={(event) => {
-            setCollapsedPlanningPanelOpenStep(
-              event.currentTarget.open ? overviewVisualStep : null,
-            );
-          }}
-        >
-          <summary>
-            <div className="v2-overview-planning-shell-toggle-copy">
-              <span>{t('v2Vesinvest.eyebrow', 'Vesinvest')}</span>
-              <strong>
-                {activeVesinvestPlan?.name ??
-                  activeVesinvestPlan?.utilityName ??
-                  overview?.importStatus.link?.nimi ??
-                  t('v2Vesinvest.title', 'Vesinvest workspace')}
-              </strong>
-            </div>
-          </summary>
-          <div className="v2-overview-planning-shell-toggle-body">
-            {planningPanelContent}
-          </div>
-        </details>
-      ) : (
-        planningPanelContent
-      )}
-    </div>
-  ) : null;
+  const planningPanel = null;
 
   const activeSurface = (
     <div className="v2-overview-active-surface">
@@ -739,7 +669,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           onExcludeYear={(year) => void handleExcludeYearFromPlan(year)}
           onRestoreYear={(year) => void handleRestoreYearToPlan(year)}
           onRestoreVeeti={(year) => void handleRestoreYearVeeti(year)}
-          onOpenForecast={handleOpenForecastHandoff}
+          onOpenForecast={openAssetManagement}
         />
       ) : null}
 

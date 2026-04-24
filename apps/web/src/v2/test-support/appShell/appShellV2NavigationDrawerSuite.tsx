@@ -94,6 +94,7 @@ vi.mock('../../OverviewPageV2', () => ({
       linkedScenarioId: string | null;
       classificationReviewRequired: boolean;
       pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
+      tariffPlanStatus?: 'draft' | 'accepted' | 'stale' | null;
       baselineChangedSinceAcceptedRevision: boolean;
       investmentPlanChangedSinceFeeRecommendation: boolean;
     } | null) => void;
@@ -327,6 +328,7 @@ vi.mock('../../OverviewPageV2', () => ({
               linkedScenarioId: 'scenario-1',
               classificationReviewRequired: false,
               pricingStatus: 'verified',
+              tariffPlanStatus: 'accepted',
               baselineChangedSinceAcceptedRevision: false,
               investmentPlanChangedSinceFeeRecommendation: false,
             })
@@ -347,6 +349,17 @@ vi.mock('../../OverviewPageV2', () => ({
       </div>
     );
   },
+}));
+
+vi.mock('../../AssetManagementPageV2', () => ({
+  AssetManagementPageV2: ({ onGoToTariffPlan }: { onGoToTariffPlan?: (scenarioId?: string | null) => void }) => (
+    <div>
+      <div>asset-management-content</div>
+      <button type="button" onClick={() => onGoToTariffPlan?.('scenario-1')}>
+        asset-to-tariff-plan
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock('../../EnnustePageV2', () => ({
@@ -387,6 +400,26 @@ vi.mock('../../EnnustePageV2', () => ({
       </button>
       <button type="button" onClick={() => onReportCreated('report-123')}>
         create-report
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock('../../TariffPlanPageV2', () => ({
+  TariffPlanPageV2: ({
+    onTariffPlanAccepted,
+    onGoToReports,
+  }: {
+    onTariffPlanAccepted?: () => void;
+    onGoToReports: () => void;
+  }) => (
+    <div>
+      <div>tariff-plan-content</div>
+      <button type="button" onClick={() => onTariffPlanAccepted?.()}>
+        accept-tariff-plan
+      </button>
+      <button type="button" onClick={() => onGoToReports()}>
+        tariff-to-reports
       </button>
     </div>
   ),
@@ -445,6 +478,7 @@ export function registerAppShellV2NavigationDrawerSuite() {
     status: 'draft',
     baselineStatus: 'draft',
     pricingStatus: 'blocked',
+    tariffPlanStatus: null,
     selectedScenarioId: null,
     projectCount: 1,
     totalInvestmentAmount: 100000,
@@ -521,6 +555,7 @@ export function registerAppShellV2NavigationDrawerSuite() {
   const unlockSetupThroughOverview = async () => {
     fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'set-plan-verified' }));
     await waitFor(() => {
       expect(
         (screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement)
@@ -603,6 +638,7 @@ export function registerAppShellV2NavigationDrawerSuite() {
         activePlan: {
           baselineStatus: 'verified',
           pricingStatus: 'verified',
+          tariffPlanStatus: 'accepted',
           selectedScenarioId: 'scenario-1',
           status: 'active',
         },
@@ -1148,7 +1184,7 @@ export function registerAppShellV2NavigationDrawerSuite() {
     expect(screen.getByText('Step 1 / 5')).toBeTruthy();
   });
 
-  it('returns stale report flow to Overview and stores a saved fee-path focus target', async () => {
+  it('returns stale report flow to Tariff Plan and stores a saved fee-path conflict', async () => {
     primeVerifiedBaselineImportStatus();
     getPlanningContextV2Mock.mockResolvedValue(
       buildPlanningContext({
@@ -1159,6 +1195,7 @@ export function registerAppShellV2NavigationDrawerSuite() {
           utilityName: 'Wizard Utility',
           businessId: '1234567-8',
           pricingStatus: 'verified',
+          tariffPlanStatus: 'accepted',
           selectedScenarioId: 'scenario-1',
           status: 'active',
         },
@@ -1186,8 +1223,7 @@ export function registerAppShellV2NavigationDrawerSuite() {
 
     fireEvent.click(screen.getByRole('button', { name: 'stale-report-hit' }));
 
-    expect(await screen.findByText('overview-content')).toBeTruthy();
-    expect(screen.getByText('overview-focus-target:plan-1')).toBeTruthy();
+    expect(await screen.findByText('tariff-plan-content')).toBeTruthy();
     expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
     expect(screen.queryByText('Report-ready scenario')).toBeNull();
     expect(
@@ -1206,6 +1242,7 @@ export function registerAppShellV2NavigationDrawerSuite() {
           utilityName: 'Wizard Utility',
           businessId: '1234567-8',
           pricingStatus: 'verified',
+          tariffPlanStatus: 'accepted',
           selectedScenarioId: 'scenario-1',
           status: 'active',
         },
@@ -1232,16 +1269,13 @@ export function registerAppShellV2NavigationDrawerSuite() {
     expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'stale-report-hit' }));
-    expect(await screen.findByText('overview-content')).toBeTruthy();
+    expect(await screen.findByText('tariff-plan-content')).toBeTruthy();
     expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
+    fireEvent.click(screen.getByRole('button', { name: 'accept-tariff-plan' }));
 
-    expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
-    expect(screen.getByText('Report-ready scenario')).toBeTruthy();
+    expect(await screen.findByText('Report-ready scenario')).toBeTruthy();
   });
 
   });
 }
-
-

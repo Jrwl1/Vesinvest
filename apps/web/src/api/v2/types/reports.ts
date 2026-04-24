@@ -1,6 +1,12 @@
 import type { V2DepreciationRuleMethod,V2ForecastScenario } from './forecast';
 import type { V2BaselineSourceSummary } from './shared';
-import type { V2VesinvestFeeRecommendation } from './vesinvest';
+import type {
+  V2TariffAllocationPolicy,
+  V2TariffBaselineInput,
+  V2TariffReadinessChecklist,
+  V2TariffRecommendation,
+  V2VesinvestFeeRecommendation,
+} from './vesinvest';
 
 export type V2ReportListItem = {
   id: string;
@@ -83,6 +89,15 @@ export type V2ReportDetail = {
         linearYears: number | null;
         residualPercent: number | null;
       }>;
+    } | null;
+    tariffPlan?: {
+      id: string;
+      status: 'draft' | 'accepted' | 'stale';
+      acceptedAt: string | null;
+      baselineInput: V2TariffBaselineInput;
+      allocationPolicy: V2TariffAllocationPolicy;
+      recommendation: V2TariffRecommendation;
+      readinessChecklist: V2TariffReadinessChecklist;
     } | null;
     reportVariant: 'public_summary' | 'confidential_appendix';
     reportSections: {

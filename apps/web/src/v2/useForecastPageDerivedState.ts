@@ -41,6 +41,9 @@ export function useForecastPageDerivedState({
     if (activePlan.classificationReviewRequired) {
       return 'classificationReviewRequired' as const;
     }
+    if (activePlan.tariffPlanStatus !== 'accepted') {
+      return 'tariffPlanRequired' as const;
+    }
     if (scenarioController.forecastFreshnessState === 'computing') {
       return 'missingComputeResults' as const;
     }
@@ -92,6 +95,11 @@ export function useForecastPageDerivedState({
         return t(
           'v2Forecast.classificationReviewRequired',
           'Review and save the Vesinvest class plan before creating a report.',
+        );
+      case 'tariffPlanRequired':
+        return t(
+          'v2TariffPlan.acceptBeforeReports',
+          'Accept the tariff plan before creating reports.',
         );
       case 'missingDepreciationSnapshots':
         return t(

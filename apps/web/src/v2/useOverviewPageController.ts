@@ -47,6 +47,7 @@ export type OverviewPageControllerProps = {
       linkedScenarioId: string | null;
       classificationReviewRequired: boolean;
       pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
+      tariffPlanStatus: 'draft' | 'accepted' | 'stale' | null;
       baselineChangedSinceAcceptedRevision: boolean;
       investmentPlanChangedSinceFeeRecommendation: boolean;
     } | null,
@@ -660,6 +661,7 @@ export function useOverviewPageController({
       classificationReviewRequired:
         activeVesinvestPlan.classificationReviewRequired === true,
       pricingStatus: activeVesinvestPlan.pricingStatus ?? null,
+      tariffPlanStatus: activeVesinvestPlan.tariffPlanStatus ?? null,
       baselineChangedSinceAcceptedRevision:
         activeVesinvestPlan.baselineChangedSinceAcceptedRevision === true,
       investmentPlanChangedSinceFeeRecommendation:

@@ -94,6 +94,7 @@ vi.mock('../../OverviewPageV2', () => ({
       linkedScenarioId: string | null;
       classificationReviewRequired: boolean;
       pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
+      tariffPlanStatus?: 'draft' | 'accepted' | 'stale' | null;
       baselineChangedSinceAcceptedRevision: boolean;
       investmentPlanChangedSinceFeeRecommendation: boolean;
     } | null) => void;
@@ -327,6 +328,7 @@ vi.mock('../../OverviewPageV2', () => ({
               linkedScenarioId: 'scenario-1',
               classificationReviewRequired: false,
               pricingStatus: 'verified',
+              tariffPlanStatus: 'accepted',
               baselineChangedSinceAcceptedRevision: false,
               investmentPlanChangedSinceFeeRecommendation: false,
             })
@@ -347,6 +349,17 @@ vi.mock('../../OverviewPageV2', () => ({
       </div>
     );
   },
+}));
+
+vi.mock('../../AssetManagementPageV2', () => ({
+  AssetManagementPageV2: ({ onGoToTariffPlan }: { onGoToTariffPlan?: (scenarioId?: string | null) => void }) => (
+    <div>
+      <div>asset-management-content</div>
+      <button type="button" onClick={() => onGoToTariffPlan?.('scenario-1')}>
+        asset-to-tariff-plan
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock('../../EnnustePageV2', () => ({
@@ -387,6 +400,26 @@ vi.mock('../../EnnustePageV2', () => ({
       </button>
       <button type="button" onClick={() => onReportCreated('report-123')}>
         create-report
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock('../../TariffPlanPageV2', () => ({
+  TariffPlanPageV2: ({
+    onTariffPlanAccepted,
+    onGoToReports,
+  }: {
+    onTariffPlanAccepted?: () => void;
+    onGoToReports: () => void;
+  }) => (
+    <div>
+      <div>tariff-plan-content</div>
+      <button type="button" onClick={() => onTariffPlanAccepted?.()}>
+        accept-tariff-plan
+      </button>
+      <button type="button" onClick={() => onGoToReports()}>
+        tariff-to-reports
       </button>
     </div>
   ),
@@ -445,6 +478,7 @@ export function registerAppShellV2SavedFeePathSuite() {
     status: 'draft',
     baselineStatus: 'draft',
     pricingStatus: 'blocked',
+    tariffPlanStatus: null,
     selectedScenarioId: null,
     projectCount: 1,
     totalInvestmentAmount: 100000,
@@ -521,6 +555,7 @@ export function registerAppShellV2SavedFeePathSuite() {
   const unlockSetupThroughOverview = async () => {
     fireEvent.click(await screen.findByRole('button', { name: 'set-org-name' }));
     fireEvent.click(await screen.findByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'set-plan-verified' }));
     await waitFor(() => {
       expect(
         (screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement)
@@ -611,6 +646,7 @@ export function registerAppShellV2SavedFeePathSuite() {
           utilityName: 'Wizard Utility',
           businessId: '1234567-8',
           pricingStatus: 'verified',
+          tariffPlanStatus: 'accepted',
           selectedScenarioId: 'scenario-1',
           status: 'active',
         },
@@ -637,10 +673,10 @@ export function registerAppShellV2SavedFeePathSuite() {
     expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
 
     fireEvent.click(await screen.findByRole('button', { name: 'stale-report-hit' }));
-    expect(await screen.findByText('overview-content')).toBeTruthy();
+    expect(await screen.findByText('tariff-plan-content')).toBeTruthy();
     expect(await screen.findByText('Vesinvest in progress')).toBeTruthy();
 
-    await clickOverviewButton('set-plan-verified');
+    fireEvent.click(screen.getByRole('button', { name: 'accept-tariff-plan' }));
 
     expect(await screen.findByText('Report-ready scenario')).toBeTruthy();
   });
@@ -656,6 +692,7 @@ export function registerAppShellV2SavedFeePathSuite() {
           utilityName: 'Wizard Utility',
           businessId: '1234567-8',
           pricingStatus: 'verified',
+          tariffPlanStatus: 'accepted',
           selectedScenarioId: 'scenario-1',
           status: 'active',
         },
@@ -701,6 +738,7 @@ export function registerAppShellV2SavedFeePathSuite() {
           utilityName: 'Wizard Utility',
           businessId: '1234567-8',
           pricingStatus: 'verified',
+          tariffPlanStatus: 'accepted',
           selectedScenarioId: 'scenario-1',
           status: 'active',
         },
@@ -752,6 +790,7 @@ export function registerAppShellV2SavedFeePathSuite() {
           utilityName: 'Wizard Utility',
           businessId: '1234567-8',
           pricingStatus: 'verified',
+          tariffPlanStatus: 'accepted',
           baselineChangedSinceAcceptedRevision: true,
           selectedScenarioId: 'scenario-1',
           status: 'active',
@@ -956,5 +995,3 @@ export function registerAppShellV2SavedFeePathSuite() {
 
   });
 }
-
-

@@ -32,6 +32,7 @@ type ReportReadinessReason =
   | 'unsavedChanges'
   | 'missingComputeResults'
   | 'missingDepreciationSnapshots'
+  | 'missingTariffPlan'
   | null;
 
 export function useVesinvestPlanningDerivedState({
@@ -259,19 +260,19 @@ export function useVesinvestPlanningDerivedState({
     if (utilityBindingMismatch) {
       return t(
         'v2Vesinvest.pricingBlockedHint',
-        'Fee-path and financing output stay blocked until the baseline is verified.',
+        'Tariff-plan and financing output stay blocked until the baseline is verified.',
       );
     }
     if (!feeRecommendation || !hasSavedFeePathLink) {
       return t(
         'v2Vesinvest.planNotYetSynced',
-        'Fee-path has not been opened from this revision yet.',
+        'Tariff plan has not been opened from this revision yet.',
       );
     }
     if (reportConflictCode === 'VESINVEST_BASELINE_STALE') {
       return t(
         'v2Vesinvest.baselineChangedSincePricing',
-        'Accepted baseline changed after the saved fee-path result.',
+        'Accepted baseline changed after the saved tariff-plan result.',
       );
     }
     if (reportConflictCode === 'VESINVEST_SCENARIO_STALE') {
@@ -289,24 +290,24 @@ export function useVesinvestPlanningDerivedState({
     if (selectedSummary.baselineChangedSinceAcceptedRevision) {
       return t(
         'v2Vesinvest.baselineChangedSincePricing',
-        'Accepted baseline changed after the saved fee-path result.',
+        'Accepted baseline changed after the saved tariff-plan result.',
       );
     }
     if (selectedSummary.investmentPlanChangedSinceFeeRecommendation) {
       return t(
         'v2Vesinvest.planChangedSincePricing',
-        'Investment plan changed since the last fee-path result.',
+        'Investment plan changed since the last tariff-plan result.',
       );
     }
     if (selectedSummary.pricingStatus !== 'verified') {
       return t(
         'v2Vesinvest.pricingBlockedHint',
-        'Fee-path and financing output stay blocked until the baseline is verified.',
+        'Tariff-plan and financing output stay blocked until the baseline is verified.',
       );
     }
     return t(
       'v2Vesinvest.planAlignedWithPricing',
-      'Saved fee-path result still matches this revision.',
+      'Saved tariff-plan result still matches this revision.',
     );
   }, [
     feeRecommendation,
@@ -338,6 +339,9 @@ export function useVesinvestPlanningDerivedState({
     if (selectedSummary?.pricingStatus !== 'verified') {
       return 'staleComputeToken';
     }
+    if (selectedSummary?.tariffPlanStatus !== 'accepted') {
+      return 'missingTariffPlan';
+    }
     if (hasUnsavedChanges) {
       return 'unsavedChanges';
     }
@@ -364,6 +368,7 @@ export function useVesinvestPlanningDerivedState({
     selectedSummary?.classificationReviewRequired,
     selectedSummary?.investmentPlanChangedSinceFeeRecommendation,
     selectedSummary?.pricingStatus,
+    selectedSummary?.tariffPlanStatus,
   ]);
 
   const canCreateReport = reportReadinessReason == null && !loadingLinkedScenario && !!plan?.id;

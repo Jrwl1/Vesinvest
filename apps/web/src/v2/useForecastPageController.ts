@@ -384,7 +384,9 @@ export function useForecastPageController({
       const activePlan = scenarioController.planningContext?.vesinvest?.activePlan ?? null;
       if (
         (code === 'VESINVEST_SCENARIO_STALE' ||
-          code === 'VESINVEST_BASELINE_STALE') &&
+          code === 'VESINVEST_BASELINE_STALE' ||
+          code === 'TARIFF_PLAN_REQUIRED' ||
+          code === 'TARIFF_PLAN_STALE') &&
         activePlan?.id
       ) {
         onGoToOverviewFeePath?.(activePlan.id);

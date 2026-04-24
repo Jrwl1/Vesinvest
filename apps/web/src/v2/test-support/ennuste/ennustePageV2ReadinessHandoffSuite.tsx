@@ -326,6 +326,7 @@ const buildVesinvestPlanSummary = (selectedScenarioId = 'base-1') => ({
   status: 'active',
   baselineStatus: 'verified',
   pricingStatus: 'verified',
+  tariffPlanStatus: 'accepted',
   selectedScenarioId,
   projectCount: 2,
   totalInvestmentAmount: 245000,
@@ -600,7 +601,7 @@ export function registerEnnustePageV2ReadinessHandoffSuite() {
     const onGoToOverviewFeePath = vi.fn();
     createReportV2.mockRejectedValueOnce(
       Object.assign(
-        new Error('Vesinvest pricing snapshot is out of date. Re-open fee path before creating report.'),
+        new Error('Vesinvest pricing snapshot is out of date. Re-open Tariff Plan before creating report.'),
         { code: 'VESINVEST_SCENARIO_STALE' },
       ),
     );
@@ -1026,5 +1027,3 @@ export function registerEnnustePageV2ReadinessHandoffSuite() {
 
   });
 }
-
-

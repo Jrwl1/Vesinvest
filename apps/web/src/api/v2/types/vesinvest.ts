@@ -38,6 +38,7 @@ export type V2VesinvestPlanSummary = {
   classificationReviewRequired: boolean;
   baselineChangedSinceAcceptedRevision: boolean;
   investmentPlanChangedSinceFeeRecommendation: boolean;
+  tariffPlanStatus?: 'draft' | 'accepted' | 'stale' | null;
   baselineFingerprint: string | null;
   scenarioFingerprint: string | null;
   updatedAt: string;
@@ -210,3 +211,98 @@ export type V2VesinvestPlanInput = V2VesinvestPlanCreateInput & {
   reviewDueAt?: string | null;
 };
 
+export type V2TariffFeeKey =
+  | 'connectionFee'
+  | 'baseFee'
+  | 'waterUsageFee'
+  | 'wastewaterUsageFee';
+
+export type V2TariffBaselineInput = {
+  connectionFeeAverage?: number | null;
+  connectionFeeRevenue?: number | null;
+  connectionFeeNewConnections?: number | null;
+  connectionFeeBasis?: string | null;
+  baseFeeRevenue?: number | null;
+  connectionCount?: number | null;
+  waterPrice?: number | null;
+  wastewaterPrice?: number | null;
+  soldWaterVolume?: number | null;
+  soldWastewaterVolume?: number | null;
+  notes?: string | null;
+};
+
+export type V2TariffAllocationPolicy = {
+  connectionFeeSharePct?: number | null;
+  baseFeeSharePct?: number | null;
+  waterUsageSharePct?: number | null;
+  wastewaterUsageSharePct?: number | null;
+  smoothingYears?: number | null;
+  regionalVariationApplies?: boolean | null;
+  stormwaterApplies?: boolean | null;
+  financialRiskAssessment?: string | null;
+};
+
+export type V2TariffFeeRecommendation = {
+  key: V2TariffFeeKey;
+  currentUnit: number | null;
+  proposedUnit: number | null;
+  currentAnnualRevenue: number | null;
+  proposedAnnualRevenue: number | null;
+  revenueImpact: number;
+  deltaPct: number | null;
+  annualIncreasePct: number | null;
+  allocationSharePct: number;
+  denominator: number | null;
+  yearlyPath: Array<{
+    yearIndex: number;
+    unit: number | null;
+    annualRevenue: number | null;
+  }>;
+};
+
+export type V2TariffReadinessChecklist = {
+  isReady: boolean;
+  assetPlan20YearPresent: boolean;
+  trustedBaselinePresent: boolean;
+  currentTariffBaselinePresent: boolean;
+  investmentFinancingNeedPresent: boolean;
+  riskAssessmentPresent: boolean;
+  smoothingStatus: 'ok' | 'exceeds_15_pct' | 'missing';
+  regionalVariationFlag: boolean;
+  stormwaterFlag: boolean;
+  unresolvedManualAssumptions: string[];
+};
+
+export type V2TariffRecommendation = {
+  savedAt: string;
+  linkedScenarioId: string;
+  vesinvestPlanId: string;
+  baselineFingerprint: string | null;
+  scenarioFingerprint: string | null;
+  targetAdditionalAnnualRevenue: number;
+  baselineAnnualRevenue: number;
+  proposedAnnualRevenue: number;
+  smoothingYears: number;
+  averageAnnualIncreasePct: number | null;
+  fees: Record<V2TariffFeeKey, V2TariffFeeRecommendation>;
+  lawReadiness: V2TariffReadinessChecklist;
+};
+
+export type V2TariffPlan = {
+  id: string | null;
+  vesinvestPlanId: string;
+  scenarioId: string;
+  status: 'draft' | 'accepted' | 'stale';
+  baselineInput: V2TariffBaselineInput;
+  allocationPolicy: V2TariffAllocationPolicy;
+  recommendation: V2TariffRecommendation;
+  readinessChecklist: V2TariffReadinessChecklist;
+  acceptedAt: string | null;
+  updatedAt: string | null;
+  createdAt: string | null;
+};
+
+export type V2TariffPlanInput = {
+  baselineInput?: V2TariffBaselineInput | null;
+  allocationPolicy?: V2TariffAllocationPolicy | null;
+};

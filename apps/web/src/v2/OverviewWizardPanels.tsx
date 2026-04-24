@@ -502,7 +502,7 @@ export const OverviewForecastHandoffStep: React.FC<
         className={openForecastButtonClass}
         onClick={onOpenForecast}
       >
-        {t('v2Overview.openForecast')}
+        {t('v2Overview.openAssetManagement', 'Open Asset Management')}
       </button>
     </div>
 

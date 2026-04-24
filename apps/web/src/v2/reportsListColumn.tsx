@@ -109,7 +109,7 @@ export const ReportsListColumn: React.FC<ReportsListColumnProps> = ({
           </button>
           {savedFeePathReportConflictActive && savedFeePathPlanId ? (
             <button type="button" className="v2-btn" onClick={handleSavedFeePathAction}>
-              {t('v2Vesinvest.openPricing', 'Open fee path')}
+              {t('v2Shell.tabs.tariffPlan', 'Tariff Plan')}
             </button>
           ) : null}
         </div>

@@ -7,6 +7,8 @@ import type {
   V2VesinvestPlanCreateInput,
   V2VesinvestPlanInput,
   V2VesinvestPlanSummary,
+  V2TariffPlan,
+  V2TariffPlanInput,
 } from './types';
 export async function listVesinvestGroupsV2(): Promise<V2VesinvestGroupDefinition[]> {
   return api<V2VesinvestGroupDefinition[]>('/v2/vesinvest/groups');
@@ -79,5 +81,35 @@ export async function syncVesinvestPlanToForecastV2(
     },
   );
   invalidateCachedGets('GET /v2/context', 'GET /v2/forecast/scenarios');
+  return result;
+}
+
+export async function getTariffPlanV2(planId: string): Promise<V2TariffPlan> {
+  return api<V2TariffPlan>(`/v2/vesinvest/plans/${planId}/tariff-plan`);
+}
+
+export async function saveTariffPlanV2(
+  planId: string,
+  data: V2TariffPlanInput,
+): Promise<V2TariffPlan> {
+  const result = await api<V2TariffPlan>(
+    `/v2/vesinvest/plans/${planId}/tariff-plan`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    },
+  );
+  invalidateCachedGets('GET /v2/context');
+  return result;
+}
+
+export async function acceptTariffPlanV2(planId: string): Promise<V2TariffPlan> {
+  const result = await api<V2TariffPlan>(
+    `/v2/vesinvest/plans/${planId}/tariff-plan/accept`,
+    {
+      method: 'POST',
+    },
+  );
+  invalidateCachedGets('GET /v2/context');
   return result;
 }

@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next';
 import React from 'react';
 
-import type { V2VesinvestGroupDefinition,V2VesinvestProject } from '../api';
+import type { V2VesinvestGroupDefinition,V2VesinvestPlan,V2VesinvestProject } from '../api';
 import { formatEur } from './format';
 import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 import {
@@ -30,6 +30,7 @@ export function VesinvestPlanningInvestmentWorkspace({
   groupedPlanMatrix,
   yearTotals,
   totalInvestments,
+  lawInvestmentSummary,
   busy,
   loading,
   loadingPlan,
@@ -44,6 +45,7 @@ export function VesinvestPlanningInvestmentWorkspace({
   groupedPlanMatrix: VesinvestGroupedMatrixSection[];
   yearTotals: Array<{ year: number; totalAmount: number }>;
   totalInvestments: number;
+  lawInvestmentSummary: V2VesinvestPlan['lawInvestmentSummary'] | null;
   busy: boolean;
   loading: boolean;
   loadingPlan: boolean;
@@ -57,8 +59,99 @@ export function VesinvestPlanningInvestmentWorkspace({
     value: number,
   ) => void;
 }) {
+  const bucketLabel = (key: string) =>
+    key === 'years_1_5' || key === 'years_0_5'
+      ? t('v2Vesinvest.lawBucketYears05', 'Years 1-5')
+      : key === 'years_6_10'
+      ? t('v2Vesinvest.lawBucketYears610', 'Years 6-10')
+      : key === 'years_11_20'
+      ? t('v2Vesinvest.lawBucketYears1120', 'Years 11-20')
+      : key;
+
   return (
     <>
+      {lawInvestmentSummary ? (
+        <VesinvestMatrixSurface t={t}>
+          <div className="v2-section-heading">
+            <span className="v2-eyebrow">
+              {t('v2Vesinvest.lawInvestmentEyebrow', '20-year legal summary')}
+            </span>
+            <h3>{t('v2Vesinvest.lawInvestmentTitle', 'Investment need by law view')}</h3>
+            <p>
+              {t(
+                'v2Vesinvest.lawInvestmentSummary',
+                'Saved summary of renovation, new investments, asset categories, and tariff-relevant timing.',
+              )}
+            </p>
+          </div>
+          <div className="v2-grid v2-grid-3">
+            <div className="v2-stat-card">
+              <span>{t('v2Vesinvest.lawRenovationAmount', 'Renovation')}</span>
+              <strong>{formatEur(lawInvestmentSummary.renovationAmount)}</strong>
+            </div>
+            <div className="v2-stat-card">
+              <span>{t('v2Vesinvest.lawNewInvestmentAmount', 'New investments')}</span>
+              <strong>{formatEur(lawInvestmentSummary.newInvestmentAmount)}</strong>
+            </div>
+            <div className="v2-stat-card">
+              <span>{t('v2Vesinvest.lawRepairAmount', 'Repairs')}</span>
+              <strong>{formatEur(lawInvestmentSummary.repairAmount)}</strong>
+            </div>
+          </div>
+          <div className="v2-vesinvest-table-wrap">
+            <table className="v2-vesinvest-table">
+              <thead>
+                <tr>
+                  <th>{t('v2Vesinvest.lawTimeBucket', 'Time bucket')}</th>
+                  <th>{t('v2Vesinvest.projectWaterTotal', 'Water total')}</th>
+                  <th>{t('v2Vesinvest.projectWastewaterTotal', 'Wastewater total')}</th>
+                  <th>{t('v2Vesinvest.projectTotal', 'Total')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lawInvestmentSummary.timeBuckets.map((bucket) => (
+                  <tr key={bucket.key}>
+                    <td>
+                      {bucketLabel(bucket.key)} ({bucket.startYear}-{bucket.endYear})
+                    </td>
+                    <td>{formatEur(bucket.waterAmount)}</td>
+                    <td>{formatEur(bucket.wastewaterAmount)}</td>
+                    <td>{formatEur(bucket.totalAmount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="v2-vesinvest-table-wrap">
+            <table className="v2-vesinvest-table">
+              <thead>
+                <tr>
+                  <th>{t('v2Vesinvest.projectClass', 'Class')}</th>
+                  <th>{t('v2Vesinvest.projectCount', 'Projects')}</th>
+                  <th>{t('v2Vesinvest.projectTotal', 'Total')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lawInvestmentSummary.byAssetCategory.map((category) => (
+                  <tr key={category.groupKey}>
+                    <td>{category.groupLabel}</td>
+                    <td>{category.projectCount}</td>
+                    <td>{formatEur(category.totalAmount)}</td>
+                  </tr>
+                ))}
+                {lawInvestmentSummary.byInvestmentType.map((item) => (
+                  <tr key={item.investmentType}>
+                    <td>{typeLabel(t, item.investmentType)}</td>
+                    <td>{item.projectCount}</td>
+                    <td>{formatEur(item.totalAmount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </VesinvestMatrixSurface>
+      ) : null}
+
       <VesinvestMatrixSurface t={t}>
         <div className="v2-vesinvest-table-wrap v2-vesinvest-matrix-wrap" data-testid="vesinvest-grouped-plan">
           <table className="v2-vesinvest-table v2-vesinvest-plan-matrix">

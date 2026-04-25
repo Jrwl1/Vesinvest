@@ -29,11 +29,15 @@ type ReportReadinessReason =
   | 'missingScenario'
   | 'staleComputeToken'
   | 'classificationReviewRequired'
+  | 'assetEvidenceIncomplete'
   | 'unsavedChanges'
   | 'missingComputeResults'
   | 'missingDepreciationSnapshots'
   | 'missingTariffPlan'
   | null;
+
+const hasEvidenceValue = (value: Record<string, unknown> | null | undefined) =>
+  typeof value?.notes === 'string' && value.notes.trim().length > 0;
 
 export function useVesinvestPlanningDerivedState({
   t,
@@ -218,12 +222,27 @@ export function useVesinvestPlanningDerivedState({
     [planningContext?.baselineYears, savedBaselineSource],
   );
 
+  const assetEvidenceValues = [
+    draft.assetEvidenceState,
+    draft.conditionStudyState,
+    draft.maintenanceEvidenceState,
+    draft.municipalPlanContext,
+    draft.financialRiskState,
+    draft.publicationState,
+    draft.communicationState,
+  ];
+  const assetEvidenceMissingCount = assetEvidenceValues.filter(
+    (value) => !hasEvidenceValue(value),
+  ).length;
+  const assetEvidenceReady = assetEvidenceMissingCount === 0;
+
   const pricingReady =
     !utilityBindingMissing &&
     !utilityBindingMismatch &&
     baselineVerified &&
     draft.projects.length > 0 &&
-    totalInvestments > 0;
+    totalInvestments > 0 &&
+    assetEvidenceReady;
 
   const feeRecommendation = React.useMemo(() => {
     const snapshot = plan?.feeRecommendation ?? null;
@@ -330,6 +349,9 @@ export function useVesinvestPlanningDerivedState({
     if (selectedSummary?.classificationReviewRequired) {
       return 'classificationReviewRequired';
     }
+    if (!assetEvidenceReady) {
+      return 'assetEvidenceIncomplete';
+    }
     if (
       selectedSummary?.baselineChangedSinceAcceptedRevision ||
       selectedSummary?.investmentPlanChangedSinceFeeRecommendation
@@ -360,6 +382,7 @@ export function useVesinvestPlanningDerivedState({
     }
     return null;
   }, [
+    assetEvidenceReady,
     hasUnsavedChanges,
     linkedScenario,
     plan?.selectedScenarioId,
@@ -389,6 +412,8 @@ export function useVesinvestPlanningDerivedState({
     baselineVerified,
     baselineYears,
     pricingReady,
+    assetEvidenceReady,
+    assetEvidenceMissingCount,
     feeRecommendation,
     hasSavedFeePathLink,
     showDownstreamActions,

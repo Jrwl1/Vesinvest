@@ -33,6 +33,13 @@ export type VesinvestDraft = {
   feeRecommendationStatus: 'blocked' | 'provisional' | 'verified';
   lastReviewedAt?: string | null;
   reviewDueAt?: string | null;
+  assetEvidenceState: Record<string, unknown> | null;
+  municipalPlanContext: Record<string, unknown> | null;
+  maintenanceEvidenceState: Record<string, unknown> | null;
+  conditionStudyState: Record<string, unknown> | null;
+  financialRiskState: Record<string, unknown> | null;
+  publicationState: Record<string, unknown> | null;
+  communicationState: Record<string, unknown> | null;
   horizonYearsRange: number[];
   projects: V2VesinvestProject[];
 };
@@ -59,7 +66,7 @@ export type VesinvestGroupedMatrixSection = {
   }>;
 };
 
-export type VesinvestWorkspaceView = 'investment' | 'depreciation';
+export type VesinvestWorkspaceView = 'evidence' | 'investment' | 'depreciation';
 
 export const FALLBACK_GROUP_KEY = 'sanering_water_network';
 
@@ -93,6 +100,13 @@ export const buildDraftFromPlan = (
       feeRecommendationStatus: plan.feeRecommendationStatus,
       lastReviewedAt: plan.lastReviewedAt,
       reviewDueAt: plan.reviewDueAt,
+      assetEvidenceState: plan.assetEvidenceState,
+      municipalPlanContext: plan.municipalPlanContext,
+      maintenanceEvidenceState: plan.maintenanceEvidenceState,
+      conditionStudyState: plan.conditionStudyState,
+      financialRiskState: plan.financialRiskState,
+      publicationState: plan.publicationState,
+      communicationState: plan.communicationState,
       horizonYearsRange: [...plan.horizonYearsRange],
       projects: plan.projects.map((project) => ({
         ...project,
@@ -110,6 +124,13 @@ export const buildDraftFromPlan = (
     horizonYears: 20,
     baselineStatus: 'draft',
     feeRecommendationStatus: 'blocked',
+    assetEvidenceState: null,
+    municipalPlanContext: null,
+    maintenanceEvidenceState: null,
+    conditionStudyState: null,
+    financialRiskState: null,
+    publicationState: null,
+    communicationState: null,
     horizonYearsRange: buildHorizonYears(currentYear, 20),
     projects: [],
   };
@@ -143,6 +164,13 @@ export const toCreatePlanInput = (
   name: draft.name,
   horizonYears: draft.horizonYears,
   baselineSourceState,
+  assetEvidenceState: draft.assetEvidenceState,
+  municipalPlanContext: draft.municipalPlanContext,
+  maintenanceEvidenceState: draft.maintenanceEvidenceState,
+  conditionStudyState: draft.conditionStudyState,
+  financialRiskState: draft.financialRiskState,
+  publicationState: draft.publicationState,
+  communicationState: draft.communicationState,
   projects: toPlanProjectInputs(draft),
 });
 
@@ -158,6 +186,13 @@ export const toUpdatePlanInput = (
   lastReviewedAt: draft.lastReviewedAt,
   reviewDueAt: draft.reviewDueAt,
   baselineSourceState,
+  assetEvidenceState: draft.assetEvidenceState,
+  municipalPlanContext: draft.municipalPlanContext,
+  maintenanceEvidenceState: draft.maintenanceEvidenceState,
+  conditionStudyState: draft.conditionStudyState,
+  financialRiskState: draft.financialRiskState,
+  publicationState: draft.publicationState,
+  communicationState: draft.communicationState,
   projects: toPlanProjectInputs(draft),
 });
 

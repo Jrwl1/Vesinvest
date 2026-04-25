@@ -231,6 +231,8 @@ export const useVesinvestPlanningController = ({
     baselineVerified,
     baselineYears,
     pricingReady,
+    assetEvidenceReady,
+    assetEvidenceMissingCount,
     feeRecommendation,
     hasSavedFeePathLink,
     showDownstreamActions,
@@ -619,6 +621,11 @@ export const useVesinvestPlanningController = ({
                   'v2Forecast.staleComputeHint',
                   'Saved inputs changed after the last calculation. Recompute results before creating report.',
                 )
+              : reportReadinessReason === 'assetEvidenceIncomplete'
+                ? t(
+                    'v2Vesinvest.assetEvidenceReportBlocked',
+                    'Complete asset-management evidence before creating reports.',
+                  )
               : reportReadinessReason === 'missingTariffPlan'
                 ? t(
                     'v2TariffPlan.acceptBeforeReports',
@@ -772,6 +779,8 @@ export const useVesinvestPlanningController = ({
     baselineVerified,
     baselineYears,
     pricingReady,
+    assetEvidenceReady,
+    assetEvidenceMissingCount,
     feeRecommendation,
     hasSavedFeePathLink,
     showDownstreamActions,

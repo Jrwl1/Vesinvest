@@ -36,6 +36,8 @@ export type V2VesinvestPlanSummary = {
   lastReviewedAt: string | null;
   reviewDueAt: string | null;
   classificationReviewRequired: boolean;
+  assetEvidenceReady?: boolean;
+  assetEvidenceMissingCount?: number;
   baselineChangedSinceAcceptedRevision: boolean;
   investmentPlanChangedSinceFeeRecommendation: boolean;
   tariffPlanStatus?: 'draft' | 'accepted' | 'stale' | null;
@@ -158,6 +160,13 @@ export type V2VesinvestPlan = V2VesinvestPlanSummary & {
   feeRecommendationStatus: 'blocked' | 'provisional' | 'verified';
   feeRecommendation: V2VesinvestFeeRecommendation | null;
   baselineSourceState: V2VesinvestBaselineSourceState | null;
+  assetEvidenceState: Record<string, unknown> | null;
+  municipalPlanContext: Record<string, unknown> | null;
+  maintenanceEvidenceState: Record<string, unknown> | null;
+  conditionStudyState: Record<string, unknown> | null;
+  financialRiskState: Record<string, unknown> | null;
+  publicationState: Record<string, unknown> | null;
+  communicationState: Record<string, unknown> | null;
   baselineFingerprint: string | null;
   scenarioFingerprint: string | null;
   horizonYearsRange: number[];
@@ -172,6 +181,34 @@ export type V2VesinvestPlan = V2VesinvestPlanSummary & {
     endYear: number;
     totalAmount: number;
   }>;
+  lawInvestmentSummary: {
+    horizonYears: number;
+    totalAmount: number;
+    renovationAmount: number;
+    newInvestmentAmount: number;
+    repairAmount: number;
+    timeBuckets: Array<{
+      key: 'years_1_5' | 'years_6_10' | 'years_11_20' | string;
+      startYear: number;
+      endYear: number;
+      totalAmount: number;
+      waterAmount: number;
+      wastewaterAmount: number;
+    }>;
+    byInvestmentType: Array<{
+      investmentType: 'sanering' | 'nyanlaggning' | 'reparation';
+      projectCount: number;
+      totalAmount: number;
+    }>;
+    byAssetCategory: Array<{
+      groupKey: string;
+      groupLabel: string;
+      projectCount: number;
+      totalAmount: number;
+      waterAmount: number;
+      wastewaterAmount: number;
+    }>;
+  };
   projects: V2VesinvestProject[];
 };
 
@@ -200,6 +237,13 @@ export type V2VesinvestPlanCreateInput = {
   name?: string;
   horizonYears?: number;
   baselineSourceState?: V2VesinvestBaselineSourceState | null;
+  assetEvidenceState?: Record<string, unknown> | null;
+  municipalPlanContext?: Record<string, unknown> | null;
+  maintenanceEvidenceState?: Record<string, unknown> | null;
+  conditionStudyState?: Record<string, unknown> | null;
+  financialRiskState?: Record<string, unknown> | null;
+  publicationState?: Record<string, unknown> | null;
+  communicationState?: Record<string, unknown> | null;
   projects?: V2VesinvestPlanProjectInput[];
 };
 
@@ -242,6 +286,8 @@ export type V2TariffAllocationPolicy = {
   financialRiskAssessment?: string | null;
 };
 
+export type V2TariffEvidenceObject = Record<string, unknown>;
+
 export type V2TariffFeeRecommendation = {
   key: V2TariffFeeKey;
   currentUnit: number | null;
@@ -267,6 +313,9 @@ export type V2TariffReadinessChecklist = {
   currentTariffBaselinePresent: boolean;
   investmentFinancingNeedPresent: boolean;
   riskAssessmentPresent: boolean;
+  tariffRevenueEvidencePresent?: boolean;
+  costEvidencePresent?: boolean;
+  connectionFeeLiabilityPresent?: boolean;
   smoothingStatus: 'ok' | 'exceeds_15_pct' | 'missing';
   regionalVariationFlag: boolean;
   stormwaterFlag: boolean;
@@ -285,6 +334,27 @@ export type V2TariffRecommendation = {
   smoothingYears: number;
   averageAnnualIncreasePct: number | null;
   fees: Record<V2TariffFeeKey, V2TariffFeeRecommendation>;
+  revenueTable?: Array<{
+    key: V2TariffFeeKey;
+    currentAnnualRevenue: number | null;
+    proposedAnnualRevenue: number | null;
+    revenueImpact: number;
+    allocationSharePct: number;
+  }>;
+  annualChangePath?: Array<{
+    yearIndex: number;
+    annualRevenue: number | null;
+    annualIncreasePct: number | null;
+  }>;
+  impactFlags?: {
+    exceeds15PctAnnualIncrease: boolean;
+    regionalVariationApplies: boolean;
+    stormwaterApplies: boolean;
+    specialUseApplies: boolean;
+    connectionFeeLiabilityRecorded: boolean;
+    ownerDistributionRecorded: boolean;
+  };
+  allocationRationale?: string[];
   lawReadiness: V2TariffReadinessChecklist;
 };
 
@@ -297,6 +367,13 @@ export type V2TariffPlan = {
   allocationPolicy: V2TariffAllocationPolicy;
   recommendation: V2TariffRecommendation;
   readinessChecklist: V2TariffReadinessChecklist;
+  revenueEvidence: V2TariffEvidenceObject | null;
+  costEvidence: V2TariffEvidenceObject | null;
+  regionalDifferentiationState: V2TariffEvidenceObject | null;
+  stormwaterState: V2TariffEvidenceObject | null;
+  specialUseState: V2TariffEvidenceObject | null;
+  connectionFeeLiabilityState: V2TariffEvidenceObject | null;
+  ownerDistributionState: V2TariffEvidenceObject | null;
   acceptedAt: string | null;
   updatedAt: string | null;
   createdAt: string | null;
@@ -305,4 +382,11 @@ export type V2TariffPlan = {
 export type V2TariffPlanInput = {
   baselineInput?: V2TariffBaselineInput | null;
   allocationPolicy?: V2TariffAllocationPolicy | null;
+  revenueEvidence?: V2TariffEvidenceObject | null;
+  costEvidence?: V2TariffEvidenceObject | null;
+  regionalDifferentiationState?: V2TariffEvidenceObject | null;
+  stormwaterState?: V2TariffEvidenceObject | null;
+  specialUseState?: V2TariffEvidenceObject | null;
+  connectionFeeLiabilityState?: V2TariffEvidenceObject | null;
+  ownerDistributionState?: V2TariffEvidenceObject | null;
 };

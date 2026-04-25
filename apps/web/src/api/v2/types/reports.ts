@@ -50,6 +50,13 @@ export type V2ReportDetail = {
       baselineFingerprint?: string | null;
       scenarioFingerprint?: string | null;
       feeRecommendation?: V2VesinvestFeeRecommendation | null;
+      assetEvidenceState?: Record<string, unknown> | null;
+      municipalPlanContext?: Record<string, unknown> | null;
+      maintenanceEvidenceState?: Record<string, unknown> | null;
+      conditionStudyState?: Record<string, unknown> | null;
+      financialRiskState?: Record<string, unknown> | null;
+      publicationState?: Record<string, unknown> | null;
+      communicationState?: Record<string, unknown> | null;
     } | null;
     vesinvestAppendix?: {
       yearlyTotals: Array<{
@@ -98,6 +105,13 @@ export type V2ReportDetail = {
       allocationPolicy: V2TariffAllocationPolicy;
       recommendation: V2TariffRecommendation;
       readinessChecklist: V2TariffReadinessChecklist;
+      revenueEvidence?: Record<string, unknown> | null;
+      costEvidence?: Record<string, unknown> | null;
+      regionalDifferentiationState?: Record<string, unknown> | null;
+      stormwaterState?: Record<string, unknown> | null;
+      specialUseState?: Record<string, unknown> | null;
+      connectionFeeLiabilityState?: Record<string, unknown> | null;
+      ownerDistributionState?: Record<string, unknown> | null;
     } | null;
     reportVariant: 'public_summary' | 'confidential_appendix';
     reportSections: {

@@ -26,7 +26,167 @@ import {
   VesinvestBaselineReviewSurface,
   VesinvestDepreciationPlanSurface,
   VesinvestIdentitySurface,
+  VesinvestRevisionSurface,
 } from './vesinvestPlanningSections';
+
+const assetEvidenceFields: Array<{
+  key: keyof Pick<
+    VesinvestDraft,
+    | 'assetEvidenceState'
+    | 'conditionStudyState'
+    | 'maintenanceEvidenceState'
+    | 'municipalPlanContext'
+    | 'financialRiskState'
+    | 'publicationState'
+    | 'communicationState'
+  >;
+  labelKey: string;
+  fallbackLabel: string;
+  hintKey: string;
+  fallbackHint: string;
+}> = [
+  {
+    key: 'assetEvidenceState',
+    labelKey: 'v2Vesinvest.assetInventoryEvidence',
+    fallbackLabel: 'Asset inventory and data gaps',
+    hintKey: 'v2Vesinvest.assetInventoryEvidenceHint',
+    fallbackHint: 'Record what asset data exists and which gaps still affect the 20-year plan.',
+  },
+  {
+    key: 'conditionStudyState',
+    labelKey: 'v2Vesinvest.conditionStudyEvidence',
+    fallbackLabel: 'Condition studies',
+    hintKey: 'v2Vesinvest.conditionStudyEvidenceHint',
+    fallbackHint: 'Summarize condition surveys, inspection coverage, and open condition assumptions.',
+  },
+  {
+    key: 'maintenanceEvidenceState',
+    labelKey: 'v2Vesinvest.maintenanceEvidence',
+    fallbackLabel: 'Maintenance and service tracking',
+    hintKey: 'v2Vesinvest.maintenanceEvidenceHint',
+    fallbackHint: 'Capture maintenance logs, service-level evidence, and capacity constraints.',
+  },
+  {
+    key: 'municipalPlanContext',
+    labelKey: 'v2Vesinvest.municipalPlanContext',
+    fallbackLabel: 'Municipal-plan context',
+    hintKey: 'v2Vesinvest.municipalPlanContextHint',
+    fallbackHint: 'Note growth areas, land-use plans, and other municipal drivers behind investments.',
+  },
+  {
+    key: 'financialRiskState',
+    labelKey: 'v2Vesinvest.financialRiskEvidence',
+    fallbackLabel: 'Financial and execution risks',
+    hintKey: 'v2Vesinvest.financialRiskEvidenceHint',
+    fallbackHint: 'Document financing capacity, delivery risks, and assumptions that affect pricing.',
+  },
+  {
+    key: 'publicationState',
+    labelKey: 'v2Vesinvest.publicationEvidence',
+    fallbackLabel: 'Publication boundaries',
+    hintKey: 'v2Vesinvest.publicationEvidenceHint',
+    fallbackHint: 'Mark what can be public and what belongs only in internal decision material.',
+  },
+  {
+    key: 'communicationState',
+    labelKey: 'v2Vesinvest.communicationEvidence',
+    fallbackLabel: 'Board and customer communication',
+    hintKey: 'v2Vesinvest.communicationEvidenceHint',
+    fallbackHint: 'Keep the decision-message, customer explanation, and unresolved communication work here.',
+  },
+];
+
+const readEvidenceNotes = (value: Record<string, unknown> | null) =>
+  typeof value?.notes === 'string' ? value.notes : '';
+
+const hasEvidenceNotes = (value: Record<string, unknown> | null) =>
+  readEvidenceNotes(value).trim().length > 0;
+
+const countStructuredEvidenceKeys = (value: Record<string, unknown> | null) =>
+  value == null ? 0 : Object.keys(value).filter((key) => key !== 'notes').length;
+
+export function VesinvestAssetEvidenceSection({
+  t,
+  active,
+  draft,
+  setDraft,
+}: {
+  t: TFunction;
+  active: boolean;
+  draft: VesinvestDraft;
+  setDraft: React.Dispatch<React.SetStateAction<VesinvestDraft>>;
+}) {
+  if (!active) {
+    return null;
+  }
+  const completed = assetEvidenceFields.filter((field) =>
+    hasEvidenceNotes(draft[field.key] as Record<string, unknown> | null),
+  ).length;
+  const updateEvidenceNotes = (
+    key: (typeof assetEvidenceFields)[number]['key'],
+    notes: string,
+  ) => {
+    setDraft((current) => ({
+      ...current,
+      [key]: (() => {
+        const currentValue = current[key] ?? {};
+        const nextValue = { ...currentValue };
+        if (notes.trim().length > 0) {
+          nextValue.notes = notes;
+        } else {
+          delete nextValue.notes;
+        }
+        return Object.keys(nextValue).length > 0 ? nextValue : null;
+      })(),
+    }));
+  };
+
+  return (
+    <VesinvestRevisionSurface>
+      <div className="v2-section-heading">
+        <span className="v2-eyebrow">
+          {t('v2Vesinvest.assetEvidenceEyebrow', 'Asset management')}
+        </span>
+        <h3>{t('v2Vesinvest.assetEvidenceTitle', 'Water-law evidence')}</h3>
+        <p>
+          {t(
+            'v2Vesinvest.assetEvidenceSummary',
+            '{{completed}}/{{total}} evidence areas have notes.',
+            { completed, total: assetEvidenceFields.length },
+          )}
+        </p>
+      </div>
+      <div className="v2-grid v2-grid-2">
+        {assetEvidenceFields.map((field) => (
+          <label className="v2-field" key={field.key}>
+            <span>{t(field.labelKey, field.fallbackLabel)}</span>
+            <textarea
+              className="v2-input"
+              rows={4}
+              value={readEvidenceNotes(draft[field.key] as Record<string, unknown> | null)}
+              onChange={(event) => updateEvidenceNotes(field.key, event.target.value)}
+              placeholder={t(field.hintKey, field.fallbackHint)}
+            />
+            {countStructuredEvidenceKeys(draft[field.key] as Record<string, unknown> | null) >
+            0 ? (
+              <small className="v2-muted">
+                {t(
+                  'v2Vesinvest.structuredEvidencePreserved',
+                  '{{count}} structured evidence field(s) preserved.',
+                  {
+                    count: countStructuredEvidenceKeys(
+                      draft[field.key] as Record<string, unknown> | null,
+                    ),
+                  },
+                )}
+              </small>
+            ) : null}
+          </label>
+        ))}
+      </div>
+    </VesinvestRevisionSurface>
+  );
+}
 
 export function VesinvestUtilityBindingSection({
   t,

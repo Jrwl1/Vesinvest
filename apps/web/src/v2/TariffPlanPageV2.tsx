@@ -10,6 +10,7 @@ import {
   type V2PlanningContextResponse,
   type V2TariffAllocationPolicy,
   type V2TariffBaselineInput,
+  type V2TariffEvidenceObject,
   type V2TariffFeeKey,
   type V2TariffPlan,
 } from '../api';
@@ -76,6 +77,76 @@ const getTariffStatusKey = (status: V2TariffPlan['status'] | null | undefined) =
   return 'statusDraft';
 };
 
+type TariffEvidenceKey =
+  | 'revenueEvidence'
+  | 'costEvidence'
+  | 'regionalDifferentiationState'
+  | 'stormwaterState'
+  | 'specialUseState'
+  | 'connectionFeeLiabilityState'
+  | 'ownerDistributionState';
+
+const TARIFF_EVIDENCE_FIELDS: Array<{
+  key: TariffEvidenceKey;
+  labelKey: string;
+  fallbackLabel: string;
+  hintKey: string;
+  fallbackHint: string;
+}> = [
+  {
+    key: 'revenueEvidence',
+    labelKey: 'v2TariffPlan.revenueEvidence',
+    fallbackLabel: 'Revenue evidence by fee type',
+    hintKey: 'v2TariffPlan.revenueEvidenceHint',
+    fallbackHint: 'Document current and proposed revenue for connection, base, water, and wastewater fees.',
+  },
+  {
+    key: 'costEvidence',
+    labelKey: 'v2TariffPlan.costEvidence',
+    fallbackLabel: 'Cost evidence',
+    hintKey: 'v2TariffPlan.costEvidenceHint',
+    fallbackHint: 'Summarize materials, purchased services, personnel, finance costs, and other costs.',
+  },
+  {
+    key: 'regionalDifferentiationState',
+    labelKey: 'v2TariffPlan.regionalDifferentiationEvidence',
+    fallbackLabel: 'Regional differentiation',
+    hintKey: 'v2TariffPlan.regionalDifferentiationEvidenceHint',
+    fallbackHint: 'Record whether regional price differentiation may be required and why.',
+  },
+  {
+    key: 'stormwaterState',
+    labelKey: 'v2TariffPlan.stormwaterEvidence',
+    fallbackLabel: 'Stormwater boundary',
+    hintKey: 'v2TariffPlan.stormwaterEvidenceHint',
+    fallbackHint: 'Flag stormwater relevance without modelling a stormwater tariff package.',
+  },
+  {
+    key: 'specialUseState',
+    labelKey: 'v2TariffPlan.specialUseEvidence',
+    fallbackLabel: 'Special water or wastewater use',
+    hintKey: 'v2TariffPlan.specialUseEvidenceHint',
+    fallbackHint: 'Document exceptional water use, wastewater load, or industrial assumptions.',
+  },
+  {
+    key: 'connectionFeeLiabilityState',
+    labelKey: 'v2TariffPlan.connectionFeeLiabilityEvidence',
+    fallbackLabel: 'Returnable connection-fee liability',
+    hintKey: 'v2TariffPlan.connectionFeeLiabilityEvidenceHint',
+    fallbackHint: 'Record whether returnable connection fees create balance-sheet or pricing constraints.',
+  },
+  {
+    key: 'ownerDistributionState',
+    labelKey: 'v2TariffPlan.ownerDistributionEvidence',
+    fallbackLabel: 'Owner distribution assumptions',
+    hintKey: 'v2TariffPlan.ownerDistributionEvidenceHint',
+    fallbackHint: 'Capture owner return, tuloutus, or municipal distribution assumptions.',
+  },
+];
+
+const readEvidenceNotes = (value: V2TariffEvidenceObject | null | undefined) =>
+  typeof value?.notes === 'string' ? value.notes : '';
+
 export const TariffPlanPageV2: React.FC<Props> = ({
   onGoToAssetManagement,
   onGoToForecast,
@@ -89,6 +160,17 @@ export const TariffPlanPageV2: React.FC<Props> = ({
   const [baselineInput, setBaselineInput] = React.useState<V2TariffBaselineInput>({});
   const [allocationPolicy, setAllocationPolicy] =
     React.useState<V2TariffAllocationPolicy>({});
+  const [tariffEvidence, setTariffEvidence] = React.useState<
+    Record<TariffEvidenceKey, V2TariffEvidenceObject | null>
+  >({
+    revenueEvidence: null,
+    costEvidence: null,
+    regionalDifferentiationState: null,
+    stormwaterState: null,
+    specialUseState: null,
+    connectionFeeLiabilityState: null,
+    ownerDistributionState: null,
+  });
   const [loading, setLoading] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -112,9 +194,19 @@ export const TariffPlanPageV2: React.FC<Props> = ({
     }
     return (
       JSON.stringify(baselineInput) !== JSON.stringify(tariffPlan.baselineInput) ||
-      JSON.stringify(allocationPolicy) !== JSON.stringify(tariffPlan.allocationPolicy)
+      JSON.stringify(allocationPolicy) !== JSON.stringify(tariffPlan.allocationPolicy) ||
+      JSON.stringify(tariffEvidence) !==
+        JSON.stringify({
+          revenueEvidence: tariffPlan.revenueEvidence,
+          costEvidence: tariffPlan.costEvidence,
+          regionalDifferentiationState: tariffPlan.regionalDifferentiationState,
+          stormwaterState: tariffPlan.stormwaterState,
+          specialUseState: tariffPlan.specialUseState,
+          connectionFeeLiabilityState: tariffPlan.connectionFeeLiabilityState,
+          ownerDistributionState: tariffPlan.ownerDistributionState,
+        })
     );
-  }, [allocationPolicy, baselineInput, tariffPlan]);
+  }, [allocationPolicy, baselineInput, tariffEvidence, tariffPlan]);
 
   const loadTariffWorkspace = React.useCallback(async () => {
     setLoading(true);
@@ -128,12 +220,30 @@ export const TariffPlanPageV2: React.FC<Props> = ({
         setTariffPlan(null);
         setBaselineInput({});
         setAllocationPolicy({});
+        setTariffEvidence({
+          revenueEvidence: null,
+          costEvidence: null,
+          regionalDifferentiationState: null,
+          stormwaterState: null,
+          specialUseState: null,
+          connectionFeeLiabilityState: null,
+          ownerDistributionState: null,
+        });
         return;
       }
       const loaded = await getTariffPlanV2(plan.id);
       setTariffPlan(loaded);
       setBaselineInput(loaded.baselineInput);
       setAllocationPolicy(loaded.allocationPolicy);
+      setTariffEvidence({
+        revenueEvidence: loaded.revenueEvidence,
+        costEvidence: loaded.costEvidence,
+        regionalDifferentiationState: loaded.regionalDifferentiationState,
+        stormwaterState: loaded.stormwaterState,
+        specialUseState: loaded.specialUseState,
+        connectionFeeLiabilityState: loaded.connectionFeeLiabilityState,
+        ownerDistributionState: loaded.ownerDistributionState,
+      });
     } catch (err) {
       setError(
         err instanceof Error
@@ -167,6 +277,21 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       [field]: value.trim().length > 0 ? value : null,
     }));
   };
+  const updateEvidenceNotes = (field: TariffEvidenceKey, value: string) => {
+    setTariffEvidence((current) => ({
+      ...current,
+      [field]: (() => {
+        const currentValue = current[field] ?? {};
+        const nextValue = { ...currentValue };
+        if (value.trim().length > 0) {
+          nextValue.notes = value;
+        } else {
+          delete nextValue.notes;
+        }
+        return Object.keys(nextValue).length > 0 ? nextValue : null;
+      })(),
+    }));
+  };
 
   const saveTariffPlan = React.useCallback(async () => {
     if (!activePlanId) {
@@ -179,10 +304,20 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       const saved = await saveTariffPlanV2(activePlanId, {
         baselineInput,
         allocationPolicy,
+        ...tariffEvidence,
       });
       setTariffPlan(saved);
       setBaselineInput(saved.baselineInput);
       setAllocationPolicy(saved.allocationPolicy);
+      setTariffEvidence({
+        revenueEvidence: saved.revenueEvidence,
+        costEvidence: saved.costEvidence,
+        regionalDifferentiationState: saved.regionalDifferentiationState,
+        stormwaterState: saved.stormwaterState,
+        specialUseState: saved.specialUseState,
+        connectionFeeLiabilityState: saved.connectionFeeLiabilityState,
+        ownerDistributionState: saved.ownerDistributionState,
+      });
       setInfo(t('v2TariffPlan.saved', 'Tariff plan saved.'));
     } catch (err) {
       setError(
@@ -193,7 +328,7 @@ export const TariffPlanPageV2: React.FC<Props> = ({
     } finally {
       setBusy(false);
     }
-  }, [activePlanId, allocationPolicy, baselineInput, t]);
+  }, [activePlanId, allocationPolicy, baselineInput, tariffEvidence, t]);
 
   const acceptTariffPlan = React.useCallback(async () => {
     if (!activePlanId) {
@@ -206,6 +341,7 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       const saved = await saveTariffPlanV2(activePlanId, {
         baselineInput,
         allocationPolicy,
+        ...tariffEvidence,
       });
       setTariffPlan(saved);
       setBaselineInput(saved.baselineInput);
@@ -214,6 +350,15 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       setTariffPlan(accepted);
       setBaselineInput(accepted.baselineInput);
       setAllocationPolicy(accepted.allocationPolicy);
+      setTariffEvidence({
+        revenueEvidence: accepted.revenueEvidence,
+        costEvidence: accepted.costEvidence,
+        regionalDifferentiationState: accepted.regionalDifferentiationState,
+        stormwaterState: accepted.stormwaterState,
+        specialUseState: accepted.specialUseState,
+        connectionFeeLiabilityState: accepted.connectionFeeLiabilityState,
+        ownerDistributionState: accepted.ownerDistributionState,
+      });
       onTariffPlanAccepted?.();
       setInfo(t('v2TariffPlan.accepted', 'Tariff plan accepted.'));
     } catch (err) {
@@ -225,7 +370,7 @@ export const TariffPlanPageV2: React.FC<Props> = ({
     } finally {
       setBusy(false);
     }
-  }, [activePlanId, allocationPolicy, baselineInput, onTariffPlanAccepted, t]);
+  }, [activePlanId, allocationPolicy, baselineInput, onTariffPlanAccepted, tariffEvidence, t]);
 
   const createReport = React.useCallback(async () => {
     if (!activePlanId || !activeScenarioId) {
@@ -285,6 +430,21 @@ export const TariffPlanPageV2: React.FC<Props> = ({
         {
           label: t('v2TariffPlan.readinessRisk', 'Financial risk assessment'),
           ready: tariffPlan.readinessChecklist.riskAssessmentPresent,
+        },
+        {
+          label: t('v2TariffPlan.readinessRevenueEvidence', 'Tariff revenue evidence'),
+          ready: tariffPlan.readinessChecklist.tariffRevenueEvidencePresent === true,
+        },
+        {
+          label: t('v2TariffPlan.readinessCostEvidence', 'Cost evidence'),
+          ready: tariffPlan.readinessChecklist.costEvidencePresent === true,
+        },
+        {
+          label: t(
+            'v2TariffPlan.readinessConnectionLiability',
+            'Connection-fee liability',
+          ),
+          ready: tariffPlan.readinessChecklist.connectionFeeLiabilityPresent === true,
         },
       ]
     : [];
@@ -480,6 +640,27 @@ export const TariffPlanPageV2: React.FC<Props> = ({
           />
         </label>
 
+        <div className="v2-section-heading">
+          <span className="v2-eyebrow">
+            {t('v2TariffPlan.evidenceEyebrow', 'Tariff evidence')}
+          </span>
+          <h3>{t('v2TariffPlan.evidenceTitle', 'Assumptions and legal flags')}</h3>
+        </div>
+        <div className="v2-grid v2-grid-2">
+          {TARIFF_EVIDENCE_FIELDS.map((field) => (
+            <label className="v2-field" key={field.key}>
+              <span>{t(field.labelKey, field.fallbackLabel)}</span>
+              <textarea
+                className="v2-input"
+                rows={3}
+                value={readEvidenceNotes(tariffEvidence[field.key])}
+                onChange={(event) => updateEvidenceNotes(field.key, event.target.value)}
+                placeholder={t(field.hintKey, field.fallbackHint)}
+              />
+            </label>
+          ))}
+        </div>
+
         <div className="v2-actions-row">
           <label className="v2-checkbox-row">
             <input
@@ -553,6 +734,25 @@ export const TariffPlanPageV2: React.FC<Props> = ({
               <span>{formatEur(tariffPlan.recommendation.proposedAnnualRevenue)}</span>
             </div>
           </div>
+          <div className="v2-keyvalue-list">
+            <div className="v2-keyvalue-row">
+              <span>{t('v2TariffPlan.allocationRationale', 'Allocation rationale')}</span>
+              <span>
+                {t(
+                  'v2TariffPlan.allocationRationaleServiceSplit',
+                  'Allocation uses the current service split and the edited four-lever policy.',
+                )}
+              </span>
+            </div>
+            <div className="v2-keyvalue-row">
+              <span>{t('v2TariffPlan.targetRevenue', 'Target additional annual revenue')}</span>
+              <span>{formatEur(tariffPlan.recommendation.targetAdditionalAnnualRevenue)}</span>
+            </div>
+            <div className="v2-keyvalue-row">
+              <span>{t('v2TariffPlan.smoothingYears', 'Smoothing years')}</span>
+              <span>{tariffPlan.recommendation.smoothingYears}</span>
+            </div>
+          </div>
           <div className="v2-vesinvest-table-wrap">
             <table className="v2-vesinvest-table">
               <thead>
@@ -580,6 +780,28 @@ export const TariffPlanPageV2: React.FC<Props> = ({
               </tbody>
             </table>
           </div>
+          {tariffPlan.recommendation.annualChangePath?.length ? (
+            <div className="v2-vesinvest-table-wrap">
+              <table className="v2-vesinvest-table">
+                <thead>
+                  <tr>
+                    <th>{t('v2TariffPlan.yearIndex', 'Year')}</th>
+                    <th>{t('v2TariffPlan.proposedRevenue', 'Proposed annual revenue')}</th>
+                    <th>{t('v2TariffPlan.annualIncrease', 'Annual increase')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tariffPlan.recommendation.annualChangePath.map((row) => (
+                    <tr key={row.yearIndex}>
+                      <td>{row.yearIndex}</td>
+                      <td>{formatEur(row.annualRevenue ?? 0)}</td>
+                      <td>{formatPercent(row.annualIncreasePct)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
           <div className="v2-vesinvest-evidence-grid">
             {readinessRows.map((row) => (
               <article key={row.label} className="v2-vesinvest-evidence-card">

@@ -15,6 +15,7 @@ import {
 import { VesinvestPlanningInvestmentWorkspace } from './vesinvestPlanningInvestmentWorkspace';
 import { type VesinvestLinkedOrg } from './vesinvestPlanningModel';
 import {
+  VesinvestAssetEvidenceSection,
   VesinvestBaselineReviewSection,
   VesinvestDepreciationPlanSection,
   VesinvestUtilityBindingSection,
@@ -192,6 +193,8 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         hasSavedPricingOutput={controller.hasSavedPricingOutput}
         revisionStatusMessage={controller.revisionStatusMessage}
         pricingReady={controller.pricingReady}
+        assetEvidenceReady={controller.assetEvidenceReady}
+        assetEvidenceMissingCount={controller.assetEvidenceMissingCount}
       />
 
       <VesinvestWorkspaceTabs
@@ -236,6 +239,13 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             feePathHeadingRef={controller.feePathHeadingRef}
           />
 
+          <VesinvestAssetEvidenceSection
+            t={t}
+            active={controller.activeWorkspaceView === 'evidence'}
+            draft={controller.draft}
+            setDraft={controller.setDraft}
+          />
+
           {controller.activeWorkspaceView === 'investment' ? (
             <VesinvestPlanningInvestmentWorkspace
               t={t}
@@ -244,6 +254,9 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
               groupedPlanMatrix={controller.groupedPlanMatrix}
               yearTotals={controller.yearTotals}
               totalInvestments={controller.totalInvestments}
+              lawInvestmentSummary={
+                controller.hasUnsavedChanges ? null : controller.plan?.lawInvestmentSummary ?? null
+              }
               busy={controller.busy}
               loading={controller.loading}
               loadingPlan={controller.loadingPlan}

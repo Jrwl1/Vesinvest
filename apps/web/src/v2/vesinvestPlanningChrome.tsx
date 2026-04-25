@@ -321,9 +321,17 @@ export function VesinvestWorkspaceTabs({
     <section className="v2-vesinvest-section">
       <div
         className="v2-actions-row"
-        role="tablist"
+        role="group"
         aria-label={t('v2Vesinvest.workspaceTabs', 'Vesinvest workspace views')}
       >
+        <button
+          type="button"
+          className={`v2-btn ${activeWorkspaceView === 'evidence' ? 'v2-btn-primary' : ''}`}
+          aria-pressed={activeWorkspaceView === 'evidence'}
+          onClick={() => setActiveWorkspaceView('evidence')}
+        >
+          {t('v2Vesinvest.assetEvidenceTab', 'Asset evidence')}
+        </button>
         <button
           type="button"
           className={`v2-btn ${activeWorkspaceView === 'investment' ? 'v2-btn-primary' : ''}`}
@@ -354,6 +362,8 @@ export function VesinvestPlanStatusStrip({
   hasSavedPricingOutput,
   revisionStatusMessage,
   pricingReady,
+  assetEvidenceReady,
+  assetEvidenceMissingCount,
 }: {
   t: TFunction;
   draft: VesinvestDraft;
@@ -363,6 +373,8 @@ export function VesinvestPlanStatusStrip({
   hasSavedPricingOutput: boolean;
   revisionStatusMessage: string | null;
   pricingReady: boolean;
+  assetEvidenceReady: boolean;
+  assetEvidenceMissingCount: number;
 }) {
   const pricingTone =
     pricingStatus === 'verified' || pricingStatus === 'provisional' || pricingStatus === 'blocked'
@@ -434,6 +446,12 @@ export function VesinvestPlanStatusStrip({
                     'v2Vesinvest.pricingReadyHint',
                     'Sync the plan to open tariff planning.',
                   )
+                : baselineVerified && !assetEvidenceReady
+                  ? t(
+                      'v2Vesinvest.assetEvidenceMissingHint',
+                      '{{count}} asset evidence area(s) still need input before tariff planning is ready.',
+                      { count: assetEvidenceMissingCount },
+                    )
                 : baselineVerified
                   ? t(
                       'v2Vesinvest.pricingPlanMissingHint',

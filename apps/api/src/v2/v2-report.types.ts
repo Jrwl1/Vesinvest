@@ -314,6 +314,13 @@ export type SnapshotPayload = {
     baselineFingerprint?: string | null;
     scenarioFingerprint?: string | null;
     feeRecommendation?: Record<string, unknown> | null;
+    assetEvidenceState?: Record<string, unknown> | null;
+    municipalPlanContext?: Record<string, unknown> | null;
+    maintenanceEvidenceState?: Record<string, unknown> | null;
+    conditionStudyState?: Record<string, unknown> | null;
+    financialRiskState?: Record<string, unknown> | null;
+    publicationState?: Record<string, unknown> | null;
+    communicationState?: Record<string, unknown> | null;
   } | null;
   vesinvestAppendix: {
     yearlyTotals: Array<{
@@ -362,6 +369,13 @@ export type SnapshotPayload = {
     allocationPolicy: TariffAllocationPolicy;
     recommendation: TariffRecommendation;
     readinessChecklist: TariffReadinessChecklist;
+    revenueEvidence?: Record<string, unknown> | null;
+    costEvidence?: Record<string, unknown> | null;
+    regionalDifferentiationState?: Record<string, unknown> | null;
+    stormwaterState?: Record<string, unknown> | null;
+    specialUseState?: Record<string, unknown> | null;
+    connectionFeeLiabilityState?: Record<string, unknown> | null;
+    ownerDistributionState?: Record<string, unknown> | null;
   } | null;
   reportVariant: ReportVariant;
   reportSections: ReportSections;

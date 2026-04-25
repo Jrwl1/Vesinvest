@@ -195,6 +195,12 @@ const readyAllocationPolicy = {
   financialRiskAssessment: 'Financing risk reviewed with a controlled staged increase.',
 };
 
+const readyEvidence = {
+  revenueEvidence: { notes: 'Current and proposed fee revenue reviewed by fee type.' },
+  costEvidence: { notes: 'Materials, services, personnel, financing and other costs reviewed.' },
+  connectionFeeLiabilityState: { notes: 'Returnable connection-fee liability checked.' },
+};
+
 describe('V2TariffPlanService', () => {
   it('creates a first-class tariff package for all four fee types', async () => {
     const { service, prisma } = makeService();
@@ -202,6 +208,7 @@ describe('V2TariffPlanService', () => {
     const result = await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
       baselineInput: readyBaselineInput,
       allocationPolicy: readyAllocationPolicy,
+      ...readyEvidence,
     });
 
     expect(prisma.vesinvestTariffPlan.create).toHaveBeenCalledTimes(1);
@@ -245,6 +252,39 @@ describe('V2TariffPlanService', () => {
     });
   });
 
+  it('persists tariff evidence fields without requiring old rows to have them', async () => {
+    const { service, prisma } = makeService();
+
+    const first = await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+      baselineInput: readyBaselineInput,
+      allocationPolicy: readyAllocationPolicy,
+    });
+
+    expect(first.revenueEvidence).toBeNull();
+    expect(first.costEvidence).toBeNull();
+
+    const result = await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+      revenueEvidence: { waterUsageFee: { currentRevenue: 72000 } },
+      costEvidence: { purchasedServices: 22000 },
+      regionalDifferentiationState: { applies: true, reason: 'network areas' },
+      stormwaterState: { applies: false },
+      specialUseState: { wastewaterLoadReviewed: true },
+      connectionFeeLiabilityState: { returnableLiability: 150000 },
+      ownerDistributionState: { tuloutusReviewed: true },
+    });
+
+    expect(prisma.vesinvestTariffPlan.update).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({
+      revenueEvidence: { waterUsageFee: { currentRevenue: 72000 } },
+      costEvidence: { purchasedServices: 22000 },
+      regionalDifferentiationState: { applies: true, reason: 'network areas' },
+      stormwaterState: { applies: false },
+      specialUseState: { wastewaterLoadReviewed: true },
+      connectionFeeLiabilityState: { returnableLiability: 150000 },
+      ownerDistributionState: { tuloutusReviewed: true },
+    });
+  });
+
   it('blocks acceptance when manual baseline or risk assessment is incomplete', async () => {
     const { service } = makeService();
 
@@ -277,7 +317,12 @@ describe('V2TariffPlanService', () => {
           isReady: false,
           currentTariffBaselinePresent: false,
           riskAssessmentPresent: false,
-          unresolvedManualAssumptions: ['connection-fee assumption'],
+          unresolvedManualAssumptions: [
+            'connection-fee assumption',
+            'tariff revenue evidence',
+            'cost evidence',
+            'returnable connection-fee liability',
+          ],
         },
       });
     }
@@ -289,6 +334,7 @@ describe('V2TariffPlanService', () => {
     await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
       baselineInput: readyBaselineInput,
       allocationPolicy: readyAllocationPolicy,
+      ...readyEvidence,
     });
     const firstAccepted = await service.acceptTariffPlan(ORG_ID, PLAN_ID);
     expect(firstAccepted.status).toBe('accepted');
@@ -299,6 +345,7 @@ describe('V2TariffPlanService', () => {
         waterPrice: 1.3,
       },
       allocationPolicy: readyAllocationPolicy,
+      ...readyEvidence,
     });
     const secondAccepted = await service.acceptTariffPlan(ORG_ID, PLAN_ID);
 
@@ -382,6 +429,7 @@ describe('V2TariffPlanService', () => {
     await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
       baselineInput: readyBaselineInput,
       allocationPolicy: readyAllocationPolicy,
+      ...readyEvidence,
     });
     await service.acceptTariffPlan(ORG_ID, PLAN_ID);
 

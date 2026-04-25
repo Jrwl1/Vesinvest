@@ -70,11 +70,55 @@ export class V2TariffPlanService {
       body.allocationPolicy ?? current?.allocationPolicy ?? null,
       plan,
     );
+    const revenueEvidence = this.readEvidenceObject(
+      body.revenueEvidence !== undefined
+        ? body.revenueEvidence
+        : current?.revenueEvidence ?? null,
+    );
+    const costEvidence = this.readEvidenceObject(
+      body.costEvidence !== undefined
+        ? body.costEvidence
+        : current?.costEvidence ?? null,
+    );
+    const regionalDifferentiationState = this.readEvidenceObject(
+      body.regionalDifferentiationState !== undefined
+        ? body.regionalDifferentiationState
+        : current?.regionalDifferentiationState ?? null,
+    );
+    const stormwaterState = this.readEvidenceObject(
+      body.stormwaterState !== undefined
+        ? body.stormwaterState
+        : current?.stormwaterState ?? null,
+    );
+    const specialUseState = this.readEvidenceObject(
+      body.specialUseState !== undefined
+        ? body.specialUseState
+        : current?.specialUseState ?? null,
+    );
+    const connectionFeeLiabilityState = this.readEvidenceObject(
+      body.connectionFeeLiabilityState !== undefined
+        ? body.connectionFeeLiabilityState
+        : current?.connectionFeeLiabilityState ?? null,
+    );
+    const ownerDistributionState = this.readEvidenceObject(
+      body.ownerDistributionState !== undefined
+        ? body.ownerDistributionState
+        : current?.ownerDistributionState ?? null,
+    );
     const recommendation = this.buildRecommendation(
       plan,
       scenario,
       baselineInput,
       allocationPolicy,
+      {
+        revenueEvidence,
+        costEvidence,
+        regionalDifferentiationState,
+        stormwaterState,
+        specialUseState,
+        connectionFeeLiabilityState,
+        ownerDistributionState,
+      },
     );
     const data = {
       orgId,
@@ -86,6 +130,34 @@ export class V2TariffPlanService {
       recommendation: recommendation as unknown as Prisma.InputJsonValue,
       readinessChecklist:
         recommendation.lawReadiness as unknown as Prisma.InputJsonValue,
+      revenueEvidence:
+        revenueEvidence == null
+          ? Prisma.DbNull
+          : (revenueEvidence as unknown as Prisma.InputJsonValue),
+      costEvidence:
+        costEvidence == null
+          ? Prisma.DbNull
+          : (costEvidence as unknown as Prisma.InputJsonValue),
+      regionalDifferentiationState:
+        regionalDifferentiationState == null
+          ? Prisma.DbNull
+          : (regionalDifferentiationState as unknown as Prisma.InputJsonValue),
+      stormwaterState:
+        stormwaterState == null
+          ? Prisma.DbNull
+          : (stormwaterState as unknown as Prisma.InputJsonValue),
+      specialUseState:
+        specialUseState == null
+          ? Prisma.DbNull
+          : (specialUseState as unknown as Prisma.InputJsonValue),
+      connectionFeeLiabilityState:
+        connectionFeeLiabilityState == null
+          ? Prisma.DbNull
+          : (connectionFeeLiabilityState as unknown as Prisma.InputJsonValue),
+      ownerDistributionState:
+        ownerDistributionState == null
+          ? Prisma.DbNull
+          : (ownerDistributionState as unknown as Prisma.InputJsonValue),
       acceptedAt: null,
     };
     const saved = existing
@@ -117,6 +189,21 @@ export class V2TariffPlanService {
       scenario,
       baselineInput,
       allocationPolicy,
+      {
+        revenueEvidence: this.readEvidenceObject(existing.revenueEvidence),
+        costEvidence: this.readEvidenceObject(existing.costEvidence),
+        regionalDifferentiationState: this.readEvidenceObject(
+          existing.regionalDifferentiationState,
+        ),
+        stormwaterState: this.readEvidenceObject(existing.stormwaterState),
+        specialUseState: this.readEvidenceObject(existing.specialUseState),
+        connectionFeeLiabilityState: this.readEvidenceObject(
+          existing.connectionFeeLiabilityState,
+        ),
+        ownerDistributionState: this.readEvidenceObject(
+          existing.ownerDistributionState,
+        ),
+      },
     );
     if (!recommendation.lawReadiness.isReady) {
       throw new ConflictException({
@@ -206,7 +293,12 @@ export class V2TariffPlanService {
   ) {
     return this.prisma.vesinvestTariffPlan.findFirst({
       where: { orgId, vesinvestPlanId, scenarioId },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: [
+        { updatedAt: 'desc' },
+        { acceptedAt: 'desc' },
+        { createdAt: 'desc' },
+        { id: 'desc' },
+      ],
     });
   }
 
@@ -222,7 +314,12 @@ export class V2TariffPlanService {
         scenarioId,
         status: { in: ['draft', 'stale'] },
       },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: [
+        { updatedAt: 'desc' },
+        { acceptedAt: 'desc' },
+        { createdAt: 'desc' },
+        { id: 'desc' },
+      ],
     });
   }
 
@@ -394,6 +491,15 @@ export class V2TariffPlanService {
     scenario: Awaited<ReturnType<V2ForecastService['getForecastScenario']>>,
     baselineInput: TariffBaselineInput,
     allocationPolicy: TariffAllocationPolicy,
+    evidence: {
+      revenueEvidence?: Record<string, unknown> | null;
+      costEvidence?: Record<string, unknown> | null;
+      regionalDifferentiationState?: Record<string, unknown> | null;
+      stormwaterState?: Record<string, unknown> | null;
+      specialUseState?: Record<string, unknown> | null;
+      connectionFeeLiabilityState?: Record<string, unknown> | null;
+      ownerDistributionState?: Record<string, unknown> | null;
+    } = {},
   ): TariffRecommendation {
     const shares = this.normalizeShares(allocationPolicy);
     const smoothingYears = Math.max(
@@ -499,9 +605,52 @@ export class V2TariffPlanService {
       scenario,
       baselineInput,
       allocationPolicy,
+      evidence,
       targetAdditionalAnnualRevenue,
       averageAnnualIncreasePct,
     );
+    const revenueTable = FEE_KEYS.map((key) => ({
+      key,
+      currentAnnualRevenue: fees[key].currentAnnualRevenue,
+      proposedAnnualRevenue: fees[key].proposedAnnualRevenue,
+      revenueImpact: fees[key].revenueImpact,
+      allocationSharePct: fees[key].allocationSharePct,
+    }));
+    const annualChangePath = Array.from({ length: smoothingYears }, (_, index) => {
+      const yearIndex = index + 1;
+      const annualRevenue = FEE_KEYS.reduce<number | null>((sum, key) => {
+        const row = fees[key].yearlyPath[index];
+        if (sum == null || row?.annualRevenue == null) {
+          return null;
+        }
+        return sum + row.annualRevenue;
+      }, 0);
+      return {
+        yearIndex,
+        annualRevenue: annualRevenue == null ? null : this.round2(annualRevenue),
+        annualIncreasePct:
+          averageAnnualIncreasePct == null ? null : averageAnnualIncreasePct,
+      };
+    });
+    const impactFlags = {
+      exceeds15PctAnnualIncrease: averageAnnualIncreasePct != null && averageAnnualIncreasePct > 15,
+      regionalVariationApplies:
+        allocationPolicy.regionalVariationApplies === true ||
+        this.hasEvidenceNotes(evidence.regionalDifferentiationState),
+      stormwaterApplies:
+        allocationPolicy.stormwaterApplies === true ||
+        this.hasEvidenceNotes(evidence.stormwaterState),
+      specialUseApplies: this.hasEvidenceNotes(evidence.specialUseState),
+      connectionFeeLiabilityRecorded: this.hasEvidenceNotes(
+        evidence.connectionFeeLiabilityState,
+      ),
+      ownerDistributionRecorded: this.hasEvidenceNotes(evidence.ownerDistributionState),
+    };
+    const allocationRationale = [
+      'Allocation uses the current service split and the edited four-lever policy.',
+      `Target pressure is ${this.round2(targetAdditionalAnnualRevenue)} annual revenue after smoothing.`,
+      `Smoothing period is ${smoothingYears} year(s).`,
+    ];
 
     return {
       savedAt: new Date().toISOString(),
@@ -523,6 +672,10 @@ export class V2TariffPlanService {
       smoothingYears,
       averageAnnualIncreasePct,
       fees,
+      revenueTable,
+      annualChangePath,
+      impactFlags,
+      allocationRationale,
       lawReadiness,
     };
   }
@@ -599,6 +752,15 @@ export class V2TariffPlanService {
     scenario: Awaited<ReturnType<V2ForecastService['getForecastScenario']>>,
     baselineInput: TariffBaselineInput,
     allocationPolicy: TariffAllocationPolicy,
+    evidence: {
+      revenueEvidence?: Record<string, unknown> | null;
+      costEvidence?: Record<string, unknown> | null;
+      regionalDifferentiationState?: Record<string, unknown> | null;
+      stormwaterState?: Record<string, unknown> | null;
+      specialUseState?: Record<string, unknown> | null;
+      connectionFeeLiabilityState?: Record<string, unknown> | null;
+      ownerDistributionState?: Record<string, unknown> | null;
+    },
     targetAdditionalAnnualRevenue: number,
     averageAnnualIncreasePct: number | null,
   ): TariffReadinessChecklist {
@@ -645,6 +807,22 @@ export class V2TariffPlanService {
     const riskAssessmentPresent =
       typeof allocationPolicy.financialRiskAssessment === 'string' &&
       allocationPolicy.financialRiskAssessment.trim().length >= 8;
+    const tariffRevenueEvidencePresent = this.hasEvidenceNotes(
+      evidence.revenueEvidence,
+    );
+    const costEvidencePresent = this.hasEvidenceNotes(evidence.costEvidence);
+    const connectionFeeLiabilityPresent = this.hasEvidenceNotes(
+      evidence.connectionFeeLiabilityState,
+    );
+    if (!tariffRevenueEvidencePresent) {
+      unresolvedManualAssumptions.push('tariff revenue evidence');
+    }
+    if (!costEvidencePresent) {
+      unresolvedManualAssumptions.push('cost evidence');
+    }
+    if (!connectionFeeLiabilityPresent) {
+      unresolvedManualAssumptions.push('returnable connection-fee liability');
+    }
     const smoothingStatus =
       averageAnnualIncreasePct == null
         ? 'missing'
@@ -658,12 +836,18 @@ export class V2TariffPlanService {
         trustedBaselinePresent &&
         currentTariffBaselinePresent &&
         investmentFinancingNeedPresent &&
-        riskAssessmentPresent,
+        riskAssessmentPresent &&
+        tariffRevenueEvidencePresent &&
+        costEvidencePresent &&
+        connectionFeeLiabilityPresent,
       assetPlan20YearPresent,
       trustedBaselinePresent,
       currentTariffBaselinePresent,
       investmentFinancingNeedPresent,
       riskAssessmentPresent,
+      tariffRevenueEvidencePresent,
+      costEvidencePresent,
+      connectionFeeLiabilityPresent,
       smoothingStatus,
       regionalVariationFlag: allocationPolicy.regionalVariationApplies === true,
       stormwaterFlag: allocationPolicy.stormwaterApplies === true,
@@ -717,6 +901,19 @@ export class V2TariffPlanService {
       readinessChecklist:
         (row?.readinessChecklist as unknown as TariffReadinessChecklist | null) ??
         recommendation.lawReadiness,
+      revenueEvidence: this.readEvidenceObject(row?.revenueEvidence ?? null),
+      costEvidence: this.readEvidenceObject(row?.costEvidence ?? null),
+      regionalDifferentiationState: this.readEvidenceObject(
+        row?.regionalDifferentiationState ?? null,
+      ),
+      stormwaterState: this.readEvidenceObject(row?.stormwaterState ?? null),
+      specialUseState: this.readEvidenceObject(row?.specialUseState ?? null),
+      connectionFeeLiabilityState: this.readEvidenceObject(
+        row?.connectionFeeLiabilityState ?? null,
+      ),
+      ownerDistributionState: this.readEvidenceObject(
+        row?.ownerDistributionState ?? null,
+      ),
       acceptedAt: row?.acceptedAt?.toISOString() ?? null,
       updatedAt: row?.updatedAt?.toISOString() ?? null,
       createdAt: row?.createdAt?.toISOString() ?? null,
@@ -728,6 +925,20 @@ export class V2TariffPlanService {
       return {};
     }
     return value as Record<string, unknown>;
+  }
+
+  private readEvidenceObject(value: unknown): Record<string, unknown> | null {
+    if (value == null || value === Prisma.JsonNull || value === Prisma.DbNull) {
+      return null;
+    }
+    if (typeof value !== 'object' || Array.isArray(value)) {
+      throw new BadRequestException('Tariff evidence state must be an object.');
+    }
+    return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+  }
+
+  private hasEvidenceNotes(value: Record<string, unknown> | null | undefined) {
+    return typeof value?.notes === 'string' && value.notes.trim().length > 0;
   }
 
   private toNullableText(value: unknown) {

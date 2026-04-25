@@ -106,7 +106,12 @@ export class V2VesinvestPlanSupport {
             acceptedAt: true,
             updatedAt: true,
           },
-          orderBy: { updatedAt: 'desc' },
+          orderBy: [
+            { updatedAt: 'desc' },
+            { acceptedAt: 'desc' },
+            { createdAt: 'desc' },
+            { id: 'desc' },
+          ],
         },
       },
     });
@@ -172,6 +177,27 @@ export class V2VesinvestPlanSupport {
       horizonYears: horizonYearsRaw,
       baselineSourceState: this.foundationSupport.normalizeJsonObject(
         body.baselineSourceState,
+      ),
+      assetEvidenceState: this.foundationSupport.normalizeJsonObject(
+        body.assetEvidenceState,
+      ),
+      municipalPlanContext: this.foundationSupport.normalizeJsonObject(
+        body.municipalPlanContext,
+      ),
+      maintenanceEvidenceState: this.foundationSupport.normalizeJsonObject(
+        body.maintenanceEvidenceState,
+      ),
+      conditionStudyState: this.foundationSupport.normalizeJsonObject(
+        body.conditionStudyState,
+      ),
+      financialRiskState: this.foundationSupport.normalizeJsonObject(
+        body.financialRiskState,
+      ),
+      publicationState: this.foundationSupport.normalizeJsonObject(
+        body.publicationState,
+      ),
+      communicationState: this.foundationSupport.normalizeJsonObject(
+        body.communicationState,
       ),
       projects,
     };
@@ -350,6 +376,18 @@ export class V2VesinvestPlanSupport {
       baselineChangedSinceAcceptedRevision,
       classificationReviewRequired,
     );
+    const assetEvidenceFields = [
+      plan.assetEvidenceState,
+      plan.conditionStudyState,
+      plan.maintenanceEvidenceState,
+      plan.municipalPlanContext,
+      plan.financialRiskState,
+      plan.publicationState,
+      plan.communicationState,
+    ];
+    const assetEvidenceMissingCount = assetEvidenceFields.filter(
+      (value) => !this.hasEvidenceNotes(value),
+    ).length;
     return {
       id: plan.id,
       seriesId: plan.seriesId,
@@ -369,6 +407,8 @@ export class V2VesinvestPlanSupport {
       lastReviewedAt: plan.lastReviewedAt?.toISOString() ?? null,
       reviewDueAt: plan.reviewDueAt?.toISOString() ?? null,
       classificationReviewRequired,
+      assetEvidenceReady: assetEvidenceMissingCount === 0,
+      assetEvidenceMissingCount,
       baselineChangedSinceAcceptedRevision,
       investmentPlanChangedSinceFeeRecommendation:
         plan.investmentPlanChangedSinceFeeRecommendation,
@@ -435,6 +475,115 @@ export class V2VesinvestPlanSupport {
         ),
       });
     }
+    const summarizeAllocations = (
+      projects: VesinvestPlanRecord['projects'],
+      years: number[],
+    ) => {
+      const yearSet = new Set(years);
+      return projects.reduce(
+        (acc, project) => {
+          const projectTotal = project.allocations
+            .filter((allocation) => yearSet.has(allocation.year))
+            .reduce(
+              (sum, allocation) =>
+                sum + this.foundationSupport.toNumberNullable(allocation.totalAmount),
+              0,
+            );
+          return {
+            totalAmount: acc.totalAmount + projectTotal,
+            waterAmount:
+              acc.waterAmount +
+              project.allocations
+                .filter((allocation) => yearSet.has(allocation.year))
+                .reduce(
+                  (sum, allocation) =>
+                    sum + this.foundationSupport.toNumberNullable(allocation.waterAmount),
+                  0,
+                ),
+            wastewaterAmount:
+              acc.wastewaterAmount +
+              project.allocations
+                .filter((allocation) => yearSet.has(allocation.year))
+                .reduce(
+                  (sum, allocation) =>
+                    sum + this.foundationSupport.toNumberNullable(allocation.wastewaterAmount),
+                  0,
+                ),
+          };
+        },
+        { totalAmount: 0, waterAmount: 0, wastewaterAmount: 0 },
+      );
+    };
+    const lawBucketDefinitions = [
+      { key: 'years_1_5', years: horizonYears.slice(0, 5) },
+      { key: 'years_6_10', years: horizonYears.slice(5, 10) },
+      { key: 'years_11_20', years: horizonYears.slice(10, 20) },
+    ];
+    const renovationTotals = summarizeAllocations(
+      plan.projects.filter((project) => project.investmentType === 'sanering'),
+      horizonYears,
+    );
+    const newInvestmentTotals = summarizeAllocations(
+      plan.projects.filter((project) => project.investmentType === 'nyanlaggning'),
+      horizonYears,
+    );
+    const repairTotals = summarizeAllocations(
+      plan.projects.filter((project) => project.investmentType === 'reparation'),
+      horizonYears,
+    );
+    const lawInvestmentSummary = {
+      horizonYears: plan.horizonYears,
+      totalAmount: this.foundationSupport.round2(
+        yearlyTotals.reduce((sum, item) => sum + item.totalAmount, 0),
+      ),
+      renovationAmount: this.foundationSupport.round2(renovationTotals.totalAmount),
+      newInvestmentAmount: this.foundationSupport.round2(newInvestmentTotals.totalAmount),
+      repairAmount: this.foundationSupport.round2(repairTotals.totalAmount),
+      timeBuckets: lawBucketDefinitions
+        .filter((bucket) => bucket.years.length > 0)
+        .map((bucket) => {
+          const totals = summarizeAllocations(plan.projects, bucket.years);
+          return {
+            key: bucket.key,
+            startYear: bucket.years[0]!,
+            endYear: bucket.years[bucket.years.length - 1]!,
+            totalAmount: this.foundationSupport.round2(totals.totalAmount),
+            waterAmount: this.foundationSupport.round2(totals.waterAmount),
+            wastewaterAmount: this.foundationSupport.round2(totals.wastewaterAmount),
+          };
+        }),
+      byInvestmentType: (['sanering', 'nyanlaggning', 'reparation'] as const).map(
+        (investmentType) => {
+          const projects = plan.projects.filter(
+            (project) => project.investmentType === investmentType,
+          );
+          const totals = summarizeAllocations(projects, horizonYears);
+          return {
+            investmentType,
+            projectCount: projects.length,
+            totalAmount: this.foundationSupport.round2(totals.totalAmount),
+          };
+        },
+      ),
+      byAssetCategory: [...new Set(plan.projects.map((project) => project.groupKey))].map(
+        (groupKey) => {
+          const projects = plan.projects.filter((project) => project.groupKey === groupKey);
+          const group = this.foundationSupport.resolveGroupDefinitionFromMap(
+            groupDefinitions,
+            groupKey,
+          );
+          const totals = summarizeAllocations(projects, horizonYears);
+          return {
+            groupKey,
+            groupLabel: group.label,
+            projectCount: projects.length,
+            totalAmount: this.foundationSupport.round2(totals.totalAmount),
+            waterAmount: this.foundationSupport.round2(totals.waterAmount),
+            wastewaterAmount: this.foundationSupport.round2(totals.wastewaterAmount),
+          };
+        },
+      ),
+    };
 
     return {
       ...this.mapPlanSummary(plan, currentBaseline, groupDefinitions),
@@ -446,11 +595,19 @@ export class V2VesinvestPlanSupport {
       ),
       feeRecommendation: plan.feeRecommendation ?? null,
       baselineSourceState: plan.baselineSourceState ?? null,
+      assetEvidenceState: plan.assetEvidenceState ?? null,
+      municipalPlanContext: plan.municipalPlanContext ?? null,
+      maintenanceEvidenceState: plan.maintenanceEvidenceState ?? null,
+      conditionStudyState: plan.conditionStudyState ?? null,
+      financialRiskState: plan.financialRiskState ?? null,
+      publicationState: plan.publicationState ?? null,
+      communicationState: plan.communicationState ?? null,
       baselineFingerprint: plan.baselineFingerprint,
       scenarioFingerprint: plan.scenarioFingerprint,
       horizonYearsRange: horizonYears,
       yearlyTotals,
       fiveYearBands,
+      lawInvestmentSummary,
       projects: plan.projects.map((project) => {
         const group = this.foundationSupport.resolveGroupDefinitionFromMap(
           groupDefinitions,
@@ -487,6 +644,16 @@ export class V2VesinvestPlanSupport {
         };
       }),
     };
+  }
+
+  private hasEvidenceNotes(value: unknown) {
+    return (
+      value != null &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      typeof (value as { notes?: unknown }).notes === 'string' &&
+      (value as { notes: string }).notes.trim().length > 0
+    );
   }
 
   resolveBaselineStatus(

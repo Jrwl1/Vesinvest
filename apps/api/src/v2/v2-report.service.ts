@@ -268,6 +268,13 @@ async listReports(orgId: string, ennusteId?: string) {
         scenarioFingerprint: true,
         feeRecommendation: true,
         baselineSourceState: true,
+        assetEvidenceState: true,
+        municipalPlanContext: true,
+        maintenanceEvidenceState: true,
+        conditionStudyState: true,
+        financialRiskState: true,
+        publicationState: true,
+        communicationState: true,
         projects: {
           select: {
             groupKey: true,
@@ -412,23 +419,37 @@ async listReports(orgId: string, ennusteId?: string) {
         'Legacy Vesinvest baseline snapshot does not match the current utility binding and accepted baseline. Re-verify baseline before creating report.',
       });
     }
+    this.assertAssetEvidenceReady(vesinvestPlan);
 
-    const acceptedTariffPlan = await this.prisma.vesinvestTariffPlan.findFirst({
+    const latestTariffPlan = await this.prisma.vesinvestTariffPlan.findFirst({
       where: {
         orgId,
         vesinvestPlanId: vesinvestPlan.id,
         scenarioId,
-        status: 'accepted',
       },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: [
+        { updatedAt: 'desc' },
+        { acceptedAt: 'desc' },
+        { createdAt: 'desc' },
+        { id: 'desc' },
+      ],
     });
-    if (!acceptedTariffPlan) {
+    if (!latestTariffPlan) {
       throw new ConflictException({
         code: 'TARIFF_PLAN_REQUIRED',
         message:
           'Accept the tariff plan before creating a report snapshot.',
       });
     }
+    if (latestTariffPlan.status !== 'accepted') {
+      throw new ConflictException({
+        code: 'TARIFF_PLAN_STALE',
+        message:
+          'The latest tariff plan has not been accepted. Accept the current tariff package before creating a report snapshot.',
+      });
+    }
+    const acceptedTariffPlan = latestTariffPlan;
+    this.assertTariffEvidenceReady(acceptedTariffPlan);
     this.assertAcceptedTariffPlanCurrent(
       acceptedTariffPlan.recommendation,
       currentBaseline.fingerprint,
@@ -483,6 +504,7 @@ async listReports(orgId: string, ennusteId?: string) {
 
     const reportVariant = this.normalizeReportVariant(body.variant);
     const reportSections = this.buildReportSections(reportVariant);
+    const includeInternalEvidence = reportVariant === 'confidential_appendix';
     const vesinvestAppendix = await this.buildVesinvestAppendix(
       vesinvestPlan.projects,
       scenario.years.map((item) => item.year),
@@ -508,6 +530,24 @@ async listReports(orgId: string, ennusteId?: string) {
         scenarioFingerprint: vesinvestPlan.scenarioFingerprint,
         feeRecommendation:
           (vesinvestPlan.feeRecommendation as Record<string, unknown> | null) ?? null,
+        ...(includeInternalEvidence
+          ? {
+              assetEvidenceState:
+                vesinvestPlan.assetEvidenceState as Record<string, unknown> | null,
+              municipalPlanContext:
+                vesinvestPlan.municipalPlanContext as Record<string, unknown> | null,
+              maintenanceEvidenceState:
+                vesinvestPlan.maintenanceEvidenceState as Record<string, unknown> | null,
+              conditionStudyState:
+                vesinvestPlan.conditionStudyState as Record<string, unknown> | null,
+              financialRiskState:
+                vesinvestPlan.financialRiskState as Record<string, unknown> | null,
+              publicationState:
+                vesinvestPlan.publicationState as Record<string, unknown> | null,
+              communicationState:
+                vesinvestPlan.communicationState as Record<string, unknown> | null,
+            }
+          : {}),
       },
       vesinvestAppendix,
       tariffPlan: {
@@ -518,6 +558,33 @@ async listReports(orgId: string, ennusteId?: string) {
         allocationPolicy: acceptedTariffPlan.allocationPolicy as any,
         recommendation: acceptedTariffPlan.recommendation as any,
         readinessChecklist: acceptedTariffPlan.readinessChecklist as any,
+        ...(includeInternalEvidence
+          ? {
+              revenueEvidence:
+                acceptedTariffPlan.revenueEvidence as Record<string, unknown> | null,
+              costEvidence:
+                acceptedTariffPlan.costEvidence as Record<string, unknown> | null,
+              regionalDifferentiationState:
+                acceptedTariffPlan.regionalDifferentiationState as Record<
+                  string,
+                  unknown
+                > | null,
+              stormwaterState:
+                acceptedTariffPlan.stormwaterState as Record<string, unknown> | null,
+              specialUseState:
+                acceptedTariffPlan.specialUseState as Record<string, unknown> | null,
+              connectionFeeLiabilityState:
+                acceptedTariffPlan.connectionFeeLiabilityState as Record<
+                  string,
+                  unknown
+                > | null,
+              ownerDistributionState:
+                acceptedTariffPlan.ownerDistributionState as Record<
+                  string,
+                  unknown
+                > | null,
+            }
+          : {}),
       },
       reportVariant,
       reportSections,
@@ -684,6 +751,68 @@ async listReports(orgId: string, ennusteId?: string) {
           'Accepted tariff plan is out of date. Re-open Tariff Plan and accept the current package before creating a report.',
       });
     }
+  }
+
+  private assertAssetEvidenceReady(plan: {
+    assetEvidenceState?: unknown;
+    municipalPlanContext?: unknown;
+    maintenanceEvidenceState?: unknown;
+    conditionStudyState?: unknown;
+    financialRiskState?: unknown;
+    publicationState?: unknown;
+    communicationState?: unknown;
+  }) {
+    const fields = [
+      plan.assetEvidenceState,
+      plan.conditionStudyState,
+      plan.maintenanceEvidenceState,
+      plan.municipalPlanContext,
+      plan.financialRiskState,
+      plan.publicationState,
+      plan.communicationState,
+    ];
+    if (fields.every((value) => this.hasEvidenceNotes(value))) {
+      return;
+    }
+    throw new ConflictException({
+      code: 'ASSET_EVIDENCE_REQUIRED',
+      message:
+        'Complete asset-management evidence before creating a report snapshot.',
+    });
+  }
+
+  private assertTariffEvidenceReady(plan: {
+    readinessChecklist?: unknown;
+    revenueEvidence?: unknown;
+    costEvidence?: unknown;
+    connectionFeeLiabilityState?: unknown;
+  }) {
+    const readiness = this.asRecord(plan.readinessChecklist);
+    if (
+      readiness.tariffRevenueEvidencePresent === true &&
+      readiness.costEvidencePresent === true &&
+      readiness.connectionFeeLiabilityPresent === true &&
+      this.hasEvidenceNotes(plan.revenueEvidence) &&
+      this.hasEvidenceNotes(plan.costEvidence) &&
+      this.hasEvidenceNotes(plan.connectionFeeLiabilityState)
+    ) {
+      return;
+    }
+    throw new ConflictException({
+      code: 'TARIFF_EVIDENCE_REQUIRED',
+      message:
+        'Complete tariff evidence and accept the current tariff package before creating a report snapshot.',
+    });
+  }
+
+  private hasEvidenceNotes(value: unknown) {
+    return (
+      value != null &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      typeof (value as { notes?: unknown }).notes === 'string' &&
+      (value as { notes: string }).notes.trim().length > 0
+    );
   }
 
   private asRecord(value: unknown): Record<string, unknown> {

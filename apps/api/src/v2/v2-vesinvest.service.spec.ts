@@ -19,6 +19,13 @@ const makePlanRecord = (overrides: Record<string, unknown> = {}) => {
     feeRecommendationStatus: 'blocked',
     feeRecommendation: null,
     baselineSourceState: null,
+    assetEvidenceState: null,
+    municipalPlanContext: null,
+    maintenanceEvidenceState: null,
+    conditionStudyState: null,
+    financialRiskState: null,
+    publicationState: null,
+    communicationState: null,
     baselineFingerprint: null,
     scenarioFingerprint: null,
     selectedScenarioId: null,
@@ -71,6 +78,7 @@ const makePlanRecord = (overrides: Record<string, unknown> = {}) => {
 const makeService = () => {
   const updatePlan = jest.fn();
   const updateManyPlans = jest.fn();
+  const updateManyTariffPlans = jest.fn();
   const prisma = {
     vesinvestPlanSeries: {
       create: jest.fn().mockResolvedValue({ id: 'series-1' }),
@@ -96,6 +104,9 @@ const makeService = () => {
         vesinvestPlan: {
           update: updatePlan,
           updateMany: updateManyPlans,
+        },
+        vesinvestTariffPlan: {
+          updateMany: updateManyTariffPlans,
         },
       }),
     ),
@@ -475,6 +486,47 @@ describe('V2VesinvestService', () => {
         data: expect.objectContaining({
           name: 'Updated active revision',
           status: 'active',
+        }),
+      }),
+    );
+  });
+
+  it('persists water-law evidence fields on plan updates', async () => {
+    const { service, prisma } = makeService();
+    prisma.vesinvestPlan.findFirst.mockResolvedValue(makePlanRecord());
+    prisma.vesinvestPlan.update.mockResolvedValue(
+      makePlanRecord({
+        assetEvidenceState: { inventoryStatus: 'partial' },
+        municipalPlanContext: { growthAreaReviewed: true },
+        maintenanceEvidenceState: { maintenanceLogCoverage: 'network' },
+        conditionStudyState: { latestStudyYear: 2025 },
+        financialRiskState: { debtCapacity: 'tight' },
+        publicationState: { publicSummaryAllowed: false },
+        communicationState: { boardMaterialStatus: 'draft' },
+      }),
+    );
+
+    await service.updatePlan('org-1', 'plan-1', {
+      assetEvidenceState: { inventoryStatus: 'partial' },
+      municipalPlanContext: { growthAreaReviewed: true },
+      maintenanceEvidenceState: { maintenanceLogCoverage: 'network' },
+      conditionStudyState: { latestStudyYear: 2025 },
+      financialRiskState: { debtCapacity: 'tight' },
+      publicationState: { publicSummaryAllowed: false },
+      communicationState: { boardMaterialStatus: 'draft' },
+    });
+
+    expect(prisma.vesinvestPlan.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'plan-1' },
+        data: expect.objectContaining({
+          assetEvidenceState: { inventoryStatus: 'partial' },
+          municipalPlanContext: { growthAreaReviewed: true },
+          maintenanceEvidenceState: { maintenanceLogCoverage: 'network' },
+          conditionStudyState: { latestStudyYear: 2025 },
+          financialRiskState: { debtCapacity: 'tight' },
+          publicationState: { publicSummaryAllowed: false },
+          communicationState: { boardMaterialStatus: 'draft' },
         }),
       }),
     );

@@ -189,6 +189,13 @@ export async function buildV2ReportPdf({
       ? formatPrice(value)
       : formatMoney(value);
   };
+  const evidenceNote = (value: unknown) =>
+    value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    typeof (value as { notes?: unknown }).notes === 'string'
+      ? ((value as { notes: string }).notes.trim() || null)
+      : null;
 
   const drawTariffTableHeader = () => {
     draw('Year', 30, y, 8, true);
@@ -381,6 +388,33 @@ export async function buildV2ReportPdf({
         false,
         14,
       );
+    }
+    if (reportSections.assumptions) {
+      const evidenceRows = [
+        ['Asset inventory', snapshot?.vesinvestPlan?.assetEvidenceState],
+        ['Condition studies', snapshot?.vesinvestPlan?.conditionStudyState],
+        ['Maintenance', snapshot?.vesinvestPlan?.maintenanceEvidenceState],
+        ['Municipal context', snapshot?.vesinvestPlan?.municipalPlanContext],
+        ['Financial risk', snapshot?.vesinvestPlan?.financialRiskState],
+        ['Publication boundary', snapshot?.vesinvestPlan?.publicationState],
+        ['Communication', snapshot?.vesinvestPlan?.communicationState],
+        ['Tariff revenue', acceptedTariffPlan.revenueEvidence],
+        ['Tariff costs', acceptedTariffPlan.costEvidence],
+        ['Regional differentiation', acceptedTariffPlan.regionalDifferentiationState],
+        ['Stormwater', acceptedTariffPlan.stormwaterState],
+        ['Special use', acceptedTariffPlan.specialUseState],
+        ['Connection-fee liability', acceptedTariffPlan.connectionFeeLiabilityState],
+        ['Owner distribution', acceptedTariffPlan.ownerDistributionState],
+      ] as const;
+      const evidenceNotes = evidenceRows
+        .map(([label, value]) => [label, evidenceNote(value)] as const)
+        .filter(([, note]) => note);
+      if (evidenceNotes.length > 0) {
+        drawSectionHeading('Internal evidence appendix');
+        for (const [label, note] of evidenceNotes) {
+          drawLine(`${label}: ${note}`, MARGIN_LEFT, 10, false, 14);
+        }
+      }
     }
   }
 

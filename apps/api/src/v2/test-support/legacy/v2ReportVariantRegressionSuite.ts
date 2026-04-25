@@ -272,11 +272,33 @@ describe('V2Service report variant regression', () => {
         years: scenario.years,
       }),
     },
-    readinessChecklist: { isReady: true },
+    readinessChecklist: {
+      isReady: true,
+      tariffRevenueEvidencePresent: true,
+      costEvidencePresent: true,
+      connectionFeeLiabilityPresent: true,
+    },
+    revenueEvidence: { notes: 'Tariff revenue evidence reviewed.' },
+    costEvidence: { notes: 'Cost evidence reviewed.' },
+    connectionFeeLiabilityState: { notes: 'Connection-fee liability reviewed.' },
+    regionalDifferentiationState: null,
+    stormwaterState: null,
+    specialUseState: null,
+    ownerDistributionState: null,
     acceptedAt: NOW,
     createdAt: NOW,
     updatedAt: NOW,
   });
+
+  const readyAssetEvidenceState = {
+    assetEvidenceState: { notes: 'Asset inventory reviewed.' },
+    municipalPlanContext: { notes: 'Municipal plan context reviewed.' },
+    maintenanceEvidenceState: { notes: 'Maintenance evidence reviewed.' },
+    conditionStudyState: { notes: 'Condition studies reviewed.' },
+    financialRiskState: { notes: 'Financial risks reviewed.' },
+    publicationState: { notes: 'Publication boundaries reviewed.' },
+    communicationState: { notes: 'Communication material reviewed.' },
+  };
 
   const buildYearDataset = () => ({
     year: 2024,
@@ -393,6 +415,7 @@ describe('V2Service report variant regression', () => {
             businessId: '1234567-8',
             identitySource: 'veeti',
           },
+          ...readyAssetEvidenceState,
           projects: [],
         }),
       },
@@ -884,6 +907,7 @@ describe('V2Service report variant regression', () => {
             businessId: '1234567-8',
             identitySource: 'veeti',
           },
+          ...readyAssetEvidenceState,
           projects: [],
         }),
       },
@@ -1285,6 +1309,7 @@ describe('V2Service report variant regression', () => {
               },
             ],
           },
+          ...readyAssetEvidenceState,
           projects: [
             {
               groupKey: 'sanering_water_network',

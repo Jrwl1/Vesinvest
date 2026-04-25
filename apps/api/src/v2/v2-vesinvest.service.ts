@@ -74,7 +74,12 @@ async getPlanningContextSummary(orgId: string) {
               acceptedAt: true,
               updatedAt: true,
             },
-            orderBy: { updatedAt: 'desc' },
+            orderBy: [
+              { updatedAt: 'desc' },
+              { acceptedAt: 'desc' },
+              { createdAt: 'desc' },
+              { id: 'desc' },
+            ],
           },
         },
         orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
@@ -204,7 +209,12 @@ async getPlanningContextSummary(orgId: string) {
               acceptedAt: true,
               updatedAt: true,
             },
-            orderBy: { updatedAt: 'desc' },
+            orderBy: [
+              { updatedAt: 'desc' },
+              { acceptedAt: 'desc' },
+              { createdAt: 'desc' },
+              { id: 'desc' },
+            ],
           },
         },
         orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
@@ -260,6 +270,34 @@ async getPlanningContextSummary(orgId: string) {
           payload.baselineSourceState == null
             ? undefined
             : payload.baselineSourceState,
+        assetEvidenceState:
+          payload.assetEvidenceState == null
+            ? undefined
+            : payload.assetEvidenceState,
+        municipalPlanContext:
+          payload.municipalPlanContext == null
+            ? undefined
+            : payload.municipalPlanContext,
+        maintenanceEvidenceState:
+          payload.maintenanceEvidenceState == null
+            ? undefined
+            : payload.maintenanceEvidenceState,
+        conditionStudyState:
+          payload.conditionStudyState == null
+            ? undefined
+            : payload.conditionStudyState,
+        financialRiskState:
+          payload.financialRiskState == null
+            ? undefined
+            : payload.financialRiskState,
+        publicationState:
+          payload.publicationState == null
+            ? undefined
+            : payload.publicationState,
+        communicationState:
+          payload.communicationState == null
+            ? undefined
+            : payload.communicationState,
         reviewDueAt,
         projects: {
           create: payload.projects.map((project) => this.currentPlanSupport().toProjectCreate(project)),
@@ -287,7 +325,12 @@ async getPlanningContextSummary(orgId: string) {
             acceptedAt: true,
             updatedAt: true,
           },
-          orderBy: { updatedAt: 'desc' },
+          orderBy: [
+            { updatedAt: 'desc' },
+            { acceptedAt: 'desc' },
+            { createdAt: 'desc' },
+            { id: 'desc' },
+          ],
         },
       },
     });
@@ -335,6 +378,14 @@ async getPlanningContextSummary(orgId: string) {
                   ),
                 })),
               })),
+        baselineSourceState: body.baselineSourceState,
+        assetEvidenceState: body.assetEvidenceState,
+        municipalPlanContext: body.municipalPlanContext,
+        maintenanceEvidenceState: body.maintenanceEvidenceState,
+        conditionStudyState: body.conditionStudyState,
+        financialRiskState: body.financialRiskState,
+        publicationState: body.publicationState,
+        communicationState: body.communicationState,
       },
       true,
     );
@@ -388,7 +439,7 @@ async getPlanningContextSummary(orgId: string) {
           selectedScenarioId: current.selectedScenarioId,
           feeRecommendation:
             investmentPlanChanged
-              ? Prisma.JsonNull
+              ? Prisma.DbNull
               : undefined,
           baselineFingerprint: current.baselineFingerprint,
           scenarioFingerprint:
@@ -396,8 +447,50 @@ async getPlanningContextSummary(orgId: string) {
           baselineSourceState:
             body.baselineSourceState !== undefined
               ? payload.baselineSourceState == null
-                ? Prisma.JsonNull
+                ? Prisma.DbNull
                 : payload.baselineSourceState
+              : undefined,
+          assetEvidenceState:
+            body.assetEvidenceState !== undefined
+              ? payload.assetEvidenceState == null
+                ? Prisma.DbNull
+                : payload.assetEvidenceState
+              : undefined,
+          municipalPlanContext:
+            body.municipalPlanContext !== undefined
+              ? payload.municipalPlanContext == null
+                ? Prisma.DbNull
+                : payload.municipalPlanContext
+              : undefined,
+          maintenanceEvidenceState:
+            body.maintenanceEvidenceState !== undefined
+              ? payload.maintenanceEvidenceState == null
+                ? Prisma.DbNull
+                : payload.maintenanceEvidenceState
+              : undefined,
+          conditionStudyState:
+            body.conditionStudyState !== undefined
+              ? payload.conditionStudyState == null
+                ? Prisma.DbNull
+                : payload.conditionStudyState
+              : undefined,
+          financialRiskState:
+            body.financialRiskState !== undefined
+              ? payload.financialRiskState == null
+                ? Prisma.DbNull
+                : payload.financialRiskState
+              : undefined,
+          publicationState:
+            body.publicationState !== undefined
+              ? payload.publicationState == null
+                ? Prisma.DbNull
+                : payload.publicationState
+              : undefined,
+          communicationState:
+            body.communicationState !== undefined
+              ? payload.communicationState == null
+                ? Prisma.DbNull
+                : payload.communicationState
               : undefined,
           lastReviewedAt:
             body.lastReviewedAt !== undefined
@@ -473,6 +566,13 @@ async getPlanningContextSummary(orgId: string) {
         baselineFingerprint: null,
         scenarioFingerprint: null,
         baselineSourceState: source.baselineSourceState ?? undefined,
+        assetEvidenceState: source.assetEvidenceState ?? undefined,
+        municipalPlanContext: source.municipalPlanContext ?? undefined,
+        maintenanceEvidenceState: source.maintenanceEvidenceState ?? undefined,
+        conditionStudyState: source.conditionStudyState ?? undefined,
+        financialRiskState: source.financialRiskState ?? undefined,
+        publicationState: source.publicationState ?? undefined,
+        communicationState: source.communicationState ?? undefined,
         projects: {
           create: await Promise.all(
             source.projects.map(async (project) => {
@@ -535,7 +635,12 @@ async getPlanningContextSummary(orgId: string) {
             acceptedAt: true,
             updatedAt: true,
           },
-          orderBy: { updatedAt: 'desc' },
+          orderBy: [
+            { updatedAt: 'desc' },
+            { acceptedAt: 'desc' },
+            { createdAt: 'desc' },
+            { id: 'desc' },
+          ],
         },
       },
     });

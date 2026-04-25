@@ -115,6 +115,13 @@ export type ReportSnapshot = {
   vesinvestPlan?: {
     name?: string | null;
     versionNumber?: number | null;
+    assetEvidenceState?: Record<string, unknown> | null;
+    municipalPlanContext?: Record<string, unknown> | null;
+    maintenanceEvidenceState?: Record<string, unknown> | null;
+    conditionStudyState?: Record<string, unknown> | null;
+    financialRiskState?: Record<string, unknown> | null;
+    publicationState?: Record<string, unknown> | null;
+    communicationState?: Record<string, unknown> | null;
   } | null;
   vesinvestAppendix?: {
     yearlyTotals?: Array<{
@@ -158,6 +165,13 @@ export type ReportSnapshot = {
   tariffPlan?: {
     status?: 'draft' | 'accepted' | 'stale';
     acceptedAt?: string | null;
+    revenueEvidence?: Record<string, unknown> | null;
+    costEvidence?: Record<string, unknown> | null;
+    regionalDifferentiationState?: Record<string, unknown> | null;
+    stormwaterState?: Record<string, unknown> | null;
+    specialUseState?: Record<string, unknown> | null;
+    connectionFeeLiabilityState?: Record<string, unknown> | null;
+    ownerDistributionState?: Record<string, unknown> | null;
     recommendation?: {
       targetAdditionalAnnualRevenue?: number | null;
       baselineAnnualRevenue?: number | null;

@@ -17,6 +17,7 @@ type Props = {
   savedFeePathPricingStatus?: 'blocked' | 'provisional' | 'verified' | null;
   savedFeePathTariffPlanStatus?: 'draft' | 'accepted' | 'stale' | null;
   savedFeePathClassificationReviewRequired?: boolean;
+  savedFeePathAssetEvidenceReady?: boolean;
   savedFeePathBaselineChangedSinceAcceptedRevision?: boolean;
   savedFeePathInvestmentPlanChangedSinceFeeRecommendation?: boolean;
   savedFeePathReportConflictActive?: boolean;
@@ -38,6 +39,7 @@ export const ReportsPageV2: React.FC<Props> = ({
   savedFeePathPricingStatus,
   savedFeePathTariffPlanStatus,
   savedFeePathClassificationReviewRequired = false,
+  savedFeePathAssetEvidenceReady = false,
   savedFeePathBaselineChangedSinceAcceptedRevision = false,
   savedFeePathInvestmentPlanChangedSinceFeeRecommendation = false,
   savedFeePathReportConflictActive = false,
@@ -81,6 +83,7 @@ export const ReportsPageV2: React.FC<Props> = ({
       reports,
       savedFeePathBaselineChangedSinceAcceptedRevision,
       savedFeePathClassificationReviewRequired,
+      savedFeePathAssetEvidenceReady,
       savedFeePathInvestmentPlanChangedSinceFeeRecommendation,
       savedFeePathPlanId,
       savedFeePathPlanRequired,

@@ -27,6 +27,8 @@ export type WorkspaceBootstrapSnapshot = {
     investmentPlanReady?: boolean;
     linkedScenarioComputedFresh?: boolean;
     classificationReviewRequired: boolean;
+    assetEvidenceReady?: boolean;
+    assetEvidenceMissingCount?: number;
     pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
     tariffPlanStatus: 'draft' | 'accepted' | 'stale' | null;
     baselineChangedSinceAcceptedRevision: boolean;

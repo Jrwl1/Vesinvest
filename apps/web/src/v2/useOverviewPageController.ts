@@ -45,7 +45,11 @@ export type OverviewPageControllerProps = {
     state: {
       activePlanId: string | null;
       linkedScenarioId: string | null;
+      investmentPlanReady?: boolean;
+      linkedScenarioComputedFresh?: boolean;
       classificationReviewRequired: boolean;
+      assetEvidenceReady?: boolean;
+      assetEvidenceMissingCount?: number;
       pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
       tariffPlanStatus: 'draft' | 'accepted' | 'stale' | null;
       baselineChangedSinceAcceptedRevision: boolean;
@@ -658,8 +662,14 @@ export function useOverviewPageController({
     return {
       activePlanId: activeVesinvestPlan.id ?? null,
       linkedScenarioId: activeVesinvestPlan.selectedScenarioId ?? null,
+      investmentPlanReady:
+        (activeVesinvestPlan.projectCount ?? 0) > 0 &&
+        (activeVesinvestPlan.totalInvestmentAmount ?? 0) > 0,
+      linkedScenarioComputedFresh: undefined,
       classificationReviewRequired:
         activeVesinvestPlan.classificationReviewRequired === true,
+      assetEvidenceReady: activeVesinvestPlan.assetEvidenceReady === true,
+      assetEvidenceMissingCount: activeVesinvestPlan.assetEvidenceMissingCount ?? 0,
       pricingStatus: activeVesinvestPlan.pricingStatus ?? null,
       tariffPlanStatus: activeVesinvestPlan.tariffPlanStatus ?? null,
       baselineChangedSinceAcceptedRevision:

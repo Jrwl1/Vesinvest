@@ -30,6 +30,7 @@ export type ForecastPageControllerProps = {
   initialScenarioId?: string | null;
   computedFromUpdatedAtByScenario?: Record<string, string>;
   onScenarioSelectionChange?: (scenarioId: string | null) => void;
+  onGoToAssetManagement?: () => void;
   onGoToOverviewFeePath?: (planId?: string | null) => void;
   onComputedVersionChange?: (
     scenarioId: string,
@@ -42,6 +43,7 @@ export function useForecastPageController({
   initialScenarioId = null,
   computedFromUpdatedAtByScenario,
   onScenarioSelectionChange,
+  onGoToAssetManagement,
   onGoToOverviewFeePath,
   onComputedVersionChange,
 }: ForecastPageControllerProps) {
@@ -385,11 +387,17 @@ export function useForecastPageController({
       if (
         (code === 'VESINVEST_SCENARIO_STALE' ||
           code === 'VESINVEST_BASELINE_STALE' ||
+          code === 'ASSET_EVIDENCE_REQUIRED' ||
+          code === 'TARIFF_EVIDENCE_REQUIRED' ||
           code === 'TARIFF_PLAN_REQUIRED' ||
           code === 'TARIFF_PLAN_STALE') &&
         activePlan?.id
       ) {
-        onGoToOverviewFeePath?.(activePlan.id);
+        if (code === 'ASSET_EVIDENCE_REQUIRED') {
+          onGoToAssetManagement?.();
+        } else {
+          onGoToOverviewFeePath?.(activePlan.id);
+        }
         return;
       }
       scenarioController.setError(
@@ -404,6 +412,7 @@ export function useForecastPageController({
     }
   }, [
     canCreateReport,
+    onGoToAssetManagement,
     onGoToOverviewFeePath,
     onReportCreated,
     reportReadinessHint,

@@ -41,6 +41,9 @@ export function useForecastPageDerivedState({
     if (activePlan.classificationReviewRequired) {
       return 'classificationReviewRequired' as const;
     }
+    if (activePlan.assetEvidenceReady === false) {
+      return 'assetEvidenceIncomplete' as const;
+    }
     if (activePlan.tariffPlanStatus !== 'accepted') {
       return 'tariffPlanRequired' as const;
     }
@@ -95,6 +98,11 @@ export function useForecastPageDerivedState({
         return t(
           'v2Forecast.classificationReviewRequired',
           'Review and save the Vesinvest class plan before creating a report.',
+        );
+      case 'assetEvidenceIncomplete':
+        return t(
+          'v2Vesinvest.assetEvidenceReportBlocked',
+          'Complete asset-management evidence before creating reports.',
         );
       case 'tariffPlanRequired':
         return t(

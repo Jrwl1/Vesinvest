@@ -21,6 +21,7 @@ export type ReportReadinessReason =
   | 'missingDepreciationSnapshots'
   | 'staleComputeResults'
   | 'classificationReviewRequired'
+  | 'assetEvidenceIncomplete'
   | 'missingActivePlan'
   | 'missingAcceptedTariffPlan'
   | 'staleSavedFeePath';

@@ -144,6 +144,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     !runtimeScenarioOffLinkedFeePath &&
     savedFeePathReportConflictPlanId !== setupPlanState.activePlanId &&
     setupPlanState.classificationReviewRequired !== true &&
+    setupPlanState.assetEvidenceReady === true &&
     setupPlanState.pricingStatus === 'verified' &&
     setupPlanState.tariffPlanStatus === 'accepted' &&
     setupPlanState.linkedScenarioComputedFresh === true &&
@@ -237,7 +238,8 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
         ? status('neutral', statusLabels.notStarted)
         : hasHardPlanBlocker
           ? status('danger', statusLabels.blocked)
-          : setupPlanState?.investmentPlanReady === true
+          : setupPlanState?.investmentPlanReady === true &&
+              setupPlanState?.assetEvidenceReady === true
             ? status('positive', statusLabels.ready)
             : status('warning', statusLabels.needsWork),
       ennuste: !baselineVerified
@@ -271,6 +273,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     hasSelectedUtility,
     runtimeScenarioOffLinkedFeePath,
     setupPlanState?.activePlanId,
+    setupPlanState?.assetEvidenceReady,
     setupPlanState?.classificationReviewRequired,
     setupPlanState?.investmentPlanReady,
     setupPlanState?.linkedScenarioComputedFresh,
@@ -315,49 +318,56 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
 
   const applySetupPlanState = React.useCallback((nextState: WorkspaceBootstrapSnapshot['planState']) => {
     setSetupPlanState((prev) => {
+      const mergedState =
+        nextState && prev?.activePlanId === nextState.activePlanId
+          ? { ...prev, ...nextState }
+          : nextState;
       setSavedFeePathReportConflictPlanId((current) => {
         if (!current) {
           return current;
         }
-        if (!nextState?.activePlanId || nextState.activePlanId !== current) {
+        if (!mergedState?.activePlanId || mergedState.activePlanId !== current) {
           return null;
         }
         if (
-          nextState.pricingStatus === 'verified' &&
-          nextState.tariffPlanStatus === 'accepted' &&
-          nextState.linkedScenarioComputedFresh === true &&
-          nextState.classificationReviewRequired !== true &&
-          nextState.baselineChangedSinceAcceptedRevision !== true &&
-          nextState.investmentPlanChangedSinceFeeRecommendation !== true
+          mergedState.pricingStatus === 'verified' &&
+          mergedState.tariffPlanStatus === 'accepted' &&
+          mergedState.linkedScenarioComputedFresh === true &&
+          mergedState.classificationReviewRequired !== true &&
+          mergedState.assetEvidenceReady === true &&
+          mergedState.baselineChangedSinceAcceptedRevision !== true &&
+          mergedState.investmentPlanChangedSinceFeeRecommendation !== true
         ) {
           return null;
         }
         if (
-          prev?.activePlanId === nextState.activePlanId &&
+          prev?.activePlanId === mergedState.activePlanId &&
           prev.linkedScenarioId &&
-          nextState.linkedScenarioId &&
-          nextState.linkedScenarioId !== prev.linkedScenarioId
+          mergedState.linkedScenarioId &&
+          mergedState.linkedScenarioId !== prev.linkedScenarioId
         ) {
           return null;
         }
         return current;
       });
       if (
-        prev?.activePlanId === nextState?.activePlanId &&
-        prev?.linkedScenarioId === nextState?.linkedScenarioId &&
-        prev?.investmentPlanReady === nextState?.investmentPlanReady &&
-        prev?.linkedScenarioComputedFresh === nextState?.linkedScenarioComputedFresh &&
-        prev?.classificationReviewRequired === nextState?.classificationReviewRequired &&
-        prev?.pricingStatus === nextState?.pricingStatus &&
-        prev?.tariffPlanStatus === nextState?.tariffPlanStatus &&
+        prev?.activePlanId === mergedState?.activePlanId &&
+        prev?.linkedScenarioId === mergedState?.linkedScenarioId &&
+        prev?.investmentPlanReady === mergedState?.investmentPlanReady &&
+        prev?.linkedScenarioComputedFresh === mergedState?.linkedScenarioComputedFresh &&
+        prev?.classificationReviewRequired === mergedState?.classificationReviewRequired &&
+        prev?.assetEvidenceReady === mergedState?.assetEvidenceReady &&
+        prev?.assetEvidenceMissingCount === mergedState?.assetEvidenceMissingCount &&
+        prev?.pricingStatus === mergedState?.pricingStatus &&
+        prev?.tariffPlanStatus === mergedState?.tariffPlanStatus &&
         prev?.baselineChangedSinceAcceptedRevision ===
-          nextState?.baselineChangedSinceAcceptedRevision &&
+          mergedState?.baselineChangedSinceAcceptedRevision &&
         prev?.investmentPlanChangedSinceFeeRecommendation ===
-          nextState?.investmentPlanChangedSinceFeeRecommendation
+          mergedState?.investmentPlanChangedSinceFeeRecommendation
       ) {
         return prev;
       }
-      return nextState;
+      return mergedState;
     });
   }, []);
 
@@ -405,6 +415,8 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
             linkedScenarioComputedFresh:
               isBootstrapScenarioComputedFresh(selectedScenario),
             classificationReviewRequired: workflowPlan.classificationReviewRequired === true,
+            assetEvidenceReady: workflowPlan.assetEvidenceReady === true,
+            assetEvidenceMissingCount: workflowPlan.assetEvidenceMissingCount ?? 0,
             pricingStatus: workflowPlan.pricingStatus ?? null,
             tariffPlanStatus: workflowPlan.tariffPlanStatus ?? null,
             baselineChangedSinceAcceptedRevision:
@@ -462,6 +474,9 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
         if (setupPlanState?.classificationReviewRequired) {
           return 'asset_management';
         }
+        if (setupPlanState?.assetEvidenceReady === false) {
+          return 'asset_management';
+        }
         if (setupPlanState?.tariffPlanStatus !== 'accepted') {
           return 'tariff_plan';
         }
@@ -471,6 +486,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     },
     [
       setupPlanState?.classificationReviewRequired,
+      setupPlanState?.assetEvidenceReady,
       setupPlanState?.tariffPlanStatus,
     ],
   );
@@ -479,6 +495,9 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     (tab: TabId, snapshot: WorkspaceBootstrapSnapshot): TabId => {
       if (tab === 'reports' && snapshot.wizardState.forecastUnlocked) {
         if (snapshot.planState?.classificationReviewRequired) {
+          return 'asset_management';
+        }
+        if (snapshot.planState?.assetEvidenceReady === false) {
           return 'asset_management';
         }
         if (snapshot.planState?.tariffPlanStatus !== 'accepted') {
@@ -509,6 +528,12 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
       );
     }
     if (tab === 'reports' && setupWizardState?.forecastUnlocked) {
+      if (setupPlanState?.assetEvidenceReady === false) {
+        return t(
+          'v2Vesinvest.assetEvidenceReportBlocked',
+          'Complete asset-management evidence before creating reports.',
+        );
+      }
       if (setupPlanState?.tariffPlanStatus !== 'accepted') {
         return t(
           'v2TariffPlan.acceptBeforeReports',
@@ -526,6 +551,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     );
   }, [
     setupPlanState?.classificationReviewRequired,
+    setupPlanState?.assetEvidenceReady,
     setupPlanState?.tariffPlanStatus,
     setupWizardState?.forecastUnlocked,
     t,
@@ -628,6 +654,9 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     if (tab === 'reports' && setupWizardState?.forecastUnlocked && setupPlanState?.classificationReviewRequired) {
       return t('v2Shell.tabs.assetManagement', 'Asset Management');
     }
+    if (tab === 'reports' && setupWizardState?.forecastUnlocked && setupPlanState?.assetEvidenceReady === false) {
+      return t('v2Shell.tabs.assetManagement', 'Asset Management');
+    }
     if (tab === 'reports' && setupWizardState?.forecastUnlocked && setupPlanState?.tariffPlanStatus !== 'accepted') {
       return t('v2Shell.tabs.tariffPlan', 'Tariff Plan');
     }
@@ -641,6 +670,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
   }, [
     reportsNeedFeePathRecovery,
     setupPlanState?.classificationReviewRequired,
+    setupPlanState?.assetEvidenceReady,
     setupPlanState?.tariffPlanStatus,
     setupWizardState?.forecastUnlocked,
     t,
@@ -652,6 +682,10 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     }
     if (blockedTabNotice === 'reports' && setupWizardState?.forecastUnlocked) {
       if (setupPlanState?.classificationReviewRequired) {
+        handleGoToAssetManagement();
+        return;
+      }
+      if (setupPlanState?.assetEvidenceReady === false) {
         handleGoToAssetManagement();
         return;
       }
@@ -682,6 +716,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     handleGoToOverviewFeePath,
     reportsNeedFeePathRecovery,
     setupPlanState?.activePlanId,
+    setupPlanState?.assetEvidenceReady,
     setupPlanState?.classificationReviewRequired,
     setupPlanState?.linkedScenarioId,
     setupWizardState?.forecastUnlocked,
@@ -966,6 +1001,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
                     onReportCreated={handleReportCreated}
                     initialScenarioId={forecastRuntimeState.selectedScenarioId}
                     onScenarioSelectionChange={handleForecastScenarioSelection}
+                    onGoToAssetManagement={handleGoToAssetManagement}
                     onGoToOverviewFeePath={handleGoToOverviewFeePath}
                     onComputedVersionChange={() => {
                       void refreshWorkspaceTruth().catch(() => undefined);
@@ -996,6 +1032,9 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
                     savedFeePathTariffPlanStatus={setupPlanState?.tariffPlanStatus ?? null}
                     savedFeePathClassificationReviewRequired={
                       setupPlanState?.classificationReviewRequired ?? false
+                    }
+                    savedFeePathAssetEvidenceReady={
+                      setupPlanState?.assetEvidenceReady ?? false
                     }
                     savedFeePathBaselineChangedSinceAcceptedRevision={
                       setupPlanState?.baselineChangedSinceAcceptedRevision ?? false

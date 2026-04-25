@@ -45,6 +45,7 @@ type Params = {
   reports: V2ReportListItem[];
   savedFeePathBaselineChangedSinceAcceptedRevision: boolean;
   savedFeePathClassificationReviewRequired: boolean;
+  savedFeePathAssetEvidenceReady: boolean;
   savedFeePathInvestmentPlanChangedSinceFeeRecommendation: boolean;
   savedFeePathPlanId?: string | null;
   savedFeePathPlanRequired: boolean;
@@ -75,6 +76,7 @@ export function useReportsPageViewModel({
   reports,
   savedFeePathBaselineChangedSinceAcceptedRevision,
   savedFeePathClassificationReviewRequired,
+  savedFeePathAssetEvidenceReady,
   savedFeePathInvestmentPlanChangedSinceFeeRecommendation,
   savedFeePathPlanId,
   savedFeePathPlanRequired,
@@ -136,6 +138,9 @@ export function useReportsPageViewModel({
     if (savedFeePathClassificationReviewRequired) {
       return 'classificationReviewRequired' as const;
     }
+    if (!savedFeePathAssetEvidenceReady) {
+      return 'assetEvidenceIncomplete' as const;
+    }
     if (savedFeePathTariffPlanStatus !== 'accepted') {
       return 'missingAcceptedTariffPlan' as const;
     }
@@ -150,6 +155,7 @@ export function useReportsPageViewModel({
     return null;
   }, [
     savedFeePathBaselineChangedSinceAcceptedRevision,
+    savedFeePathAssetEvidenceReady,
     savedFeePathClassificationReviewRequired,
     savedFeePathInvestmentPlanChangedSinceFeeRecommendation,
     savedFeePathPlanId,
@@ -250,6 +256,11 @@ export function useReportsPageViewModel({
           'v2Forecast.classificationReviewRequired',
           'Review and save the Vesinvest class plan before creating a report.',
         );
+      case 'assetEvidenceIncomplete':
+        return t(
+          'v2Vesinvest.assetEvidenceReportBlocked',
+          'Complete asset-management evidence before creating reports.',
+        );
       case 'missingActivePlan':
         return t(
           'v2Vesinvest.workflowCreatePlanBody',
@@ -283,6 +294,7 @@ export function useReportsPageViewModel({
   const emptyStateCtaLabel = React.useMemo(() => {
     switch (emptyStateReportReadinessReason) {
       case 'missingActivePlan':
+      case 'assetEvidenceIncomplete':
         return t('v2Shell.tabs.assetManagement', 'Asset Management');
       case 'classificationReviewRequired':
       case 'missingAcceptedTariffPlan':
@@ -312,6 +324,10 @@ export function useReportsPageViewModel({
 
   const handleEmptyStateAction = React.useCallback(() => {
     if (emptyStateReportReadinessReason === 'missingActivePlan') {
+      onGoToAssetManagement?.();
+      return;
+    }
+    if (emptyStateReportReadinessReason === 'assetEvidenceIncomplete') {
       onGoToAssetManagement?.();
       return;
     }

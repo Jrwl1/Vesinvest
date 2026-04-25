@@ -143,6 +143,34 @@ export class CreateVesinvestPlanDto {
   @IsOptional()
   @IsObject()
   baselineSourceState?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  assetEvidenceState?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  municipalPlanContext?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  maintenanceEvidenceState?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  conditionStudyState?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  financialRiskState?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  publicationState?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  communicationState?: Record<string, unknown> | null;
 }
 
 export class UpdateVesinvestPlanDto extends CreateVesinvestPlanDto {

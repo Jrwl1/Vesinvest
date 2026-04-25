@@ -29,9 +29,18 @@ export type TariffAllocationPolicy = {
   financialRiskAssessment?: string | null;
 };
 
+export type TariffEvidenceObject = Record<string, unknown>;
+
 export type TariffPlanBody = {
   baselineInput?: TariffBaselineInput | null;
   allocationPolicy?: TariffAllocationPolicy | null;
+  revenueEvidence?: TariffEvidenceObject | null;
+  costEvidence?: TariffEvidenceObject | null;
+  regionalDifferentiationState?: TariffEvidenceObject | null;
+  stormwaterState?: TariffEvidenceObject | null;
+  specialUseState?: TariffEvidenceObject | null;
+  connectionFeeLiabilityState?: TariffEvidenceObject | null;
+  ownerDistributionState?: TariffEvidenceObject | null;
 };
 
 export type TariffFeeRecommendation = {
@@ -59,6 +68,9 @@ export type TariffReadinessChecklist = {
   currentTariffBaselinePresent: boolean;
   investmentFinancingNeedPresent: boolean;
   riskAssessmentPresent: boolean;
+  tariffRevenueEvidencePresent: boolean;
+  costEvidencePresent: boolean;
+  connectionFeeLiabilityPresent: boolean;
   smoothingStatus: 'ok' | 'exceeds_15_pct' | 'missing';
   regionalVariationFlag: boolean;
   stormwaterFlag: boolean;
@@ -77,5 +89,26 @@ export type TariffRecommendation = {
   smoothingYears: number;
   averageAnnualIncreasePct: number | null;
   fees: Record<TariffFeeKey, TariffFeeRecommendation>;
+  revenueTable: Array<{
+    key: TariffFeeKey;
+    currentAnnualRevenue: number | null;
+    proposedAnnualRevenue: number | null;
+    revenueImpact: number;
+    allocationSharePct: number;
+  }>;
+  annualChangePath: Array<{
+    yearIndex: number;
+    annualRevenue: number | null;
+    annualIncreasePct: number | null;
+  }>;
+  impactFlags: {
+    exceeds15PctAnnualIncrease: boolean;
+    regionalVariationApplies: boolean;
+    stormwaterApplies: boolean;
+    specialUseApplies: boolean;
+    connectionFeeLiabilityRecorded: boolean;
+    ownerDistributionRecorded: boolean;
+  };
+  allocationRationale: string[];
   lawReadiness: TariffReadinessChecklist;
 };

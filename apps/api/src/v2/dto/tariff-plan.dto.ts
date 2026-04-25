@@ -139,4 +139,32 @@ export class UpsertTariffPlanDto {
   @ValidateNested()
   @Type(() => TariffAllocationPolicyDto)
   allocationPolicy?: TariffAllocationPolicyDto | null;
+
+  @IsOptional()
+  @IsObject()
+  revenueEvidence?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  costEvidence?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  regionalDifferentiationState?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  stormwaterState?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  specialUseState?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  connectionFeeLiabilityState?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  ownerDistributionState?: Record<string, unknown> | null;
 }

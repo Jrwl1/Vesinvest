@@ -1,6 +1,16 @@
 import { Prisma } from '@prisma/client';
 import type { VesinvestUtilityIdentitySnapshot } from './vesinvest-contract';
 
+export type PlanEvidenceBody = {
+  assetEvidenceState?: Record<string, unknown> | null;
+  municipalPlanContext?: Record<string, unknown> | null;
+  maintenanceEvidenceState?: Record<string, unknown> | null;
+  conditionStudyState?: Record<string, unknown> | null;
+  financialRiskState?: Record<string, unknown> | null;
+  publicationState?: Record<string, unknown> | null;
+  communicationState?: Record<string, unknown> | null;
+};
+
 export type PlanProjectAllocationInput = {
   year: number;
   totalAmount: number;
@@ -24,7 +34,7 @@ export type PlanProjectInput = {
   allocations?: PlanProjectAllocationInput[];
 };
 
-export type CreatePlanBody = {
+export type CreatePlanBody = PlanEvidenceBody & {
   name?: string;
   utilityName?: string;
   businessId?: string | null;
@@ -35,7 +45,7 @@ export type CreatePlanBody = {
   projects?: PlanProjectInput[];
 };
 
-export type UpdatePlanBody = {
+export type UpdatePlanBody = PlanEvidenceBody & {
   name?: string;
   utilityName?: string;
   businessId?: string | null;
@@ -140,5 +150,12 @@ export type NormalizedPlanPayload = {
   identitySource: 'manual' | 'veeti' | 'mixed';
   horizonYears: number;
   baselineSourceState: Prisma.InputJsonValue | null | undefined;
+  assetEvidenceState: Prisma.InputJsonValue | null | undefined;
+  municipalPlanContext: Prisma.InputJsonValue | null | undefined;
+  maintenanceEvidenceState: Prisma.InputJsonValue | null | undefined;
+  conditionStudyState: Prisma.InputJsonValue | null | undefined;
+  financialRiskState: Prisma.InputJsonValue | null | undefined;
+  publicationState: Prisma.InputJsonValue | null | undefined;
+  communicationState: Prisma.InputJsonValue | null | undefined;
   projects: NormalizedPlanProject[];
 };

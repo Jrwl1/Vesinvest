@@ -52,6 +52,8 @@ async getCurrentBaselineSnapshot(orgId: string) {
           financials: row.financials,
           prices: row.prices,
           volumes: row.volumes,
+          soldWaterVolume: row.soldWaterVolume,
+          soldWastewaterVolume: row.soldWastewaterVolume,
           combinedSoldVolume: row.combinedSoldVolume,
         }))
       : [];

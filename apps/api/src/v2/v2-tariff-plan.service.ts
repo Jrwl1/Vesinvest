@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { V2ForecastService } from './v2-forecast.service';
+import { V2ImportOverviewService } from './v2-import-overview.service';
 import type {
   TariffAllocationPolicy,
   TariffBaselineInput,
@@ -29,6 +30,7 @@ export class V2TariffPlanService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly forecastService: V2ForecastService,
+    private readonly importOverviewService?: V2ImportOverviewService,
   ) {}
 
   async getTariffPlan(orgId: string, vesinvestPlanId: string) {
@@ -42,11 +44,19 @@ export class V2TariffPlanService {
       scenario,
       existing,
     );
+    const baselineVolumeDefaults = await this.resolveBaselineVolumeDefaults(
+      orgId,
+      scenario.baselineYear,
+    );
     return this.toResponse(
       current,
       plan,
       scenario,
-      this.readBaselineInput(current?.baselineInput ?? null, scenario),
+      this.readBaselineInput(
+        current?.baselineInput ?? null,
+        scenario,
+        baselineVolumeDefaults,
+      ),
       this.readAllocationPolicy(current?.allocationPolicy ?? null, plan),
     );
   }
@@ -62,9 +72,14 @@ export class V2TariffPlanService {
     );
     const existing = await this.findEditablePlan(orgId, plan.id, scenario.id);
     const current = await this.findLatestPlan(orgId, plan.id, scenario.id);
+    const baselineVolumeDefaults = await this.resolveBaselineVolumeDefaults(
+      orgId,
+      scenario.baselineYear,
+    );
     const baselineInput = this.readBaselineInput(
       body.baselineInput ?? current?.baselineInput ?? null,
       scenario,
+      baselineVolumeDefaults,
     );
     const allocationPolicy = this.readAllocationPolicy(
       body.allocationPolicy ?? current?.allocationPolicy ?? null,
@@ -179,7 +194,15 @@ export class V2TariffPlanService {
     if (!existing) {
       throw new BadRequestException('Save the tariff plan before accepting it.');
     }
-    const baselineInput = this.readBaselineInput(existing.baselineInput, scenario);
+    const baselineVolumeDefaults = await this.resolveBaselineVolumeDefaults(
+      orgId,
+      scenario.baselineYear,
+    );
+    const baselineInput = this.readBaselineInput(
+      existing.baselineInput,
+      scenario,
+      baselineVolumeDefaults,
+    );
     const allocationPolicy = this.readAllocationPolicy(
       existing.allocationPolicy,
       plan,
@@ -214,6 +237,16 @@ export class V2TariffPlanService {
       });
     }
 
+    const acceptedScenarioFingerprint =
+      recommendation.scenarioFingerprint ??
+      computeVesinvestScenarioFingerprint({
+        scenarioId: scenario.id,
+        updatedAt: scenario.updatedAt,
+        computedFromUpdatedAt: scenario.computedFromUpdatedAt,
+        yearlyInvestments: scenario.yearlyInvestments,
+        years: scenario.years,
+      });
+
     const accepted = await this.prisma.$transaction(async (tx) => {
       await tx.vesinvestTariffPlan.updateMany({
         where: {
@@ -225,7 +258,7 @@ export class V2TariffPlanService {
         },
         data: { status: 'stale' },
       });
-      return tx.vesinvestTariffPlan.update({
+      const acceptedRow = await tx.vesinvestTariffPlan.update({
         where: { id: existing.id },
         data: {
           status: 'accepted',
@@ -235,6 +268,15 @@ export class V2TariffPlanService {
           acceptedAt: new Date(),
         },
       });
+      await tx.vesinvestPlan.update({
+        where: { id: plan.id },
+        data: {
+          scenarioFingerprint: acceptedScenarioFingerprint,
+          feeRecommendationStatus: 'verified',
+          investmentPlanChangedSinceFeeRecommendation: false,
+        },
+      });
+      return acceptedRow;
     });
 
     return this.toResponse(
@@ -276,14 +318,65 @@ export class V2TariffPlanService {
       orgId,
       plan.selectedScenarioId,
     );
-    if (!scenario.computedFromUpdatedAt) {
+    const scenarioUpdatedAtIso = new Date(scenario.updatedAt).toISOString();
+    const computedFromUpdatedAtIso = scenario.computedFromUpdatedAt
+      ? new Date(scenario.computedFromUpdatedAt).toISOString()
+      : null;
+    if (!computedFromUpdatedAtIso || computedFromUpdatedAtIso !== scenarioUpdatedAtIso) {
       throw new ConflictException({
         code: 'FORECAST_RECOMPUTE_REQUIRED',
         message:
           'Compute the linked forecast scenario before tariff planning.',
       });
     }
+    if (scenario.years.length === 0) {
+      throw new ConflictException({
+        code: 'FORECAST_RECOMPUTE_REQUIRED',
+        message:
+          'Compute the linked forecast scenario before tariff planning.',
+      });
+    }
+    if (!this.investmentSeriesMatchesYearlyInvestments(scenario)) {
+      throw new ConflictException({
+        code: 'FORECAST_RECOMPUTE_REQUIRED',
+        message:
+          'Recompute the linked forecast scenario before tariff planning.',
+      });
+    }
     return { plan, scenario };
+  }
+
+  private investmentSeriesMatchesYearlyInvestments(
+    scenario: Awaited<ReturnType<V2ForecastService['getForecastScenario']>>,
+  ) {
+    const investmentSeries = new Map<number, number>();
+    for (const row of scenario.investmentSeries) {
+      investmentSeries.set(
+        Number(row.year),
+        this.round2(this.toNumber(row.amount)),
+      );
+    }
+    const yearlyInvestments = new Map<number, number>();
+    for (const row of scenario.yearlyInvestments) {
+      yearlyInvestments.set(
+        Number(row.year),
+        this.round2(
+          (yearlyInvestments.get(Number(row.year)) ?? 0) +
+            this.toNumber(row.amount),
+        ),
+      );
+    }
+    for (const [year, amount] of investmentSeries) {
+      if (amount !== (yearlyInvestments.get(year) ?? 0)) {
+        return false;
+      }
+    }
+    for (const [year, amount] of yearlyInvestments) {
+      if (amount !== (investmentSeries.get(year) ?? 0)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private findLatestPlan(
@@ -360,7 +453,6 @@ export class V2TariffPlanService {
       recommendation.scenarioFingerprint,
     );
     const liveScenarioFingerprint =
-      plan.scenarioFingerprint ??
       computeVesinvestScenarioFingerprint({
         scenarioId: scenario.id,
         updatedAt: scenario.updatedAt,
@@ -378,6 +470,10 @@ export class V2TariffPlanService {
   private readBaselineInput(
     raw: unknown,
     scenario: Awaited<ReturnType<V2ForecastService['getForecastScenario']>>,
+    baselineVolumeDefaults?: {
+      soldWaterVolume: number | null;
+      soldWastewaterVolume: number | null;
+    } | null,
   ): TariffBaselineInput {
     const firstYear = scenario.years[0] ?? null;
     const record = this.asRecord(raw);
@@ -402,12 +498,44 @@ export class V2TariffPlanService {
         this.toNullableNumber(firstYear?.wastewaterPrice),
       soldWaterVolume:
         this.toNullableNumber(record.soldWaterVolume) ??
+        baselineVolumeDefaults?.soldWaterVolume ??
         this.toNullableNumber((firstYear as any)?.soldWaterVolume),
       soldWastewaterVolume:
         this.toNullableNumber(record.soldWastewaterVolume) ??
+        baselineVolumeDefaults?.soldWastewaterVolume ??
         this.toNullableNumber((firstYear as any)?.soldWastewaterVolume),
       notes: this.toNullableText(record.notes),
     };
+  }
+
+  private async resolveBaselineVolumeDefaults(
+    orgId: string,
+    baselineYear: number | null,
+  ) {
+    if (!this.importOverviewService || baselineYear == null) {
+      return null;
+    }
+    try {
+      const context = await this.importOverviewService.getPlanningContext(orgId);
+      const row = Array.isArray((context as any)?.baselineYears)
+        ? (context as any).baselineYears.find(
+            (item: any) => item?.year === baselineYear,
+          )
+        : null;
+      if (!row) {
+        return null;
+      }
+      const soldWaterVolume = this.toNullableNumber(row.soldWaterVolume);
+      const soldWastewaterVolume = this.toNullableNumber(
+        row.soldWastewaterVolume,
+      );
+      if (soldWaterVolume == null && soldWastewaterVolume == null) {
+        return null;
+      }
+      return { soldWaterVolume, soldWastewaterVolume };
+    } catch {
+      return null;
+    }
   }
 
   private readAllocationPolicy(raw: unknown, plan: { projects: Array<{
@@ -658,7 +786,6 @@ export class V2TariffPlanService {
       vesinvestPlanId: plan.id,
       baselineFingerprint: plan.baselineFingerprint,
       scenarioFingerprint:
-        plan.scenarioFingerprint ??
         computeVesinvestScenarioFingerprint({
           scenarioId: scenario.id,
           updatedAt: scenario.updatedAt,

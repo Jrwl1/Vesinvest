@@ -57,6 +57,8 @@ export class V2VesinvestPlanSupport {
           financials: row.financials,
           prices: row.prices,
           volumes: row.volumes,
+          soldWaterVolume: row.soldWaterVolume,
+          soldWastewaterVolume: row.soldWastewaterVolume,
           combinedSoldVolume: row.combinedSoldVolume,
         }))
       : [];
@@ -105,6 +107,7 @@ export class V2VesinvestPlanSupport {
             status: true,
             acceptedAt: true,
             updatedAt: true,
+            recommendation: true,
           },
           orderBy: [
             { updatedAt: 'desc' },
@@ -699,10 +702,16 @@ export class V2VesinvestPlanSupport {
       plan.scenarioFingerprint != null &&
       this.foundationSupport.normalizeDateIso(plan.selectedScenario?.updatedAt ?? null) != null &&
       this.foundationSupport.normalizeDateIso(plan.selectedScenario?.computedFromUpdatedAt ?? null) ===
-        this.foundationSupport.normalizeDateIso(plan.selectedScenario?.updatedAt ?? null);
+        this.foundationSupport.normalizeDateIso(plan.selectedScenario?.updatedAt ?? null) &&
+      this.isPlanFingerprintTimestampAlignedWithSelectedScenario(
+        plan,
+        (plan as { updatedAt?: Date | string | null }).updatedAt ?? null,
+      );
+    const acceptedTariffPlanIsCurrent =
+      this.resolveTariffPlanStatus(plan) === 'accepted';
     if (
-      scenarioStillCurrent &&
-      plan.feeRecommendationStatus === 'verified' &&
+      ((scenarioStillCurrent && plan.feeRecommendationStatus === 'verified') ||
+        acceptedTariffPlanIsCurrent) &&
       !plan.investmentPlanChangedSinceFeeRecommendation
     ) {
       return 'verified' as const;
@@ -718,12 +727,57 @@ export class V2VesinvestPlanSupport {
           scenarioId: string | null;
           status: 'draft' | 'accepted' | 'stale';
           updatedAt: Date;
+          recommendation?: unknown;
         }>)
       : [];
     const relevant = tariffPlans.filter(
       (item) => !plan.selectedScenarioId || item.scenarioId === plan.selectedScenarioId,
     );
-    return relevant[0]?.status ?? null;
+    const latest = relevant[0] ?? null;
+    if (!latest) {
+      return null;
+    }
+    if (
+      latest.status === 'accepted' &&
+      (!this.isPlanFingerprintTimestampAlignedWithSelectedScenario(
+          plan,
+          latest.updatedAt,
+        ) ||
+        this.readTariffRecommendationFingerprint(latest.recommendation) !==
+          plan.scenarioFingerprint)
+    ) {
+      return 'stale';
+    }
+    return latest.status ?? null;
+  }
+
+  private readTariffRecommendationFingerprint(recommendation: unknown) {
+    if (
+      recommendation &&
+      typeof recommendation === 'object' &&
+      !Array.isArray(recommendation) &&
+      typeof (recommendation as { scenarioFingerprint?: unknown }).scenarioFingerprint === 'string'
+    ) {
+      return (recommendation as { scenarioFingerprint: string }).scenarioFingerprint;
+    }
+    return null;
+  }
+
+  private isPlanFingerprintTimestampAlignedWithSelectedScenario(
+    plan: VesinvestPlanRecord,
+    acceptedAt: Date | string | null | undefined,
+  ) {
+    const scenarioUpdatedAt = this.foundationSupport.normalizeDateIso(
+      plan.selectedScenario?.updatedAt ?? null,
+    );
+    const acceptedUpdatedAt = this.foundationSupport.normalizeDateIso(acceptedAt ?? null);
+    if (!plan.selectedScenarioId) {
+      return false;
+    }
+    if (!plan.scenarioFingerprint || !scenarioUpdatedAt || !acceptedUpdatedAt) {
+      return false;
+    }
+    return new Date(acceptedUpdatedAt).getTime() >= new Date(scenarioUpdatedAt).getTime();
   }
 
   hasBaselineRevisionDrift(

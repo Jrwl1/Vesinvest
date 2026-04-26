@@ -389,16 +389,6 @@ async listReports(orgId: string, ennusteId?: string) {
       yearlyInvestments: scenario.yearlyInvestments,
       years: scenario.years,
     });
-    if (
-      vesinvestPlan.scenarioFingerprint &&
-      vesinvestPlan.scenarioFingerprint !== liveScenarioFingerprint
-    ) {
-      throw new ConflictException({
-        code: 'VESINVEST_SCENARIO_STALE',
-        message:
-          'Vesinvest pricing snapshot is out of date. Re-open Tariff Plan before creating report.',
-      });
-    }
     if (vesinvestPlan.baselineFingerprint) {
       if (vesinvestPlan.baselineFingerprint !== currentBaseline.fingerprint) {
         throw new ConflictException({
@@ -527,7 +517,7 @@ async listReports(orgId: string, ennusteId?: string) {
         versionNumber: vesinvestPlan.versionNumber,
         status: vesinvestPlan.status,
         baselineFingerprint: vesinvestPlan.baselineFingerprint,
-        scenarioFingerprint: vesinvestPlan.scenarioFingerprint,
+        scenarioFingerprint: liveScenarioFingerprint,
         feeRecommendation:
           (vesinvestPlan.feeRecommendation as Record<string, unknown> | null) ?? null,
         ...(includeInternalEvidence

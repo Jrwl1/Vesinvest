@@ -74,7 +74,7 @@ export function createPdfReportSupport({
     `${value.toLocaleString(pdfLocale, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    })} EUR/m3`;
+    })} EUR/m³`;
   const formatPct = (value: number | null | undefined) =>
     value == null || !Number.isFinite(value)
       ? '-'
@@ -116,7 +116,7 @@ export function createPdfReportSupport({
   const formatVolume = (value: number | null | undefined) =>
     value == null || !Number.isFinite(value)
       ? '-'
-      : `${Math.round(value).toLocaleString(pdfLocale)} m3`;
+      : `${Math.round(value).toLocaleString(pdfLocale)} m³`;
   const assumptionLabels: Record<string, string> = {
     inflaatio: 'Inflation',
     energiakerroin: 'Energy factor',

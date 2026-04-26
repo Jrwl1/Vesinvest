@@ -105,6 +105,7 @@ export type VesinvestPlanRecord = Prisma.VesinvestPlanGetPayload<{
         status: true;
         acceptedAt: true;
         updatedAt: true;
+        recommendation: true;
       };
     };
   };

@@ -73,6 +73,7 @@ async getPlanningContextSummary(orgId: string) {
               status: true,
               acceptedAt: true,
               updatedAt: true,
+              recommendation: true,
             },
             orderBy: [
               { updatedAt: 'desc' },
@@ -208,6 +209,7 @@ async getPlanningContextSummary(orgId: string) {
               status: true,
               acceptedAt: true,
               updatedAt: true,
+              recommendation: true,
             },
             orderBy: [
               { updatedAt: 'desc' },
@@ -324,6 +326,7 @@ async getPlanningContextSummary(orgId: string) {
             status: true,
             acceptedAt: true,
             updatedAt: true,
+            recommendation: true,
           },
           orderBy: [
             { updatedAt: 'desc' },
@@ -634,6 +637,7 @@ async getPlanningContextSummary(orgId: string) {
             status: true,
             acceptedAt: true,
             updatedAt: true,
+            recommendation: true,
           },
           orderBy: [
             { updatedAt: 'desc' },

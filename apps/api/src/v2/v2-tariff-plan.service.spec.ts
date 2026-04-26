@@ -121,6 +121,11 @@ const makeService = (
   const prisma: Record<string, any> = {
     vesinvestPlan: {
       findFirst: jest.fn().mockResolvedValue(makePlan(planOverrides)),
+      update: jest.fn(async ({ data }: { data: Record<string, unknown> }) => ({
+        ...makePlan(planOverrides),
+        ...data,
+        updatedAt: nextDate(),
+      })),
     },
     vesinvestTariffPlan: {
       findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
@@ -168,8 +173,15 @@ const makeService = (
   const forecastService = {
     getForecastScenario: jest.fn().mockResolvedValue(makeScenario(scenarioOverrides)),
   };
-  const service = new V2TariffPlanService(prisma as any, forecastService as any);
-  return { service, prisma, forecastService, rows };
+  const importOverviewService = {
+    getPlanningContext: jest.fn().mockResolvedValue({ baselineYears: [] }),
+  };
+  const service = new V2TariffPlanService(
+    prisma as any,
+    forecastService as any,
+    importOverviewService as any,
+  );
+  return { service, prisma, forecastService, importOverviewService, rows };
 };
 
 const readyBaselineInput = {
@@ -350,6 +362,14 @@ describe('V2TariffPlanService', () => {
     const secondAccepted = await service.acceptTariffPlan(ORG_ID, PLAN_ID);
 
     expect(secondAccepted.status).toBe('accepted');
+    expect(prisma.vesinvestPlan.update).toHaveBeenLastCalledWith({
+      where: { id: PLAN_ID },
+      data: {
+        scenarioFingerprint: expect.any(String),
+        feeRecommendationStatus: 'verified',
+        investmentPlanChangedSinceFeeRecommendation: false,
+      },
+    });
     expect(prisma.vesinvestTariffPlan.updateMany).toHaveBeenLastCalledWith({
       where: {
         orgId: ORG_ID,
@@ -368,7 +388,8 @@ describe('V2TariffPlanService', () => {
   });
 
   it('does not duplicate a combined forecast volume into both tariff services', async () => {
-    const { service } = makeService();
+    const { service, importOverviewService } = makeService();
+    importOverviewService.getPlanningContext.mockResolvedValue({ baselineYears: [] });
 
     const result = await service.getTariffPlan(ORG_ID, PLAN_ID);
 
@@ -381,6 +402,28 @@ describe('V2TariffPlanService', () => {
     expect(result.readinessChecklist.unresolvedManualAssumptions).toEqual(
       expect.arrayContaining(['sold water volume', 'sold wastewater volume']),
     );
+  });
+
+  it('prefills split tariff volumes from the accepted planning baseline', async () => {
+    const { service, importOverviewService } = makeService();
+    importOverviewService.getPlanningContext.mockResolvedValue({
+      baselineYears: [
+        {
+          year: 2024,
+          soldWaterVolume: 62000,
+          soldWastewaterVolume: 41000,
+        },
+      ],
+    });
+
+    const result = await service.getTariffPlan(ORG_ID, PLAN_ID);
+
+    expect(result.baselineInput).toMatchObject({
+      waterPrice: 1.2,
+      wastewaterPrice: 1.6,
+      soldWaterVolume: 62000,
+      soldWastewaterVolume: 41000,
+    });
   });
 
   it('uses explicit split forecast volumes when they are available', async () => {
@@ -440,5 +483,41 @@ describe('V2TariffPlanService', () => {
 
     expect(result.status).toBe('stale');
     expect(rows[0].status).toBe('stale');
+  });
+
+  it('blocks tariff planning when the linked forecast needs recompute', async () => {
+    const { service } = makeService({}, {
+      updatedAt: new Date('2026-04-24T09:00:00.000Z'),
+      computedFromUpdatedAt: new Date('2026-04-24T08:30:00.000Z'),
+    });
+
+    await expect(service.getTariffPlan(ORG_ID, PLAN_ID)).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'FORECAST_RECOMPUTE_REQUIRED',
+      }),
+    });
+  });
+
+  it('blocks tariff planning when computed years are missing', async () => {
+    const { service } = makeService({}, { years: [] });
+
+    await expect(service.getTariffPlan(ORG_ID, PLAN_ID)).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'FORECAST_RECOMPUTE_REQUIRED',
+      }),
+    });
+  });
+
+  it('blocks tariff planning when investment inputs differ from computed rows', async () => {
+    const { service } = makeService({}, {
+      investmentSeries: [{ year: 2026, amount: 100000 }],
+      yearlyInvestments: [{ year: 2026, amount: 125000 }],
+    });
+
+    await expect(service.getTariffPlan(ORG_ID, PLAN_ID)).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'FORECAST_RECOMPUTE_REQUIRED',
+      }),
+    });
   });
 });

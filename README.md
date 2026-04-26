@@ -8,7 +8,7 @@ This repository is private, proprietary source code. It is not open source, no o
 
 **Monorepo:** NestJS API (`apps/api`) + React / Vite web (`apps/web`). Shared packages: `domain` (types), `config` (ESLint, Prettier, TS).
 
-**Docs:** For canonical doc set and read order see [docs/CANONICAL.md](docs/CANONICAL.md).
+**Docs:** Start with the repository knowledge index at [docs/index.md](docs/index.md). The short agent entry point is [AGENTS.md](AGENTS.md).
 
 ## Tech stack
 

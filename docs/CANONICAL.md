@@ -1,91 +1,47 @@
-﻿# Canonical documentation
+# Canonical Summary
 
-Last updated: 2026-03-25
+Last updated: 2026-04-27
 
-Use this file as the entry point for planning and product truth.
+The repository has moved from the former AIOS command protocol to a harness-engineering model.
 
-## Top-level OS contract
+## Source Of Truth
 
-- `AGENTS.md` is the operating contract for HUMANAUDIT, PLAN, and RUNSPRINT behavior.
-- If there is any conflict about agent behavior, `AGENTS.md` wins.
-- Direct MCP tools are preferred where they improve evidence or verification quality. This repo does not use external delegation or autopilot tooling outside the bounded native-helper rules declared in `AGENTS.md`.
+- Root agent map: `AGENTS.md`
+- Repository knowledge index: `docs/index.md`
+- Product truth: `docs/product/index.md`
+- Architecture: `docs/architecture/index.md`
+- Quality gates: `docs/quality/index.md`
+- Harness and local validation: `docs/harness/index.md`
+- Active execution plans: `docs/exec-plans/active/`
 
-## Conflict resolution hierarchy
+## Conflict Resolution
 
 Use this order for conflicts:
 
-1. `AGENTS.md` for operating behavior and file permissions.
-2. Code reality (`apps/**`, `packages/**`, Prisma schema, tests) for implemented behavior.
-3. `docs/client/**` for customer requirements and scope.
-4. Accepted ADRs in `docs/DECISIONS.md`.
-5. Active planning docs (`docs/PROJECT_STATUS.md`, `docs/ROADMAP.md`, `docs/SPRINT.md`).
-6. Supporting and historical docs.
+1. Code, tests, schemas, scripts, and CI for implemented behavior.
+2. Indexed product and architecture docs for intended behavior.
+3. Accepted ADRs in `docs/DECISIONS.md`.
+4. Customer-source documents under `docs/client/**` when explicitly needed for the task.
+5. Historical audits, sprint records, work logs, and canonical reports for traceability only.
 
 Rules:
-- For "what exists now", code wins.
-- For "what must be delivered", customer facts in `docs/client/**` win.
-- Planned execution scope must be proven against code reality before `docs/SPRINT.md` is updated.
-- If uncertain, write `TBD` and assign owner.
 
-## Language policy
+- For what exists now, code wins.
+- For what must be delivered, current product docs and explicitly supplied customer facts win.
+- If a repeated instruction matters, promote it into a script, lint rule, test, generated map, or indexed doc.
+- Do not expand `AGENTS.md` into a policy manual.
 
-- Preserve each file's current language.
-- Do not rewrite documents just to translate language.
-- New text in a file must follow that file's current language style.
+## Retired Protocols
 
-## Canonical V1 plan doc
+`HUMANAUDIT`, `PLAN`, `RUNSPRINT`, `DO`, `OK GO`, and `CANCEL` are historical terms only. They do not route current agent behavior.
 
-- The single canonical V1 plan document is `docs/ROADMAP.md`.
-- `docs/PROJECT_STATUS.md` and `docs/SPRINT.md` must stay aligned with it.
+## Historical References
 
-## Read order
+The following remain useful for traceability but are not default execution inputs:
 
-For protocol-required read order, follow `AGENTS.md`. The list below mirrors the default planning order and must not override protocol-specific ordering in `AGENTS.md`.
-
-1. `docs/CANONICAL.md`
-2. `AGENTS.md`
-3. `docs/PROJECT_STATUS.md`
-4. `docs/ROADMAP.md`
-5. `docs/SPRINT.md`
-6. `docs/DECISIONS.md`
-7. `docs/CANONICAL_REPORT.md`
-8. Only the user-directed `docs/client/**` documents and repo code required by the current `AGENTS.md` PLAN rules
-
-## Canonical set
-
-- `AGENTS.md`: mode router, HUMANAUDIT intake contract, and execution contract.
-- `docs/CANONICAL.md`: precedence and canonical set.
-- `docs/PROJECT_STATUS.md`: current planning snapshot.
-- `docs/ROADMAP.md`: canonical V1 milestones and done criteria.
-- `docs/SPRINT.md`: active execution queue.
-- `docs/DECISIONS.md`: ADR history and locked decisions.
-- `docs/CANONICAL_REPORT.md`: change and conflict log.
-
-## Supporting (not normative)
-
-- `README.md`
-- `docs/ARCHITECTURE.md`
-- `docs/API.md`
-- `DEPLOYMENT.md`
-- `TESTING.md`
-- `docs/playbooks/PROMPTS.md`
-- `docs/KVA_REGRESSION_DEBUG.md`
-- `docs/TASKS.md`
-- `docs/BACKLOG.md`
+- `docs/SPRINT.md`
 - `docs/SPRINT_ARCHIVE.md`
-- `docs/BACKLOG_ARCHIVE.md`
+- `docs/WORKLOG.md`
+- `docs/CANONICAL_REPORT.md`
+- historical audit files in `docs/`
 
-## Non-canonical / historical planning references
-
-These are traceability references only and must not drive active scope:
-
-- `docs/EXCEL_IMPORT_KVA_PERFECT_PLAN.md`
-- `docs/SANITY_CHECK_KVA_PERFECT_PLAN.md`
-- `docs/EXCEL_IMPORT_VA_FULL_PLAN.md`
-- `docs/EXCEL_IMPORT_VA_PIVOT_PLAN.md`
-- `docs/EXCEL_IMPORT_VA_PLAN.md`
-- `docs/EXCEL_IMPORT_GUIDE.md`
-- `docs/KVA_DRIVERS_LOG_STAGES.md`
-- `docs/pivot/VA_BUDGET_PIVOT_PLAN.md`
-- `docs/pivot/EXCEL_IMPORT_PHILOSOPHY.md`
-- `docs/pivot/WATER_UTILITY_PIVOT_OVERVIEW.md`

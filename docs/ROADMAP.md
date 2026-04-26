@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-04-24
+Last updated: 2026-04-27
 
 Planning baseline for V1:
 
@@ -19,10 +19,10 @@ Planning baseline for V1:
 **Done criteria:**
 
 1. Customer-locked V1 facts are reflected in canonical docs.
-2. AGENTS mode router and HUMANAUDIT/PLAN/RUNSPRINT contracts are deterministic, including exact-prefix protocol routing, session-scoped read-only audit intake with `OK GO` freeze plus later-`PLAN` sprint materialization, centralized shared-enforcement rules, explicit frontend copy-freeze policy, customer-doc reads only when the user explicitly directs PLAN to use named document(s) or extract specific information, PLAN code-localized blast-radius proof before sprint-row creation, `git status --porcelain` clean-tree semantics, bounded dirty-baseline absorption and same-package gate fixes during execution, bounded same-slice RUNSPRINT scope repair for planning misses, internal row acceptance inside RUNSPRINT, bounded native helper-agent usage under parent ownership, no recursive or parallel helper streams, and direct MCP preference for evidence and verification.
-3. Sprint format is executable, evidence-driven, and active-only in its main file, with accepted history moved to archive docs instead of being kept inline. Backlog is a user-owned optional parking lot, not a default execution or planning input.
+2. The root `AGENTS.md` is a short harness map, not an AIOS command router; durable operating knowledge lives in indexed docs and executable checks.
+3. Execution plans under `docs/exec-plans/` replace active sprint rows for durable multi-step work; accepted history stays historical and is not default execution context. Backlog is a user-owned optional parking lot, not a default execution or planning input.
 4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). The selective repair, Forecast hardening, CFO-readiness, visual-overhaul, post-audit interaction queue, and residual cleanup through `S-141` are accepted in scope: workbook-backed year repair, explicit 2024 mixed-source ownership, `Investointiohjelma`, PTS-derived `Poistosaannot`, reset cleanliness, explicit Step 3 approval, mapped depreciation compute, cumulative-cash-first funding hierarchy, Forecast report-freshness truth, reset-to-PDF live audit, shared modern-trust visual system, wizard back navigation, parked-year state, value-led review summaries, true row-local step-2 editing, card-native step-3 review, lightweight row-save refresh, linked-workspace prefetch scoping, and task-first login hierarchy all passed.
-5. The security/performance remediation queue `S-149..S-155` is accepted, while `S-156` remains a deployment-only header-verification hold that cannot be closed from this workspace; the frontend trust/interaction and login/year-card follow-up rows `S-157..S-183` are accepted history, and the current locally executable target in `docs/SPRINT.md` is the new prod-first correction queue `S-184..S-192` for live route/access truth, one-screen wizard recovery, verification-first `Yhteenveto`, real `Ennuste` operator-board delivery, org-default `Poistosuunnitelmat`, item-level depreciation enforcement, report/readiness alignment, and a final live re-audit.
+5. The security/performance remediation queue `S-149..S-155` is accepted, while `S-156` remains a deployment-only header-verification hold that cannot be closed from this workspace; the frontend trust/interaction and login/year-card follow-up rows `S-157..S-183` and prod-first correction queue `S-184..S-192` are accepted history.
 6. The customer-facing workflow from login through VEETI connect, year import, year review, planning-baseline creation, and on to Forecast/Reports must remain unchanged in meaning while those fixes land: `Yhteenveto` remains a VEETI verification surface, `Ennuste` owns planning and depreciation behavior, live route/readiness truth must match backend scenario state, report-readiness gating stays truthful, and the 20-year planning model from customer source docs remains intact.
 
 **Dependencies:** Customer clarification baseline and canonical consistency.

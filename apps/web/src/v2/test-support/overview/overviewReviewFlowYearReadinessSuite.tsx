@@ -284,7 +284,7 @@ export function registerOverviewReviewFlowYearReadinessSuite() {
     ).toBeNull();
     await waitFor(() => {
       expect(screen.getAllByText(/0 EUR/).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/0 m3/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/0 m³/).length).toBeGreaterThan(0);
     });
   });
 
@@ -900,4 +900,3 @@ export function registerOverviewReviewFlowYearReadinessSuite() {
   });
   });
 }
-

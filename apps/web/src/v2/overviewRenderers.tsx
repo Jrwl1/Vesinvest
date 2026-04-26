@@ -5,7 +5,7 @@ import type {
   V2ImportYearDataResponse,
   V2ImportYearResultToZeroSignal,
 } from '../api';
-import { formatEur, formatNumber, formatPrice } from './format';
+import { formatEur, formatNumber, formatPrice, formatVolume } from './format';
 import {
   getImportYearTargetStatusLabel,
   getSourceLayerBadgeText,
@@ -371,7 +371,7 @@ export function renderOverviewStep2InlineFieldEditor({
       return wrapEditor(
         <label className="v2-inline-field-editor-control">
           <span className="v2-inline-field-editor-label">
-            {t('v2Overview.manualPriceWater', 'Water unit price (EUR/m3)')}
+            {t('v2Overview.manualPriceWater', 'Water usage fee (EUR/m³)')}
           </span>
           <input
             ref={setInlineCardFieldRef('waterUnitPrice')}
@@ -395,7 +395,7 @@ export function renderOverviewStep2InlineFieldEditor({
       return wrapEditor(
         <label className="v2-inline-field-editor-control">
           <span className="v2-inline-field-editor-label">
-            {t('v2Overview.manualPriceWastewater', 'Wastewater unit price (EUR/m3)')}
+            {t('v2Overview.manualPriceWastewater', 'Wastewater usage fee (EUR/m³)')}
           </span>
           <input
             ref={setInlineCardFieldRef('wastewaterUnitPrice')}
@@ -419,7 +419,7 @@ export function renderOverviewStep2InlineFieldEditor({
       return wrapEditor(
         <label className="v2-inline-field-editor-control">
           <span className="v2-inline-field-editor-label">
-            {t('v2Overview.manualVolumeWater', 'Sold water volume (m3)')}
+            {t('v2Overview.manualVolumeWater', 'Sold water volume (m³)')}
           </span>
           <input
             ref={setInlineCardFieldRef('soldWaterVolume')}
@@ -443,7 +443,7 @@ export function renderOverviewStep2InlineFieldEditor({
       return wrapEditor(
         <label className="v2-inline-field-editor-control">
           <span className="v2-inline-field-editor-label">
-            {t('v2Overview.manualVolumeWastewater', 'Sold wastewater volume (m3)')}
+            {t('v2Overview.manualVolumeWastewater', 'Sold wastewater volume (m³)')}
           </span>
           <input
             ref={setInlineCardFieldRef('soldWastewaterVolume')}
@@ -618,7 +618,7 @@ export function renderOverviewYearValuePreview({
       displayValue:
         Object.keys(waterVolumeRow).length === 0
           ? t('v2Overview.previewVeetiMissingValue', 'VEETI did not provide this value')
-          : `${formatNumber(volumes.soldWaterVolume)} m3`,
+          : formatVolume(volumes.soldWaterVolume),
     },
     {
       label: t('v2Overview.previewWastewaterVolumeLabel', 'Sold wastewater'),
@@ -629,7 +629,7 @@ export function renderOverviewYearValuePreview({
       displayValue:
         Object.keys(wastewaterVolumeRow).length === 0
           ? t('v2Overview.previewVeetiMissingValue', 'VEETI did not provide this value')
-          : `${formatNumber(volumes.soldWastewaterVolume)} m3`,
+          : formatVolume(volumes.soldWastewaterVolume),
     },
   ];
 

@@ -470,6 +470,7 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
         savedFeePathPlanId="plan-1"
         savedFeePathScenarioId="base-1"
         savedFeePathTariffPlanStatus="accepted"
+        savedFeePathAssetEvidenceReady={true}
         onFocusedReportChange={() => undefined}
       />,
     );

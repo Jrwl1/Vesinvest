@@ -9,7 +9,7 @@ import type {
   V2VesinvestPlanSummary,
 } from '../api';
 import type { DepreciationRuleDraft } from './forecastModel';
-import { formatEur,formatPercent,formatPrice } from './format';
+import { formatEur,formatPercent,formatPrice, formatVolume } from './format';
 import type { VesinvestBaselineYear } from './vesinvestPlanningModel';
 import {
   toneClass,
@@ -29,7 +29,7 @@ import {
   VesinvestRevisionSurface,
 } from './vesinvestPlanningSections';
 
-const assetEvidenceFields: Array<{
+export const assetEvidenceFields: Array<{
   key: keyof Pick<
     VesinvestDraft,
     | 'assetEvidenceState'
@@ -682,7 +682,7 @@ export function VesinvestBaselineReviewSection({
               ) : null}
               <div className="v2-keyvalue-row">
                 <span>{t('v2Vesinvest.baselineYearVolume', 'Combined sold volume')}</span>
-                <strong>{yearRow.combinedSoldVolume.toLocaleString()} m3</strong>
+                <strong>{formatVolume(yearRow.combinedSoldVolume)}</strong>
               </div>
             </article>
           ))}

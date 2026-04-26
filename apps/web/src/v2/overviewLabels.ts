@@ -426,11 +426,11 @@ export function getPriceComparisonLabel(
   key: PriceComparisonFieldKey,
 ): string {
   if (key === 'waterUnitPrice') {
-    return t('v2Overview.manualPriceWater', 'Water unit price (EUR/m3)');
+    return t('v2Overview.manualPriceWater', 'Water usage fee (EUR/m³)');
   }
   return t(
     'v2Overview.manualPriceWastewater',
-    'Wastewater unit price (EUR/m3)',
+      'Wastewater usage fee (EUR/m³)',
   );
 }
 
@@ -439,11 +439,11 @@ export function getVolumeComparisonLabel(
   key: VolumeComparisonFieldKey,
 ): string {
   if (key === 'soldWaterVolume') {
-    return t('v2Overview.manualVolumeWater', 'Sold water volume (m3)');
+    return t('v2Overview.manualVolumeWater', 'Sold water volume (m³)');
   }
   return t(
     'v2Overview.manualVolumeWastewater',
-    'Sold wastewater volume (m3)',
+      'Sold wastewater volume (m³)',
   );
 }
 

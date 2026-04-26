@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatVolume } from './format';
 import { toPercentPoints } from './forecastModel';
 import type { ForecastPageController } from './useForecastPageController';
 
@@ -124,7 +125,7 @@ export const ForecastRevenueSurface: React.FC<Props> = ({ controller }) => {
               <span>{t('v2Forecast.ctxSoldWater', 'Sold water')}</span>
               <strong>
                 {baselineContext
-                  ? `${formatNumber(baselineContext.soldWaterVolume)} m3`
+                  ? formatVolume(baselineContext.soldWaterVolume)
                   : t('v2Forecast.reportStateMissing')}
               </strong>
             </div>
@@ -132,7 +133,7 @@ export const ForecastRevenueSurface: React.FC<Props> = ({ controller }) => {
               <span>{t('v2Forecast.ctxSoldWastewater', 'Sold wastewater')}</span>
               <strong>
                 {baselineContext
-                  ? `${formatNumber(baselineContext.soldWastewaterVolume)} m3`
+                  ? formatVolume(baselineContext.soldWastewaterVolume)
                   : t('v2Forecast.reportStateMissing')}
               </strong>
             </div>
@@ -140,7 +141,7 @@ export const ForecastRevenueSurface: React.FC<Props> = ({ controller }) => {
               <span>{t('projection.scenario', 'Scenario')}</span>
               <strong>
                 {horizonYearSnapshot?.soldVolume != null
-                  ? `${formatNumber(horizonYearSnapshot.soldVolume)} m3`
+                  ? formatVolume(horizonYearSnapshot.soldVolume)
                   : t('v2Forecast.reportStateMissing')}
               </strong>
             </div>

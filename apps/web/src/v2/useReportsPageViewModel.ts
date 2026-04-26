@@ -141,6 +141,9 @@ export function useReportsPageViewModel({
     if (!savedFeePathAssetEvidenceReady) {
       return 'assetEvidenceIncomplete' as const;
     }
+    if (savedFeePathTariffPlanStatus === 'stale') {
+      return 'staleSavedFeePath' as const;
+    }
     if (savedFeePathTariffPlanStatus !== 'accepted') {
       return 'missingAcceptedTariffPlan' as const;
     }
@@ -274,6 +277,12 @@ export function useReportsPageViewModel({
       case 'staleSavedFeePath':
       case 'missingScenario':
         if (emptyStateReportReadinessReason === 'staleSavedFeePath') {
+          if (savedFeePathTariffPlanStatus === 'stale') {
+            return t(
+              'v2TariffPlan.acceptCurrentBeforeReports',
+              'Accept the current tariff plan before creating reports.',
+            );
+          }
           return t(
             'v2Forecast.staleComputeHint',
             'Saved inputs changed after the last calculation. Recompute results before creating report.',
@@ -289,7 +298,7 @@ export function useReportsPageViewModel({
           'Latest computed scenario can be published as a report.',
         );
     }
-  }, [emptyStateReportReadinessReason, t]);
+  }, [emptyStateReportReadinessReason, savedFeePathTariffPlanStatus, t]);
 
   const emptyStateCtaLabel = React.useMemo(() => {
     switch (emptyStateReportReadinessReason) {

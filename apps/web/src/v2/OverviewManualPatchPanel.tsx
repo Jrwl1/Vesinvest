@@ -1,7 +1,7 @@
 import React from 'react';
 import { DocumentImportPreviewDetails } from './DocumentImportPreviewDetails';
 import { getDocumentImportSelectedPageNumbers } from './documentPdfImportModel';
-import { formatEur,formatNumber,formatPrice } from './format';
+import { formatEur,formatNumber,formatPrice, formatVolume } from './format';
 import type { OverviewManualPatchViewModel } from './overviewManualPatchModel';
 import {
   ComparisonSection,
@@ -270,7 +270,7 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                   'Matches VEETI',
                 )}
                 rows={volumeComparisonRows}
-                formatValue={(value) => `${formatNumber(value)} m3`}
+                formatValue={(value) => formatVolume(value)}
                 onRestore={
                   canReapplyVolumesForYear ? handleModalApplyVeetiVolumes : null
                 }
@@ -573,7 +573,7 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
             </div>
             <div className="v2-manual-grid">
               <label>
-                {t('v2Overview.manualPriceWater', 'Water unit price (EUR/m3)')}
+                {t('v2Overview.manualPriceWater', 'Water usage fee (EUR/m³)')}
                 <input
                   ref={setInlineCardFieldRef('waterUnitPrice')}
                   className="v2-input"
@@ -593,7 +593,7 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
               <label>
                 {t(
                   'v2Overview.manualPriceWastewater',
-                  'Wastewater unit price (EUR/m3)',
+                  'Wastewater usage fee (EUR/m³)',
                 )}
                 <input
                   ref={setInlineCardFieldRef('wastewaterUnitPrice')}
@@ -622,7 +622,7 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
             </div>
             <div className="v2-manual-grid">
               <label>
-                {t('v2Overview.manualVolumeWater', 'Sold water volume (m3)')}
+                {t('v2Overview.manualVolumeWater', 'Sold water volume (m³)')}
                 <input
                   ref={setInlineCardFieldRef('soldWaterVolume')}
                   className="v2-input"
@@ -642,7 +642,7 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
               <label>
                 {t(
                   'v2Overview.manualVolumeWastewater',
-                  'Sold wastewater volume (m3)',
+                  'Sold wastewater volume (m³)',
                 )}
                 <input
                   ref={setInlineCardFieldRef('soldWastewaterVolume')}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Bar,CartesianGrid,ComposedChart,Legend,Line,ResponsiveContainer,Tooltip,XAxis,YAxis } from 'recharts';
+import { formatVolume } from './format';
 import type { ForecastPageController } from './useForecastPageController';
 type Props = { controller: ForecastPageController };
 export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
@@ -56,6 +57,7 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
     currentRequiredIncreaseFromToday,
     tariffDriverCards,
     primaryUnderfundingStartYear,
+    onGoToAssetManagement,
   } = controller;
   if (!scenario) return null;
   const editableScenarioTypeOptions: Array<typeof draftScenarioType> = scenario.onOletus
@@ -527,7 +529,10 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
                       : t('v2Forecast.openOtherOpexWorkbench', 'Open other operating costs')
                   }
                   onClick={() => {
-                    if (pillar.id === 'investments') setActiveWorkbench('investments');
+                    if (pillar.id === 'investments') {
+                      onGoToAssetManagement?.();
+                      return;
+                    }
                     if (pillar.id === 'revenues') setActiveWorkbench('revenue');
                     if (pillar.id === 'materials') setActiveWorkbench('materials');
                     if (pillar.id === 'personnel') setActiveWorkbench('personnel');
@@ -681,16 +686,16 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
                     {t('v2Forecast.ctxInvestments', 'Investments')}: <strong>{formatEur(baselineContext.investmentAmount)}</strong>
                   </span>
                   <span>
-                    {t('v2Forecast.ctxSoldWater', 'Sold water')}: <strong>{formatNumber(baselineContext.soldWaterVolume)} m3</strong>
+                    {t('v2Forecast.ctxSoldWater', 'Sold water')}: <strong>{formatVolume(baselineContext.soldWaterVolume)}</strong>
                   </span>
                   <span>
-                    {t('v2Forecast.ctxSoldWastewater', 'Sold wastewater')}: <strong>{formatNumber(baselineContext.soldWastewaterVolume)} m3</strong>
+                    {t('v2Forecast.ctxSoldWastewater', 'Sold wastewater')}: <strong>{formatVolume(baselineContext.soldWastewaterVolume)}</strong>
                   </span>
                   <span>
-                    {t('v2Forecast.ctxPumpedWater', 'Pumped water')}: <strong>{formatNumber(baselineContext.pumpedWaterVolume)} m3</strong>
+                    {t('v2Forecast.ctxPumpedWater', 'Pumped water')}: <strong>{formatVolume(baselineContext.pumpedWaterVolume)}</strong>
                   </span>
                   <span>
-                    {t('v2Forecast.ctxNetWaterTrade', 'Net water trade')}: <strong>{formatNumber(baselineContext.netWaterTradeVolume)} m3</strong>
+                    {t('v2Forecast.ctxNetWaterTrade', 'Net water trade')}: <strong>{formatVolume(baselineContext.netWaterTradeVolume)}</strong>
                   </span>
                   <span>
                     {t('v2Forecast.ctxProcessElectricity', 'Process electricity')}: <strong>{formatNumber(baselineContext.processElectricity)}</strong>

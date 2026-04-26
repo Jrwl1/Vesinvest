@@ -1,6 +1,5 @@
 import React from 'react';
 import { ForecastCockpitSurface } from './ForecastCockpitSurface';
-import { ForecastInvestmentSurface } from './ForecastInvestmentSurface';
 import { ForecastOpexSurface } from './ForecastOpexSurface';
 import { ForecastRevenueSurface } from './ForecastRevenueSurface';
 import { ForecastScenarioStrip } from './ForecastScenarioStrip';
@@ -28,35 +27,6 @@ export const EnnustePageV2: React.FC<Props> = (props) => {
         : null;
     targetSection?.scrollIntoView?.({ block: 'start', inline: 'nearest' });
   }, [controller.activeWorkbench]);
-
-  const investmentProgramSurface = (
-    <ForecastInvestmentSurface
-      t={controller.t}
-      depreciationRulesUnavailable={controller.depreciationRulesUnavailable}
-      investmentSummary={controller.investmentSummary}
-      forecastStateToneClass={controller.forecastStateToneClass}
-      forecastStateLabel={controller.forecastStateLabel}
-      investmentImpactSummary={controller.investmentImpactSummary}
-      hasInvestmentDepreciationErrors={controller.hasInvestmentDepreciationErrors}
-      invalidInvestmentDepreciationYears={controller.invalidInvestmentDepreciationYears}
-      renderInvestmentProgramRows={controller.renderInvestmentProgramRows}
-      nearTermInvestmentRows={controller.nearTermInvestmentRows}
-      investmentProgramGroupOptions={controller.investmentProgramGroupOptions}
-      longRangeInvestmentGroups={controller.longRangeInvestmentGroups}
-      renderInvestmentEditorRows={controller.renderInvestmentEditorRows}
-      denseAnalystMode={controller.denseAnalystMode}
-      busy={controller.busy}
-      draftInvestmentsCount={controller.draftInvestments.length}
-      onCopyFirstInvestmentToAll={controller.handleCopyFirstInvestmentToAll}
-      onRepeatNearTermInvestmentTemplate={
-        controller.handleRepeatNearTermInvestmentTemplate
-      }
-      onClearAllInvestments={controller.handleClearAllInvestments}
-      allInvestmentRows={controller.draftInvestments}
-      formatEur={controller.formatEur}
-      formatPrice={controller.formatPrice}
-    />
-  );
 
   return (
     <div className="v2-page v2-forecast-theme">
@@ -123,9 +93,42 @@ export const EnnustePageV2: React.FC<Props> = (props) => {
                           'Investment program',
                         )}
                       </h3>
+                      <p className="v2-muted">
+                        {controller.t(
+                          'v2Forecast.investmentProgramForecastReadOnly',
+                          'Investment rows are edited in Asset Management. Forecast uses the synced plan for calculations.',
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="v2-btn"
+                      onClick={() => controller.onGoToAssetManagement?.()}
+                    >
+                      {controller.t('v2Shell.tabs.assetManagement', 'Asset Management')}
+                    </button>
+                  </div>
+                  <div className="v2-kpi-strip">
+                    <div>
+                      <h3>{controller.t('v2Forecast.totalInvestments', 'Total investments')}</h3>
+                      <p>
+                        {controller.formatEur(
+                          controller.scenario.investmentSeries.reduce(
+                            (sum, row) => sum + row.amount,
+                            0,
+                          ),
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <h3>{controller.t('v2Forecast.forecastYears', 'Forecast years')}</h3>
+                      <p>{controller.scenario.years.length}</p>
+                    </div>
+                    <div>
+                      <h3>{controller.t('v2Forecast.computedVersion', 'Computed version')}</h3>
+                      <p>{controller.computedVersionLabel}</p>
                     </div>
                   </div>
-                  {investmentProgramSurface}
                 </section>
               </div>
 

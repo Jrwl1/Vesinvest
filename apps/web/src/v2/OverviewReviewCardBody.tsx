@@ -382,7 +382,7 @@ export const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
               />
             </label>
             <label>
-              {t('v2Overview.manualPriceWater', 'Water unit price (EUR/m3)')}
+              {t('v2Overview.manualPriceWater', 'Water usage fee (EUR/m³)')}
               <input
                 ref={setInlineCardFieldRef('waterUnitPrice')}
                 className="v2-input"
@@ -402,7 +402,7 @@ export const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
             <label>
               {t(
                 'v2Overview.manualPriceWastewater',
-                'Wastewater unit price (EUR/m3)',
+                'Wastewater usage fee (EUR/m³)',
               )}
               <input
                 ref={setInlineCardFieldRef('wastewaterUnitPrice')}
@@ -421,7 +421,7 @@ export const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
               />
             </label>
             <label>
-              {t('v2Overview.manualVolumeWater', 'Sold water volume (m3)')}
+              {t('v2Overview.manualVolumeWater', 'Sold water volume (m³)')}
               <input
                 ref={setInlineCardFieldRef('soldWaterVolume')}
                 className="v2-input"
@@ -441,7 +441,7 @@ export const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
             <label>
               {t(
                 'v2Overview.manualVolumeWastewater',
-                'Sold wastewater volume (m3)',
+                'Sold wastewater volume (m³)',
               )}
               <input
                 ref={setInlineCardFieldRef('soldWastewaterVolume')}

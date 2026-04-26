@@ -14,7 +14,7 @@ import {
   type V2TariffFeeKey,
   type V2TariffPlan,
 } from '../api';
-import { formatDateTime, formatEur, formatNumber, formatPercent, formatPrice } from './format';
+import { formatDateTime, formatEur, formatNumber, formatPercent, formatPrice, formatVolume } from './format';
 
 type Props = {
   onGoToAssetManagement: () => void;
@@ -65,6 +65,49 @@ const formatTariffUnit = (key: V2TariffFeeKey, value: number | null) => {
   return key === 'waterUsageFee' || key === 'wastewaterUsageFee'
     ? formatPrice(value)
     : formatEur(value, 2);
+};
+
+const UNRESOLVED_LABEL_KEYS: Record<string, { key: string; fallback: string }> = {
+  'current water price': {
+    key: 'v2TariffPlan.unresolvedCurrentWaterPrice',
+    fallback: 'current water price',
+  },
+  'current wastewater price': {
+    key: 'v2TariffPlan.unresolvedCurrentWastewaterPrice',
+    fallback: 'current wastewater price',
+  },
+  'sold water volume': {
+    key: 'v2TariffPlan.unresolvedSoldWaterVolume',
+    fallback: 'sold water volume',
+  },
+  'sold wastewater volume': {
+    key: 'v2TariffPlan.unresolvedSoldWastewaterVolume',
+    fallback: 'sold wastewater volume',
+  },
+  'base-fee revenue': {
+    key: 'v2TariffPlan.unresolvedBaseFeeRevenue',
+    fallback: 'base-fee revenue',
+  },
+  'connection count': {
+    key: 'v2TariffPlan.unresolvedConnectionCount',
+    fallback: 'connection count',
+  },
+  'connection-fee assumption': {
+    key: 'v2TariffPlan.unresolvedConnectionFeeAssumption',
+    fallback: 'connection-fee assumption',
+  },
+  'tariff revenue evidence': {
+    key: 'v2TariffPlan.unresolvedTariffRevenueEvidence',
+    fallback: 'tariff revenue evidence',
+  },
+  'cost evidence': {
+    key: 'v2TariffPlan.unresolvedCostEvidence',
+    fallback: 'cost evidence',
+  },
+  'returnable connection-fee liability': {
+    key: 'v2TariffPlan.unresolvedConnectionFeeLiability',
+    fallback: 'returnable connection-fee liability',
+  },
 };
 
 const getTariffStatusKey = (status: V2TariffPlan['status'] | null | undefined) => {
@@ -207,6 +250,25 @@ export const TariffPlanPageV2: React.FC<Props> = ({
         })
     );
   }, [allocationPolicy, baselineInput, tariffEvidence, tariffPlan]);
+  const formatUnresolvedAssumption = React.useCallback(
+    (value: string) => {
+      const label = UNRESOLVED_LABEL_KEYS[value];
+      return label ? t(label.key, label.fallback) : value;
+    },
+    [t],
+  );
+  const formatSmoothingStatus = React.useCallback(
+    (value: string) => {
+      if (value === 'ok') {
+        return t('v2TariffPlan.smoothingOk', 'within 15%');
+      }
+      if (value === 'exceeds_15_pct') {
+        return t('v2TariffPlan.smoothingExceeds', 'exceeds 15%');
+      }
+      return t('v2TariffPlan.smoothingMissing', 'missing');
+    },
+    [t],
+  );
 
   const loadTariffWorkspace = React.useCallback(async () => {
     setLoading(true);
@@ -814,14 +876,14 @@ export const TariffPlanPageV2: React.FC<Props> = ({
           </div>
           {tariffPlan.readinessChecklist.unresolvedManualAssumptions.length > 0 ? (
             <p className="v2-muted">
-              {t('v2TariffPlan.unresolved', 'Unresolved')}: {tariffPlan.readinessChecklist.unresolvedManualAssumptions.join(', ')}
+              {t('v2TariffPlan.unresolved', 'Unresolved')}: {tariffPlan.readinessChecklist.unresolvedManualAssumptions.map(formatUnresolvedAssumption).join(', ')}
             </p>
           ) : null}
           <p className="v2-muted">
-            {t('v2TariffPlan.smoothingStatus', '15% smoothing status')}: {tariffPlan.readinessChecklist.smoothingStatus}
+            {t('v2TariffPlan.smoothingStatus', '15% smoothing status')}: {formatSmoothingStatus(tariffPlan.readinessChecklist.smoothingStatus)}
           </p>
           <p className="v2-muted">
-            {t('v2TariffPlan.volumeSummary', 'Volumes')}: {formatNumber((baselineInput.soldWaterVolume ?? 0) + (baselineInput.soldWastewaterVolume ?? 0))}
+            {t('v2TariffPlan.volumeSummary', 'Volumes')}: {formatVolume((baselineInput.soldWaterVolume ?? 0) + (baselineInput.soldWastewaterVolume ?? 0))}
           </p>
         </section>
       ) : null}

@@ -5,7 +5,7 @@ import type {
   DocumentImportFieldMatch,
   DocumentImportPreview,
 } from './documentPdfImportModel';
-import { formatEur,formatNumber,formatPrice } from './format';
+import { formatEur,formatNumber,formatPrice, formatVolume } from './format';
 import {
   buildFinancialForm,
   buildPriceForm,
@@ -217,5 +217,5 @@ function formatMatchValue(
   if (datasetKind === 'prices') {
     return formatPrice(value);
   }
-  return `${formatNumber(value, 0)} m3`;
+  return formatVolume(value, 0);
 }

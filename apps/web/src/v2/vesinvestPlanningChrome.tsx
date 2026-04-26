@@ -364,6 +364,7 @@ export function VesinvestPlanStatusStrip({
   pricingReady,
   assetEvidenceReady,
   assetEvidenceMissingCount,
+  assetEvidenceMissingLabels,
 }: {
   t: TFunction;
   draft: VesinvestDraft;
@@ -375,6 +376,7 @@ export function VesinvestPlanStatusStrip({
   pricingReady: boolean;
   assetEvidenceReady: boolean;
   assetEvidenceMissingCount: number;
+  assetEvidenceMissingLabels: string[];
 }) {
   const pricingTone =
     pricingStatus === 'verified' || pricingStatus === 'provisional' || pricingStatus === 'blocked'
@@ -452,6 +454,9 @@ export function VesinvestPlanStatusStrip({
                       '{{count}} asset evidence area(s) still need input before tariff planning is ready.',
                       { count: assetEvidenceMissingCount },
                     )
+                    + (assetEvidenceMissingLabels.length > 0
+                      ? ` ${assetEvidenceMissingLabels.join(', ')}.`
+                      : '')
                 : baselineVerified
                   ? t(
                       'v2Vesinvest.pricingPlanMissingHint',

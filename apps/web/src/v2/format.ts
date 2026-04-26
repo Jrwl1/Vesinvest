@@ -35,7 +35,7 @@ export function formatPrice(value: number | null | undefined): string {
   return `${value.toLocaleString(getActiveLocale(), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })} EUR/m3`;
+  })} EUR/m³`;
 }
 
 export function formatPercent(value: number | null | undefined): string {
@@ -52,6 +52,10 @@ export function formatNumber(value: number, digits = 0): string {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
+}
+
+export function formatVolume(value: number, digits = 0): string {
+  return `${formatNumber(value, digits)} m³`;
 }
 
 export function formatDateTime(

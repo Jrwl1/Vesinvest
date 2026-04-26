@@ -15,6 +15,7 @@ import {
 import { VesinvestPlanningInvestmentWorkspace } from './vesinvestPlanningInvestmentWorkspace';
 import { type VesinvestLinkedOrg } from './vesinvestPlanningModel';
 import {
+  assetEvidenceFields,
   VesinvestAssetEvidenceSection,
   VesinvestBaselineReviewSection,
   VesinvestDepreciationPlanSection,
@@ -70,6 +71,23 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     onSavedFeePathReportConflict,
     onPlansChanged,
   });
+
+  const assetEvidenceMissingLabels = React.useMemo(
+    () =>
+      assetEvidenceFields
+        .filter((field) => {
+          const value = controller.draft[field.key];
+          return (
+            value == null ||
+            typeof value !== 'object' ||
+            Array.isArray(value) ||
+            typeof (value as { notes?: unknown }).notes !== 'string' ||
+            (value as { notes: string }).notes.trim().length === 0
+          );
+        })
+        .map((field) => t(field.labelKey, field.fallbackLabel)),
+    [controller.draft, t],
+  );
 
   const loadingState =
     controller.loading || controller.loadingPlan ? (
@@ -195,6 +213,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         pricingReady={controller.pricingReady}
         assetEvidenceReady={controller.assetEvidenceReady}
         assetEvidenceMissingCount={controller.assetEvidenceMissingCount}
+        assetEvidenceMissingLabels={assetEvidenceMissingLabels}
       />
 
       <VesinvestWorkspaceTabs

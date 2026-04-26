@@ -108,6 +108,8 @@ const buildScenarioController = (overrides?: Record<string, unknown>) => ({
         id: 'plan-1',
         selectedScenarioId: 'scenario-1',
         classificationReviewRequired: false,
+        assetEvidenceReady: true,
+        tariffPlanStatus: 'accepted',
       },
     },
     baselineYears: [buildBaselineYear()],

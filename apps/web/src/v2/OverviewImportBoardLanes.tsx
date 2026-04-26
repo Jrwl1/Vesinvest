@@ -2,7 +2,7 @@ import React from 'react';
 import type { TFunction } from 'i18next';
 
 import type { V2ImportYearDataResponse } from '../api';
-import { formatEur, formatNumber, formatPrice } from './format';
+import { formatEur, formatNumber, formatPrice, formatVolume } from './format';
 import {
   buildPriceForm,
   buildVolumeForm,
@@ -246,7 +246,7 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                   !row.completeness.volume_vesi ||
                   Object.keys(waterVolumeRow).length === 0
                     ? t('v2Overview.checkMissing', 'Missing')
-                    : `${formatNumber(volumeForm.soldWaterVolume)} m3`,
+                    : formatVolume(volumeForm.soldWaterVolume),
               },
               {
                 label: t(
@@ -264,7 +264,7 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                   !row.completeness.volume_jatevesi ||
                   Object.keys(wastewaterVolumeRow).length === 0
                     ? t('v2Overview.checkMissing', 'Missing')
-                    : `${formatNumber(volumeForm.soldWastewaterVolume)} m3`,
+                    : formatVolume(volumeForm.soldWastewaterVolume),
               },
             ];
             const sourceLayers: ImportYearSourceLayer[] =

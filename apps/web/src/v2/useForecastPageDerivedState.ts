@@ -2,7 +2,7 @@ import React from 'react';
 import type { TFunction } from 'i18next';
 
 import type { V2OverrideProvenance } from '../api';
-import { formatEur, formatNumber, formatPercent, formatPrice } from './format';
+import { formatEur, formatNumber, formatPercent, formatPrice, formatVolume } from './format';
 import {
   ASSUMPTION_LABEL_KEYS,
   formatSignedEur,
@@ -310,10 +310,10 @@ export function useForecastPageDerivedState({
         id: 'revenues',
         title: t('v2Forecast.pillarRevenue', 'Revenue'),
         baseline: baselineContext
-          ? `${formatPrice(scenarioController.scenario?.baselinePriceTodayCombined ?? 0)} · ${formatNumber(baselineVolume)} m3`
+          ? `${formatPrice(scenarioController.scenario?.baselinePriceTodayCombined ?? 0)} · ${formatVolume(baselineVolume)}`
           : formatPrice(scenarioController.scenario?.baselinePriceTodayCombined ?? 0),
         scenario: scenarioController.latestPricePoint
-          ? `${formatPrice(scenarioController.latestPricePoint.combinedPrice)} · ${formatNumber(horizonYearSnapshot?.soldVolume ?? baselineYearSnapshot?.soldVolume ?? 0)} m3`
+          ? `${formatPrice(scenarioController.latestPricePoint.combinedPrice)} · ${formatVolume(horizonYearSnapshot?.soldVolume ?? baselineYearSnapshot?.soldVolume ?? 0)}`
           : t('v2Forecast.reportStateMissing'),
         delta:
           scenarioController.scenario?.requiredAnnualIncreasePctAnnualResult != null
@@ -505,7 +505,7 @@ export function useForecastPageDerivedState({
           },
           {
             label: t('v2Vesinvest.baselineYearVolume', 'Combined sold volume'),
-            value: `${formatNumber(baselineVolume || horizonVolume, 0)} m3`,
+            value: formatVolume(baselineVolume || horizonVolume, 0),
           },
           {
             label: t('v2Forecast.provenanceLabel', 'Source'),

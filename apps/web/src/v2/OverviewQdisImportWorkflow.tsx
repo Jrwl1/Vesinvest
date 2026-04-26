@@ -108,19 +108,19 @@ export const OverviewQdisImportWorkflow: React.FC<Props> = ({
                     ? t('v2Overview.previewMissingValue', 'Missing data')
                     : row.key.includes('Price')
                     ? formatPrice(row.veetiValue)
-                    : `${formatNumber(row.veetiValue)} m3`}
+                    : `${formatNumber(row.veetiValue)} m³`}
                 </span>
                 <span>
                   {row.pdfValue == null
                     ? t('v2Overview.previewMissingValue', 'Missing data')
                     : row.key.includes('Price')
                     ? formatPrice(row.pdfValue)
-                    : `${formatNumber(row.pdfValue)} m3`}
+                    : `${formatNumber(row.pdfValue)} m³`}
                 </span>
                 <span>
                   {row.key.includes('Price')
                     ? formatPrice(row.currentValue)
-                    : `${formatNumber(row.currentValue)} m3`}
+                    : `${formatNumber(row.currentValue)} m³`}
                 </span>
               </div>
             ))}

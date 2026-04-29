@@ -1022,49 +1022,25 @@
   }
 
   .v2-workflow-strip {
-    gap: 2px;
+    gap: 6px;
   }
 
   .v2-workflow-step {
     border: 0;
     border-radius: 6px;
     background: transparent;
-    padding: 2px 5px;
+    padding: 2px 6px;
     font-size: 0.68rem;
     color: var(--v2-muted);
   }
 
   .v2-workflow-step strong {
-    color: var(--v2-muted);
-    font-size: 0.66rem;
-    font-weight: 650;
-  }
-
-  .v2-workflow-step strong::before {
-    content: '\00b7';
-    margin: 0 4px 0 1px;
-    color: var(--v2-border-strong);
+    display: none;
   }
 
   .v2-workflow-step.active {
     background: rgba(43, 79, 136, 0.08);
     color: var(--v2-primary);
-  }
-
-  .v2-workflow-step.active strong {
-    color: var(--v2-primary);
-  }
-
-  .v2-workflow-step-positive strong {
-    color: #2f6b4d;
-  }
-
-  .v2-workflow-step-warning strong {
-    color: #8a5c18;
-  }
-
-  .v2-workflow-step-danger strong {
-    color: var(--v2-danger);
   }
 
   .v2-header-statuses {

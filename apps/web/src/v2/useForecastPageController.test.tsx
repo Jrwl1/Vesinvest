@@ -109,6 +109,7 @@ const buildScenarioController = (overrides?: Record<string, unknown>) => ({
         selectedScenarioId: 'scenario-1',
         classificationReviewRequired: false,
         assetEvidenceReady: true,
+        assetEvidenceMissingCount: 0,
         tariffPlanStatus: 'accepted',
       },
     },

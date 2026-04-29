@@ -539,6 +539,7 @@ export function useForecastPageController({
     getScenarioDisplayName,
     normalizeImportedFileName,
     onGoToAssetManagement,
+    onGoToOverviewFeePath,
     RISK_PRESETS,
   };
 }

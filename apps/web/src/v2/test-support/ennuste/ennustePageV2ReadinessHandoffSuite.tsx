@@ -333,6 +333,8 @@ const buildVesinvestPlanSummary = (selectedScenarioId = 'base-1') => ({
   lastReviewedAt: '2026-03-09T07:05:00.000Z',
   reviewDueAt: '2029-03-09T07:05:00.000Z',
   classificationReviewRequired: false,
+  assetEvidenceReady: true,
+  assetEvidenceMissingCount: 0,
   baselineChangedSinceAcceptedRevision: false,
   investmentPlanChangedSinceFeeRecommendation: false,
   baselineFingerprint: 'baseline-fingerprint',
@@ -550,23 +552,15 @@ export function registerEnnustePageV2ReadinessHandoffSuite() {
     await screen.findAllByText('Current results');
 
     expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Create report' })).toBeNull();
     expect(
-      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
-        .disabled,
+      screen
+        .getAllByRole('button', { name: 'Asset Management' })
+        .some((button) => button.className.includes('v2-btn-primary')),
     ).toBe(true);
-    expect(
-      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
-        .title,
-    ).toContain('Review and save the Vesinvest class plan before creating a report.');
-    expect(screen.getByRole('button', { name: 'Create report' }).className).toContain(
-      'v2-btn-primary',
-    );
-    expect(
-      screen.getByRole('button', { name: 'Recompute results' }).className,
-    ).not.toContain('v2-btn-primary');
   });
 
-  it('keeps report creation primary when the selected scenario is not the active Vesinvest revision', async () => {
+  it('routes report creation blockers to Asset Management when the selected scenario is not the active Vesinvest revision', async () => {
     getPlanningContextV2.mockResolvedValueOnce(buildPlanningContext('stress-1'));
 
     render(
@@ -581,20 +575,12 @@ export function registerEnnustePageV2ReadinessHandoffSuite() {
 
     await screen.findAllByText('Current results');
 
+    expect(screen.queryByRole('button', { name: 'Create report' })).toBeNull();
     expect(
-      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
-        .disabled,
+      screen
+        .getAllByRole('button', { name: 'Asset Management' })
+        .some((button) => button.className.includes('v2-btn-primary')),
     ).toBe(true);
-    expect(
-      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
-        .title,
-    ).toContain('Select an active Vesinvest revision before creating a report.');
-    expect(screen.getByRole('button', { name: 'Create report' }).className).toContain(
-      'v2-btn-primary',
-    );
-    expect(
-      screen.getByRole('button', { name: 'Recompute results' }).className,
-    ).not.toContain('v2-btn-primary');
   });
 
   it('returns stale report creation to the saved fee path instead of showing the generic recompute blocker', async () => {

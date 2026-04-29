@@ -326,12 +326,15 @@ const buildVesinvestPlanSummary = (selectedScenarioId = 'base-1') => ({
   status: 'active',
   baselineStatus: 'verified',
   pricingStatus: 'verified',
+  tariffPlanStatus: 'accepted',
   selectedScenarioId,
   projectCount: 2,
   totalInvestmentAmount: 245000,
   lastReviewedAt: '2026-03-09T07:05:00.000Z',
   reviewDueAt: '2029-03-09T07:05:00.000Z',
   classificationReviewRequired: false,
+  assetEvidenceReady: true,
+  assetEvidenceMissingCount: 0,
   baselineChangedSinceAcceptedRevision: false,
   investmentPlanChangedSinceFeeRecommendation: false,
   baselineFingerprint: 'baseline-fingerprint',
@@ -565,18 +568,25 @@ export function registerEnnustePageV2SmokeSuite() {
     expect(screen.queryByText('Funding pressure and result views')).toBeNull();
     const investmentWorkbench = await openInvestmentWorkbench();
     expect(investmentWorkbench).toBeTruthy();
-    expect(screen.getByText('Main line renewal')).toBeTruthy();
-    expect(screen.getAllByText('P-001').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Water network rehabilitation').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Straight-line 40 years').length).toBeGreaterThan(0);
-    expect(screen.getAllByDisplayValue('70000').length).toBeGreaterThan(0);
-    expect(screen.getAllByDisplayValue('50000').length).toBeGreaterThan(0);
-    expect(document.querySelector('datalist#v2-investment-program-group-options')).toBeNull();
-    expect(screen.getByText('Full annual table')).toBeTruthy();
-    fireEvent.click(screen.getByText('Full annual table'));
     expect(
-      await screen.findByRole('button', { name: 'Repeat near-term template' }),
+      within(investmentWorkbench).getByText(
+        'Investment rows are edited in Asset Management. Forecast uses the synced plan for calculations.',
+      ),
     ).toBeTruthy();
+    expect(
+      within(investmentWorkbench).getAllByRole('button', { name: 'Asset Management' })
+        .length,
+    ).toBeGreaterThan(0);
+    expect(within(investmentWorkbench).getAllByText('Total investments').length).toBeGreaterThan(0);
+    expect(within(investmentWorkbench).getByText('Forecast years')).toBeTruthy();
+    expect(within(investmentWorkbench).getByText('Computed version')).toBeTruthy();
+    expect(screen.queryByText('Main line renewal')).toBeNull();
+    expect(screen.queryByText('P-001')).toBeNull();
+    expect(screen.queryByDisplayValue('70000')).toBeNull();
+    expect(screen.queryByDisplayValue('50000')).toBeNull();
+    expect(document.querySelector('datalist#v2-investment-program-group-options')).toBeNull();
+    expect(screen.queryByText('Full annual table')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Repeat near-term template' })).toBeNull();
     expect(document.querySelector('input[name="yearlyInvestmentCategory-2024"]')).toBeNull();
     expect(document.querySelector('select[name="yearlyInvestmentType-2024"]')).toBeNull();
     expect(document.querySelector('select[name="yearlyInvestmentConfidence-2024"]')).toBeNull();
@@ -718,4 +728,3 @@ export function registerEnnustePageV2SmokeSuite() {
 
   });
 }
-

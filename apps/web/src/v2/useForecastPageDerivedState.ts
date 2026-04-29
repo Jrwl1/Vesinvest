@@ -41,7 +41,12 @@ export function useForecastPageDerivedState({
     if (activePlan.classificationReviewRequired) {
       return 'classificationReviewRequired' as const;
     }
-    if (activePlan.assetEvidenceReady === false) {
+    if (
+      !(
+        activePlan.assetEvidenceReady === true &&
+        activePlan.assetEvidenceMissingCount === 0
+      )
+    ) {
       return 'assetEvidenceIncomplete' as const;
     }
     if (activePlan.tariffPlanStatus !== 'accepted') {

@@ -64,17 +64,6 @@ export function AppShellV2Header({
             <span className="v2-brand-title">{t('app.title', 'Vesinvest')}</span>
             <span className="v2-brand-subtitle">{t('v2Shell.subtitle', 'Financial planning')}</span>
           </div>
-          <div className="v2-brand-meta">
-            {shellBackLabel ? (
-              <button type="button" className="v2-shell-back-btn" onClick={onBack}>
-                {shellBackLabel}
-              </button>
-            ) : null}
-            <div className="v2-page-indicator" aria-live="polite">
-              <span>{pageIndicatorCaption}</span>
-              <strong>{pageIndicatorLabel}</strong>
-            </div>
-          </div>
         </div>
 
         <nav className="v2-main-nav" aria-label={t('v2Shell.mainNavigation', 'Main navigation')}>
@@ -129,28 +118,42 @@ export function AppShellV2Header({
         </div>
       </div>
       <div className="v2-header-meta">
-        <div
-          className="v2-workflow-strip"
-          aria-label={t('v2Shell.workflowStrip', 'Workflow status')}
-        >
-          {TABS.map((tab) => {
-            const status = tabStatuses[tab];
-            return (
-              <button
-                key={tab}
-                type="button"
-                className={`v2-workflow-step ${activeTab === tab ? 'active' : ''} v2-workflow-step-${status.tone}`}
-                onClick={() => handleTabChange(tab)}
-                onMouseEnter={() => preloadTab(tab)}
-                aria-current={activeTab === tab ? 'step' : undefined}
-                aria-disabled={isTabLocked(tab) || undefined}
-                title={`${workflowLabels[tab]}: ${status.label}`}
-              >
-                <span>{workflowLabels[tab]}</span>
-                <strong>{status.label}</strong>
-              </button>
-            );
-          })}
+        <div className="v2-header-context">
+          {shellBackLabel ? (
+            <button type="button" className="v2-shell-back-btn" onClick={onBack}>
+              {shellBackLabel}
+            </button>
+          ) : null}
+          <div className="v2-page-indicator" aria-live="polite">
+            <span>{pageIndicatorCaption}</span>
+            <strong>{pageIndicatorLabel}</strong>
+          </div>
+          <div
+            className="v2-workflow-strip"
+            aria-label={t('v2Shell.workflowStrip', 'Workflow status')}
+          >
+            {TABS.map((tab) => {
+              const status = tabStatuses[tab];
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  className={`v2-workflow-step ${activeTab === tab ? 'active' : ''} v2-workflow-step-${status.tone}`}
+                  onClick={() => handleTabChange(tab)}
+                  onMouseEnter={() => preloadTab(tab)}
+                  aria-current={activeTab === tab ? 'step' : undefined}
+                  aria-disabled={isTabLocked(tab) || undefined}
+                  aria-label={t('v2Shell.workflowStepAria', {
+                    step: workflowLabels[tab],
+                    status: status.label,
+                  })}
+                  title={`${workflowLabels[tab]}: ${status.label}`}
+                >
+                  <span>{workflowLabels[tab]}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className="v2-header-statuses">
           <span className={`v2-badge ${connectionChipToneClass}`}>{connectionChipLabel}</span>

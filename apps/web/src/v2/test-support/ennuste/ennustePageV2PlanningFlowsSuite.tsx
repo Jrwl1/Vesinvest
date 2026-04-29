@@ -328,12 +328,15 @@ const buildVesinvestPlanSummary = (selectedScenarioId = 'base-1') => ({
   status: 'active',
   baselineStatus: 'verified',
   pricingStatus: 'verified',
+  tariffPlanStatus: 'accepted',
   selectedScenarioId,
   projectCount: 2,
   totalInvestmentAmount: 245000,
   lastReviewedAt: '2026-03-09T07:05:00.000Z',
   reviewDueAt: '2029-03-09T07:05:00.000Z',
   classificationReviewRequired: false,
+  assetEvidenceReady: true,
+  assetEvidenceMissingCount: 0,
   baselineChangedSinceAcceptedRevision: false,
   investmentPlanChangedSinceFeeRecommendation: false,
   baselineFingerprint: 'baseline-fingerprint',
@@ -580,7 +583,7 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
     );
   });
 
-  it('shows the saved investment-plan effect on depreciation, tariff pressure, and cash impact after recompute', async () => {
+  it('shows the synced investment-plan effect on depreciation, tariff pressure, and cash impact after recompute', async () => {
     const updatedScenario = {
       ...buildBaseScenario(),
       updatedAt: '2026-03-09T09:00:00.000Z',
@@ -655,7 +658,6 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
         { year: 2043, cashflow: 8000, cumulativeCashflow: 42000 },
       ],
     };
-    updateForecastScenarioV2.mockResolvedValue(updatedScenario);
     computeForecastScenarioV2.mockResolvedValue(computedScenario);
 
     render(
@@ -671,21 +673,19 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
     const investmentProgramSection = await openInvestmentWorkbench();
     const investmentProgramWithin = within(investmentProgramSection);
 
-    fireEvent.change(
-      investmentProgramWithin.getByRole('spinbutton', { name: 'Total EUR 2024' }),
-      {
-        target: { value: '150000' },
-      },
-    );
-
-    expect(investmentProgramWithin.getByText('Investment plan effect')).toBeTruthy();
     expect(
-      investmentProgramWithin.getAllByText(
-        (content) => content.includes('275') && content.includes('EUR'),
-      ).length,
-    ).toBeGreaterThan(0);
+      investmentProgramWithin.getByText(
+        'Investment rows are edited in Asset Management. Forecast uses the synced plan for calculations.',
+      ),
+    ).toBeTruthy();
+    expect(
+      investmentProgramWithin.getByRole('button', { name: 'Asset Management' }),
+    ).toBeTruthy();
+    expect(
+      investmentProgramWithin.queryByRole('spinbutton', { name: 'Total EUR 2024' }),
+    ).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save and compute results' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Recompute results' }));
 
     await waitFor(() => {
       expect(computeForecastScenarioV2).toHaveBeenCalledWith('base-1');
@@ -695,6 +695,11 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
       expect(screen.getByText('Scenario calculated.')).toBeTruthy();
       expect(screen.getAllByText('Current results').length).toBeGreaterThan(0);
     });
+    expect(
+      screen.getAllByText(
+        (content) => content.includes('275') && content.includes('EUR'),
+      ).length,
+    ).toBeGreaterThan(0);
   });
 
   it('keeps compute-backed KPI values stable after save-only updates and clears report readiness until recompute', async () => {
@@ -753,7 +758,7 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
     );
 
     expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
-    expect(screen.getAllByText(/2[,.]70 EUR\/m3/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/2[,.]70 EUR\/m(?:3|³)/).length).toBeGreaterThan(0);
     expect(
       (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
         .disabled,
@@ -789,9 +794,7 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
     expect(
       screen.getByRole('button', { name: 'Recompute results' }).className,
     ).toContain('v2-btn-primary');
-    expect(screen.getByRole('button', { name: 'Create report' }).className).not.toContain(
-      'v2-btn-primary',
-    );
+    expect(screen.queryByRole('button', { name: 'Create report' })).toBeNull();
   });
 
   it('shows unsaved changes as blocked and points the top strip back to save-and-compute', async () => {
@@ -820,26 +823,13 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
 
     expect(await screen.findAllByText('Unsaved changes')).not.toHaveLength(0);
     expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0);
-    expect(
-      (
-        screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement
-      ).title,
-    ).toContain(
-      'You have unsaved changes. Save and compute results before creating report.',
-    );
     expect(screen.getAllByText('Save and compute results').length).toBeGreaterThan(
       0,
     );
-    expect(
-      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Create report' })).toBeNull();
     expect(
       screen.getByRole('button', { name: 'Save and compute results' }).className,
     ).toContain('v2-btn-primary');
-    expect(screen.getByRole('button', { name: 'Create report' }).className).not.toContain(
-      'v2-btn-primary',
-    );
   });
 
   it('switches from computing back to current report-ready truth after recompute finishes', async () => {
@@ -867,15 +857,9 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
       ).disabled,
     ).toBe(true);
     expect(
-      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
-    expect(
       screen.getByRole('button', { name: 'Computing results...' }).className,
     ).toContain('v2-btn-primary');
-    expect(screen.getByRole('button', { name: 'Create report' }).className).not.toContain(
-      'v2-btn-primary',
-    );
+    expect(screen.queryByRole('button', { name: 'Create report' })).toBeNull();
 
     pendingCompute.resolve({
       ...buildBaseScenario(),
@@ -1088,7 +1072,7 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
     );
   });
 
-  it('keeps depreciation impact in Forecast but removes the old depreciation planning workbench', async () => {
+  it('keeps synced investment context in Forecast but removes the old depreciation planning workbench', async () => {
     render(
       <EnnustePageV2
         onReportCreated={() => undefined}
@@ -1101,8 +1085,13 @@ export function registerEnnustePageV2PlanningFlowsSuite() {
 
     await openInvestmentWorkbench();
 
-    expect(await screen.findByText('Investment plan effect')).toBeTruthy();
-    expect(screen.getAllByText('Total depreciation').length).toBeGreaterThan(0);
+    expect(
+      await screen.findByText(
+        'Investment rows are edited in Asset Management. Forecast uses the synced plan for calculations.',
+      ),
+    ).toBeTruthy();
+    expect(screen.getAllByText('Total investments').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Computed version').length).toBeGreaterThan(0);
     expect(
       screen.queryByRole('button', { name: 'Open depreciation planning' }),
     ).toBeNull();

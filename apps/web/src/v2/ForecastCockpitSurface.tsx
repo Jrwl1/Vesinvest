@@ -18,6 +18,7 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
     reportReadinessToneClass,
     reportReadinessLabel,
     reportReadinessHint,
+    reportReadinessReason,
     canCreateReport,
     reportBlockerNeedsComputeAction,
     handleGenerateReport,
@@ -58,8 +59,11 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
     tariffDriverCards,
     primaryUnderfundingStartYear,
     onGoToAssetManagement,
+    onGoToOverviewFeePath,
+    planningContext,
   } = controller;
   if (!scenario) return null;
+  const activePlanId = planningContext?.vesinvest?.activePlan?.id ?? null;
   const editableScenarioTypeOptions: Array<typeof draftScenarioType> = scenario.onOletus
     ? ['base']
     : scenarioTypeOptions.filter((option): option is Exclude<typeof draftScenarioType, 'base'> => option !== 'base');
@@ -205,57 +209,53 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
                 </button>
               </>
             ) : reportBlockerNeedsComputeAction ? (
-              <>
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-primary"
-                  onClick={handleCompute}
-                  disabled={
-                    busy ||
-                    !scenario ||
-                    hasNearTermValidationErrors ||
-                    hasMissingDepreciationRules
-                  }
-                  title={blockedForecastActionHint}
-                >
-                  {computeButtonLabel}
-                </button>
-                <button
-                  type="button"
-                  className="v2-btn"
-                  onClick={handleGenerateReport}
-                  disabled={busy || !canCreateReport}
-                  title={!canCreateReport ? reportReadinessHint ?? undefined : undefined}
-                >
-                  {t('v2Forecast.createReport', 'Create report')}
-                </button>
-              </>
+              <button
+                type="button"
+                className="v2-btn v2-btn-primary"
+                onClick={handleCompute}
+                disabled={
+                  busy ||
+                  !scenario ||
+                  hasNearTermValidationErrors ||
+                  hasMissingDepreciationRules
+                }
+                title={blockedForecastActionHint}
+              >
+                {computeButtonLabel}
+              </button>
+            ) : reportReadinessReason === 'tariffPlanRequired' && activePlanId ? (
+              <button
+                type="button"
+                className="v2-btn v2-btn-primary"
+                onClick={() => onGoToOverviewFeePath?.(activePlanId)}
+              >
+                {t('v2Forecast.openTariffPlan', 'Open Tariff Plan')}
+              </button>
+            ) : reportReadinessReason === 'assetEvidenceIncomplete' ||
+              reportReadinessReason === 'classificationReviewRequired' ||
+              reportReadinessReason === 'missingActivePlanLink' ? (
+              <button
+                type="button"
+                className="v2-btn v2-btn-primary"
+                onClick={() => onGoToAssetManagement?.()}
+              >
+                {t('v2Shell.tabs.assetManagement', 'Asset Management')}
+              </button>
             ) : (
-              <>
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-primary"
-                  onClick={handleGenerateReport}
-                  disabled={busy || !canCreateReport}
-                  title={!canCreateReport ? reportReadinessHint ?? undefined : undefined}
-                >
-                  {t('v2Forecast.createReport', 'Create report')}
-                </button>
-                <button
-                  type="button"
-                  className="v2-btn"
-                  onClick={handleCompute}
-                  disabled={
-                    busy ||
-                    !scenario ||
-                    hasNearTermValidationErrors ||
-                    hasMissingDepreciationRules
-                  }
-                  title={blockedForecastActionHint}
-                >
-                  {computeButtonLabel}
-                </button>
-              </>
+              <button
+                type="button"
+                className="v2-btn"
+                onClick={handleCompute}
+                disabled={
+                  busy ||
+                  !scenario ||
+                  hasNearTermValidationErrors ||
+                  hasMissingDepreciationRules
+                }
+                title={blockedForecastActionHint ?? reportReadinessHint ?? undefined}
+              >
+                {computeButtonLabel}
+              </button>
             )}
           </div>
           <div

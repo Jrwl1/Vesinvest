@@ -1,4 +1,5 @@
 import React from 'react';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -72,6 +73,20 @@ const parseInputNumber = (value: string): number | null => {
 };
 
 const unitLabel = (label: string, unit?: string) => (unit ? `${label} (${unit})` : label);
+
+const connectionFeeBasisDisplayValue = (
+  t: TFunction,
+  value: string | null | undefined,
+) => {
+  const trimmed = value?.trim() ?? '';
+  if (!trimmed) {
+    return '';
+  }
+  if (trimmed === 'per_connection') {
+    return t('v2TariffPlan.connectionFeeBasisPerConnection', 'Per connection');
+  }
+  return trimmed;
+};
 
 const formatTariffUnit = (key: V2TariffFeeKey, value: number | null) => {
   if (value == null || !Number.isFinite(value)) {
@@ -800,7 +815,7 @@ export const TariffPlanPageV2: React.FC<Props> = ({
             <span>{t('v2TariffPlan.connectionFeeBasis', 'Connection fee basis')}</span>
             <input
               className="v2-input"
-              value={baselineInput.connectionFeeBasis ?? ''}
+              value={connectionFeeBasisDisplayValue(t, baselineInput.connectionFeeBasis)}
               onChange={(event) => updateBaselineText('connectionFeeBasis', event.target.value)}
             />
           </label>

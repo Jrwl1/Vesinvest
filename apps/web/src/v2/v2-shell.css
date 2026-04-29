@@ -902,6 +902,13 @@
   color: var(--v2-danger);
 }
 
+.v2-header-context {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
 @media (max-width: 1024px) {
   .v2-app-header-inner {
     grid-template-columns: 1fr auto;
@@ -1063,5 +1070,132 @@
 
   .v2-header-statuses .v2-org-chip > span {
     font-size: 0.66rem;
+  }
+}
+
+/* Final desktop shell layout: keep brand, tabs, and workspace truth in separate rows. */
+.v2-app-header,
+.v2-app-shell.v2-app-shell-forecast .v2-app-header,
+.v2-app-shell.v2-app-shell-reports .v2-app-header {
+  padding: 10px 24px 8px;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.v2-app-header-inner,
+.v2-app-shell.v2-app-shell-forecast .v2-app-header-inner,
+.v2-app-shell.v2-app-shell-reports .v2-app-header-inner {
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--v2-border);
+  border-radius: 10px;
+  background: var(--v2-surface-strong);
+  box-shadow: 0 2px 8px rgba(24, 33, 45, 0.08);
+  color: var(--v2-text);
+}
+
+.v2-brand-block {
+  gap: 0;
+}
+
+.v2-brand-title {
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.v2-brand-subtitle,
+.v2-app-shell.v2-app-shell-forecast .v2-brand-subtitle,
+.v2-app-shell.v2-app-shell-reports .v2-brand-subtitle {
+  letter-spacing: 0.05em;
+}
+
+.v2-main-nav,
+.v2-app-shell.v2-app-shell-forecast .v2-main-nav,
+.v2-app-shell.v2-app-shell-reports .v2-main-nav {
+  min-width: 0;
+  justify-content: center;
+  gap: 3px;
+  overflow-x: auto;
+}
+
+.v2-nav-btn,
+.v2-app-shell.v2-app-shell-forecast .v2-nav-btn,
+.v2-app-shell.v2-app-shell-reports .v2-nav-btn {
+  padding: 6px 8px;
+  gap: 5px;
+  font-size: 0.76rem;
+  border-radius: 8px;
+}
+
+.v2-nav-status-label {
+  padding: 1px 4px;
+  font-size: 0.62rem;
+}
+
+.v2-header-tools {
+  flex: 0 0 auto;
+}
+
+.v2-header-meta {
+  width: min(var(--v2-page-width), calc(100% - 48px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 6px auto 0;
+}
+
+.v2-header-context {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.v2-page-indicator,
+.v2-app-shell.v2-app-shell-forecast .v2-page-indicator,
+.v2-app-shell.v2-app-shell-reports .v2-page-indicator,
+.v2-shell-back-btn,
+.v2-app-shell.v2-app-shell-forecast .v2-shell-back-btn,
+.v2-app-shell.v2-app-shell-reports .v2-shell-back-btn {
+  border-radius: 8px;
+}
+
+.v2-page-indicator {
+  flex: 0 1 auto;
+  max-width: 34ch;
+}
+
+.v2-page-indicator strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.v2-workflow-strip {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.v2-header-statuses {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 1120px) {
+  .v2-app-header-inner,
+  .v2-app-shell.v2-app-shell-forecast .v2-app-header-inner,
+  .v2-app-shell.v2-app-shell-reports .v2-app-header-inner {
+    grid-template-columns: minmax(140px, 1fr) auto;
+  }
+
+  .v2-main-nav {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .v2-header-context {
+    flex-wrap: wrap;
   }
 }

@@ -333,6 +333,8 @@ const buildVesinvestPlanSummary = (selectedScenarioId = 'base-1') => ({
   lastReviewedAt: '2026-03-09T07:05:00.000Z',
   reviewDueAt: '2029-03-09T07:05:00.000Z',
   classificationReviewRequired: false,
+  assetEvidenceReady: true,
+  assetEvidenceMissingCount: 0,
   baselineChangedSinceAcceptedRevision: false,
   investmentPlanChangedSinceFeeRecommendation: false,
   baselineFingerprint: 'baseline-fingerprint',
@@ -737,18 +739,20 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
   });
 
   it('keeps view mode toggles out of the primary forecast action row', async () => {
-    render(<EnnustePageV2 onReportCreated={() => undefined} />);
+    const { container } = render(<EnnustePageV2 onReportCreated={() => undefined} />);
 
-    const createReportButton = await screen.findByRole('button', {
-      name: 'Create report',
-    });
+    await screen.findByRole('heading', { name: 'Income statement overview' });
+    const primaryWorkflowRow = container.querySelector(
+      '.v2-forecast-hero-command-row',
+    );
     const standardViewButton = screen.getByRole('button', {
       name: 'Standard view',
     });
 
-    expect(createReportButton.closest('.v2-actions-row')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Create report' })).toBeNull();
+    expect(primaryWorkflowRow).toBeTruthy();
     expect(standardViewButton.closest('.v2-actions-row')).toBeTruthy();
-    expect(createReportButton.closest('.v2-actions-row')).not.toBe(
+    expect(primaryWorkflowRow).not.toBe(
       standardViewButton.closest('.v2-actions-row'),
     );
   });
@@ -830,7 +834,7 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
     expect(screen.queryByText(/Long-range block 2029-2033/)).toBeNull();
     expect(screen.queryByText('Full annual table')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Repeat near-term template' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Asset Management' })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Asset Management' }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('heading', { name: 'Investment program' })).toHaveLength(1);
     expect(
       container.querySelectorAll('.v2-investment-summary-strip article'),

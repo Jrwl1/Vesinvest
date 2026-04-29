@@ -44,6 +44,12 @@ function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
   }, obj);
 }
 
+function collectStringValues(obj: unknown): string[] {
+  if (typeof obj === 'string') return [obj];
+  if (!obj || typeof obj !== 'object') return [];
+  return Object.values(obj as Record<string, unknown>).flatMap(collectStringValues);
+}
+
 const refreshedFlowLocaleKeys = [
   'common.yes',
   'common.no',
@@ -395,6 +401,23 @@ const refreshedFlowLocaleKeys = [
   'v2Overview.wizardContextBaselineNextBody',
   'v2Overview.wizardContextBaselineSummary',
   'v2Overview.wizardCurrentFocus',
+  'v2Forecast.requiredPriceToday',
+  'v2Forecast.currentComparatorPrice',
+  'v2Forecast.requiredIncreaseVsCurrent',
+  'v2Forecast.projectedHorizonPrice',
+  'v2Overview.acceptedBaselineTitle',
+  'v2Overview.acceptedBaselineBody',
+  'v2Overview.correctedRepairedYears',
+  'v2Overview.baselineAcceptanceState',
+  'v2Overview.allChangesAccepted',
+  'v2Overview.viewDetails',
+  'v2Overview.moreActions',
+  'v2Overview.manualCorrection',
+  'v2Overview.repairFromExcel',
+  'v2Overview.repairFromPdf',
+  'v2Overview.uploadEvidenceFile',
+  'v2Overview.restoreVeetiValues',
+  'v2Overview.excludeYear',
   'v2Reports.previewTitle',
   'v2Reports.baselineSourcesTitle',
   'v2Reports.baselineSourceStatementImport',
@@ -404,8 +427,13 @@ const refreshedFlowLocaleKeys = [
   'v2Reports.baselineSourceMissing',
   'v2Reports.baselineWorkbookImportDetail',
   'v2Reports.defaultTitlePrefix',
-  'v2Reports.variantPublicHint',
-  'v2Reports.variantConfidentialHint',
+  'v2Reports.variantRegulatorHint',
+  'v2Reports.variantBoardHint',
+  'v2Reports.variantInternalHint',
+  'v2Reports.createSelectedPackage',
+  'v2Reports.creatingPackage',
+  'v2Reports.errorCreateVariantMissingPlan',
+  'v2Reports.errorCreateVariantFailed',
   'v2Reports.acceptedBaselineYears',
   'v2Reports.downloadingPdf',
   'v2Reports.requiredCombinedPriceToday',
@@ -453,6 +481,12 @@ const requiredVesinvestLocaleKeys = [
   'v2Vesinvest.workflowBuildPlanBody',
   'v2Vesinvest.workflowVerifyEvidence',
   'v2Vesinvest.workflowVerifyEvidenceBody',
+  'v2Vesinvest.waterShort',
+  'v2Vesinvest.wastewaterShort',
+  'v2Vesinvest.forecastSyncReady',
+  'v2Vesinvest.forecastSyncDraft',
+  'v2Vesinvest.forecastSyncPending',
+  'v2Vesinvest.forecastSyncUnknown',
 ] as const;
 
 // Wizard chrome stays on the strict parity path so fallback leaks fail fast.
@@ -607,6 +641,16 @@ describe('locale integrity', () => {
         const value = pick(data as Record<string, unknown>, key);
         expect(value, `${locale}: missing ${key}`).toBeTypeOf('string');
       }
+    }
+  });
+
+  it('keeps customer-facing source-file copy generic', () => {
+    const forbidden = /\bKVA\b|workbook|työkirj|arbetsbok/i;
+    for (const { locale, data } of localeEntries) {
+      const text = collectStringValues(data).join('\n');
+      expect(text, `${locale}: customer-facing source copy leaked`).not.toMatch(
+        forbidden,
+      );
     }
   });
 

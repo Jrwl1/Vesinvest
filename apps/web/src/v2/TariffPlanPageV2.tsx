@@ -190,6 +190,9 @@ const TARIFF_EVIDENCE_FIELDS: Array<{
 const readEvidenceNotes = (value: V2TariffEvidenceObject | null | undefined) =>
   typeof value?.notes === 'string' ? value.notes : '';
 
+const usesEvenSplitRecommendation = (policy: V2TariffAllocationPolicy) =>
+  FEE_KEYS.every((key) => (policy[FEE_SHARE_FIELDS[key]] ?? 0) === 25);
+
 export const TariffPlanPageV2: React.FC<Props> = ({
   onGoToAssetManagement,
   onGoToForecast,
@@ -203,6 +206,8 @@ export const TariffPlanPageV2: React.FC<Props> = ({
   const [baselineInput, setBaselineInput] = React.useState<V2TariffBaselineInput>({});
   const [allocationPolicy, setAllocationPolicy] =
     React.useState<V2TariffAllocationPolicy>({});
+  const [allocationMode, setAllocationMode] =
+    React.useState<'recommended' | 'custom'>('custom');
   const [tariffEvidence, setTariffEvidence] = React.useState<
     Record<TariffEvidenceKey, V2TariffEvidenceObject | null>
   >({
@@ -282,6 +287,7 @@ export const TariffPlanPageV2: React.FC<Props> = ({
         setTariffPlan(null);
         setBaselineInput({});
         setAllocationPolicy({});
+        setAllocationMode('custom');
         setTariffEvidence({
           revenueEvidence: null,
           costEvidence: null,
@@ -297,6 +303,11 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       setTariffPlan(loaded);
       setBaselineInput(loaded.baselineInput);
       setAllocationPolicy(loaded.allocationPolicy);
+      setAllocationMode(
+        usesEvenSplitRecommendation(loaded.allocationPolicy)
+          ? 'recommended'
+          : 'custom',
+      );
       setTariffEvidence({
         revenueEvidence: loaded.revenueEvidence,
         costEvidence: loaded.costEvidence,
@@ -328,9 +339,22 @@ export const TariffPlanPageV2: React.FC<Props> = ({
     }));
   };
   const updatePolicyNumber = (field: keyof V2TariffAllocationPolicy, value: string) => {
+    setAllocationMode('custom');
     setAllocationPolicy((current) => ({
       ...current,
       [field]: parseInputNumber(value),
+    }));
+  };
+  const allocationUsesEvenSplit =
+    usesEvenSplitRecommendation(allocationPolicy);
+  const applyEvenSplitRecommendation = () => {
+    setAllocationMode('recommended');
+    setAllocationPolicy((current) => ({
+      ...current,
+      connectionFeeSharePct: 25,
+      baseFeeSharePct: 25,
+      waterUsageSharePct: 25,
+      wastewaterUsageSharePct: 25,
     }));
   };
   const updateBaselineText = (field: keyof V2TariffBaselineInput, value: string) => {
@@ -371,6 +395,11 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       setTariffPlan(saved);
       setBaselineInput(saved.baselineInput);
       setAllocationPolicy(saved.allocationPolicy);
+      setAllocationMode(
+        usesEvenSplitRecommendation(saved.allocationPolicy)
+          ? 'recommended'
+          : 'custom',
+      );
       setTariffEvidence({
         revenueEvidence: saved.revenueEvidence,
         costEvidence: saved.costEvidence,
@@ -412,6 +441,11 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       setTariffPlan(accepted);
       setBaselineInput(accepted.baselineInput);
       setAllocationPolicy(accepted.allocationPolicy);
+      setAllocationMode(
+        usesEvenSplitRecommendation(accepted.allocationPolicy)
+          ? 'recommended'
+          : 'custom',
+      );
       setTariffEvidence({
         revenueEvidence: accepted.revenueEvidence,
         costEvidence: accepted.costEvidence,
@@ -455,6 +489,7 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       await createReportV2({
         vesinvestPlanId: activePlanId,
         ennusteId: activeScenarioId,
+        variant: 'regulator_package',
         title: t('v2TariffPlan.reportTitle', '{{name}} tariff report', {
           name: workflowPlan?.name ?? 'Vesinvest',
         }),
@@ -654,27 +689,72 @@ export const TariffPlanPageV2: React.FC<Props> = ({
           </label>
         </div>
 
-        <div className="v2-vesinvest-evidence-grid">
-          {FEE_KEYS.map((key) => (
-            <label key={key} className="v2-field">
-              <span>{feeLabels[key]} %</span>
+        <div className="v2-tariff-allocation-panel">
+          <div className="v2-section-header">
+            <div>
+              <h3>{t('v2TariffPlan.allocationPolicyTitle', 'Allocation policy')}</h3>
+              <p>
+                {t(
+                  'v2TariffPlan.allocationPolicyBody',
+                  'Start from an even split, then adjust each fee lever if policy requires it.',
+                )}
+              </p>
+            </div>
+            <div className="v2-actions-row">
+              <div
+                className="v2-tariff-allocation-mode"
+                role="group"
+                aria-label={t('v2TariffPlan.allocationMode', 'Allocation mode')}
+              >
+                <button
+                  type="button"
+                  className={allocationMode === 'recommended' ? 'active' : ''}
+                  aria-pressed={allocationMode === 'recommended'}
+                  onClick={() => setAllocationMode('recommended')}
+                >
+                  {t('v2TariffPlan.recommendedEvenSplit', 'Recommended even split')}
+                </button>
+                <button
+                  type="button"
+                  className={allocationMode === 'custom' ? 'active' : ''}
+                  aria-pressed={allocationMode === 'custom'}
+                  onClick={() => setAllocationMode('custom')}
+                >
+                  {t('v2TariffPlan.customAllocation', 'Custom allocation')}
+                </button>
+              </div>
+              <button
+                type="button"
+                className="v2-btn"
+                onClick={applyEvenSplitRecommendation}
+                disabled={allocationUsesEvenSplit}
+              >
+                {t('v2TariffPlan.applyRecommendation', 'Apply recommendation')}
+              </button>
+            </div>
+          </div>
+          <div className="v2-vesinvest-evidence-grid">
+            {FEE_KEYS.map((key) => (
+              <label key={key} className="v2-field">
+                <span>{feeLabels[key]} %</span>
+                <input
+                  className="v2-input"
+                  value={numberValue(allocationPolicy[FEE_SHARE_FIELDS[key]] as number | null)}
+                  onChange={(event) =>
+                    updatePolicyNumber(FEE_SHARE_FIELDS[key], event.target.value)
+                  }
+                />
+              </label>
+            ))}
+            <label className="v2-field">
+              <span>{t('v2TariffPlan.smoothingYears', 'Smoothing years')}</span>
               <input
                 className="v2-input"
-                value={numberValue(allocationPolicy[FEE_SHARE_FIELDS[key]] as number | null)}
-                onChange={(event) =>
-                  updatePolicyNumber(FEE_SHARE_FIELDS[key], event.target.value)
-                }
+                value={numberValue(allocationPolicy.smoothingYears)}
+                onChange={(event) => updatePolicyNumber('smoothingYears', event.target.value)}
               />
             </label>
-          ))}
-          <label className="v2-field">
-            <span>{t('v2TariffPlan.smoothingYears', 'Smoothing years')}</span>
-            <input
-              className="v2-input"
-              value={numberValue(allocationPolicy.smoothingYears)}
-              onChange={(event) => updatePolicyNumber('smoothingYears', event.target.value)}
-            />
-          </label>
+          </div>
         </div>
 
         <label className="v2-field">

@@ -324,7 +324,6 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
         feeRecommendationStatus: 'verified',
       }),
     );
-    createReportV2.mockResolvedValue({ reportId: 'report-1' });
     const onGoToReports = vi.fn();
 
     render(
@@ -337,22 +336,15 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
       />,
     );
 
-    const createReportButton = await screen.findByRole('button', {
-      name: 'Create report',
+    const openReportsButton = await screen.findByRole('button', {
+      name: 'Open Reports',
     });
     await waitFor(() => {
-      expect((createReportButton as HTMLButtonElement).disabled).toBe(false);
+      expect((openReportsButton as HTMLButtonElement).disabled).toBe(false);
     });
-    fireEvent.click(createReportButton);
+    fireEvent.click(openReportsButton);
 
-    await waitFor(() => {
-      expect(createReportV2).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ennusteId: 'scenario-1',
-          vesinvestPlanId: 'plan-1',
-        }),
-      );
-    });
+    expect(createReportV2).not.toHaveBeenCalled();
     expect(onGoToReports).toHaveBeenCalled();
   });
 
@@ -396,30 +388,23 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
       />,
     );
 
-    const createReportButton = await screen.findByRole('button', {
-      name: 'Create report',
+    const openReportsButton = await screen.findByRole('button', {
+      name: 'Open Reports',
     });
     await waitFor(() => {
-      expect((createReportButton as HTMLButtonElement).disabled).toBe(false);
+      expect((openReportsButton as HTMLButtonElement).disabled).toBe(false);
     });
-    fireEvent.click(createReportButton);
+    fireEvent.click(openReportsButton);
 
-    expect(
-      await screen.findByText(
-        'Saved inputs changed after the last calculation. Recompute results before creating report.',
-      ),
-    ).toBeTruthy();
-    await waitFor(() => {
-      expect((createReportButton as HTMLButtonElement).disabled).toBe(true);
-    });
+    expect(createReportV2).not.toHaveBeenCalled();
     expect(
       screen.queryByText(
         'Scenario investment inputs changed after last compute. Recompute scenario before creating report.',
       ),
     ).toBeNull();
-    expect(onPlansChanged).toHaveBeenCalled();
-    expect(onSavedFeePathReportConflict).toHaveBeenCalledWith('plan-1');
-    expect(onGoToReports).not.toHaveBeenCalled();
+    expect(onPlansChanged).not.toHaveBeenCalled();
+    expect(onSavedFeePathReportConflict).not.toHaveBeenCalled();
+    expect(onGoToReports).toHaveBeenCalled();
   });
 
   it('surfaces baseline-stale report conflicts with the saved fee-path baseline message', async () => {
@@ -455,19 +440,15 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
       />,
     );
 
-    const createReportButton = await screen.findByRole('button', {
-      name: 'Create report',
+    const openReportsButton = await screen.findByRole('button', {
+      name: 'Open Reports',
     });
     await waitFor(() => {
-      expect((createReportButton as HTMLButtonElement).disabled).toBe(false);
+      expect((openReportsButton as HTMLButtonElement).disabled).toBe(false);
     });
-    fireEvent.click(createReportButton);
+    fireEvent.click(openReportsButton);
 
-    expect(
-      await screen.findByText(
-        'Accepted baseline changed after the saved tariff-plan result.',
-      ),
-    ).toBeTruthy();
+    expect(createReportV2).not.toHaveBeenCalled();
     expect(
       screen.queryByText('Saved tariff-plan result still matches this revision.'),
     ).toBeNull();

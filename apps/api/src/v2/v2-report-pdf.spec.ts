@@ -103,7 +103,7 @@ describe('buildV2ReportPdf', () => {
           ],
         },
       },
-      reportVariant: 'confidential_appendix',
+      reportVariant: 'internal_appendix',
       reportSections: {
         baselineSources: true,
         investmentPlan: true,

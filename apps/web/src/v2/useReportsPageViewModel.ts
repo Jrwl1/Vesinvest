@@ -32,8 +32,10 @@ import {
 
 type Params = {
   t: TFunction;
+  creatingPreviewPackage: boolean;
   downloadingPdf: boolean;
   emptyStateScenario: V2ForecastScenario | null;
+  handleCreatePreviewPackage: () => Promise<void> | void;
   handleDownloadPdf: () => Promise<void> | void;
   loadReports: () => Promise<void> | void;
   loadingDetail: boolean;
@@ -63,8 +65,10 @@ type Params = {
 
 export function useReportsPageViewModel({
   t,
+  creatingPreviewPackage,
   downloadingPdf,
   emptyStateScenario,
+  handleCreatePreviewPackage,
   handleDownloadPdf,
   loadReports,
   loadingDetail,
@@ -387,9 +391,11 @@ export function useReportsPageViewModel({
   const reportVariantLabel = React.useCallback(
     (variant: ReportVariant) =>
       t(
-        variant === 'public_summary'
-          ? 'v2Reports.variantPublic'
-          : 'v2Reports.variantConfidential',
+        variant === 'regulator_package'
+          ? 'v2Reports.variantRegulator'
+          : variant === 'board_package'
+            ? 'v2Reports.variantBoard'
+            : 'v2Reports.variantInternal',
       ),
     [t],
   );
@@ -411,7 +417,7 @@ export function useReportsPageViewModel({
   const activeVariant = React.useMemo(
     () =>
       REPORT_VARIANT_OPTIONS.find((option) => option.id === previewVariant) ??
-      REPORT_VARIANT_OPTIONS[1],
+      REPORT_VARIANT_OPTIONS[0],
     [previewVariant],
   );
   const showDetailedInvestmentPlan = activeVariant.sections.yearlyInvestments;
@@ -596,6 +602,11 @@ export function useReportsPageViewModel({
   const downloadMatchesPreview =
     selectedReport != null ? selectedReport.variant === previewVariant : true;
   const selectedReportHasPdf = Boolean(selectedReport?.pdfUrl);
+  const canCreatePreviewPackage =
+    selectedReport != null &&
+    selectedReport.variant !== previewVariant &&
+    selectedReport.snapshot.vesinvestPlan?.id != null &&
+    !creatingPreviewPackage;
   const canDownloadPdf =
     selectedReport != null &&
     selectedReportHasPdf &&
@@ -617,7 +628,7 @@ export function useReportsPageViewModel({
     if (!downloadMatchesPreview) {
       return t(
         'v2Reports.downloadUsesSavedVariant',
-        'PDF download still uses the saved report variant. Switch back to that variant to export.',
+        'Create this package variant before downloading its PDF.',
       );
     }
     return t(
@@ -661,11 +672,14 @@ export function useReportsPageViewModel({
       baselineDatasetSourceLabel,
       baselineStatusLabel,
       canDownloadPdf,
+      canCreatePreviewPackage,
+      creatingPreviewPackage,
       dataTypeLabel,
       datasetPublicationNote,
       downloadingPdf,
       emptyStateReportReadinessHint,
       formatAssumptionSnapshotValue,
+      handleCreatePreviewPackage,
       handleDownloadPdf,
       hasSelectedReportLayout,
       loadingDetail,

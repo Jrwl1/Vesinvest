@@ -40,7 +40,7 @@ export function registerReportsPageV2SmokeSuite() {
         requiredAnnualIncreasePct: 4.1,
         totalInvestments: 100000,
         baselineSourceSummary: null,
-        variant: 'confidential_appendix',
+        variant: 'internal_appendix',
         pdfUrl: '/v2/reports/report-1/pdf',
       },
     ]);
@@ -319,7 +319,7 @@ export function registerReportsPageV2SmokeSuite() {
             },
           ],
         },
-        reportVariant: 'confidential_appendix',
+        reportVariant: 'internal_appendix',
         reportSections: {
           baselineSources: true,
           investmentPlan: true,
@@ -328,7 +328,7 @@ export function registerReportsPageV2SmokeSuite() {
           riskSummary: true,
         },
       },
-      variant: 'confidential_appendix',
+      variant: 'internal_appendix',
       pdfUrl: '/v2/reports/report-1/pdf',
     } as any);
   });
@@ -394,7 +394,7 @@ export function registerReportsPageV2SmokeSuite() {
       await screen.findByText('Tallennettu raportti on valmis vietäväksi.'),
     ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Julkinen yhteenveto' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Viranomaispaketti' }));
 
     await waitFor(() => {
       expect(screen.getAllByText('Lataa PDF')).toHaveLength(1);

@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -25,4 +26,8 @@ export class CreateReportDto {
   @IsString()
   @MaxLength(160)
   title?: string;
+
+  @IsOptional()
+  @IsIn(['regulator_package', 'board_package', 'internal_appendix'])
+  variant?: 'regulator_package' | 'board_package' | 'internal_appendix';
 }

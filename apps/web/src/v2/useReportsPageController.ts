@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
+  createReportV2,
   downloadReportPdfV2,
   getForecastScenarioV2,
   getReportV2,
@@ -36,9 +37,10 @@ export const useReportsPageController = ({
   const [loadingList, setLoadingList] = React.useState(true);
   const [loadingDetail, setLoadingDetail] = React.useState(false);
   const [downloadingPdf, setDownloadingPdf] = React.useState(false);
+  const [creatingPreviewPackage, setCreatingPreviewPackage] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [previewVariant, setPreviewVariant] =
-    React.useState<ReportVariant>('confidential_appendix');
+    React.useState<ReportVariant>('regulator_package');
   const [emptyStateScenario, setEmptyStateScenario] =
     React.useState<V2ForecastScenario | null>(null);
 
@@ -214,10 +216,47 @@ export const useReportsPageController = ({
     }
   }, [selectedReport, t]);
 
+  const handleCreatePreviewPackage = React.useCallback(async () => {
+    if (!selectedReport) return;
+    const vesinvestPlanId = selectedReport.snapshot.vesinvestPlan?.id;
+    if (!vesinvestPlanId) {
+      setError(
+        t(
+          'v2Reports.errorCreateVariantMissingPlan',
+          'This saved report does not include a Vesinvest plan snapshot for package creation.',
+        ),
+      );
+      return;
+    }
+
+    setCreatingPreviewPackage(true);
+    setError(null);
+    try {
+      const created = await createReportV2({
+        vesinvestPlanId,
+        ennusteId: selectedReport.ennuste.id,
+        title: selectedReport.title,
+        variant: previewVariant,
+      });
+      await loadReports(created.reportId, true);
+      setPreviewVariant(created.variant);
+    } catch (err) {
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : t('v2Reports.errorCreateVariantFailed', 'Failed to create report package.'),
+      );
+    } finally {
+      setCreatingPreviewPackage(false);
+    }
+  }, [loadReports, previewVariant, selectedReport, t]);
+
   return {
+    creatingPreviewPackage,
     downloadingPdf,
     emptyStateScenario,
     error,
+    handleCreatePreviewPackage,
     handleDownloadPdf,
     loadReports,
     loadingDetail,

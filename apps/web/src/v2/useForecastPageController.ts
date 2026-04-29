@@ -366,6 +366,7 @@ export function useForecastPageController({
       const report = await createReportV2({
         vesinvestPlanId: activePlan.id,
         ennusteId: scenarioController.selectedScenarioId,
+        variant: 'regulator_package',
         title: buildDefaultReportTitle(
           t,
           scenarioController.scenario?.name ??

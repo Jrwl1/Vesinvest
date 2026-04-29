@@ -5,8 +5,9 @@ import type {
   V2OverrideProvenance,
   V2ReportDetail,
 } from '../api';
+import type { V2ReportVariant } from '../api/v2/types/reports';
 
-export type ReportVariant = 'public_summary' | 'confidential_appendix';
+export type ReportVariant = V2ReportVariant;
 
 export type ForecastFreshnessState =
   | 'unsaved_changes'
@@ -47,12 +48,12 @@ export const REPORT_VARIANT_OPTIONS: Array<{
   };
 }> = [
   {
-    id: 'public_summary',
-    labelKey: 'v2Reports.variantPublic',
-    label: 'Public summary',
-    descriptionKey: 'v2Reports.variantPublicHint',
+    id: 'regulator_package',
+    labelKey: 'v2Reports.variantRegulator',
+    label: 'Regulator package',
+    descriptionKey: 'v2Reports.variantRegulatorHint',
     description:
-      'Shows tariff path, grouped investment plan, and baseline context without the detailed assumptions or yearly investment rows.',
+      'Official package for the financial plan and tariff proposal.',
     sections: {
       baselineSources: true,
       investmentPlan: true,
@@ -62,12 +63,27 @@ export const REPORT_VARIANT_OPTIONS: Array<{
     },
   },
   {
-    id: 'confidential_appendix',
-    labelKey: 'v2Reports.variantConfidential',
-    label: 'Confidential appendix',
-    descriptionKey: 'v2Reports.variantConfidentialHint',
+    id: 'board_package',
+    labelKey: 'v2Reports.variantBoard',
+    label: 'Board package',
+    descriptionKey: 'v2Reports.variantBoardHint',
     description:
-      'Adds assumptions and detailed yearly investment rows on top of the grouped investment plan and summary.',
+      'Decision package with assumptions summary and tariff impact context.',
+    sections: {
+      baselineSources: true,
+      investmentPlan: true,
+      assumptions: true,
+      yearlyInvestments: false,
+      riskSummary: true,
+    },
+  },
+  {
+    id: 'internal_appendix',
+    labelKey: 'v2Reports.variantInternal',
+    label: 'Internal appendix',
+    descriptionKey: 'v2Reports.variantInternalHint',
+    description:
+      'Full internal package with assumptions, yearly investments, and evidence state.',
     sections: {
       baselineSources: true,
       investmentPlan: true,

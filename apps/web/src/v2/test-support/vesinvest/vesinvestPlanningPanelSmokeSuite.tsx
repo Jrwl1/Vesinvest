@@ -449,7 +449,6 @@ export function registerVesinvestPlanningPanelSmokeSuite() {
         feeRecommendationStatus: 'verified',
       }),
     );
-    createReportV2.mockResolvedValue({ reportId: 'report-1' });
     const onGoToReports = vi.fn();
 
     render(
@@ -462,25 +461,17 @@ export function registerVesinvestPlanningPanelSmokeSuite() {
       />,
     );
 
-    const createReportButton = await screen.findByRole('button', {
-      name: 'Create report',
+    const openReportsButton = await screen.findByRole('button', {
+      name: 'Open Reports',
     });
     await waitFor(() => {
-      expect((createReportButton as HTMLButtonElement).disabled).toBe(false);
+      expect((openReportsButton as HTMLButtonElement).disabled).toBe(false);
     });
-    fireEvent.click(createReportButton);
+    fireEvent.click(openReportsButton);
 
-    await waitFor(() => {
-      expect(createReportV2).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ennusteId: 'scenario-1',
-          vesinvestPlanId: 'plan-1',
-        }),
-      );
-    });
+    expect(createReportV2).not.toHaveBeenCalled();
     expect(onGoToReports).toHaveBeenCalled();
   });
 
   });
 }
-

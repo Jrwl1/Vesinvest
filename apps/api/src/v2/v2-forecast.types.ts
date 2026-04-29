@@ -298,7 +298,10 @@ export type SnapshotPayload = {
   reportSections: ReportSections;
 };
 
-export type ReportVariant = 'public_summary' | 'confidential_appendix';
+export type ReportVariant =
+  | 'regulator_package'
+  | 'board_package'
+  | 'internal_appendix';
 
 export type ReportSections = {
   baselineSources: boolean;

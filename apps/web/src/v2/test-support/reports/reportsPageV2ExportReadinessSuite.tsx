@@ -5,12 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReportsPageV2 } from '../../ReportsPageV2';
 
 const downloadReportPdfV2 = vi.fn();
+const createReportV2 = vi.fn();
 const getForecastScenarioV2 = vi.fn();
 const getReportV2 = vi.fn();
 const listForecastScenariosV2 = vi.fn();
 const listReportsV2 = vi.fn();
 
 vi.mock('../../../api', () => ({
+  createReportV2: (...args: unknown[]) => createReportV2(...args),
   downloadReportPdfV2: (...args: unknown[]) => downloadReportPdfV2(...args),
   getForecastScenarioV2: (...args: unknown[]) => getForecastScenarioV2(...args),
   getReportV2: (...args: unknown[]) => getReportV2(...args),
@@ -24,6 +26,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
   describe('ReportsPageV2 export readiness', () => {
   beforeEach(() => {
     downloadReportPdfV2.mockReset();
+    createReportV2.mockReset();
     getForecastScenarioV2.mockReset();
     getReportV2.mockReset();
     listForecastScenariosV2.mockReset();
@@ -40,7 +43,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
         requiredAnnualIncreasePct: 4.1,
         totalInvestments: 100000,
         baselineSourceSummary: null,
-        variant: 'confidential_appendix',
+        variant: 'internal_appendix',
         pdfUrl: '/v2/reports/report-1/pdf',
       },
     ]);
@@ -319,7 +322,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
             },
           ],
         },
-        reportVariant: 'confidential_appendix',
+        reportVariant: 'internal_appendix',
         reportSections: {
           baselineSources: true,
           investmentPlan: true,
@@ -328,7 +331,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
           riskSummary: true,
         },
       },
-      variant: 'confidential_appendix',
+      variant: 'internal_appendix',
       pdfUrl: '/v2/reports/report-1/pdf',
     } as any);
   });
@@ -355,7 +358,13 @@ export function registerReportsPageV2ExportReadinessSuite() {
       await screen.findByText('Tallennettu raportti on valmis vietäväksi.'),
     ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Julkinen yhteenveto' }));
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Sisäinen liite' }).getAttribute('aria-pressed'),
+      ).toBe('true');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Viranomaispaketti' }));
 
     await waitFor(() => {
       expect(screen.getAllByText('Lataa PDF')).toHaveLength(1);
@@ -363,7 +372,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
         screen.getByRole('button', { name: 'Lataa PDF' }).hasAttribute('disabled'),
       ).toBe(true);
       expect(
-        screen.getByText(/PDF-vienti.+tallennettua raporttiversiota/u),
+        screen.getByText('Luo tämä raporttipaketti ennen PDF:n lataamista.'),
       ).toBeTruthy();
       expect(
         screen.queryByText('Tallennettu raportti on valmis vietäväksi.'),
@@ -404,7 +413,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
         requiredAnnualIncreasePct: 4.1,
         totalInvestments: 100000,
         baselineSourceSummary: null,
-        variant: 'confidential_appendix',
+        variant: 'internal_appendix',
         pdfUrl: '/v2/reports/report-1/pdf',
       },
     ]);
@@ -465,7 +474,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
         baselineSourceSummary: null,
         vesinvestPlan: null,
         vesinvestAppendix: null,
-        reportVariant: 'confidential_appendix',
+        reportVariant: 'internal_appendix',
         reportSections: {
           baselineSources: true,
           investmentPlan: true,
@@ -474,7 +483,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
           riskSummary: true,
         },
       },
-      variant: 'confidential_appendix',
+      variant: 'internal_appendix',
       pdfUrl: null,
     } as any);
 
@@ -535,7 +544,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
         baselineSourceSummary: null,
         vesinvestPlan: null,
         vesinvestAppendix: null,
-        reportVariant: 'confidential_appendix',
+        reportVariant: 'internal_appendix',
         reportSections: {
           baselineSources: true,
           investmentPlan: true,
@@ -544,7 +553,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
           riskSummary: true,
         },
       },
-      variant: 'confidential_appendix',
+      variant: 'internal_appendix',
       pdfUrl: null,
     } as any);
 
@@ -561,7 +570,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
       expect(getReportV2).toHaveBeenCalledWith('report-1');
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Julkinen yhteenveto' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Viranomaispaketti' }));
 
     await waitFor(() => {
       expect(
@@ -742,7 +751,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
           groupedProjects: [],
           depreciationPlan: [],
         },
-        reportVariant: 'confidential_appendix',
+        reportVariant: 'internal_appendix',
         reportSections: {
           baselineSources: true,
           investmentPlan: true,
@@ -751,7 +760,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
           riskSummary: true,
         },
       },
-      variant: 'confidential_appendix',
+      variant: 'internal_appendix',
       pdfUrl: '/v2/reports/report-1/pdf',
     } as any);
 
@@ -769,5 +778,3 @@ export function registerReportsPageV2ExportReadinessSuite() {
 
   });
 }
-
-

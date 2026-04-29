@@ -8,6 +8,11 @@ import type {
   V2VesinvestFeeRecommendation,
 } from './vesinvest';
 
+export type V2ReportVariant =
+  | 'regulator_package'
+  | 'board_package'
+  | 'internal_appendix';
+
 export type V2ReportListItem = {
   id: string;
   title: string;
@@ -18,7 +23,7 @@ export type V2ReportListItem = {
   requiredAnnualIncreasePct: number;
   totalInvestments: number;
   baselineSourceSummary?: V2BaselineSourceSummary | null;
-  variant: 'public_summary' | 'confidential_appendix';
+  variant: V2ReportVariant;
   pdfUrl: string;
 };
 
@@ -113,7 +118,7 @@ export type V2ReportDetail = {
       connectionFeeLiabilityState?: Record<string, unknown> | null;
       ownerDistributionState?: Record<string, unknown> | null;
     } | null;
-    reportVariant: 'public_summary' | 'confidential_appendix';
+    reportVariant: V2ReportVariant;
     reportSections: {
       baselineSources: boolean;
       investmentPlan: boolean;
@@ -122,6 +127,6 @@ export type V2ReportDetail = {
       riskSummary: boolean;
     };
   };
-  variant: 'public_summary' | 'confidential_appendix';
+  variant: V2ReportVariant;
   pdfUrl: string;
 };

@@ -93,9 +93,11 @@ export async function buildV2ReportPdf({
   });
 
   const variantLabel =
-    reportVariant === 'public_summary'
-      ? 'Public summary'
-      : 'Confidential appendix';
+    reportVariant === 'regulator_package'
+      ? 'Regulator package'
+      : reportVariant === 'board_package'
+        ? 'Board package'
+        : 'Internal appendix';
   const annualResultPrice =
     scenario?.requiredPriceTodayCombinedAnnualResult ?? report.requiredPriceToday;
   const annualResultIncrease =

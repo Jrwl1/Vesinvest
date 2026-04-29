@@ -9,7 +9,7 @@ import {
   parseApiErrorResponse,
   type GetRequestOptions,
 } from '../core';
-import type { V2ReportDetail,V2ReportListItem } from './types';
+import type { V2ReportDetail,V2ReportListItem,V2ReportVariant } from './types';
 export async function listReportsV2(
   ennusteId?: string,
   options?: GetRequestOptions,
@@ -26,7 +26,7 @@ export async function createReportV2(data: {
   ennusteId?: string;
   vesinvestPlanId: string;
   title?: string;
-  variant?: 'public_summary' | 'confidential_appendix';
+  variant?: V2ReportVariant;
 }): Promise<{
   reportId: string;
   title: string;
@@ -35,7 +35,7 @@ export async function createReportV2(data: {
   requiredPriceToday: number;
   requiredAnnualIncreasePct: number;
   totalInvestments: number;
-  variant: 'public_summary' | 'confidential_appendix';
+  variant: V2ReportVariant;
   pdfUrl: string;
 }> {
   const result = await api<{
@@ -46,7 +46,7 @@ export async function createReportV2(data: {
     requiredPriceToday: number;
     requiredAnnualIncreasePct: number;
     totalInvestments: number;
-    variant: 'public_summary' | 'confidential_appendix';
+    variant: V2ReportVariant;
     pdfUrl: string;
   }>('/v2/reports', {
     method: 'POST',

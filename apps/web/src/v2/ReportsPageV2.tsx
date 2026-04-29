@@ -47,9 +47,11 @@ export const ReportsPageV2: React.FC<Props> = ({
 }) => {
   const { t } = useTranslation();
   const {
+    creatingPreviewPackage,
     downloadingPdf,
     emptyStateScenario,
     error,
+    handleCreatePreviewPackage,
     handleDownloadPdf,
     loadReports,
     loadingDetail,
@@ -70,8 +72,10 @@ export const ReportsPageV2: React.FC<Props> = ({
   const { hasSelectedReportLayout, listColumnProps, previewColumnProps } =
     useReportsPageViewModel({
       t,
+      creatingPreviewPackage,
       downloadingPdf,
       emptyStateScenario,
+      handleCreatePreviewPackage,
       handleDownloadPdf,
       loadReports,
       loadingDetail,

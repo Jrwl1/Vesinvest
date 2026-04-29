@@ -5,12 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReportsPageV2 } from '../../ReportsPageV2';
 
 const downloadReportPdfV2 = vi.fn();
+const createReportV2 = vi.fn();
 const getForecastScenarioV2 = vi.fn();
 const getReportV2 = vi.fn();
 const listForecastScenariosV2 = vi.fn();
 const listReportsV2 = vi.fn();
 
 vi.mock('../../../api', () => ({
+  createReportV2: (...args: unknown[]) => createReportV2(...args),
   downloadReportPdfV2: (...args: unknown[]) => downloadReportPdfV2(...args),
   getForecastScenarioV2: (...args: unknown[]) => getForecastScenarioV2(...args),
   getReportV2: (...args: unknown[]) => getReportV2(...args),
@@ -24,6 +26,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
   describe('ReportsPageV2 preview detail', () => {
   beforeEach(() => {
     downloadReportPdfV2.mockReset();
+    createReportV2.mockReset();
     getForecastScenarioV2.mockReset();
     getReportV2.mockReset();
     listForecastScenariosV2.mockReset();
@@ -40,7 +43,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
         requiredAnnualIncreasePct: 4.1,
         totalInvestments: 100000,
         baselineSourceSummary: null,
-        variant: 'confidential_appendix',
+        variant: 'internal_appendix',
         pdfUrl: '/v2/reports/report-1/pdf',
       },
     ]);
@@ -319,7 +322,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
             },
           ],
         },
-        reportVariant: 'confidential_appendix',
+        reportVariant: 'internal_appendix',
         reportSections: {
           baselineSources: true,
           investmentPlan: true,
@@ -328,7 +331,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
           riskSummary: true,
         },
       },
-      variant: 'confidential_appendix',
+      variant: 'internal_appendix',
       pdfUrl: '/v2/reports/report-1/pdf',
     } as any);
   });
@@ -363,7 +366,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
     ).toBeTruthy();
     expect(await screen.findByText(/Revenue 95 000 EUR/)).toBeTruthy();
     expect(await screen.findByText(/Operating costs 70 000 EUR/)).toBeTruthy();
-    expect(await screen.findByText('Työkirjaimportti (kva-2024.xlsx)')).toBeTruthy();
+    expect(await screen.findByText('Excel-korjaus (kva-2024.xlsx)')).toBeTruthy();
     expect(await screen.findByText('2026-2030 (5)')).toBeTruthy();
     expect(
       screen.queryByText('Lähivuosien kuluoletukset (muokattava)'),
@@ -388,7 +391,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
         requiredAnnualIncreasePct: 4.1,
         totalInvestments: 100000,
         baselineSourceSummary: null,
-        variant: 'confidential_appendix',
+        variant: 'internal_appendix',
         pdfUrl: '/v2/reports/report-1/pdf',
       },
     ]);
@@ -480,7 +483,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
         requiredAnnualIncreasePct: 4.1,
         totalInvestments: 100000,
         baselineSourceSummary: null,
-        variant: 'public_summary',
+        variant: 'regulator_package',
         pdfUrl: '/v2/reports/report-1/pdf',
       },
     ]);
@@ -609,7 +612,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
             },
           ],
         },
-        reportVariant: 'public_summary',
+        reportVariant: 'regulator_package',
         reportSections: {
           baselineSources: true,
           investmentPlan: true,
@@ -618,7 +621,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
           riskSummary: true,
         },
       },
-      variant: 'public_summary',
+      variant: 'regulator_package',
       pdfUrl: '/v2/reports/report-1/pdf',
     } as any);
 
@@ -645,7 +648,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
     expect(screen.getByText('Vesiverkon saneeraus')).toBeTruthy();
   });
 
-  it('keeps the statement filename visible when workbook repair is mixed into the same report dataset', async () => {
+  it('keeps the statement filename visible when Excel repair is mixed into the same report dataset', async () => {
     getReportV2.mockResolvedValueOnce({
       id: 'report-1',
       title: 'Forecast report Water Utility 2026-04-09',
@@ -743,7 +746,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
           groupedProjects: [],
           depreciationPlan: [],
         },
-        reportVariant: 'confidential_appendix',
+        reportVariant: 'internal_appendix',
         reportSections: {
           baselineSources: true,
           investmentPlan: true,
@@ -752,7 +755,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
           riskSummary: true,
         },
       },
-      variant: 'confidential_appendix',
+      variant: 'internal_appendix',
       pdfUrl: '/v2/reports/report-1/pdf',
     } as any);
 
@@ -831,7 +834,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
           baselineSourceSummary: null,
           vesinvestPlan: null,
           vesinvestAppendix: null,
-          reportVariant: 'confidential_appendix',
+          reportVariant: 'internal_appendix',
           reportSections: {
             baselineSources: false,
             investmentPlan: false,
@@ -840,7 +843,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
             riskSummary: false,
           },
         },
-        variant: 'confidential_appendix',
+        variant: 'internal_appendix',
         pdfUrl: '/v2/reports/report-1/pdf',
       } as any);
 
@@ -856,7 +859,9 @@ export function registerReportsPageV2PreviewDetailSuite() {
       await waitFor(() => {
         expect(getReportV2).toHaveBeenCalledWith('report-1');
       });
-      expect(screen.getAllByText('2026').length).toBeGreaterThan(1);
+      await waitFor(() => {
+        expect(screen.getAllByText('2026').length).toBeGreaterThan(1);
+      });
       expect(
         consoleError.mock.calls.filter(([firstArg]) =>
           String(firstArg).includes('Encountered two children with the same key'),
@@ -865,6 +870,55 @@ export function registerReportsPageV2PreviewDetailSuite() {
     } finally {
       consoleError.mockRestore();
     }
+  });
+
+  it('creates the selected package variant before PDF export', async () => {
+    createReportV2.mockResolvedValueOnce({
+      reportId: 'report-regulator',
+      title: 'Forecast report Water Utility 2026-04-09',
+      createdAt: '2026-04-09T08:10:00.000Z',
+      baselineYear: 2024,
+      requiredPriceToday: 3.2,
+      requiredAnnualIncreasePct: 4.1,
+      totalInvestments: 100000,
+      variant: 'regulator_package',
+      pdfUrl: '/v2/reports/report-regulator/pdf',
+    });
+
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={() => undefined}
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getReportV2).toHaveBeenCalledWith('report-1');
+    });
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Sisäinen liite' }).getAttribute('aria-pressed'),
+      ).toBe('true');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Viranomaispaketti' }));
+
+    const createPackageButton = await screen.findByRole('button', {
+      name: 'Luo paketti',
+    });
+    fireEvent.click(createPackageButton);
+
+    await waitFor(() => {
+      expect(createReportV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          vesinvestPlanId: 'plan-1',
+          ennusteId: 'scenario-1',
+          variant: 'regulator_package',
+        }),
+      );
+    });
   });
 
   });

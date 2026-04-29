@@ -965,7 +965,7 @@ describe('V2Service report variant regression', () => {
       await service.createReport(ORG_ID, USER_ID, {
         ennusteId: 'scenario-1',
         vesinvestPlanId: '11111111-1111-4111-8111-111111111111',
-        variant: 'public_summary',
+        variant: 'regulator_package',
       });
     } finally {
       jest.useRealTimers();
@@ -978,7 +978,7 @@ describe('V2Service report variant regression', () => {
     expect(createArgs.data.title).toBe(
       'Forecast report Statement-backed scenario 2026-03-08',
     );
-    expect(snapshot.reportVariant).toBe('public_summary');
+    expect(snapshot.reportVariant).toBe('regulator_package');
     expect(snapshot.reportSections).toMatchObject({
       baselineSources: true,
       investmentPlan: true,
@@ -1012,7 +1012,7 @@ describe('V2Service report variant regression', () => {
     expect(listedReports[0]?.requiredAnnualIncreasePct).toBe(14);
 
     const report = await service.getReport(ORG_ID, 'report-1');
-    expect(report.variant).toBe('public_summary');
+    expect(report.variant).toBe('regulator_package');
     expect(report.snapshot.reportSections).toMatchObject({
       baselineSources: true,
       investmentPlan: true,

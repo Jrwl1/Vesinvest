@@ -646,6 +646,7 @@ export const useVesinvestPlanningController = ({
       await createReportV2({
         vesinvestPlanId: plan.id,
         ennusteId: plan.selectedScenarioId,
+        variant: 'regulator_package',
         title: buildDefaultReportTitle(t, linkedScenario.name),
       });
       setReportConflictCode(null);

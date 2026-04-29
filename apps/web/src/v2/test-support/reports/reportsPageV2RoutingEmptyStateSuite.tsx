@@ -40,7 +40,7 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
         requiredAnnualIncreasePct: 4.1,
         totalInvestments: 100000,
         baselineSourceSummary: null,
-        variant: 'confidential_appendix',
+        variant: 'internal_appendix',
         pdfUrl: '/v2/reports/report-1/pdf',
       },
     ]);
@@ -319,7 +319,7 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
             },
           ],
         },
-        reportVariant: 'confidential_appendix',
+        reportVariant: 'internal_appendix',
         reportSections: {
           baselineSources: true,
           investmentPlan: true,
@@ -328,7 +328,7 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
           riskSummary: true,
         },
       },
-      variant: 'confidential_appendix',
+      variant: 'internal_appendix',
       pdfUrl: '/v2/reports/report-1/pdf',
     } as any);
   });
@@ -539,7 +539,7 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
       {
         id: 'report-1',
         title: 'Saved report',
-        variant: 'confidential_appendix',
+        variant: 'internal_appendix',
         createdAt: '2026-04-09T08:00:00.000Z',
         ennuste: { id: 'base-1', nimi: 'Saved fee path scenario' },
         baselineYear: 2024,

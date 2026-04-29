@@ -17,17 +17,33 @@ const buildReportService = () =>
   );
 
 describe('V2ReportService collaborator helpers', () => {
-  it('normalizes public-summary variant into the expected section set', () => {
+  it('normalizes legacy public-summary variant into the regulator package section set', () => {
     const service = buildReportService();
 
     const variant = (service as any).normalizeReportVariant('public_summary');
     const sections = (service as any).buildReportSections(variant);
 
-    expect(variant).toBe('public_summary');
+    expect(variant).toBe('regulator_package');
     expect(sections).toEqual({
       baselineSources: true,
       investmentPlan: true,
       assumptions: false,
+      yearlyInvestments: false,
+      riskSummary: true,
+    });
+  });
+
+  it('builds board package sections with summarized assumptions but without yearly investment rows', () => {
+    const service = buildReportService();
+
+    const variant = (service as any).normalizeReportVariant('board_package');
+    const sections = (service as any).buildReportSections(variant);
+
+    expect(variant).toBe('board_package');
+    expect(sections).toEqual({
+      baselineSources: true,
+      investmentPlan: true,
+      assumptions: true,
       yearlyInvestments: false,
       riskSummary: true,
     });

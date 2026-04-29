@@ -494,7 +494,7 @@ async listReports(orgId: string, ennusteId?: string) {
 
     const reportVariant = this.normalizeReportVariant(body.variant);
     const reportSections = this.buildReportSections(reportVariant);
-    const includeInternalEvidence = reportVariant === 'confidential_appendix';
+    const includeInternalEvidence = reportVariant === 'internal_appendix';
     const vesinvestAppendix = await this.buildVesinvestAppendix(
       vesinvestPlan.projects,
       scenario.years.map((item) => item.year),
@@ -693,17 +693,36 @@ async listReports(orgId: string, ennusteId?: string) {
   }
 
   private normalizeReportVariant(raw: unknown): ReportVariant {
-    return raw === 'public_summary'
-      ? 'public_summary'
-      : 'confidential_appendix';
+    switch (raw) {
+      case 'regulator_package':
+      case 'board_package':
+      case 'internal_appendix':
+        return raw;
+      case 'public_summary':
+        return 'regulator_package';
+      case 'confidential_appendix':
+        return 'internal_appendix';
+      default:
+        return 'regulator_package';
+    }
   }
 
   private buildReportSections(variant: ReportVariant): ReportSections {
-    if (variant === 'public_summary') {
+    if (variant === 'regulator_package') {
       return {
         baselineSources: true,
         investmentPlan: true,
         assumptions: false,
+        yearlyInvestments: false,
+        riskSummary: true,
+      };
+    }
+
+    if (variant === 'board_package') {
+      return {
+        baselineSources: true,
+        investmentPlan: true,
+        assumptions: true,
         yearlyInvestments: false,
         riskSummary: true,
       };

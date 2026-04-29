@@ -41,11 +41,14 @@ type ReportsPreviewColumnProps = {
     planningRole?: V2BaselineSourceSummary['planningRole'],
   ) => string;
   canDownloadPdf: boolean;
+  canCreatePreviewPackage: boolean;
+  creatingPreviewPackage: boolean;
   dataTypeLabel: (dataType: string) => string;
   datasetPublicationNote: (dataset: V2BaselineSourceSummary['financials']) => string;
   downloadingPdf: boolean;
   emptyStateReportReadinessHint: string;
   formatAssumptionSnapshotValue: (key: string, value: number) => string;
+  handleCreatePreviewPackage: () => void;
   handleDownloadPdf: () => void;
   hasSelectedReportLayout: boolean;
   loadingDetail: boolean;
@@ -84,11 +87,14 @@ export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
   baselineDatasetSourceLabel,
   baselineStatusLabel,
   canDownloadPdf,
+  canCreatePreviewPackage,
+  creatingPreviewPackage,
   dataTypeLabel,
   datasetPublicationNote,
   downloadingPdf,
   emptyStateReportReadinessHint,
   formatAssumptionSnapshotValue,
+  handleCreatePreviewPackage,
   handleDownloadPdf,
   hasSelectedReportLayout,
   loadingDetail,
@@ -278,6 +284,18 @@ export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
                   <span className="v2-badge v2-status-info">
                     {reportVariantLabel(activeVariant.id)}
                   </span>
+                  {selectedReport && selectedReport.variant !== previewVariant ? (
+                    <button
+                      type="button"
+                      className="v2-btn v2-btn-small"
+                      onClick={handleCreatePreviewPackage}
+                      disabled={!canCreatePreviewPackage}
+                    >
+                      {creatingPreviewPackage
+                        ? t('v2Reports.creatingPackage', 'Creating package...')
+                        : t('v2Reports.createSelectedPackage', 'Create package')}
+                    </button>
+                  ) : null}
                 </div>
               </div>
               <div className="v2-report-variant-grid">

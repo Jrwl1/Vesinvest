@@ -53,15 +53,32 @@ describe('buildV2ReportPdf', () => {
             },
           ],
           nearTermExpenseAssumptions: [],
-          yearlyInvestments: [],
+          yearlyInvestments: [
+            {
+              year: 2026,
+              amount: 150000,
+              category: 'sanering_water_network',
+              investmentType: 'replacement',
+              confidence: 'high',
+              note: 'Priority renewal',
+            },
+          ],
         },
         baselineSourceSummaries: [
           {
             year: 2022,
-            sourceStatus: 'VEETI',
+            sourceStatus: 'MANUAL',
             sourceBreakdown: {
-              veetiDataTypes: ['tilinpaatos'],
-              manualDataTypes: [],
+              veetiDataTypes: [],
+              manualDataTypes: [
+                'energia',
+                'investointi',
+                'taksa',
+                'tilinpaatos',
+                'verkko',
+                'volume_jatevesi',
+                'volume_vesi',
+              ],
             },
             financials: baselineDataset,
             prices: baselineDataset,
@@ -87,7 +104,17 @@ describe('buildV2ReportPdf', () => {
               classKey: 'sanering_water_network',
               classLabel: 'Sanering / vattennatverk',
               totalAmount: 150000,
-              projects: [],
+              projects: [
+                {
+                  code: 'P-001',
+                  name: 'Water network renewal',
+                  classKey: 'sanering_water_network',
+                  classLabel: 'Sanering / vattennatverk',
+                  accountKey: 'sanering_water_network',
+                  allocations: [],
+                  totalAmount: 150000,
+                },
+              ],
             },
           ],
           depreciationPlan: [
@@ -121,13 +148,87 @@ describe('buildV2ReportPdf', () => {
 
     expect(renderedStrings).toContain('Accepted baseline years: 2022, 2024');
     expect(renderedStrings).not.toContain('Accepted baseline years: 2026');
-    expect(renderedStrings).toContain(
-      `${authoritativeGroupLabel} (sanering_water_network)`,
-    );
+    expect(renderedStrings).toContain(authoritativeGroupLabel);
     expect(renderedStrings).not.toContain(
       'Sanering / vattennatverk (sanering_water_network)',
     );
-    expect(renderedStrings).toContain(authoritativeGroupLabel);
     expect(renderedStrings).not.toContain('Sanering / vattennatverk');
+    expect(
+      renderedStrings.some((value) => value.includes('sanering_water_network')),
+    ).toBe(false);
+    expect(renderedStrings.some((value) => value.includes('MANUAL'))).toBe(false);
+    expect(renderedStrings.some((value) => value.includes('tilinpaatos'))).toBe(
+      false,
+    );
+    expect(
+      renderedStrings.some((value) => value.includes('volume_jatevesi')),
+    ).toBe(false);
+    expect(renderedStrings.some((value) => value.includes('replacement'))).toBe(
+      false,
+    );
+    expect(renderedStrings.some((value) => value === 'high')).toBe(false);
+    expect(renderedStrings).toContain(
+      'Required combined price today: 3.20 EUR/m³',
+    );
+    expect(renderedStrings).toContain(
+      'Cumulative cash floor: 3.40 EUR/m³ (4.80 %)',
+    );
+    expect(renderedStrings).not.toContain(
+      'Annual-result floor today: 3.20 EUR/m³ | Cumulative-cash floor today: 3.40 EUR/m³',
+    );
+  });
+
+  it('uses the saved report locale for package labels', async () => {
+    const toPdfText = jest.fn((value: string) => value);
+
+    await buildV2ReportPdf({
+      report: {
+        title: 'Prognosrapport Kronoby 2026-04-29 - Myndighetspaket',
+        createdAt: '2026-04-29T08:00:00.000Z',
+        baselineYear: 2025,
+        requiredPriceToday: 2.54,
+        requiredAnnualIncreasePct: 25.79,
+        totalInvestments: 600000,
+        ennuste: {
+          nimi: 'Kronoby scenario',
+        },
+      },
+      snapshot: {
+        reportLocale: 'sv',
+        scenario: {
+          assumptions: {},
+          baselinePriceTodayCombined: 1.9,
+          requiredPriceTodayCombinedAnnualResult: 2.54,
+          requiredAnnualIncreasePctAnnualResult: 25.79,
+          requiredPriceTodayCombinedCumulativeCash: 4.25,
+          requiredAnnualIncreasePctCumulativeCash: 123.68,
+          years: [],
+          nearTermExpenseAssumptions: [],
+          yearlyInvestments: [],
+        },
+        acceptedBaselineYears: [2022, 2023, 2024, 2025],
+        baselineSourceSummaries: [],
+      },
+      reportVariant: 'regulator_package',
+      reportSections: {
+        baselineSources: true,
+        investmentPlan: true,
+        assumptions: false,
+        yearlyInvestments: false,
+        riskSummary: true,
+      },
+      toPdfText,
+      normalizeText: (value) =>
+        typeof value === 'string' && value.trim().length > 0 ? value : null,
+      toNumber: (value) => Number(value),
+    });
+
+    const renderedStrings = toPdfText.mock.calls.map(([value]) => value);
+
+    expect(renderedStrings).toContain(
+      'Prognosrapport Kronoby 2026-04-29 - Myndighetspaket',
+    );
+    expect(renderedStrings).toContain('Rapportvariant: Myndighetspaket');
+    expect(renderedStrings).not.toContain('Report variant: Regulator package');
   });
 });

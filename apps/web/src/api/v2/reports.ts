@@ -27,6 +27,7 @@ export async function createReportV2(data: {
   vesinvestPlanId: string;
   title?: string;
   variant?: V2ReportVariant;
+  locale?: 'en' | 'fi' | 'sv';
 }): Promise<{
   reportId: string;
   title: string;

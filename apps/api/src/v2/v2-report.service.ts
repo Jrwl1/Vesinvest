@@ -20,6 +20,7 @@ import { V2ReportBaselineSupport } from './v2-report-baseline-support';
 import { V2ReportCreationSupport } from './v2-report-creation-support';
 import type {
   BaselineSourceSummary,
+  ReportLocale,
   ReportSections,
   ReportVariant,
   SnapshotPayload,
@@ -142,12 +143,6 @@ export class V2ReportService {
     return this.creationSupport.buildVesinvestAppendix(...args);
   }
 
-  private buildDefaultReportTitle(
-    ...args: Parameters<V2ReportBaselineSupport['buildDefaultReportTitle']>
-  ) {
-    return this.baselineSupport.buildDefaultReportTitle(...args);
-  }
-
   private readSnapshotBaselineSourceSummaries(
     ...args: Parameters<V2ReportBaselineSupport['readSnapshotBaselineSourceSummaries']>
   ) {
@@ -236,6 +231,7 @@ async listReports(orgId: string, ennusteId?: string) {
       vesinvestPlanId: string;
       title?: string;
       variant?: ReportVariant;
+      locale?: ReportLocale;
     },
   ) {
     if (!userId) {
@@ -493,6 +489,7 @@ async listReports(orgId: string, ennusteId?: string) {
     }
 
     const reportVariant = this.normalizeReportVariant(body.variant);
+    const reportLocale = this.normalizeReportLocale(body.locale);
     const reportSections = this.buildReportSections(reportVariant);
     const includeInternalEvidence = reportVariant === 'internal_appendix';
     const vesinvestAppendix = await this.buildVesinvestAppendix(
@@ -503,6 +500,7 @@ async listReports(orgId: string, ennusteId?: string) {
     const snapshot: SnapshotPayload = {
       scenario,
       generatedAt: new Date().toISOString(),
+      reportLocale,
       acceptedBaselineYears,
       baselineSourceSummaries,
       baselineSourceSummary,
@@ -602,7 +600,12 @@ async listReports(orgId: string, ennusteId?: string) {
 
     const title =
       this.normalizeText(body.title?.trim()) ||
-      this.buildDefaultReportTitle(scenario.name, new Date());
+      this.buildDefaultPackageReportTitle(
+        scenario.name,
+        new Date(),
+        reportVariant,
+        reportLocale,
+      );
 
     const created = await this.prisma.ennusteReport.create({
       data: {
@@ -707,6 +710,10 @@ async listReports(orgId: string, ennusteId?: string) {
     }
   }
 
+  private normalizeReportLocale(raw: unknown): ReportLocale {
+    return raw === 'fi' || raw === 'sv' || raw === 'en' ? raw : 'en';
+  }
+
   private buildReportSections(variant: ReportVariant): ReportSections {
     if (variant === 'regulator_package') {
       return {
@@ -735,6 +742,80 @@ async listReports(orgId: string, ennusteId?: string) {
       yearlyInvestments: true,
       riskSummary: true,
     };
+  }
+
+  private getReportLocaleLabels(locale: ReportLocale): {
+    defaultTitlePrefix: string;
+    variants: Record<ReportVariant, string>;
+  } {
+    if (locale === 'sv') {
+      return {
+        defaultTitlePrefix: 'Prognosrapport',
+        variants: {
+          regulator_package: 'Myndighetspaket',
+          board_package: 'Styrelsepaket',
+          internal_appendix: 'Intern bilaga',
+        },
+      };
+    }
+    if (locale === 'fi') {
+      return {
+        defaultTitlePrefix: 'Ennusteraportti',
+        variants: {
+          regulator_package: 'Viranomaispaketti',
+          board_package: 'Hallituksen paketti',
+          internal_appendix: 'Sisäinen liite',
+        },
+      };
+    }
+    return {
+      defaultTitlePrefix: 'Forecast report',
+      variants: {
+        regulator_package: 'Regulator package',
+        board_package: 'Board package',
+        internal_appendix: 'Internal appendix',
+      },
+    };
+  }
+
+  private getReportVariantTitleLabel(
+    variant: ReportVariant,
+    locale: ReportLocale,
+  ): string {
+    return this.getReportLocaleLabels(locale).variants[variant];
+  }
+
+  private formatIsoDate(value: Date): string {
+    return value.toISOString().slice(0, 10);
+  }
+
+  private buildDefaultReportTitle(
+    scenarioName: string | null | undefined,
+    value: Date,
+    locale: ReportLocale,
+  ): string {
+    const labels = this.getReportLocaleLabels(locale);
+    const scenarioLabel =
+      this.normalizeText(scenarioName)?.trim() ||
+      (locale === 'fi' ? 'Skenaario' : locale === 'sv' ? 'Scenario' : 'Scenario');
+    const reportDate = this.formatIsoDate(value);
+    const baseTitle = `${labels.defaultTitlePrefix} ${scenarioLabel}`;
+    return scenarioLabel.endsWith(` ${reportDate}`)
+      ? baseTitle
+      : `${baseTitle} ${reportDate}`;
+  }
+
+  private buildDefaultPackageReportTitle(
+    scenarioName: string | null | undefined,
+    value: Date,
+    variant: ReportVariant,
+    locale: ReportLocale,
+  ): string {
+    return `${this.buildDefaultReportTitle(
+      scenarioName,
+      value,
+      locale,
+    )} - ${this.getReportVariantTitleLabel(variant, locale)}`;
   }
 
   private assertAcceptedTariffPlanCurrent(

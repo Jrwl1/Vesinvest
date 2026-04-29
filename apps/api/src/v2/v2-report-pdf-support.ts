@@ -68,6 +68,209 @@ export function createPdfReportSupport({
   toNumber,
   pdfLocale,
 }: SupportParams) {
+  const language = pdfLocale.toLowerCase().startsWith('sv')
+    ? 'sv'
+    : pdfLocale.toLowerCase().startsWith('fi')
+    ? 'fi'
+    : 'en';
+  const labels = {
+    serviceSplit: {
+      water: language === 'sv' ? 'Vatten' : language === 'fi' ? 'Vesi' : 'Water',
+      wastewater:
+        language === 'sv'
+          ? 'Avlopp'
+          : language === 'fi'
+          ? 'Jatevesi'
+          : 'Wastewater',
+      mixed: language === 'sv' ? 'Blandad' : language === 'fi' ? 'Sekoitettu' : 'Mixed',
+    },
+    depreciation: {
+      straightLine:
+        language === 'sv'
+          ? 'Rak avskrivning'
+          : language === 'fi'
+          ? 'Tasapoisto'
+          : 'Straight-line',
+      linear: language === 'sv' ? 'Linjär' : language === 'fi' ? 'Lineaarinen' : 'Linear',
+      residual:
+        language === 'sv'
+          ? 'Restvärde'
+          : language === 'fi'
+          ? 'Menojäännös'
+          : 'Residual',
+      none:
+        language === 'sv'
+          ? 'Ingen avskrivning'
+          : language === 'fi'
+          ? 'Ei poistoa'
+          : 'No depreciation',
+      years: language === 'sv' ? 'år' : language === 'fi' ? 'vuotta' : 'years',
+    },
+    assumptions: {
+      inflation: language === 'sv' ? 'Inflation' : language === 'fi' ? 'Inflaatio' : 'Inflation',
+      energyFactor:
+        language === 'sv'
+          ? 'Energifaktor'
+          : language === 'fi'
+          ? 'Energiakerroin'
+          : 'Energy factor',
+      personnelFactor:
+        language === 'sv'
+          ? 'Personalfaktor'
+          : language === 'fi'
+          ? 'Henkilostokerroin'
+          : 'Personnel factor',
+      volumeChange:
+        language === 'sv'
+          ? 'Volymforandring'
+          : language === 'fi'
+          ? 'Volyymin muutos'
+          : 'Volume change',
+      priceIncrease:
+        language === 'sv'
+          ? 'Prishojning'
+          : language === 'fi'
+          ? 'Hinnankorotus'
+          : 'Price increase',
+      baseFeeChange:
+        language === 'sv'
+          ? 'Grundavgiftsandring'
+          : language === 'fi'
+          ? 'Perusmaksun muutos'
+          : 'Base fee change',
+      investmentFactor:
+        language === 'sv'
+          ? 'Investeringsfaktor'
+          : language === 'fi'
+          ? 'Investointikerroin'
+          : 'Investment factor',
+    },
+    dataset: {
+      evidenceAndWorkbook:
+        language === 'sv'
+          ? 'Underlag + Excel-korrigering'
+          : language === 'fi'
+          ? 'Aineisto + Excel-korjaus'
+          : 'Evidence file + workbook repair',
+      statementAndWorkbook:
+        language === 'sv'
+          ? 'Boksluts-PDF + Excel-korrigering'
+          : language === 'fi'
+          ? 'Tilinpaatos-PDF + Excel-korjaus'
+          : 'Statement PDF + workbook repair',
+      evidenceFile:
+        language === 'sv'
+          ? 'Underlag'
+          : language === 'fi'
+          ? 'Aineisto'
+          : 'Evidence file',
+      statementPdf:
+        language === 'sv'
+          ? 'Boksluts-PDF'
+          : language === 'fi'
+          ? 'Tilinpäätös-PDF'
+          : 'Statement PDF',
+      workbookImport:
+        language === 'sv'
+          ? 'Excel-import'
+          : language === 'fi'
+          ? 'Excel-tuonti'
+          : 'Workbook import',
+      manualReview:
+        language === 'sv'
+          ? 'Manuell granskning'
+          : language === 'fi'
+          ? 'Manuaalinen tarkistus'
+          : 'Manual review',
+    },
+    sourceStatus: {
+      veeti: 'VEETI',
+      manual:
+        language === 'sv'
+          ? 'Manuell granskning'
+          : language === 'fi'
+          ? 'Manuaalinen tarkistus'
+          : 'Manual review',
+      mixed:
+        language === 'sv'
+          ? 'Blandat underlag'
+          : language === 'fi'
+          ? 'Yhdistetty aineisto'
+          : 'Mixed sources',
+      incomplete:
+        language === 'sv'
+          ? 'Ofullständigt'
+          : language === 'fi'
+          ? 'Puutteellinen'
+          : 'Incomplete',
+    },
+    datasetTypes: {
+      energia: language === 'sv' ? 'Energi' : language === 'fi' ? 'Energia' : 'Energy',
+      investointi:
+        language === 'sv'
+          ? 'Investeringar'
+          : language === 'fi'
+          ? 'Investoinnit'
+          : 'Investments',
+      taksa: language === 'sv' ? 'Avgifter' : language === 'fi' ? 'Taksat' : 'Tariffs',
+      tilinpaatos:
+        language === 'sv'
+          ? 'Bokslut'
+          : language === 'fi'
+          ? 'Tilinpäätös'
+          : 'Financial statements',
+      verkko: language === 'sv' ? 'Nät' : language === 'fi' ? 'Verkko' : 'Network',
+      volume_jatevesi:
+        language === 'sv'
+          ? 'Sålt avlopp'
+          : language === 'fi'
+          ? 'Myyty jätevesi'
+          : 'Sold wastewater',
+      volume_vesi:
+        language === 'sv'
+          ? 'Sålt vatten'
+          : language === 'fi'
+          ? 'Myyty vesi'
+          : 'Sold water',
+    },
+    investmentTypes: {
+      replacement:
+        language === 'sv'
+          ? 'Förnyelse'
+          : language === 'fi'
+          ? 'Saneeraus'
+          : 'Renewal',
+      sanering:
+        language === 'sv'
+          ? 'Sanering'
+          : language === 'fi'
+          ? 'Saneeraus'
+          : 'Rehabilitation',
+      nyanlaggning:
+        language === 'sv'
+          ? 'Nyanläggning'
+          : language === 'fi'
+          ? 'Uudisrakentaminen'
+          : 'New build',
+      new_build:
+        language === 'sv'
+          ? 'Nyanläggning'
+          : language === 'fi'
+          ? 'Uudisrakentaminen'
+          : 'New build',
+      repair:
+        language === 'sv'
+          ? 'Reparation'
+          : language === 'fi'
+          ? 'Korjaus'
+          : 'Repair',
+    },
+    confidence: {
+      high: language === 'sv' ? 'Hög' : language === 'fi' ? 'Korkea' : 'High',
+      medium: language === 'sv' ? 'Medel' : language === 'fi' ? 'Keskitaso' : 'Medium',
+      low: language === 'sv' ? 'Låg' : language === 'fi' ? 'Matala' : 'Low',
+    },
+  };
   const formatMoney = (value: number) =>
     `${Math.round(value).toLocaleString(pdfLocale)} EUR`;
   const formatPrice = (value: number) =>
@@ -85,12 +288,76 @@ export function createPdfReportSupport({
   const formatServiceSplit = (value: 'water' | 'wastewater' | 'mixed') => {
     switch (value) {
       case 'water':
-        return 'Water';
+        return labels.serviceSplit.water;
       case 'wastewater':
-        return 'Wastewater';
+        return labels.serviceSplit.wastewater;
       default:
-        return 'Mixed';
+        return labels.serviceSplit.mixed;
     }
+  };
+  const humanizeInternalKey = (value: string | null | undefined) => {
+    const normalized = String(value ?? '').trim();
+    if (!normalized) {
+      return '-';
+    }
+    return normalized
+      .split(/[_\s-]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  };
+  const formatSourceStatus = (value: string | null | undefined) => {
+    switch (String(value ?? '').toUpperCase()) {
+      case 'VEETI':
+        return labels.sourceStatus.veeti;
+      case 'MANUAL':
+        return labels.sourceStatus.manual;
+      case 'MIXED':
+        return labels.sourceStatus.mixed;
+      case 'INCOMPLETE':
+      default:
+        return labels.sourceStatus.incomplete;
+    }
+  };
+  const formatDatasetType = (value: string | null | undefined) => {
+    const normalized = String(value ?? '').trim();
+    if (!normalized) {
+      return '-';
+    }
+    return labels.datasetTypes[normalized as keyof typeof labels.datasetTypes] ??
+      humanizeInternalKey(normalized);
+  };
+  const formatDatasetTypeList = (values: string[] | null | undefined) => {
+    if (!values?.length) {
+      return '-';
+    }
+    return values.map(formatDatasetType).join(', ');
+  };
+  const formatVesinvestKeyLabel = (
+    key: string | null | undefined,
+    fallbackLabel?: string | null,
+  ) => {
+    const normalized = normalizeVesinvestClassLabel(key, fallbackLabel);
+    if (normalized && normalized !== String(key ?? '').trim()) {
+      return normalized;
+    }
+    return humanizeInternalKey(normalized);
+  };
+  const formatInvestmentType = (value: string | null | undefined) => {
+    const normalized = String(value ?? '').trim();
+    if (!normalized) {
+      return '-';
+    }
+    return labels.investmentTypes[normalized as keyof typeof labels.investmentTypes] ??
+      humanizeInternalKey(normalized);
+  };
+  const formatConfidence = (value: string | null | undefined) => {
+    const normalized = String(value ?? '').trim();
+    if (!normalized) {
+      return '-';
+    }
+    return labels.confidence[normalized as keyof typeof labels.confidence] ??
+      humanizeInternalKey(normalized);
   };
   const formatDepreciationMethod = ({
     method,
@@ -103,14 +370,16 @@ export function createPdfReportSupport({
   }) => {
     switch (method) {
       case 'straight-line':
-        return `Straight-line ${linearYears ?? 0} years`;
+        return `${labels.depreciation.straightLine} ${linearYears ?? 0} ${
+          labels.depreciation.years
+        }`;
       case 'linear':
-        return 'Linear';
+        return labels.depreciation.linear;
       case 'residual':
-        return `Residual ${residualPercent ?? 0} %`;
+        return `${labels.depreciation.residual} ${residualPercent ?? 0} %`;
       case 'none':
       default:
-        return 'No depreciation';
+        return labels.depreciation.none;
     }
   };
   const formatVolume = (value: number | null | undefined) =>
@@ -118,13 +387,13 @@ export function createPdfReportSupport({
       ? '-'
       : `${Math.round(value).toLocaleString(pdfLocale)} m³`;
   const assumptionLabels: Record<string, string> = {
-    inflaatio: 'Inflation',
-    energiakerroin: 'Energy factor',
-    henkilostokerroin: 'Personnel factor',
-    vesimaaran_muutos: 'Volume change',
-    hintakorotus: 'Price increase',
-    perusmaksuMuutos: 'Base fee change',
-    investointikerroin: 'Investment factor',
+    inflaatio: labels.assumptions.inflation,
+    energiakerroin: labels.assumptions.energyFactor,
+    henkilostokerroin: labels.assumptions.personnelFactor,
+    vesimaaran_muutos: labels.assumptions.volumeChange,
+    hintakorotus: labels.assumptions.priceIncrease,
+    perusmaksuMuutos: labels.assumptions.baseFeeChange,
+    investointikerroin: labels.assumptions.investmentFactor,
   };
   const formatAssumptionValue = (key: string, value: number) => {
     if (key === 'investointikerroin') {
@@ -259,21 +528,21 @@ export function createPdfReportSupport({
       ) ?? false);
     if (hasDocumentImport && hasWorkbookImport) {
       return withDocumentPages(
-        `Source document + workbook repair (${documentFileName})`,
+        `${labels.dataset.evidenceAndWorkbook} (${documentFileName})`,
       );
     }
     if (hasStatementImport && hasWorkbookImport) {
-      return `Statement PDF + workbook repair (${getImportedFileNameByKind(
+      return `${labels.dataset.statementAndWorkbook} (${getImportedFileNameByKind(
         dataset.provenance,
         'statement_import',
         'OCR',
       )})`;
     }
     if (hasDocumentImport) {
-      return withDocumentPages(`Source document (${documentFileName})`);
+      return withDocumentPages(`${labels.dataset.evidenceFile} (${documentFileName})`);
     }
     if (dataset.provenance?.kind === 'statement_import') {
-      return `Statement PDF (${dataset.provenance.fileName ?? 'OCR'})`;
+      return `${labels.dataset.statementPdf} (${dataset.provenance.fileName ?? 'OCR'})`;
     }
     if (dataset.provenance?.kind === 'qdis_import') {
       return `QDIS PDF (${dataset.provenance.fileName ?? 'QDIS'})`;
@@ -282,10 +551,10 @@ export function createPdfReportSupport({
       dataset.provenance?.kind === 'kva_import' ||
       dataset.provenance?.kind === 'excel_import'
     ) {
-      return `Workbook import (${dataset.provenance.fileName ?? 'Excel'})`;
+      return `${labels.dataset.workbookImport} (${dataset.provenance.fileName ?? 'Excel'})`;
     }
     if (dataset.source === 'manual') {
-      return 'Manual review';
+      return labels.dataset.manualReview;
     }
     if (dataset.source === 'veeti') {
       return 'VEETI';
@@ -332,11 +601,16 @@ export function createPdfReportSupport({
     formatAssumptionValue,
     formatDatasetEvidenceDetail,
     formatDatasetSource,
+    formatDatasetTypeList,
     formatDepreciationMethod,
+    formatConfidence,
+    formatInvestmentType,
     formatMoney,
     formatPct,
     formatPrice,
     formatServiceSplit,
+    formatSourceStatus,
+    formatVesinvestKeyLabel,
     formatVolume,
     normalizeText,
     toPdfText,

@@ -30,4 +30,8 @@ export class CreateReportDto {
   @IsOptional()
   @IsIn(['regulator_package', 'board_package', 'internal_appendix'])
   variant?: 'regulator_package' | 'board_package' | 'internal_appendix';
+
+  @IsOptional()
+  @IsIn(['en', 'fi', 'sv'])
+  locale?: 'en' | 'fi' | 'sv';
 }

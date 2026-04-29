@@ -13,6 +13,8 @@ export type V2ReportVariant =
   | 'board_package'
   | 'internal_appendix';
 
+export type V2ReportLocale = 'en' | 'fi' | 'sv';
+
 export type V2ReportListItem = {
   id: string;
   title: string;
@@ -37,6 +39,7 @@ export type V2ReportDetail = {
   totalInvestments: number;
   ennuste: { id: string; nimi: string | null };
   snapshot: {
+    reportLocale?: V2ReportLocale;
     scenario: V2ForecastScenario;
     generatedAt: string;
     acceptedBaselineYears: number[];

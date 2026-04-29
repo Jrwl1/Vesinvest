@@ -328,6 +328,13 @@ export type V2TariffRecommendation = {
   vesinvestPlanId: string;
   baselineFingerprint: string | null;
   scenarioFingerprint: string | null;
+  priceSignal?: {
+    currentComparatorPrice: number | null;
+    requiredPriceToday: number | null;
+    requiredIncreasePct: number | null;
+    cumulativeCashFloorPrice: number | null;
+    cumulativeCashFloorIncreasePct: number | null;
+  };
   targetAdditionalAnnualRevenue: number;
   baselineAnnualRevenue: number;
   proposedAnnualRevenue: number;

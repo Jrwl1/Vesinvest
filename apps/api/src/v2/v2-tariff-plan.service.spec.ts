@@ -233,25 +233,32 @@ describe('V2TariffPlanService', () => {
       'wastewaterUsageFee',
       'waterUsageFee',
     ]);
-    expect(result.recommendation.targetAdditionalAnnualRevenue).toBe(104000);
+    expect(result.recommendation.priceSignal).toMatchObject({
+      currentComparatorPrice: 1.36,
+      requiredPriceToday: 2.5,
+      requiredIncreasePct: 40,
+      cumulativeCashFloorPrice: 2.4,
+      cumulativeCashFloorIncreasePct: 35,
+    });
+    expect(result.recommendation.targetAdditionalAnnualRevenue).toBe(114000);
     expect(result.recommendation.fees.connectionFee).toMatchObject({
       currentUnit: 5000,
-      proposedUnit: 6040,
-      revenueImpact: 10400,
+      proposedUnit: 6140,
+      revenueImpact: 11400,
       allocationSharePct: 10,
     });
     expect(result.recommendation.fees.baseFee).toMatchObject({
       currentUnit: 50,
-      proposedUnit: 89,
-      revenueImpact: 31200,
+      proposedUnit: 92.75,
+      revenueImpact: 34200,
       allocationSharePct: 30,
     });
     expect(result.recommendation.fees.waterUsageFee.proposedUnit).toBeCloseTo(
-      1.8067,
+      1.865,
       4,
     );
     expect(result.recommendation.fees.wastewaterUsageFee.proposedUnit).toBeCloseTo(
-      2.25,
+      2.3125,
       4,
     );
     expect(result.readinessChecklist).toMatchObject({
@@ -483,6 +490,26 @@ describe('V2TariffPlanService', () => {
 
     expect(result.status).toBe('stale');
     expect(rows[0].status).toBe('stale');
+  });
+
+  it('adds price signals to legacy saved recommendations when reading them', async () => {
+    const { service, rows } = makeService();
+
+    await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+      baselineInput: readyBaselineInput,
+      allocationPolicy: readyAllocationPolicy,
+      ...readyEvidence,
+    });
+    delete rows[0].recommendation.priceSignal;
+
+    const result = await service.getTariffPlan(ORG_ID, PLAN_ID);
+
+    expect(result.recommendation.priceSignal).toMatchObject({
+      currentComparatorPrice: 1.36,
+      requiredPriceToday: 2.5,
+      requiredIncreasePct: 40,
+      cumulativeCashFloorPrice: 2.4,
+    });
   });
 
   it('blocks tariff planning when the linked forecast needs recompute', async () => {

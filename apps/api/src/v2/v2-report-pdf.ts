@@ -6,6 +6,421 @@ import {
 } from './v2-report-pdf-support';
 import type { BuildV2ReportPdfInput } from './v2-report-pdf.types';
 
+type PdfReportLocale = 'en' | 'fi' | 'sv';
+
+const PDF_DATE_LOCALES: Record<PdfReportLocale, string> = {
+  en: 'en-GB',
+  fi: 'fi-FI',
+  sv: 'sv-SE',
+};
+
+const PDF_LABELS: Record<
+  PdfReportLocale,
+  {
+    reportVariant: string;
+    variants: Record<'regulator_package' | 'board_package' | 'internal_appendix', string>;
+  }
+> = {
+  en: {
+    reportVariant: 'Report variant',
+    variants: {
+      regulator_package: 'Regulator package',
+      board_package: 'Board package',
+      internal_appendix: 'Internal appendix',
+    },
+  },
+  fi: {
+    reportVariant: 'Raporttiversio',
+    variants: {
+      regulator_package: 'Viranomaispaketti',
+      board_package: 'Hallituksen paketti',
+      internal_appendix: 'Sisäinen liite',
+    },
+  },
+  sv: {
+    reportVariant: 'Rapportvariant',
+    variants: {
+      regulator_package: 'Myndighetspaket',
+      board_package: 'Styrelsepaket',
+      internal_appendix: 'Intern bilaga',
+    },
+  },
+};
+
+function normalizePdfReportLocale(
+  raw: string | null | undefined,
+  reportTitle: string | null | undefined,
+): PdfReportLocale {
+  if (raw === 'fi' || raw === 'sv' || raw === 'en') return raw;
+  const title = reportTitle?.trim().toLowerCase() ?? '';
+  if (title.startsWith('ennusteraportti ')) return 'fi';
+  if (title.startsWith('prognosrapport ')) return 'sv';
+  return 'en';
+}
+
+function createPdfCopy(locale: PdfReportLocale) {
+  const en = {
+    created: 'Created',
+    scenario: 'Scenario',
+    scenarioBranches: {
+      base: 'Base',
+      committed: 'Committed',
+      hypothesis: 'Hypothesis',
+      stress: 'Stress',
+    },
+    scenarioBranch: 'Scenario branch',
+    planRevision: 'Plan revision',
+    baselineYear: 'Baseline year',
+    acceptedBaselineYears: 'Accepted baseline years',
+    forecastHorizon: 'Forecast horizon',
+    financials: 'Financials',
+    prices: 'Prices',
+    soldVolumes: 'Sold volumes',
+    keyFigures: 'Key figures',
+    requiredCombinedPriceToday: 'Required combined price today',
+    requiredIncreaseFromCurrentCombinedPrice:
+      'Required increase from current combined price',
+    totalInvestments: 'Total investments',
+    tariffJustification: 'Tariff justification',
+    currentBaselineCombinedPrice: 'Current baseline combined price',
+    requiredIncreaseFromCurrentPrice: 'Required increase from current price',
+    baselineSoldVolume: 'Baseline sold volume',
+    totalDepreciation: 'Total depreciation',
+    peakAnnualInvestment: 'Peak annual investment',
+    expenseOverrides: 'Expense overrides',
+    nearTerm: 'near-term',
+    none: 'none',
+    thereafter: 'Thereafter',
+    configured: 'configured',
+    selectedInvestmentsRequire: (price: string) =>
+      `Selected investments require a combined price of ${price} today.`,
+    acceptedTariffPackage: (revenue: string, years: string | number) =>
+      `Accepted tariff package: ${revenue} annual revenue after ${years} years.`,
+    averageAnnualCustomerImpact: 'Average annual customer impact',
+    smoothingStatus15: '15% status',
+    feeLabels: {
+      connectionFee: 'Connection fee',
+      baseFee: 'Base fee',
+      waterUsageFee: 'Water usage fee',
+      wastewaterUsageFee: 'Wastewater usage fee',
+    },
+    impact: 'impact',
+    internalEvidenceAppendix: 'Internal evidence appendix',
+    evidenceLabels: {
+      assetInventory: 'Asset inventory',
+      conditionStudies: 'Condition studies',
+      maintenance: 'Maintenance',
+      municipalContext: 'Municipal context',
+      financialRisk: 'Financial risk',
+      publicationBoundary: 'Publication boundary',
+      communication: 'Communication',
+      tariffRevenue: 'Tariff revenue',
+      tariffCosts: 'Tariff costs',
+      regionalDifferentiation: 'Regional differentiation',
+      stormwater: 'Stormwater',
+      specialUse: 'Special use',
+      connectionFeeLiability: 'Connection-fee liability',
+      ownerDistribution: 'Owner distribution',
+    },
+    riskSummary: 'Risk summary',
+    annualResultToZero: 'Annual result to zero',
+    cumulativeCashFloor: 'Cumulative cash floor',
+    annualUnderfundingStarts: 'Annual underfunding starts',
+    cashUnderfundingStarts: 'Cash underfunding starts',
+    peakGap: 'Peak gap',
+    largestAnnualDeficit: 'Largest annual deficit',
+    acceptedBaselineProvenance: 'Accepted baseline provenance',
+    year: 'Year',
+    estimate: 'estimate',
+    evidence: 'Evidence',
+    veetiDatasets: 'VEETI sources',
+    manualDatasets: 'Manual sources',
+    appendixAnnualTariffPath: 'Appendix A: annual tariff path',
+    appendixAnnualInvestmentPath: 'Appendix B: annual investment path',
+    appendixInvestmentPlanByClass: 'Appendix C: investment plan by class',
+    appendixDepreciationPlan: 'Appendix D: depreciation plan',
+    appendixYearlyInvestmentRows: 'Appendix E: yearly investment rows',
+    appendixAssumptions: 'Appendix F: assumptions',
+    table: {
+      year: 'Year',
+      water: 'Water',
+      wastewater: 'Wastewater',
+      combined: 'Combined',
+      investments: 'Investments',
+      result: 'Result',
+      cashflow: 'Cashflow',
+      cumulativeCash: 'Cum. cash',
+      depreciation: 'Deprec.',
+      annualTotal: 'Annual total',
+      fiveYearBands: 'Five-year bands',
+      code: 'Code',
+      project: 'Project',
+      account: 'Account',
+      total: 'Total',
+      class: 'Class',
+      split: 'Split',
+      method: 'Method',
+      writeOff: 'Write-off',
+      residual: 'Residual',
+      amount: 'Amount',
+      group: 'Group',
+      type: 'Type',
+      confidence: 'Confidence',
+      note: 'Note',
+    },
+    noSavedInvestments: 'No saved investments.',
+    noSavedAssumptions: 'No saved assumptions.',
+    nearTermExpenseOverrides: 'Near-term expense overrides',
+    thereafterExpenseProfile: 'Thereafter expense profile',
+    personnel: 'personnel',
+    energy: 'energy',
+    otherOpex: 'other opex',
+    savedTariffAssumption: 'Saved tariff assumption',
+  };
+  if (locale === 'fi') {
+    return {
+      ...en,
+      created: 'Luotu',
+      scenario: 'Skenaario',
+      scenarioBranches: {
+        base: 'Perus',
+        committed: 'Paatetty',
+        hypothesis: 'Oletus',
+        stress: 'Stressi',
+      },
+      scenarioBranch: 'Skenaariotyyppi',
+      planRevision: 'Suunnitelmarevisio',
+      baselineYear: 'Perusvuosi',
+      acceptedBaselineYears: 'Hyvaksytyt perusvuodet',
+      forecastHorizon: 'Ennustehorisontti',
+      financials: 'Talous',
+      prices: 'Hinnat',
+      soldVolumes: 'Myydyt volyymit',
+      keyFigures: 'Avainluvut',
+      requiredCombinedPriceToday: 'Tarvittava yhdistetty hinta tanaan',
+      requiredIncreaseFromCurrentCombinedPrice:
+        'Tarvittava korotus nykyiseen yhdistettyyn hintaan',
+      totalInvestments: 'Investoinnit yhteensa',
+      tariffJustification: 'Maksuperustelu',
+      currentBaselineCombinedPrice: 'Nykyinen yhdistetty perushinta',
+      requiredIncreaseFromCurrentPrice: 'Tarvittava korotus nykyhintaan',
+      baselineSoldVolume: 'Perusvuoden myyty volyymi',
+      totalDepreciation: 'Poistot yhteensa',
+      peakAnnualInvestment: 'Suurin vuosittainen investointi',
+      expenseOverrides: 'Kustannusoletukset',
+      nearTerm: 'lahivuodet',
+      none: 'ei ole',
+      thereafter: 'Sen jalkeen',
+      configured: 'maaritetty',
+      selectedInvestmentsRequire: (price: string) =>
+        `Valitut investoinnit edellyttavat yhdistettya hintaa ${price} tanaan.`,
+      acceptedTariffPackage: (revenue: string, years: string | number) =>
+        `Hyvaksytty maksupaketti: ${revenue} vuosituotto ${years} vuoden jalkeen.`,
+      averageAnnualCustomerImpact: 'Keskimaarainen vuosittainen asiakasvaikutus',
+      smoothingStatus15: '15 % tila',
+      feeLabels: {
+        connectionFee: 'Liittymismaksu',
+        baseFee: 'Perusmaksu',
+        waterUsageFee: 'Vesimaksu',
+        wastewaterUsageFee: 'Jatevesimaksu',
+      },
+      impact: 'vaikutus',
+      internalEvidenceAppendix: 'Sisainen evidenssiliite',
+      evidenceLabels: {
+        assetInventory: 'Omaisuusluettelo',
+        conditionStudies: 'Kuntotutkimukset',
+        maintenance: 'Kunnossapito',
+        municipalContext: 'Kunnan konteksti',
+        financialRisk: 'Talousriski',
+        publicationBoundary: 'Julkaisurajaus',
+        communication: 'Viestinta',
+        tariffRevenue: 'Maksutuotot',
+        tariffCosts: 'Maksukustannukset',
+        regionalDifferentiation: 'Alueellinen eriyttaminen',
+        stormwater: 'Hulevesi',
+        specialUse: 'Erityiskaytto',
+        connectionFeeLiability: 'Liittymismaksuvelka',
+        ownerDistribution: 'Omistajajako',
+      },
+      riskSummary: 'Riskikooste',
+      annualResultToZero: 'Vuosikatteen nollataso',
+      cumulativeCashFloor: 'Kumulatiivinen kassataso',
+      annualUnderfundingStarts: 'Vuositason alirahoitus alkaa',
+      cashUnderfundingStarts: 'Kassaalirahoitus alkaa',
+      peakGap: 'Suurin vaje',
+      largestAnnualDeficit: 'Suurin vuosivaje',
+      acceptedBaselineProvenance: 'Hyvaksytyn perusaineiston provenienssi',
+      year: 'Vuosi',
+      estimate: 'arvio',
+      evidence: 'Evidenssi',
+      veetiDatasets: 'VEETI-lähteet',
+      manualDatasets: 'Manuaaliset lähteet',
+      appendixAnnualTariffPath: 'Liite A: vuosittainen maksupolku',
+      appendixAnnualInvestmentPath: 'Liite B: vuosittainen investointipolku',
+      appendixInvestmentPlanByClass: 'Liite C: investointisuunnitelma luokittain',
+      appendixDepreciationPlan: 'Liite D: poistosuunnitelma',
+      appendixYearlyInvestmentRows: 'Liite E: vuosittaiset investointirivit',
+      appendixAssumptions: 'Liite F: oletukset',
+      table: {
+        year: 'Vuosi',
+        water: 'Vesi',
+        wastewater: 'Jatevesi',
+        combined: 'Yhdistetty',
+        investments: 'Investoinnit',
+        result: 'Tulos',
+        cashflow: 'Kassavirta',
+        cumulativeCash: 'Kum. kassa',
+        depreciation: 'Poistot',
+        annualTotal: 'Vuosiyhteensa',
+        fiveYearBands: 'Viiden vuoden jaksot',
+        code: 'Koodi',
+        project: 'Projekti',
+        account: 'Tili',
+        total: 'Yhteensa',
+        class: 'Luokka',
+        split: 'Jako',
+        method: 'Menetelma',
+        writeOff: 'Poistoaika',
+        residual: 'Jaannos',
+        amount: 'Maara',
+        group: 'Ryhma',
+        type: 'Tyyppi',
+        confidence: 'Varmuus',
+        note: 'Huomio',
+      },
+      noSavedInvestments: 'Ei tallennettuja investointeja.',
+      noSavedAssumptions: 'Ei tallennettuja oletuksia.',
+      nearTermExpenseOverrides: 'Lahivuosien kustannusoletukset',
+      thereafterExpenseProfile: 'Myohainen kustannusprofiili',
+      personnel: 'henkilosto',
+      energy: 'energia',
+      otherOpex: 'muu kaytto',
+      savedTariffAssumption: 'Tallennettu maksuoletus',
+    };
+  }
+  if (locale === 'sv') {
+    return {
+      ...en,
+      created: 'Skapad',
+      scenarioBranches: {
+        base: 'Bas',
+        committed: 'Beslutad',
+        hypothesis: 'Hypotes',
+        stress: 'Stress',
+      },
+      scenarioBranch: 'Scenariotyp',
+      planRevision: 'Planrevision',
+      baselineYear: 'Basår',
+      acceptedBaselineYears: 'Godkända basår',
+      forecastHorizon: 'Prognoshorisont',
+      financials: 'Ekonomi',
+      prices: 'Priser',
+      soldVolumes: 'Sålda volymer',
+      keyFigures: 'Nyckeltal',
+      requiredCombinedPriceToday: 'Nödvändigt kombinerat pris idag',
+      requiredIncreaseFromCurrentCombinedPrice:
+        'Nödvändig höjning från nuvarande kombinerade pris',
+      totalInvestments: 'Investeringar totalt',
+      tariffJustification: 'Avgiftsmotivering',
+      currentBaselineCombinedPrice: 'Nuvarande kombinerat baspris',
+      requiredIncreaseFromCurrentPrice: 'Nödvändig höjning från nuvarande pris',
+      baselineSoldVolume: 'Såld basvolym',
+      totalDepreciation: 'Avskrivningar totalt',
+      peakAnnualInvestment: 'Högsta årliga investering',
+      expenseOverrides: 'Kostnadsantaganden',
+      nearTerm: 'närtid',
+      none: 'inga',
+      thereafter: 'Därefter',
+      configured: 'konfigurerad',
+      selectedInvestmentsRequire: (price: string) =>
+        `Valda investeringar kräver ett kombinerat pris på ${price} idag.`,
+      acceptedTariffPackage: (revenue: string, years: string | number) =>
+        `Godkänt avgiftspaket: ${revenue} årlig intäkt efter ${years} år.`,
+      averageAnnualCustomerImpact: 'Genomsnittlig årlig kundpåverkan',
+      smoothingStatus15: '15 %-status',
+      feeLabels: {
+        connectionFee: 'Anslutningsavgift',
+        baseFee: 'Grundavgift',
+        waterUsageFee: 'Vattenpris',
+        wastewaterUsageFee: 'Avloppspris',
+      },
+      impact: 'effekt',
+      internalEvidenceAppendix: 'Intern evidensbilaga',
+      evidenceLabels: {
+        assetInventory: 'Egendomsunderlag',
+        conditionStudies: 'Konditionsstudier',
+        maintenance: 'Underhåll',
+        municipalContext: 'Kommunal kontext',
+        financialRisk: 'Finansiell risk',
+        publicationBoundary: 'Publiceringsgräns',
+        communication: 'Kommunikation',
+        tariffRevenue: 'Avgiftsintäkter',
+        tariffCosts: 'Avgiftskostnader',
+        regionalDifferentiation: 'Regional differentiering',
+        stormwater: 'Dagvatten',
+        specialUse: 'Särskild användning',
+        connectionFeeLiability: 'Anslutningsavgiftsskuld',
+        ownerDistribution: 'Ägarfördelning',
+      },
+      riskSummary: 'Risksammanfattning',
+      annualResultToZero: 'Årsresultat till noll',
+      cumulativeCashFloor: 'Kumulativ kassagräns',
+      annualUnderfundingStarts: 'Årsunderskott börjar',
+      cashUnderfundingStarts: 'Kassaunderskott börjar',
+      peakGap: 'Största gap',
+      largestAnnualDeficit: 'Största årsunderskott',
+      acceptedBaselineProvenance: 'Godkänd basårsproveniens',
+      year: 'År',
+      estimate: 'uppskattning',
+      evidence: 'Evidens',
+      veetiDatasets: 'VEETI-källor',
+      manualDatasets: 'Manuella källor',
+      appendixAnnualTariffPath: 'Bilaga A: årlig avgiftsbana',
+      appendixAnnualInvestmentPath: 'Bilaga B: årlig investeringsbana',
+      appendixInvestmentPlanByClass: 'Bilaga C: investeringsplan per klass',
+      appendixDepreciationPlan: 'Bilaga D: avskrivningsplan',
+      appendixYearlyInvestmentRows: 'Bilaga E: årliga investeringsrader',
+      appendixAssumptions: 'Bilaga F: antaganden',
+      table: {
+        year: 'År',
+        water: 'Vatten',
+        wastewater: 'Avlopp',
+        combined: 'Kombinerat',
+        investments: 'Investeringar',
+        result: 'Resultat',
+        cashflow: 'Kassaflöde',
+        cumulativeCash: 'Kum. kassa',
+        depreciation: 'Avskr.',
+        annualTotal: 'Årstotal',
+        fiveYearBands: 'Femårsblock',
+        code: 'Kod',
+        project: 'Projekt',
+        account: 'Konto',
+        total: 'Totalt',
+        class: 'Klass',
+        split: 'Fördelning',
+        method: 'Metod',
+        writeOff: 'Avskrivningstid',
+        residual: 'Restvärde',
+        amount: 'Belopp',
+        group: 'Grupp',
+        type: 'Typ',
+        confidence: 'Säkerhet',
+        note: 'Anteckning',
+      },
+      noSavedInvestments: 'Inga sparade investeringar.',
+      noSavedAssumptions: 'Inga sparade antaganden.',
+      nearTermExpenseOverrides: 'Kostnadsantaganden för närtid',
+      thereafterExpenseProfile: 'Kostnadsprofil därefter',
+      personnel: 'personal',
+      energy: 'energi',
+      otherOpex: 'övrig drift',
+      savedTariffAssumption: 'Sparat avgiftsantagande',
+    };
+  }
+  return en;
+}
+
 export async function buildV2ReportPdf({
   report,
   snapshot,
@@ -20,7 +435,15 @@ export async function buildV2ReportPdf({
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const PDF_LOCALE = 'en-GB';
+  const pdfReportLocale = normalizePdfReportLocale(
+    snapshot?.reportLocale,
+    report.title,
+  );
+  const PDF_LOCALE = PDF_DATE_LOCALES[pdfReportLocale];
+  const pdfLabels = PDF_LABELS[pdfReportLocale];
+  const pdfCopy = createPdfCopy(pdfReportLocale);
+  const yearsUnit =
+    pdfReportLocale === 'en' ? 'years' : pdfReportLocale === 'fi' ? 'vuotta' : 'år';
 
   const PAGE_WIDTH = 842;
   const PAGE_HEIGHT = 595;
@@ -77,13 +500,18 @@ export async function buildV2ReportPdf({
     assumptionLabels,
     formatAllocationLines,
     formatAssumptionValue,
+    formatConfidence,
     formatDatasetEvidenceDetail,
     formatDatasetSource,
+    formatDatasetTypeList,
     formatDepreciationMethod,
+    formatInvestmentType,
     formatMoney,
     formatPct,
     formatPrice,
     formatServiceSplit,
+    formatSourceStatus,
+    formatVesinvestKeyLabel,
     formatVolume,
   } = createPdfReportSupport({
     toPdfText,
@@ -92,12 +520,7 @@ export async function buildV2ReportPdf({
     pdfLocale: PDF_LOCALE,
   });
 
-  const variantLabel =
-    reportVariant === 'regulator_package'
-      ? 'Regulator package'
-      : reportVariant === 'board_package'
-        ? 'Board package'
-        : 'Internal appendix';
+  const variantLabel = pdfLabels.variants[reportVariant];
   const annualResultPrice =
     scenario?.requiredPriceTodayCombinedAnnualResult ?? report.requiredPriceToday;
   const annualResultIncrease =
@@ -135,31 +558,37 @@ export async function buildV2ReportPdf({
   );
   const annualTariffHeading =
     annualTariffRows.length > 0
-      ? `Appendix A: annual tariff path ${annualTariffRows[0]!.year}-${annualTariffRows[annualTariffRows.length - 1]!.year} (${annualTariffRows.length} years)`
-      : 'Appendix A: annual tariff path';
+      ? `${pdfCopy.appendixAnnualTariffPath} ${annualTariffRows[0]!.year}-${
+          annualTariffRows[annualTariffRows.length - 1]!.year
+        } (${annualTariffRows.length} ${yearsUnit})`
+      : pdfCopy.appendixAnnualTariffPath;
   const scenarioHorizonLabel =
     annualTariffRows.length > 0
-      ? `${annualTariffRows[0]!.year}-${annualTariffRows[annualTariffRows.length - 1]!.year} (${annualTariffRows.length} years)`
+      ? `${annualTariffRows[0]!.year}-${
+          annualTariffRows[annualTariffRows.length - 1]!.year
+        } (${annualTariffRows.length} ${yearsUnit})`
       : '-';
   const acceptedBaselineYearsLabel = formatAcceptedBaselineYears(snapshot);
   const scenarioBranchLabel =
     scenario?.scenarioType === 'base'
-      ? 'Base'
+      ? pdfCopy.scenarioBranches.base
       : scenario?.scenarioType === 'committed'
-      ? 'Committed'
+      ? pdfCopy.scenarioBranches.committed
       : scenario?.scenarioType === 'hypothesis'
-      ? 'Hypothesis'
+      ? pdfCopy.scenarioBranches.hypothesis
       : scenario?.scenarioType === 'stress'
-      ? 'Stress'
+      ? pdfCopy.scenarioBranches.stress
       : '-';
   const annualInvestmentHeading =
     annualInvestmentRows.length > 0
-      ? `Appendix B: annual investment path ${annualInvestmentRows[0]!.year}-${annualInvestmentRows[annualInvestmentRows.length - 1]!.year} (${annualInvestmentRows.length} years)`
-      : 'Appendix B: annual investment path';
-  const investmentPlanHeading = 'Appendix C: investment plan by class';
-  const depreciationPlanHeading = 'Appendix D: depreciation plan';
-  const yearlyInvestmentsHeading = 'Appendix E: yearly investment rows';
-  const assumptionsHeading = 'Appendix F: assumptions';
+      ? `${pdfCopy.appendixAnnualInvestmentPath} ${annualInvestmentRows[0]!.year}-${
+          annualInvestmentRows[annualInvestmentRows.length - 1]!.year
+        } (${annualInvestmentRows.length} ${yearsUnit})`
+      : pdfCopy.appendixAnnualInvestmentPath;
+  const investmentPlanHeading = pdfCopy.appendixInvestmentPlanByClass;
+  const depreciationPlanHeading = pdfCopy.appendixDepreciationPlan;
+  const yearlyInvestmentsHeading = pdfCopy.appendixYearlyInvestmentRows;
+  const assumptionsHeading = pdfCopy.appendixAssumptions;
   const showDetailedInvestmentAppendices = reportSections.yearlyInvestments;
   const baselineTariffRow = annualTariffRows[0] ?? null;
   const peakAnnualInvestmentRow =
@@ -177,12 +606,7 @@ export async function buildV2ReportPdf({
   );
   const acceptedTariffPlan = snapshot?.tariffPlan ?? null;
   const acceptedTariffFees = acceptedTariffPlan?.recommendation?.fees ?? {};
-  const tariffFeeLabels: Record<string, string> = {
-    connectionFee: 'Connection fee',
-    baseFee: 'Base fee',
-    waterUsageFee: 'Water usage fee',
-    wastewaterUsageFee: 'Wastewater usage fee',
-  };
+  const tariffFeeLabels: Record<string, string> = pdfCopy.feeLabels;
   const formatTariffUnit = (key: string, value: number | null | undefined) => {
     if (value == null || !Number.isFinite(value)) {
       return '-';
@@ -200,54 +624,56 @@ export async function buildV2ReportPdf({
       : null;
 
   const drawTariffTableHeader = () => {
-    draw('Year', 30, y, 8, true);
-    draw('Water', 75, y, 8, true);
-    draw('Wastewater', 135, y, 8, true);
-    draw('Combined', 205, y, 8, true);
-    draw('Investments', 280, y, 8, true);
-    draw('Result', 380, y, 8, true);
-    draw('Cashflow', 470, y, 8, true);
-    draw('Cum. cash', 565, y, 8, true);
-    draw('Deprec.', 675, y, 8, true);
+    draw(pdfCopy.table.year, 30, y, 8, true);
+    draw(pdfCopy.table.water, 75, y, 8, true);
+    draw(pdfCopy.table.wastewater, 135, y, 8, true);
+    draw(pdfCopy.table.combined, 205, y, 8, true);
+    draw(pdfCopy.table.investments, 280, y, 8, true);
+    draw(pdfCopy.table.result, 380, y, 8, true);
+    draw(pdfCopy.table.cashflow, 470, y, 8, true);
+    draw(pdfCopy.table.cumulativeCash, 565, y, 8, true);
+    draw(pdfCopy.table.depreciation, 675, y, 8, true);
     y -= 12;
   };
   const drawAnnualInvestmentTableHeader = () => {
-    draw('Year', 40, y, 9, true);
-    draw('Annual total', 130, y, 9, true);
+    draw(pdfCopy.table.year, 40, y, 9, true);
+    draw(pdfCopy.table.annualTotal, 130, y, 9, true);
     y -= 12;
   };
 
   draw(report.title, MARGIN_LEFT, y, 16, true);
   y -= 24;
-  drawLine(`Report variant: ${variantLabel}`);
-  drawLine(`Created: ${new Date(report.createdAt).toLocaleString(PDF_LOCALE)}`);
-  drawLine(`Scenario: ${normalizeText(report.ennuste?.nimi) ?? '-'}`);
-  drawLine(`Scenario branch: ${scenarioBranchLabel}`);
+  drawLine(`${pdfLabels.reportVariant}: ${variantLabel}`);
+  drawLine(`${pdfCopy.created}: ${new Date(report.createdAt).toLocaleString(PDF_LOCALE)}`);
+  drawLine(`${pdfCopy.scenario}: ${normalizeText(report.ennuste?.nimi) ?? '-'}`);
+  drawLine(`${pdfCopy.scenarioBranch}: ${scenarioBranchLabel}`);
   if (snapshot?.vesinvestPlan?.name) {
     drawLine(
-      `Plan revision: ${snapshot.vesinvestPlan.name} / v${snapshot.vesinvestPlan.versionNumber ?? '-'}`,
+      `${pdfCopy.planRevision}: ${snapshot.vesinvestPlan.name} / v${
+        snapshot.vesinvestPlan.versionNumber ?? '-'
+      }`,
     );
   }
-  drawLine(`Baseline year: ${report.baselineYear}`);
-  drawLine(`Accepted baseline years: ${acceptedBaselineYearsLabel}`);
-  drawLine(`Forecast horizon: ${scenarioHorizonLabel}`);
+  drawLine(`${pdfCopy.baselineYear}: ${report.baselineYear}`);
+  drawLine(`${pdfCopy.acceptedBaselineYears}: ${acceptedBaselineYearsLabel}`);
+  drawLine(`${pdfCopy.forecastHorizon}: ${scenarioHorizonLabel}`);
   if (reportSections.baselineSources && primaryBaselineSourceSummary) {
     drawLine(
-      `Financials: ${formatDatasetSource(primaryBaselineSourceSummary.financials, '-')}`,
+      `${pdfCopy.financials}: ${formatDatasetSource(primaryBaselineSourceSummary.financials, '-')}`,
       MARGIN_LEFT,
       10,
       false,
       14,
     );
     drawLine(
-      `Prices: ${formatDatasetSource(primaryBaselineSourceSummary.prices, '-')}`,
+      `${pdfCopy.prices}: ${formatDatasetSource(primaryBaselineSourceSummary.prices, '-')}`,
       MARGIN_LEFT,
       10,
       false,
       14,
     );
     drawLine(
-      `Sold volumes: ${formatDatasetSource(primaryBaselineSourceSummary.volumes, '-')}`,
+      `${pdfCopy.soldVolumes}: ${formatDatasetSource(primaryBaselineSourceSummary.volumes, '-')}`,
       MARGIN_LEFT,
       10,
       false,
@@ -258,30 +684,32 @@ export async function buildV2ReportPdf({
   }
   y -= 8;
 
-  drawSectionHeading('Key figures');
+  drawSectionHeading(pdfCopy.keyFigures);
   drawLine(
-    `Required combined price today: ${formatPrice(report.requiredPriceToday)}`,
+    `${pdfCopy.requiredCombinedPriceToday}: ${formatPrice(report.requiredPriceToday)}`,
     MARGIN_LEFT,
     11,
     true,
   );
   drawLine(
-    `Required increase from current combined price: ${formatPct(report.requiredAnnualIncreasePct)}`,
+    `${pdfCopy.requiredIncreaseFromCurrentCombinedPrice}: ${formatPct(
+      report.requiredAnnualIncreasePct,
+    )}`,
     MARGIN_LEFT,
     11,
     true,
   );
   drawLine(
-    `Total investments: ${formatMoney(report.totalInvestments)}`,
+    `${pdfCopy.totalInvestments}: ${formatMoney(report.totalInvestments)}`,
     MARGIN_LEFT,
     11,
     true,
     24,
   );
 
-  drawSectionHeading('Tariff justification');
+  drawSectionHeading(pdfCopy.tariffJustification);
   drawLine(
-    `Current baseline combined price: ${
+    `${pdfCopy.currentBaselineCombinedPrice}: ${
       baselineCombinedPrice != null ? formatPrice(baselineCombinedPrice) : '-'
     }`,
     MARGIN_LEFT,
@@ -290,21 +718,16 @@ export async function buildV2ReportPdf({
     14,
   );
   drawLine(
-    `Required combined price today: ${formatPrice(report.requiredPriceToday)}`,
+    `${pdfCopy.requiredCombinedPriceToday}: ${formatPrice(report.requiredPriceToday)}`,
     MARGIN_LEFT,
     10,
     false,
     14,
   );
   drawLine(
-    `Required increase from current price: ${formatPct(report.requiredAnnualIncreasePct)}`,
-    MARGIN_LEFT,
-    10,
-    false,
-    14,
-  );
-  drawLine(
-    `Annual-result floor today: ${formatPrice(annualResultPrice)} | Cumulative-cash floor today: ${formatPrice(cumulativeCashPrice)}`,
+    `${pdfCopy.requiredIncreaseFromCurrentPrice}: ${formatPct(
+      report.requiredAnnualIncreasePct,
+    )}`,
     MARGIN_LEFT,
     10,
     false,
@@ -312,7 +735,11 @@ export async function buildV2ReportPdf({
   );
   if (baselineTariffRow) {
     drawLine(
-      `Baseline sold volume (${baselineTariffRow.year}): ${formatVolume(baselineTariffRow.soldVolume)} | Total depreciation (${baselineTariffRow.year}): ${formatMoney(baselineTariffRow.totalDepreciation)}`,
+      `${pdfCopy.baselineSoldVolume} (${baselineTariffRow.year}): ${formatVolume(
+        baselineTariffRow.soldVolume,
+      )} | ${pdfCopy.totalDepreciation} (${baselineTariffRow.year}): ${formatMoney(
+        baselineTariffRow.totalDepreciation,
+      )}`,
       MARGIN_LEFT,
       10,
       false,
@@ -321,7 +748,9 @@ export async function buildV2ReportPdf({
   }
   if (peakAnnualInvestmentRow) {
     drawLine(
-      `Peak annual investment: ${peakAnnualInvestmentRow.year} -> ${formatMoney(peakAnnualInvestmentRow.totalAmount)}`,
+      `${pdfCopy.peakAnnualInvestment}: ${peakAnnualInvestmentRow.year} -> ${formatMoney(
+        peakAnnualInvestmentRow.totalAmount,
+      )}`,
       MARGIN_LEFT,
       10,
       false,
@@ -332,14 +761,14 @@ export async function buildV2ReportPdf({
     const nearTermYearsLabel =
       nearTermExpenseRows.length > 0
         ? `${nearTermExpenseRows[0]!.year}-${nearTermExpenseRows[nearTermExpenseRows.length - 1]!.year}`
-        : 'none';
+        : pdfCopy.none;
     const thereafterLabel = thereafterExpenseProfile
       ? reportSections.assumptions
-        ? `personnel ${formatPct(thereafterExpenseProfile.personnelPct)}, energy ${formatPct(thereafterExpenseProfile.energyPct)}, other opex ${formatPct(thereafterExpenseProfile.opexOtherPct)}`
-        : 'configured'
+        ? `${pdfCopy.personnel} ${formatPct(thereafterExpenseProfile.personnelPct)}, ${pdfCopy.energy} ${formatPct(thereafterExpenseProfile.energyPct)}, ${pdfCopy.otherOpex} ${formatPct(thereafterExpenseProfile.opexOtherPct)}`
+        : pdfCopy.configured
       : '-';
     drawLine(
-      `Expense overrides: near-term ${nearTermYearsLabel} | Thereafter ${thereafterLabel}`,
+      `${pdfCopy.expenseOverrides}: ${pdfCopy.nearTerm} ${nearTermYearsLabel} | ${pdfCopy.thereafter} ${thereafterLabel}`,
       MARGIN_LEFT,
       10,
       false,
@@ -349,7 +778,7 @@ export async function buildV2ReportPdf({
   if (reportSections.assumptions && savedTariffAssumptionRows.length > 0) {
     for (const [key, value] of savedTariffAssumptionRows) {
       drawLine(
-        `Saved tariff assumption - ${assumptionLabels[key] ?? key}: ${formatAssumptionValue(key, toNumber(value))}`,
+        `${pdfCopy.savedTariffAssumption} - ${assumptionLabels[key] ?? key}: ${formatAssumptionValue(key, toNumber(value))}`,
         MARGIN_LEFT,
         10,
         false,
@@ -358,7 +787,7 @@ export async function buildV2ReportPdf({
     }
   }
   drawLine(
-    `Selected investments require a combined price of ${formatPrice(report.requiredPriceToday)} today.`,
+    pdfCopy.selectedInvestmentsRequire(formatPrice(report.requiredPriceToday)),
     MARGIN_LEFT,
     10,
     false,
@@ -366,14 +795,21 @@ export async function buildV2ReportPdf({
   );
   if (acceptedTariffPlan?.recommendation) {
     drawLine(
-      `Accepted tariff package: ${formatMoney(acceptedTariffPlan.recommendation.proposedAnnualRevenue ?? 0)} annual revenue after ${acceptedTariffPlan.recommendation.smoothingYears ?? '-'} years.`,
+      pdfCopy.acceptedTariffPackage(
+        formatMoney(acceptedTariffPlan.recommendation.proposedAnnualRevenue ?? 0),
+        acceptedTariffPlan.recommendation.smoothingYears ?? '-',
+      ),
       MARGIN_LEFT,
       10,
       true,
       14,
     );
     drawLine(
-      `Average annual customer impact: ${formatPct(acceptedTariffPlan.recommendation.averageAnnualIncreasePct ?? null)} | 15% status: ${acceptedTariffPlan.recommendation.lawReadiness?.smoothingStatus ?? '-'}`,
+      `${pdfCopy.averageAnnualCustomerImpact}: ${formatPct(
+        acceptedTariffPlan.recommendation.averageAnnualIncreasePct ?? null,
+      )} | ${pdfCopy.smoothingStatus15}: ${
+        acceptedTariffPlan.recommendation.lawReadiness?.smoothingStatus ?? '-'
+      }`,
       MARGIN_LEFT,
       10,
       false,
@@ -384,7 +820,9 @@ export async function buildV2ReportPdf({
         `${tariffFeeLabels[key] ?? key}: ${formatTariffUnit(
           key,
           fee.currentUnit,
-        )} -> ${formatTariffUnit(key, fee.proposedUnit)} | impact ${formatMoney(fee.revenueImpact ?? 0)}`,
+        )} -> ${formatTariffUnit(key, fee.proposedUnit)} | ${
+          pdfCopy.impact
+        } ${formatMoney(fee.revenueImpact ?? 0)}`,
         MARGIN_LEFT,
         10,
         false,
@@ -393,26 +831,26 @@ export async function buildV2ReportPdf({
     }
     if (reportSections.assumptions) {
       const evidenceRows = [
-        ['Asset inventory', snapshot?.vesinvestPlan?.assetEvidenceState],
-        ['Condition studies', snapshot?.vesinvestPlan?.conditionStudyState],
-        ['Maintenance', snapshot?.vesinvestPlan?.maintenanceEvidenceState],
-        ['Municipal context', snapshot?.vesinvestPlan?.municipalPlanContext],
-        ['Financial risk', snapshot?.vesinvestPlan?.financialRiskState],
-        ['Publication boundary', snapshot?.vesinvestPlan?.publicationState],
-        ['Communication', snapshot?.vesinvestPlan?.communicationState],
-        ['Tariff revenue', acceptedTariffPlan.revenueEvidence],
-        ['Tariff costs', acceptedTariffPlan.costEvidence],
-        ['Regional differentiation', acceptedTariffPlan.regionalDifferentiationState],
-        ['Stormwater', acceptedTariffPlan.stormwaterState],
-        ['Special use', acceptedTariffPlan.specialUseState],
-        ['Connection-fee liability', acceptedTariffPlan.connectionFeeLiabilityState],
-        ['Owner distribution', acceptedTariffPlan.ownerDistributionState],
+        [pdfCopy.evidenceLabels.assetInventory, snapshot?.vesinvestPlan?.assetEvidenceState],
+        [pdfCopy.evidenceLabels.conditionStudies, snapshot?.vesinvestPlan?.conditionStudyState],
+        [pdfCopy.evidenceLabels.maintenance, snapshot?.vesinvestPlan?.maintenanceEvidenceState],
+        [pdfCopy.evidenceLabels.municipalContext, snapshot?.vesinvestPlan?.municipalPlanContext],
+        [pdfCopy.evidenceLabels.financialRisk, snapshot?.vesinvestPlan?.financialRiskState],
+        [pdfCopy.evidenceLabels.publicationBoundary, snapshot?.vesinvestPlan?.publicationState],
+        [pdfCopy.evidenceLabels.communication, snapshot?.vesinvestPlan?.communicationState],
+        [pdfCopy.evidenceLabels.tariffRevenue, acceptedTariffPlan.revenueEvidence],
+        [pdfCopy.evidenceLabels.tariffCosts, acceptedTariffPlan.costEvidence],
+        [pdfCopy.evidenceLabels.regionalDifferentiation, acceptedTariffPlan.regionalDifferentiationState],
+        [pdfCopy.evidenceLabels.stormwater, acceptedTariffPlan.stormwaterState],
+        [pdfCopy.evidenceLabels.specialUse, acceptedTariffPlan.specialUseState],
+        [pdfCopy.evidenceLabels.connectionFeeLiability, acceptedTariffPlan.connectionFeeLiabilityState],
+        [pdfCopy.evidenceLabels.ownerDistribution, acceptedTariffPlan.ownerDistributionState],
       ] as const;
       const evidenceNotes = evidenceRows
         .map(([label, value]) => [label, evidenceNote(value)] as const)
         .filter(([, note]) => note);
       if (evidenceNotes.length > 0) {
-        drawSectionHeading('Internal evidence appendix');
+        drawSectionHeading(pdfCopy.internalEvidenceAppendix);
         for (const [label, note] of evidenceNotes) {
           drawLine(`${label}: ${note}`, MARGIN_LEFT, 10, false, 14);
         }
@@ -421,37 +859,43 @@ export async function buildV2ReportPdf({
   }
 
   if (reportSections.riskSummary) {
-    drawSectionHeading('Risk summary');
+    drawSectionHeading(pdfCopy.riskSummary);
     drawLine(
-      `Annual result to zero: ${formatPrice(annualResultPrice)} (${formatPct(annualResultIncrease)})`,
+      `${pdfCopy.annualResultToZero}: ${formatPrice(annualResultPrice)} (${formatPct(
+        annualResultIncrease,
+      )})`,
       MARGIN_LEFT,
       10,
       false,
       14,
     );
     drawLine(
-      `Cumulative cash >= 0: ${formatPrice(cumulativeCashPrice)} (${formatPct(cumulativeCashIncrease)})`,
+      `${pdfCopy.cumulativeCashFloor}: ${formatPrice(cumulativeCashPrice)} (${formatPct(
+        cumulativeCashIncrease,
+      )})`,
       MARGIN_LEFT,
       10,
       false,
       14,
     );
     drawLine(
-      `Annual underfunding starts: ${annualUnderfundingYear ?? '-'}`,
+      `${pdfCopy.annualUnderfundingStarts}: ${annualUnderfundingYear ?? '-'}`,
       MARGIN_LEFT,
       10,
       false,
       14,
     );
     drawLine(
-      `Cash underfunding starts: ${cumulativeUnderfundingYear ?? '-'} | Peak gap: ${formatMoney(peakCumulativeGap)}`,
+      `${pdfCopy.cashUnderfundingStarts}: ${cumulativeUnderfundingYear ?? '-'} | ${
+        pdfCopy.peakGap
+      }: ${formatMoney(peakCumulativeGap)}`,
       MARGIN_LEFT,
       10,
       false,
       14,
     );
     drawLine(
-      `Largest annual deficit: ${formatMoney(peakAnnualDeficit)}`,
+      `${pdfCopy.largestAnnualDeficit}: ${formatMoney(peakAnnualDeficit)}`,
       MARGIN_LEFT,
       10,
       false,
@@ -460,13 +904,15 @@ export async function buildV2ReportPdf({
   }
 
   if (reportSections.baselineSources && baselineSourceSummaries.length > 0) {
-    drawSectionHeading('Accepted baseline provenance');
+    drawSectionHeading(pdfCopy.acceptedBaselineProvenance);
     for (const summary of baselineSourceSummaries) {
       drawLine(
-        `Year ${summary.year ?? '-'}: ${
-          summary.sourceStatus ?? 'INCOMPLETE'
-        }${
-          summary.planningRole === 'current_year_estimate' ? ' (estimate)' : ''
+        `${pdfCopy.year} ${summary.year ?? '-'}: ${formatSourceStatus(
+          summary.sourceStatus,
+        )}${
+          summary.planningRole === 'current_year_estimate'
+            ? ` (${pdfCopy.estimate})`
+            : ''
         }`,
         MARGIN_LEFT,
         10,
@@ -474,7 +920,7 @@ export async function buildV2ReportPdf({
         14,
       );
       drawLine(
-        `Financials: ${formatDatasetSource(summary.financials, '-')}`,
+        `${pdfCopy.financials}: ${formatDatasetSource(summary.financials, '-')}`,
         MARGIN_LEFT + 10,
         10,
         false,
@@ -483,7 +929,7 @@ export async function buildV2ReportPdf({
       const financialEvidence = formatDatasetEvidenceDetail(summary.financials);
       if (financialEvidence) {
         drawLine(
-          `Evidence: ${financialEvidence}`,
+          `${pdfCopy.evidence}: ${financialEvidence}`,
           MARGIN_LEFT + 20,
           8,
           false,
@@ -491,7 +937,7 @@ export async function buildV2ReportPdf({
         );
       }
       drawLine(
-        `Prices: ${formatDatasetSource(summary.prices, '-')}`,
+        `${pdfCopy.prices}: ${formatDatasetSource(summary.prices, '-')}`,
         MARGIN_LEFT + 10,
         10,
         false,
@@ -500,7 +946,7 @@ export async function buildV2ReportPdf({
       const priceEvidence = formatDatasetEvidenceDetail(summary.prices);
       if (priceEvidence) {
         drawLine(
-          `Evidence: ${priceEvidence}`,
+          `${pdfCopy.evidence}: ${priceEvidence}`,
           MARGIN_LEFT + 20,
           8,
           false,
@@ -508,7 +954,7 @@ export async function buildV2ReportPdf({
         );
       }
       drawLine(
-        `Sold volumes: ${formatDatasetSource(summary.volumes, '-')}`,
+        `${pdfCopy.soldVolumes}: ${formatDatasetSource(summary.volumes, '-')}`,
         MARGIN_LEFT + 10,
         10,
         false,
@@ -517,7 +963,7 @@ export async function buildV2ReportPdf({
       const volumeEvidence = formatDatasetEvidenceDetail(summary.volumes);
       if (volumeEvidence) {
         drawLine(
-          `Evidence: ${volumeEvidence}`,
+          `${pdfCopy.evidence}: ${volumeEvidence}`,
           MARGIN_LEFT + 20,
           8,
           false,
@@ -525,14 +971,18 @@ export async function buildV2ReportPdf({
         );
       }
       drawLine(
-        `VEETI datasets: ${summary.sourceBreakdown?.veetiDataTypes?.join(', ') || '-'}`,
+        `${pdfCopy.veetiDatasets}: ${formatDatasetTypeList(
+          summary.sourceBreakdown?.veetiDataTypes,
+        )}`,
         MARGIN_LEFT + 10,
         9,
         false,
         12,
       );
       drawLine(
-        `Manual datasets: ${summary.sourceBreakdown?.manualDataTypes?.join(', ') || '-'}`,
+        `${pdfCopy.manualDatasets}: ${formatDatasetTypeList(
+          summary.sourceBreakdown?.manualDataTypes,
+        )}`,
         MARGIN_LEFT + 10,
         9,
         false,
@@ -596,7 +1046,7 @@ export async function buildV2ReportPdf({
     drawSectionHeading(investmentPlanHeading);
 
     if ((vesinvestAppendix?.fiveYearBands?.length ?? 0) > 0) {
-      drawLine('Five-year bands', MARGIN_LEFT, 10, true, 14);
+      drawLine(pdfCopy.table.fiveYearBands, MARGIN_LEFT, 10, true, 14);
       for (const band of vesinvestAppendix?.fiveYearBands ?? []) {
         drawLine(
           `${band.startYear}-${band.endYear}: ${formatMoney(band.totalAmount)}`,
@@ -611,18 +1061,16 @@ export async function buildV2ReportPdf({
 
     if ((vesinvestAppendix?.groupedProjects?.length ?? 0) > 0) {
       if (showDetailedInvestmentAppendices) {
-        draw('Code', 40, y, 9, true);
-        draw('Project', 110, y, 9, true);
-        draw('Account', 420, y, 9, true);
-        draw('Total', 510, y, 9, true);
+        draw(pdfCopy.table.code, 40, y, 9, true);
+        draw(pdfCopy.table.project, 110, y, 9, true);
+        draw(pdfCopy.table.account, 420, y, 9, true);
+        draw(pdfCopy.table.total, 510, y, 9, true);
         y -= 12;
 
         for (const group of vesinvestAppendix?.groupedProjects ?? []) {
           ensureSpace(18);
           draw(
-            toPdfText(
-              `${normalizeVesinvestClassLabel(group.classKey, group.classLabel)} (${group.classKey})`,
-            ),
+            toPdfText(formatVesinvestKeyLabel(group.classKey, group.classLabel)),
             40,
             y,
             9,
@@ -640,7 +1088,14 @@ export async function buildV2ReportPdf({
               y,
               8,
             );
-            draw(toPdfText((project.accountKey ?? '-').slice(0, 14)), 420, y, 8);
+            draw(
+              toPdfText(
+                formatVesinvestKeyLabel(project.accountKey, null).slice(0, 22),
+              ),
+              420,
+              y,
+              8,
+            );
             draw(formatMoney(project.totalAmount), 510, y, 8);
             y -= 11;
             for (const line of allocationLines) {
@@ -650,16 +1105,14 @@ export async function buildV2ReportPdf({
           }
         }
       } else {
-        draw('Class', 40, y, 9, true);
-        draw('Total', 510, y, 9, true);
+        draw(pdfCopy.table.class, 40, y, 9, true);
+        draw(pdfCopy.table.total, 510, y, 9, true);
         y -= 12;
 
         for (const group of vesinvestAppendix?.groupedProjects ?? []) {
           ensureSpace(14);
           draw(
-            toPdfText(
-              `${normalizeVesinvestClassLabel(group.classKey, group.classLabel)} (${group.classKey})`,
-            ),
+            toPdfText(formatVesinvestKeyLabel(group.classKey, group.classLabel)),
             40,
             y,
             8,
@@ -676,25 +1129,30 @@ export async function buildV2ReportPdf({
     ) {
       y -= 4;
       drawLine(depreciationPlanHeading, MARGIN_LEFT, 10, true, 14);
-      draw('Class', 40, y, 9, true);
-      draw('Account', 240, y, 9, true);
-      draw('Split', 350, y, 9, true);
-      draw('Method', 430, y, 9, true);
-      draw('Write-off', 600, y, 9, true);
-      draw('Residual', 690, y, 9, true);
+      draw(pdfCopy.table.class, 40, y, 9, true);
+      draw(pdfCopy.table.account, 240, y, 9, true);
+      draw(pdfCopy.table.split, 350, y, 9, true);
+      draw(pdfCopy.table.method, 430, y, 9, true);
+      draw(pdfCopy.table.writeOff, 600, y, 9, true);
+      draw(pdfCopy.table.residual, 690, y, 9, true);
       y -= 12;
 
       for (const row of vesinvestAppendix?.depreciationPlan ?? []) {
         ensureSpace(14);
         draw(
           toPdfText(
-            normalizeVesinvestClassLabel(row.classKey, row.classLabel).slice(0, 28),
+            formatVesinvestKeyLabel(row.classKey, row.classLabel).slice(0, 28),
           ),
           40,
           y,
           8,
         );
-        draw(toPdfText((row.accountKey ?? '-').slice(0, 18)), 240, y, 8);
+        draw(
+          toPdfText(formatVesinvestKeyLabel(row.accountKey, null).slice(0, 24)),
+          240,
+          y,
+          8,
+        );
         draw(toPdfText(formatServiceSplit(row.serviceSplit)), 350, y, 8);
         draw(
           toPdfText(
@@ -723,25 +1181,30 @@ export async function buildV2ReportPdf({
   if (reportSections.yearlyInvestments) {
     nextPage();
     drawSectionHeading(yearlyInvestmentsHeading);
-    draw('Year', 30, y, 9, true);
-    draw('Amount', 90, y, 9, true);
-    draw('Group', 180, y, 9, true);
-    draw('Type', 320, y, 9, true);
-    draw('Confidence', 430, y, 9, true);
-    draw('Note', 540, y, 9, true);
+    draw(pdfCopy.table.year, 30, y, 9, true);
+    draw(pdfCopy.table.amount, 90, y, 9, true);
+    draw(pdfCopy.table.group, 180, y, 9, true);
+    draw(pdfCopy.table.type, 320, y, 9, true);
+    draw(pdfCopy.table.confidence, 430, y, 9, true);
+    draw(pdfCopy.table.note, 540, y, 9, true);
     y -= 12;
 
     const investmentRows = scenario?.yearlyInvestments ?? [];
     if (investmentRows.length === 0) {
-      drawLine('No saved investments.', MARGIN_LEFT, 10);
+      drawLine(pdfCopy.noSavedInvestments, MARGIN_LEFT, 10);
     } else {
       for (const row of investmentRows) {
         ensureSpace(14);
         draw(String(row.year), 30, y, 8);
         draw(formatMoney(row.amount), 90, y, 8);
-        draw(toPdfText(row.category ?? '-'), 180, y, 8);
-        draw(toPdfText(row.investmentType ?? '-'), 320, y, 8);
-        draw(toPdfText(row.confidence ?? '-'), 430, y, 8);
+        draw(
+          toPdfText(formatVesinvestKeyLabel(row.category, row.category).slice(0, 28)),
+          180,
+          y,
+          8,
+        );
+        draw(toPdfText(formatInvestmentType(row.investmentType).slice(0, 18)), 320, y, 8);
+        draw(toPdfText(formatConfidence(row.confidence).slice(0, 14)), 430, y, 8);
         draw(toPdfText((row.note ?? '-').slice(0, 36)), 540, y, 8);
         y -= 11;
       }
@@ -759,7 +1222,7 @@ export async function buildV2ReportPdf({
       nearTermExpenseRows.length === 0 &&
       !thereafterExpenseProfile
     ) {
-      drawLine('No saved assumptions.', MARGIN_LEFT, 10);
+      drawLine(pdfCopy.noSavedAssumptions, MARGIN_LEFT, 10);
     } else {
       for (const [key, value] of assumptionRows) {
         drawLine(
@@ -774,10 +1237,14 @@ export async function buildV2ReportPdf({
         );
       }
       if (nearTermExpenseRows.length > 0) {
-        drawLine('Near-term expense overrides', MARGIN_LEFT, 10, true, 14);
+        drawLine(pdfCopy.nearTermExpenseOverrides, MARGIN_LEFT, 10, true, 14);
         for (const row of nearTermExpenseRows) {
           drawLine(
-            `${row.year}: personnel ${formatPct(row.personnelPct)}, energy ${formatPct(row.energyPct)}, other opex ${formatPct(row.opexOtherPct)}`,
+            `${row.year}: ${pdfCopy.personnel} ${formatPct(row.personnelPct)}, ${
+              pdfCopy.energy
+            } ${formatPct(row.energyPct)}, ${pdfCopy.otherOpex} ${formatPct(
+              row.opexOtherPct,
+            )}`,
             MARGIN_LEFT + 10,
             10,
             false,
@@ -786,9 +1253,15 @@ export async function buildV2ReportPdf({
         }
       }
       if (thereafterExpenseProfile) {
-        drawLine('Thereafter expense profile', MARGIN_LEFT, 10, true, 14);
+        drawLine(pdfCopy.thereafterExpenseProfile, MARGIN_LEFT, 10, true, 14);
         drawLine(
-          `Personnel ${formatPct(thereafterExpenseProfile.personnelPct)} | Energy ${formatPct(thereafterExpenseProfile.energyPct)} | Other opex ${formatPct(thereafterExpenseProfile.opexOtherPct)}`,
+          `${pdfCopy.personnel} ${formatPct(
+            thereafterExpenseProfile.personnelPct,
+          )} | ${pdfCopy.energy} ${formatPct(
+            thereafterExpenseProfile.energyPct,
+          )} | ${pdfCopy.otherOpex} ${formatPct(
+            thereafterExpenseProfile.opexOtherPct,
+          )}`,
           MARGIN_LEFT + 10,
           10,
           false,

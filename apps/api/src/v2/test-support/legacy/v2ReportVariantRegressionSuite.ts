@@ -976,7 +976,7 @@ describe('V2Service report variant regression', () => {
     const snapshot = createArgs.data.snapshotJson as any;
 
     expect(createArgs.data.title).toBe(
-      'Forecast report Statement-backed scenario 2026-03-08',
+      'Forecast report Statement-backed scenario 2026-03-08 - Regulator package',
     );
     expect(snapshot.reportVariant).toBe('regulator_package');
     expect(snapshot.reportSections).toMatchObject({
@@ -1051,6 +1051,38 @@ describe('V2Service report variant regression', () => {
     });
 
     expect(prisma.ennusteReport.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('persists report locale and localizes generated package titles', async () => {
+    const { prisma, service } = buildReportCreateHarness();
+
+    jest.useFakeTimers().setSystemTime(NOW);
+    try {
+      await service.createReport(ORG_ID, USER_ID, {
+        ennusteId: 'scenario-1',
+        vesinvestPlanId: '11111111-1111-4111-8111-111111111111',
+        variant: 'board_package',
+        locale: 'sv',
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+
+    const createArgs = (prisma.ennusteReport.create as jest.Mock).mock.calls[0][0];
+    const snapshot = createArgs.data.snapshotJson as any;
+
+    expect(createArgs.data.title).toBe(
+      'Prognosrapport Statement-backed scenario 2026-03-08 - Styrelsepaket',
+    );
+    expect(snapshot.reportLocale).toBe('sv');
+    expect(snapshot.reportVariant).toBe('board_package');
+    expect(snapshot.reportSections).toMatchObject({
+      baselineSources: true,
+      investmentPlan: true,
+      assumptions: true,
+      yearlyInvestments: false,
+      riskSummary: true,
+    });
   });
 
   it('allows report creation when computed series explicitly includes matching zero-only years', async () => {

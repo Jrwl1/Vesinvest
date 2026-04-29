@@ -156,10 +156,10 @@ INSERT INTO "vesinvest_group_definition" (
     "created_at",
     "updated_at"
 ) VALUES
-    ('vesinvest-group-sanering-water-network', 'sanering_water_network', 'Sanering / vattennatverk', 'sanering_water_network', 'water_network_post_1999', 'network_rehabilitation', 'water', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('vesinvest-group-sanering-wastewater-network', 'sanering_wastewater_network', 'Sanering / avloppsnatverk', 'sanering_wastewater_network', 'wastewater_network_post_1999', 'network_rehabilitation', 'wastewater', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('vesinvest-group-new-water-network', 'new_water_network', 'Nyanlaggning / vattennatverk', 'new_water_network', 'water_network_post_1999', 'new_network', 'water', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('vesinvest-group-new-wastewater-network', 'new_wastewater_network', 'Nyanlaggning / avloppsnatverk', 'new_wastewater_network', 'wastewater_network_post_1999', 'new_network', 'wastewater', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('vesinvest-group-sanering-water-network', 'sanering_water_network', 'Sanering / vattennätverk', 'sanering_water_network', 'water_network_post_1999', 'network_rehabilitation', 'water', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('vesinvest-group-sanering-wastewater-network', 'sanering_wastewater_network', 'Sanering / avloppsnätverk', 'sanering_wastewater_network', 'wastewater_network_post_1999', 'network_rehabilitation', 'wastewater', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('vesinvest-group-new-water-network', 'new_water_network', 'Nyanläggning / vattennätverk', 'new_water_network', 'water_network_post_1999', 'new_network', 'water', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('vesinvest-group-new-wastewater-network', 'new_wastewater_network', 'Nyanläggning / avloppsnätverk', 'new_wastewater_network', 'wastewater_network_post_1999', 'new_network', 'wastewater', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     ('vesinvest-group-waterworks-equipment', 'waterworks_equipment', 'Vattenverksapparatur', 'waterworks_equipment', 'plant_machinery', 'plant_equipment', 'water', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     ('vesinvest-group-wastewater-equipment', 'wastewater_equipment', 'Avloppsapparatur', 'wastewater_equipment', 'plant_machinery', 'plant_equipment', 'wastewater', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     ('vesinvest-group-water-production', 'water_production', 'Vattenproduktion', 'water_production', 'plant_buildings', 'production', 'water', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),

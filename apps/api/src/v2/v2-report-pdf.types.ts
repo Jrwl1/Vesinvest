@@ -3,6 +3,8 @@ export type ReportVariant =
   | 'board_package'
   | 'internal_appendix';
 
+export type ReportLocale = 'en' | 'fi' | 'sv';
+
 export type ReportSections = {
   baselineSources: boolean;
   investmentPlan: boolean;
@@ -111,6 +113,7 @@ export type ScenarioSnapshot = {
 } | null;
 
 export type ReportSnapshot = {
+  reportLocale?: ReportLocale;
   scenario?: ScenarioSnapshot;
   acceptedBaselineYears?: number[];
   baselineSourceSummaries?: BaselineSourceSummary[];

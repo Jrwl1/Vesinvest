@@ -646,22 +646,19 @@ export class V2TariffPlanService {
           totalVolume
         : scenario.baselinePriceTodayCombined ?? 0;
     const requiredCombinedPrice =
-      scenario.requiredPriceTodayCombinedCumulativeCash ??
       scenario.requiredPriceTodayCombinedAnnualResult ??
       scenario.requiredPriceTodayCombined ??
       currentCombinedPrice;
+    const priceSignal = this.buildPriceSignal(
+      scenario,
+      currentCombinedPrice,
+      requiredCombinedPrice,
+    );
     const usagePricePressure = Math.max(
       0,
       (requiredCombinedPrice - currentCombinedPrice) * totalVolume,
     );
-    const peakGapPressure = Math.max(
-      0,
-      this.toNumber(scenario.feeSufficiency?.cumulativeCash?.peakGap) /
-        smoothingYears,
-    );
-    const targetAdditionalAnnualRevenue = this.round2(
-      Math.max(usagePricePressure, peakGapPressure),
-    );
+    const targetAdditionalAnnualRevenue = this.round2(usagePricePressure);
     const baselineAnnualRevenue = this.round2(
       this.toNumber(baselineInput.connectionFeeRevenue) +
         this.toNumber(baselineInput.baseFeeRevenue) +
@@ -793,6 +790,7 @@ export class V2TariffPlanService {
           yearlyInvestments: scenario.yearlyInvestments,
           years: scenario.years,
         }),
+      priceSignal,
       targetAdditionalAnnualRevenue,
       baselineAnnualRevenue,
       proposedAnnualRevenue,
@@ -804,6 +802,41 @@ export class V2TariffPlanService {
       impactFlags,
       allocationRationale,
       lawReadiness,
+    };
+  }
+
+  private buildPriceSignal(
+    scenario: Awaited<ReturnType<V2ForecastService['getForecastScenario']>>,
+    currentCombinedPrice: number,
+    requiredCombinedPrice: number,
+  ): TariffRecommendation['priceSignal'] {
+    const currentComparatorPrice =
+      scenario.baselinePriceTodayCombined ?? currentCombinedPrice;
+    const requiredPriceToday =
+      scenario.requiredPriceTodayCombinedAnnualResult ??
+      scenario.requiredPriceTodayCombined ??
+      requiredCombinedPrice;
+    const cumulativeCashFloorPrice =
+      scenario.requiredPriceTodayCombinedCumulativeCash ?? null;
+    return {
+      currentComparatorPrice:
+        currentComparatorPrice == null
+          ? null
+          : this.round4(currentComparatorPrice),
+      requiredPriceToday:
+        requiredPriceToday == null ? null : this.round4(requiredPriceToday),
+      requiredIncreasePct:
+        scenario.requiredAnnualIncreasePctAnnualResult == null
+          ? this.calculateIncreasePct(requiredPriceToday, currentComparatorPrice)
+          : this.round2(scenario.requiredAnnualIncreasePctAnnualResult),
+      cumulativeCashFloorPrice:
+        cumulativeCashFloorPrice == null
+          ? null
+          : this.round4(cumulativeCashFloorPrice),
+      cumulativeCashFloorIncreasePct:
+        scenario.requiredAnnualIncreasePctCumulativeCash == null
+          ? this.calculateIncreasePct(cumulativeCashFloorPrice, currentComparatorPrice)
+          : this.round2(scenario.requiredAnnualIncreasePctCumulativeCash),
     };
   }
 
@@ -1015,7 +1048,11 @@ export class V2TariffPlanService {
   ) {
     const recommendation =
       row?.recommendation && typeof row.recommendation === 'object'
-        ? (row.recommendation as unknown as TariffRecommendation)
+        ? this.normalizeRecommendation(
+            row.recommendation as unknown as TariffRecommendation,
+            scenario,
+            baselineInput,
+          )
         : this.buildRecommendation(plan as any, scenario, baselineInput, allocationPolicy);
     return {
       id: row?.id ?? null,
@@ -1092,6 +1129,50 @@ export class V2TariffPlanService {
       return null;
     }
     return this.round4(numerator / denominator);
+  }
+
+  private calculateIncreasePct(
+    requiredPrice: number | null | undefined,
+    comparatorPrice: number | null | undefined,
+  ) {
+    if (
+      requiredPrice == null ||
+      comparatorPrice == null ||
+      comparatorPrice <= 0
+    ) {
+      return null;
+    }
+    return this.round2((requiredPrice / comparatorPrice - 1) * 100);
+  }
+
+  private normalizeRecommendation(
+    recommendation: TariffRecommendation,
+    scenario: Awaited<ReturnType<V2ForecastService['getForecastScenario']>>,
+    baselineInput: TariffBaselineInput,
+  ): TariffRecommendation {
+    const totalVolume =
+      this.toNumber(baselineInput.soldWaterVolume) +
+      this.toNumber(baselineInput.soldWastewaterVolume);
+    const currentCombinedPrice =
+      totalVolume > 0
+        ? (this.toNumber(baselineInput.waterPrice) *
+            this.toNumber(baselineInput.soldWaterVolume) +
+            this.toNumber(baselineInput.wastewaterPrice) *
+              this.toNumber(baselineInput.soldWastewaterVolume)) /
+          totalVolume
+        : scenario.baselinePriceTodayCombined ?? 0;
+    const requiredCombinedPrice =
+      scenario.requiredPriceTodayCombinedAnnualResult ??
+      scenario.requiredPriceTodayCombined ??
+      currentCombinedPrice;
+    return {
+      ...recommendation,
+      priceSignal: this.buildPriceSignal(
+        scenario,
+        currentCombinedPrice,
+        requiredCombinedPrice,
+      ),
+    };
   }
 
   private round2(value: number) {

@@ -298,6 +298,7 @@ export type ScenarioPayload = {
 export type SnapshotPayload = {
   scenario: ScenarioPayload;
   generatedAt: string;
+  reportLocale?: ReportLocale;
   acceptedBaselineYears: number[];
   baselineSourceSummaries: BaselineSourceSummary[];
   baselineSourceSummary: BaselineSourceSummary | null;
@@ -387,6 +388,7 @@ export type ReportVariant =
   | 'internal_appendix';
 
 export type LegacyReportVariant = 'public_summary' | 'confidential_appendix';
+export type ReportLocale = 'en' | 'fi' | 'sv';
 
 export type ReportSections = {
   baselineSources: boolean;

@@ -40,6 +40,16 @@ Implement the v3 Vesinvest V2 frontend target across the shell, Overview, Asset 
 
 ## Progress Log
 
+- Started the live UI completion fix pass after deployed E2E validation on `https://vesipolku.jrwl.io`.
+- Live audit evidence folder: `output/playwright/live-vesipolku-audit-2026-04-30/`.
+- This pass is desktop-first; mobile polish remains out of scope except for gross breakage.
+- Findings being closed in this pass:
+  - Desktop shell/header overlap across all V2 routes.
+  - Asset Management allocation inputs clipping large yearly investment values.
+  - Reports ready/no-package state placing package creation in the side rail while the main surface says to select a report.
+  - Tariff Plan leaking raw connection-fee-basis enum values such as `per_connection`.
+  - Forecast showing a prominent disabled report action before tariff acceptance.
+  - Reports list/preview duplicating long generated report titles and defaulting to internal appendix when regulator package exists.
 - Created execution plan before implementation.
 - Implemented report package variants with backward-compatible legacy snapshot reads.
 - Added visible shell status labels and compact workflow strip.
@@ -146,9 +156,26 @@ Implement the v3 Vesinvest V2 frontend target across the shell, Overview, Asset 
     - Reports first-package creation now requires a saved fee-path plan, saved scenario id, and `verified` pricing status before creating/exporting a package.
     - Login no longer renders raw backend messages for credential or generic API failures.
     - Reports aggregate smoke coverage now asserts generic evidence language and current package-export guard copy.
-  - Follow-up verification:
-    - `pnpm --filter ./apps/web test -- src/v2/ReportsPageV2.test.tsx src/v2/ReportsPageV2.routing-empty-state.test.tsx src/v2/ReportsPageV2.preview-detail.test.tsx src/v2/ReportsPageV2.export-readiness.test.tsx src/v2/TariffPlanPageV2.test.tsx src/components/LoginForm.test.tsx src/i18n/locales/localeIntegrity.test.ts` passed.
-    - `pnpm --filter ./apps/web test -- src/v2/VesinvestPlanningPanel.test.tsx src/v2/VesinvestPlanningPanel.evidence-workflow.test.tsx src/v2/VesinvestPlanningPanel.report-handoff.test.tsx src/v2/AppShellV2.bootstrap-routing.locks.test.tsx` passed.
-    - `pnpm --filter ./apps/web exec tsc --noEmit --pretty false` passed.
-    - `pnpm smoke:v2` passed.
-    - Final independent 5.5 xhigh re-audit returned no P0/P1/P2 findings.
+- Follow-up verification:
+  - `pnpm --filter ./apps/web test -- src/v2/ReportsPageV2.test.tsx src/v2/ReportsPageV2.routing-empty-state.test.tsx src/v2/ReportsPageV2.preview-detail.test.tsx src/v2/ReportsPageV2.export-readiness.test.tsx src/v2/TariffPlanPageV2.test.tsx src/components/LoginForm.test.tsx src/i18n/locales/localeIntegrity.test.ts` passed.
+  - `pnpm --filter ./apps/web test -- src/v2/VesinvestPlanningPanel.test.tsx src/v2/VesinvestPlanningPanel.evidence-workflow.test.tsx src/v2/VesinvestPlanningPanel.report-handoff.test.tsx src/v2/AppShellV2.bootstrap-routing.locks.test.tsx` passed.
+  - `pnpm --filter ./apps/web exec tsc --noEmit --pretty false` passed.
+  - `pnpm smoke:v2` passed.
+  - Final independent 5.5 xhigh re-audit returned no P0/P1/P2 findings.
+- Live UI completion follow-up implemented after the latest deployed audit:
+  - Shell header now uses stable two-row desktop structure; workflow strip is quiet step names only while tab statuses remain visible in the main nav.
+  - Asset Management yearly allocations now use a focused modal with wide right-aligned numeric inputs and a funded-years strip so nonzero totals below the fold are explained.
+  - Reports ready/no-package state now uses the main preview surface to create the selected package and does not style blocked navigation actions as package creation.
+  - Tariff Plan localizes known connection-fee basis codes such as `per_connection` without changing the stored string contract.
+  - Forecast only shows `Create report` as a primary action when report creation is genuinely available; blocked states route to Forecast, Tariff Plan, or Asset Management as appropriate.
+  - Compact report display titles now use package/scenario/date while preserving full generated titles in metadata/export context.
+  - Final GPT-5.5 xhigh hostile audit found no P0/P1 findings; its three P3 notes were either fixed in this pass or left as accepted non-blocking shell-density polish.
+  - Follow-up GPT-5.5 xhigh audit found one P2 accessibility/localization leak: workflow-step `aria-label` used the English phrase `workflow step`. The label is now localized for EN/SV/FI.
+  - Browser artifacts for this pass are in `output/playwright/local-live-ui-completion-2026-04-30/`.
+  - `pnpm --filter ./apps/web test -- src/v2/AppShellV2.navigation-drawer.test.tsx src/v2/AppShellV2.bootstrap-routing.locks.test.tsx src/v2/VesinvestPlanningPanel.test.tsx src/v2/ReportsPageV2.preview-detail.test.tsx src/v2/ReportsPageV2.export-readiness.test.tsx src/v2/ReportsPageV2.routing-empty-state.test.tsx src/v2/EnnustePageV2.cockpit-layout.test.tsx src/v2/EnnustePageV2.readiness-handoff.test.tsx src/v2/EnnustePageV2.planning-flows.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/TariffPlanPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts` passed.
+  - `pnpm --filter ./apps/web test -- src/v2/AppShellV2.navigation-drawer.test.tsx src/v2/AppShellV2.bootstrap-routing.locks.test.tsx src/i18n/locales/localeIntegrity.test.ts` passed after the aria-label localization fix.
+  - `pnpm --filter ./apps/web typecheck` passed.
+  - Browser aria check on Swedish `/forecast` passed; workflow labels are localized as `Baslinje i arbetsflödet: Godkänd`, etc., with no English `workflow step`.
+  - `pnpm smoke:v2` passed.
+  - `pnpm check:harness` passed.
+  - `git diff --check` passed with CRLF normalization warnings only.

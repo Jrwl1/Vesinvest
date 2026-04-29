@@ -5,6 +5,7 @@ import {
   createReportV2,
   downloadReportPdfV2,
   getForecastScenarioV2,
+  getPlanningContextV2,
   getReportV2,
   listForecastScenariosV2,
   listReportsV2,
@@ -50,6 +51,26 @@ export const useReportsPageController = ({
     React.useState<ReportVariant>('regulator_package');
   const [emptyStateScenario, setEmptyStateScenario] =
     React.useState<V2ForecastScenario | null>(null);
+  const [emptyStateBaselineYears, setEmptyStateBaselineYears] =
+    React.useState<number[]>([]);
+
+  const pickDefaultReportId = React.useCallback(
+    (
+      rows: V2ReportListItem[],
+      currentReportId: string | null,
+      preferredReportId?: string,
+    ) => {
+      if (preferredReportId && rows.some((row) => row.id === preferredReportId)) {
+        return preferredReportId;
+      }
+      if (currentReportId && rows.some((row) => row.id === currentReportId)) {
+        return currentReportId;
+      }
+      const regulatorPackage = rows.find((row) => row.variant === 'regulator_package');
+      return regulatorPackage?.id ?? rows[0]?.id ?? null;
+    },
+    [],
+  );
 
   const loadReports = React.useCallback(
     async (preferredReportId?: string, forceRefresh = false) => {
@@ -61,14 +82,7 @@ export const useReportsPageController = ({
         });
         setReports(rows);
         setSelectedReportId((current) => {
-          if (
-            preferredReportId &&
-            rows.some((row) => row.id === preferredReportId)
-          ) {
-            return preferredReportId;
-          }
-          if (current && rows.some((row) => row.id === current)) return current;
-          return rows[0]?.id ?? null;
+          return pickDefaultReportId(rows, current, preferredReportId);
         });
       } catch (err) {
         setError(
@@ -80,7 +94,7 @@ export const useReportsPageController = ({
         setLoadingList(false);
       }
     },
-    [scenarioFilter, t],
+    [pickDefaultReportId, scenarioFilter, t],
   );
 
   React.useEffect(() => {
@@ -124,6 +138,7 @@ export const useReportsPageController = ({
   React.useEffect(() => {
     if (loadingList || reports.length > 0) {
       setEmptyStateScenario(null);
+      setEmptyStateBaselineYears([]);
       return;
     }
 
@@ -132,8 +147,15 @@ export const useReportsPageController = ({
 
     const run = async () => {
       try {
-        const scenarioRows = await listForecastScenariosV2();
+        const [scenarioRows, planningContext] = await Promise.all([
+          listForecastScenariosV2(),
+          getPlanningContextV2().catch(() => null),
+        ]);
         if (cancelled) return;
+        setEmptyStateBaselineYears(
+          planningContext?.baselineYears.map((row) => row.year).sort((left, right) => left - right) ??
+            [],
+        );
         if (scenarioRows.length === 0) {
           setEmptyStateScenario(null);
           return;
@@ -173,6 +195,7 @@ export const useReportsPageController = ({
       } catch {
         if (cancelled) return;
         setEmptyStateScenario(null);
+        setEmptyStateBaselineYears([]);
       }
     };
 
@@ -332,6 +355,7 @@ export const useReportsPageController = ({
   return {
     creatingPreviewPackage,
     downloadingPdf,
+    emptyStateBaselineYears,
     emptyStateScenario,
     error,
     handleCreatePreviewPackage,

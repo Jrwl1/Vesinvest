@@ -84,6 +84,18 @@
   gap: 14px;
 }
 
+.v2-reports-package-create {
+  gap: 16px;
+}
+
+.v2-reports-package-create .v2-report-variant-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.v2-reports-package-create .v2-report-variant-option {
+  text-align: left;
+}
+
 .v2-reports-document-preview {
   border: 1px solid var(--v2-border);
   border-radius: 8px;

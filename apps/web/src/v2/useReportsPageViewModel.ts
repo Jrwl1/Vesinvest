@@ -6,7 +6,7 @@ import type {
   V2ReportListItem,
 } from '../api';
 import {
-  getReportDisplayTitle,
+  getReportCompactDisplayTitle,
   getScenarioDisplayName,
 } from './displayNames';
 import {
@@ -34,6 +34,7 @@ type Params = {
   t: TFunction;
   creatingPreviewPackage: boolean;
   downloadingPdf: boolean;
+  emptyStateBaselineYears: number[];
   emptyStateScenario: V2ForecastScenario | null;
   handleCreateFirstPackage: () => Promise<void> | void;
   handleCreatePreviewPackage: () => Promise<void> | void;
@@ -68,6 +69,7 @@ export function useReportsPageViewModel({
   t,
   creatingPreviewPackage,
   downloadingPdf,
+  emptyStateBaselineYears,
   emptyStateScenario,
   handleCreateFirstPackage,
   handleCreatePreviewPackage,
@@ -459,8 +461,8 @@ export function useReportsPageViewModel({
   const selectedListReportTitle = React.useMemo(
     () =>
       selectedListReport
-        ? getReportDisplayTitle({
-            title: selectedListReport.title,
+        ? getReportCompactDisplayTitle({
+            variant: selectedListReport.variant,
             scenarioName:
               selectedListReport.ennuste.nimi ?? selectedListReport.ennuste.id,
             createdAt: selectedListReport.createdAt,
@@ -472,8 +474,8 @@ export function useReportsPageViewModel({
   const selectedPreviewTitle = React.useMemo(
     () =>
       selectedReport
-        ? getReportDisplayTitle({
-            title: selectedReport.title,
+        ? getReportCompactDisplayTitle({
+            variant: selectedReport.variant,
             scenarioName:
               selectedReport.ennuste.nimi ?? selectedReport.ennuste.id,
             createdAt: selectedReport.createdAt,
@@ -710,22 +712,36 @@ export function useReportsPageViewModel({
     selectedReportHasPdf,
     t,
   ]);
-  const hasSelectedReportLayout = selectedReportId != null;
+  const emptyStatePrimaryFeeSignal = React.useMemo(() => {
+    const scenario = emptyStateScenario;
+    return {
+      price: scenario?.requiredPriceTodayCombinedAnnualResult ??
+        scenario?.requiredPriceTodayCombined ??
+        scenario?.requiredPriceTodayCombinedCumulativeCash ??
+        null,
+      increase: scenario?.requiredAnnualIncreasePctAnnualResult ??
+        scenario?.requiredAnnualIncreasePct ??
+        scenario?.requiredAnnualIncreasePctCumulativeCash ??
+        null,
+    };
+  }, [emptyStateScenario]);
+  const emptyStateBaselineYearsLabel = React.useMemo(
+    () => (emptyStateBaselineYears.length > 0 ? emptyStateBaselineYears.join(', ') : '-'),
+    [emptyStateBaselineYears],
+  );
+  const hasSelectedReportLayout = selectedReportId != null || reports.length === 0;
 
   return {
     hasSelectedReportLayout,
     listColumnProps: {
       emptyStateComputedVersionLabel,
       emptyStateCtaLabel,
-      emptyStateActionBusy: creatingPreviewPackage,
-      emptyStateActionBusyLabel: t('v2Reports.creatingPackage', 'Creating package...'),
       emptyStateForecastLabel,
       emptyStateForecastToneClass,
       emptyStateReportReadinessHint,
       emptyStateReportReadinessLabel,
       emptyStateReportReadinessToneClass,
       emptyStateScenario,
-      handleEmptyStateAction,
       handleSavedFeePathAction,
       hasSelectedReportLayout,
       loadReports,
@@ -753,8 +769,20 @@ export function useReportsPageViewModel({
       dataTypeLabel,
       datasetPublicationNote,
       downloadingPdf,
+      emptyStateActionBusy: creatingPreviewPackage,
+      emptyStateActionBusyLabel: t('v2Reports.creatingPackage', 'Creating package...'),
+      emptyStateBaselineYearsLabel,
+      emptyStateCanCreateReport,
+      emptyStateComputedVersionLabel,
+      emptyStateCtaLabel,
+      emptyStateForecastLabel,
+      emptyStatePrimaryFeeSignal,
       emptyStateReportReadinessHint,
+      emptyStateReportReadinessLabel,
+      emptyStateReportReadinessToneClass,
+      emptyStateScenario,
       formatAssumptionSnapshotValue,
+      handleEmptyStateAction,
       handleCreatePreviewPackage,
       handleDownloadPdf,
       hasSelectedReportLayout,

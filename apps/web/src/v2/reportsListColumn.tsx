@@ -3,7 +3,7 @@ import type { TFunction } from 'i18next';
 
 import type { V2ReportListItem } from '../api';
 import { formatDateTime } from './format';
-import { getReportDisplayTitle, getScenarioDisplayName } from './displayNames';
+import { getReportCompactDisplayTitle, getScenarioDisplayName } from './displayNames';
 import { formatScenarioUpdatedAt } from './reportReadinessModel';
 
 type ScenarioOption = {
@@ -17,8 +17,6 @@ type EmptyStateScenario = {
 };
 
 type ReportsListColumnProps = {
-  emptyStateActionBusy: boolean;
-  emptyStateActionBusyLabel: string;
   emptyStateComputedVersionLabel: string;
   emptyStateCtaLabel: string;
   emptyStateForecastLabel: string;
@@ -27,7 +25,6 @@ type ReportsListColumnProps = {
   emptyStateReportReadinessLabel: string;
   emptyStateReportReadinessToneClass: string;
   emptyStateScenario: EmptyStateScenario | null;
-  handleEmptyStateAction: () => void;
   handleSavedFeePathAction: () => void;
   hasSelectedReportLayout: boolean;
   loadReports: (scenarioId?: string, force?: boolean) => void;
@@ -46,8 +43,6 @@ type ReportsListColumnProps = {
 };
 
 export const ReportsListColumn: React.FC<ReportsListColumnProps> = ({
-  emptyStateActionBusy,
-  emptyStateActionBusyLabel,
   emptyStateComputedVersionLabel,
   emptyStateCtaLabel,
   emptyStateForecastLabel,
@@ -56,7 +51,6 @@ export const ReportsListColumn: React.FC<ReportsListColumnProps> = ({
   emptyStateReportReadinessLabel,
   emptyStateReportReadinessToneClass,
   emptyStateScenario,
-  handleEmptyStateAction,
   handleSavedFeePathAction,
   hasSelectedReportLayout,
   loadReports,
@@ -186,22 +180,14 @@ export const ReportsListColumn: React.FC<ReportsListColumnProps> = ({
             <span>{t('v2Overview.wizardContextNext', 'Next')}</span>
             <strong>{emptyStateCtaLabel}</strong>
           </div>
-          <button
-            type="button"
-            className="v2-btn v2-btn-primary"
-            onClick={handleEmptyStateAction}
-            disabled={emptyStateActionBusy}
-          >
-            {emptyStateActionBusy ? emptyStateActionBusyLabel : emptyStateCtaLabel}
-          </button>
         </div>
       ) : null}
 
       {reports.length > 0 ? (
         <div className="v2-report-table v2-report-list">
           {reports.map((row) => {
-            const rowTitle = getReportDisplayTitle({
-              title: row.title,
+            const rowTitle = getReportCompactDisplayTitle({
+              variant: row.variant,
               scenarioName: row.ennuste.nimi ?? row.ennuste.id,
               createdAt: row.createdAt,
               t,

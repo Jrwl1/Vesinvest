@@ -7,6 +7,7 @@ import { ReportsPageV2 } from '../../ReportsPageV2';
 const downloadReportPdfV2 = vi.fn();
 const createReportV2 = vi.fn();
 const getForecastScenarioV2 = vi.fn();
+const getPlanningContextV2 = vi.fn();
 const getReportV2 = vi.fn();
 const listForecastScenariosV2 = vi.fn();
 const listReportsV2 = vi.fn();
@@ -15,6 +16,7 @@ vi.mock('../../../api', () => ({
   createReportV2: (...args: unknown[]) => createReportV2(...args),
   downloadReportPdfV2: (...args: unknown[]) => downloadReportPdfV2(...args),
   getForecastScenarioV2: (...args: unknown[]) => getForecastScenarioV2(...args),
+  getPlanningContextV2: (...args: unknown[]) => getPlanningContextV2(...args),
   getReportV2: (...args: unknown[]) => getReportV2(...args),
   listForecastScenariosV2: (...args: unknown[]) => listForecastScenariosV2(...args),
   listReportsV2: (...args: unknown[]) => listReportsV2(...args),
@@ -28,9 +30,13 @@ export function registerReportsPageV2ExportReadinessSuite() {
     downloadReportPdfV2.mockReset();
     createReportV2.mockReset();
     getForecastScenarioV2.mockReset();
+    getPlanningContextV2.mockReset();
     getReportV2.mockReset();
     listForecastScenariosV2.mockReset();
     listReportsV2.mockReset();
+    getPlanningContextV2.mockResolvedValue({
+      baselineYears: [{ year: 2022 }, { year: 2023 }, { year: 2024 }],
+    });
 
     listReportsV2.mockResolvedValue([
       {
@@ -422,7 +428,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
 
     const documentHeader = container.querySelector('.v2-reports-document-header');
     expect(documentHeader?.textContent).toContain(
-      'Ennusteraportti Water Utility Vesinvest v2 2026-04-09',
+      'Water Utility Vesinvest v2 - 2026-04-09',
     );
     expect(documentHeader?.textContent).toContain('Luotu esikatselu');
   });
@@ -459,7 +465,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
 
     const documentHeader = container.querySelector('.v2-reports-document-header');
     expect(documentHeader?.textContent).toContain(
-      'Ennusteraportti Water Utility Vesinvest v2 2026-04-09',
+      'Water Utility Vesinvest v2 - 2026-04-09',
     );
     expect(documentHeader?.textContent).not.toContain('Outdated list title');
   });

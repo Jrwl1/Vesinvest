@@ -49,6 +49,7 @@ export const ReportsPageV2: React.FC<Props> = ({
   const {
     creatingPreviewPackage,
     downloadingPdf,
+    emptyStateBaselineYears,
     emptyStateScenario,
     error,
     handleCreateFirstPackage,
@@ -76,6 +77,7 @@ export const ReportsPageV2: React.FC<Props> = ({
       t,
       creatingPreviewPackage,
       downloadingPdf,
+      emptyStateBaselineYears,
       emptyStateScenario,
       handleCreateFirstPackage,
       handleCreatePreviewPackage,

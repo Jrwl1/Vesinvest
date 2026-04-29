@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 
 import type {
   V2BaselineSourceSummary,
+  V2ForecastScenario,
   V2OverrideProvenance,
   V2ReportDetail,
   V2ReportListItem,
@@ -51,8 +52,23 @@ type ReportsPreviewColumnProps = {
   dataTypeLabel: (dataType: string) => string;
   datasetPublicationNote: (dataset: V2BaselineSourceSummary['financials']) => string;
   downloadingPdf: boolean;
+  emptyStateActionBusy: boolean;
+  emptyStateActionBusyLabel: string;
+  emptyStateBaselineYearsLabel: string;
+  emptyStateCanCreateReport: boolean;
+  emptyStateComputedVersionLabel: string;
+  emptyStateCtaLabel: string;
+  emptyStateForecastLabel: string;
+  emptyStatePrimaryFeeSignal: {
+    price: number | null;
+    increase: number | null;
+  };
   emptyStateReportReadinessHint: string;
+  emptyStateReportReadinessLabel: string;
+  emptyStateReportReadinessToneClass: string;
+  emptyStateScenario: V2ForecastScenario | null;
   formatAssumptionSnapshotValue: (key: string, value: number) => string;
+  handleEmptyStateAction: () => void;
   handleCreatePreviewPackage: () => void;
   handleDownloadPdf: () => void;
   hasSelectedReportLayout: boolean;
@@ -99,8 +115,20 @@ export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
   dataTypeLabel,
   datasetPublicationNote,
   downloadingPdf,
+  emptyStateActionBusy,
+  emptyStateActionBusyLabel,
+  emptyStateBaselineYearsLabel,
+  emptyStateCanCreateReport,
+  emptyStateComputedVersionLabel,
+  emptyStateCtaLabel,
+  emptyStateForecastLabel,
+  emptyStatePrimaryFeeSignal,
   emptyStateReportReadinessHint,
+  emptyStateReportReadinessLabel,
+  emptyStateReportReadinessToneClass,
+  emptyStateScenario,
   formatAssumptionSnapshotValue,
+  handleEmptyStateAction,
   handleCreatePreviewPackage,
   handleDownloadPdf,
   hasSelectedReportLayout,
@@ -139,9 +167,17 @@ export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
     >
       <div className="v2-section-header v2-reports-preview-head">
         <div className="v2-reports-section-copy">
-          <h2>{t('v2Reports.selectedReportTitle', 'Selected report')}</h2>
+          <h2>
+            {selectedReport
+              ? t('v2Reports.selectedReportTitle', 'Selected report')
+              : reports.length === 0
+                ? t('v2Reports.createFirstPackage', 'Create report package')
+                : t('v2Reports.selectedReportTitle', 'Selected report')}
+          </h2>
           {selectedReport ? (
             <p className="v2-muted">{selectedPreviewTitle}</p>
+          ) : reports.length === 0 ? (
+            <p className="v2-muted">{emptyStateReportReadinessHint}</p>
           ) : (
             <p className="v2-muted">{t('v2Reports.selectFromList')}</p>
           )}
@@ -163,14 +199,104 @@ export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
         </div>
       ) : null}
       {!loadingDetail && !selectedReport ? (
-        <div className="v2-empty-state">
-          <p>{t('v2Reports.selectFromList')}</p>
-          <p className="v2-muted">
-            {reports.length === 0
-              ? emptyStateReportReadinessHint
-              : t('v2Reports.emptyHint')}
-          </p>
-        </div>
+        reports.length === 0 ? (
+          <article className="v2-reports-document-header v2-reports-package-create">
+            <div className="v2-reports-document-header-top">
+              <div className="v2-reports-document-copy">
+                <h3>{reportVariantLabel(previewVariant)}</h3>
+                <p className="v2-muted">
+                  {t(activeVariant.descriptionKey, activeVariant.description)}
+                </p>
+              </div>
+              <span className={`v2-badge ${emptyStateReportReadinessToneClass}`}>
+                {emptyStateReportReadinessLabel}
+              </span>
+            </div>
+
+            <div className="v2-reports-document-meta">
+              <article>
+                <span>{t('v2Reports.variantTitle', 'Package variant')}</span>
+                <strong>{reportVariantLabel(previewVariant)}</strong>
+              </article>
+              <article>
+                <span>{t('projection.scenario', 'Scenario')}</span>
+                <strong>{emptyStateScenario?.name ?? '-'}</strong>
+              </article>
+              <article>
+                <span>{t('v2Reports.acceptedBaselineYears', 'Accepted baseline years')}</span>
+                <strong>{emptyStateBaselineYearsLabel}</strong>
+              </article>
+              <article>
+                <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
+                <strong>
+                  {emptyStateScenario?.horizonYears != null
+                    ? `${emptyStateScenario.horizonYears} ${t('projection.v2.horizonUnit', 'y')}`
+                    : '-'}
+                </strong>
+              </article>
+              <article>
+                <span>{t('v2Forecast.requiredPriceToday', 'Required price today')}</span>
+                <strong>{formatPrice(emptyStatePrimaryFeeSignal.price)}</strong>
+              </article>
+              <article>
+                <span>{t('v2Forecast.requiredIncreaseVsCurrent', 'Required increase vs current')}</span>
+                <strong>{formatPercent(emptyStatePrimaryFeeSignal.increase)}</strong>
+              </article>
+              <article>
+                <span>{t('v2Forecast.latestComparatorPrice', 'Latest full-year comparator price')}</span>
+                <strong>{formatPrice(emptyStateScenario?.baselinePriceTodayCombined ?? null)}</strong>
+              </article>
+              <article>
+                <span>{t('v2Forecast.reportComputeSource', 'Computed from version')}</span>
+                <strong>{emptyStateComputedVersionLabel}</strong>
+              </article>
+            </div>
+
+            <div className="v2-report-variant-grid">
+              {REPORT_VARIANT_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`v2-report-variant-option ${
+                    previewVariant === option.id ? 'active' : ''
+                  }`}
+                  onClick={() => setPreviewVariant(option.id)}
+                  aria-pressed={previewVariant === option.id}
+                  aria-label={t(option.labelKey, option.label)}
+                >
+                  <div className="v2-report-variant-option-head">
+                    <strong>{t(option.labelKey, option.label)}</strong>
+                  </div>
+                  <p className="v2-muted">{t(option.descriptionKey, option.description)}</p>
+                </button>
+              ))}
+            </div>
+
+            <div className="v2-actions-row v2-reports-document-actions">
+              <div className="v2-reports-document-status">
+                <strong>{emptyStateForecastLabel}</strong>
+                <p className="v2-muted">{emptyStateReportReadinessHint}</p>
+              </div>
+              <button
+                type="button"
+                className={`v2-btn${emptyStateCanCreateReport ? ' v2-btn-primary' : ''}`}
+                onClick={handleEmptyStateAction}
+                disabled={emptyStateActionBusy}
+              >
+                {emptyStateActionBusy
+                  ? emptyStateActionBusyLabel
+                  : emptyStateCanCreateReport
+                    ? t('v2Reports.createSelectedPackage', 'Create package')
+                    : emptyStateCtaLabel}
+              </button>
+            </div>
+          </article>
+        ) : (
+          <div className="v2-empty-state">
+            <p>{t('v2Reports.selectFromList')}</p>
+            <p className="v2-muted">{t('v2Reports.emptyHint')}</p>
+          </div>
+        )
       ) : null}
 
       {selectedReport ? (

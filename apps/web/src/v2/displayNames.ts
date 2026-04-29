@@ -184,3 +184,16 @@ export function getReportDisplayTitle(params: {
     ? `${defaultTitle} - ${t(packageSuffix.labelKey, packageSuffix.fallback)}`
     : defaultTitle;
 }
+
+export function getReportCompactDisplayTitle(params: {
+  variant: ReportPackageVariant;
+  scenarioName: string | null | undefined;
+  createdAt: string;
+  t: TFunction;
+}): string {
+  const { variant, scenarioName, createdAt, t } = params;
+  return `${getReportVariantDisplayLabel(variant, t)} - ${getScenarioDisplayName(
+    scenarioName,
+    t,
+  )} - ${toIsoDateLabel(createdAt)}`;
+}

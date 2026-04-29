@@ -6,6 +6,7 @@ import { ReportsPageV2 } from '../../ReportsPageV2';
 
 const downloadReportPdfV2 = vi.fn();
 const getForecastScenarioV2 = vi.fn();
+const getPlanningContextV2 = vi.fn();
 const getReportV2 = vi.fn();
 const listForecastScenariosV2 = vi.fn();
 const listReportsV2 = vi.fn();
@@ -13,6 +14,7 @@ const listReportsV2 = vi.fn();
 vi.mock('../../../api', () => ({
   downloadReportPdfV2: (...args: unknown[]) => downloadReportPdfV2(...args),
   getForecastScenarioV2: (...args: unknown[]) => getForecastScenarioV2(...args),
+  getPlanningContextV2: (...args: unknown[]) => getPlanningContextV2(...args),
   getReportV2: (...args: unknown[]) => getReportV2(...args),
   listForecastScenariosV2: (...args: unknown[]) => listForecastScenariosV2(...args),
   listReportsV2: (...args: unknown[]) => listReportsV2(...args),
@@ -25,9 +27,13 @@ export function registerReportsPageV2SmokeSuite() {
   beforeEach(() => {
     downloadReportPdfV2.mockReset();
     getForecastScenarioV2.mockReset();
+    getPlanningContextV2.mockReset();
     getReportV2.mockReset();
     listForecastScenariosV2.mockReset();
     listReportsV2.mockReset();
+    getPlanningContextV2.mockResolvedValue({
+      baselineYears: [{ year: 2022 }, { year: 2023 }, { year: 2024 }],
+    });
 
     listReportsV2.mockResolvedValue([
       {

@@ -7,6 +7,7 @@ import { ReportsPageV2 } from '../../ReportsPageV2';
 const downloadReportPdfV2 = vi.fn();
 const createReportV2 = vi.fn();
 const getForecastScenarioV2 = vi.fn();
+const getPlanningContextV2 = vi.fn();
 const getReportV2 = vi.fn();
 const listForecastScenariosV2 = vi.fn();
 const listReportsV2 = vi.fn();
@@ -15,6 +16,7 @@ vi.mock('../../../api', () => ({
   createReportV2: (...args: unknown[]) => createReportV2(...args),
   downloadReportPdfV2: (...args: unknown[]) => downloadReportPdfV2(...args),
   getForecastScenarioV2: (...args: unknown[]) => getForecastScenarioV2(...args),
+  getPlanningContextV2: (...args: unknown[]) => getPlanningContextV2(...args),
   getReportV2: (...args: unknown[]) => getReportV2(...args),
   listForecastScenariosV2: (...args: unknown[]) => listForecastScenariosV2(...args),
   listReportsV2: (...args: unknown[]) => listReportsV2(...args),
@@ -28,9 +30,13 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
     downloadReportPdfV2.mockReset();
     createReportV2.mockReset();
     getForecastScenarioV2.mockReset();
+    getPlanningContextV2.mockReset();
     getReportV2.mockReset();
     listForecastScenariosV2.mockReset();
     listReportsV2.mockReset();
+    getPlanningContextV2.mockResolvedValue({
+      baselineYears: [{ year: 2022 }, { year: 2023 }, { year: 2024 }],
+    });
 
     listReportsV2.mockResolvedValue([
       {
@@ -486,9 +492,7 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
     expect((await screen.findAllByText('Saved fee path scenario')).length).toBeGreaterThan(0);
     expect(getForecastScenarioV2).toHaveBeenCalledWith('base-1');
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Luo raporttipaketti' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Luo paketti' }));
 
     await waitFor(() => {
       expect(createReportV2).toHaveBeenCalledWith(
@@ -632,7 +636,7 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
       />,
     );
 
-    expect(await screen.findByText('Runtime hypothesis')).toBeTruthy();
+    expect((await screen.findAllByText('Runtime hypothesis')).length).toBeGreaterThan(0);
     expect(getForecastScenarioV2).toHaveBeenCalledWith('stress-1');
 
     fireEvent.click(

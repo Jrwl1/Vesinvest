@@ -91,7 +91,10 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
     },
     {
       key: 'underfunding-start',
-      label: t('v2Forecast.underfundingStarts', 'Underfunding starts'),
+      label: t(
+        'v2Forecast.annualUnderfundingCompare',
+        'Underfunding start (annual result)',
+      ),
       value: primaryUnderfundingStartYear ?? t('v2Forecast.noUnderfunding', 'None'),
     },
     {
@@ -273,34 +276,6 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
           </div>
         </div>
       </div>
-      <section className="v2-card v2-tariff-answer-card">
-        <div className="v2-section-header">
-          <div>
-            <p className="v2-overview-eyebrow">
-              {t('v2Forecast.tariffAnswerEyebrow', 'Tariff answer')}
-            </p>
-            <h3>{t('v2Forecast.tariffDriversTitle', 'Why this price')}</h3>
-          </div>
-          <span className={`v2-badge ${scenarioTypeToneClass}`}>
-            {scenarioTypeLabel(scenario.scenarioType)}
-          </span>
-        </div>
-        <div className="v2-forecast-driver-grid">
-          {tariffDriverCards.map((card) => (
-            <article className="v2-subcard v2-forecast-driver-card" key={card.id}>
-              <strong>{card.title}</strong>
-              <div className="v2-keyvalue-list">
-                {card.rows.map((row) => (
-                  <div className="v2-keyvalue-row" key={row.label}>
-                    <span>{row.label}</span>
-                    <strong>{row.value}</strong>
-                  </div>
-                ))}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
       <section className={`v2-card v2-statement-cockpit${denseAnalystMode ? ' dense' : ''}`}>
         <div className="v2-forecast-workspace-head">
           <div className="v2-forecast-workspace-copy">
@@ -468,6 +443,34 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
             ) : null}
           </div>
         </article>
+        <section className="v2-tariff-answer-card v2-tariff-answer-card-inline">
+          <div className="v2-section-header">
+            <div>
+              <p className="v2-overview-eyebrow">
+                {t('v2Forecast.tariffAnswerEyebrow', 'Tariff answer')}
+              </p>
+              <h3>{t('v2Forecast.tariffDriversTitle', 'Why this price')}</h3>
+            </div>
+            <span className={`v2-badge ${scenarioTypeToneClass}`}>
+              {scenarioTypeLabel(scenario.scenarioType)}
+            </span>
+          </div>
+          <div className="v2-forecast-driver-grid">
+            {tariffDriverCards.map((card) => (
+              <article className="v2-subcard v2-forecast-driver-card" key={card.id}>
+                <strong>{card.title}</strong>
+                <div className="v2-keyvalue-list">
+                  {card.rows.map((row) => (
+                    <div className="v2-keyvalue-row" key={row.label}>
+                      <span>{row.label}</span>
+                      <strong>{row.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
         <div className="v2-statement-cockpit-grid">
           {denseAnalystMode ? (
             <article className="v2-subcard v2-statement-card">

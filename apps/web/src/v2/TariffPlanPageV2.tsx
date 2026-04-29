@@ -14,6 +14,10 @@ import {
   type V2TariffFeeKey,
   type V2TariffPlan,
 } from '../api';
+import {
+  buildDefaultPackageReportTitle,
+  normalizeReportLocale,
+} from './displayNames';
 import { formatDateTime, formatEur, formatNumber, formatPercent, formatPrice, formatVolume } from './format';
 
 type Props = {
@@ -199,7 +203,8 @@ export const TariffPlanPageV2: React.FC<Props> = ({
   onGoToReports,
   onTariffPlanAccepted,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const reportLocaleLanguage = i18n?.language;
   const [planningContext, setPlanningContext] =
     React.useState<V2PlanningContextResponse | null>(null);
   const [tariffPlan, setTariffPlan] = React.useState<V2TariffPlan | null>(null);
@@ -490,9 +495,12 @@ export const TariffPlanPageV2: React.FC<Props> = ({
         vesinvestPlanId: activePlanId,
         ennusteId: activeScenarioId,
         variant: 'regulator_package',
-        title: t('v2TariffPlan.reportTitle', '{{name}} tariff report', {
-          name: workflowPlan?.name ?? 'Vesinvest',
-        }),
+        locale: normalizeReportLocale(reportLocaleLanguage),
+        title: buildDefaultPackageReportTitle(
+          t,
+          workflowPlan?.name ?? 'Vesinvest',
+          'regulator_package',
+        ),
       });
       onGoToReports();
     } catch (err) {
@@ -504,7 +512,15 @@ export const TariffPlanPageV2: React.FC<Props> = ({
     } finally {
       setBusy(false);
     }
-  }, [activePlanId, activeScenarioId, hasUnsavedTariffEdits, onGoToReports, t, workflowPlan?.name]);
+  }, [
+    activePlanId,
+    activeScenarioId,
+    hasUnsavedTariffEdits,
+    onGoToReports,
+    reportLocaleLanguage,
+    t,
+    workflowPlan?.name,
+  ]);
 
   const readinessRows = tariffPlan
     ? [
@@ -545,6 +561,102 @@ export const TariffPlanPageV2: React.FC<Props> = ({
         },
       ]
     : [];
+  const priceSignal = tariffPlan?.recommendation.priceSignal ?? null;
+  const tariffSummaryPanel = tariffPlan ? (
+    <aside className="v2-tariff-summary-panel">
+      <div className="v2-section-header">
+        <div>
+          <h3>{t('v2TariffPlan.recommendationSummary', 'Recommendation summary')}</h3>
+          <p className="v2-muted">
+            {t('v2TariffPlan.updatedAt', 'Updated')}: {formatDateTime(tariffPlan.updatedAt)}
+          </p>
+        </div>
+        <span className="v2-badge v2-status-positive">
+          {t('v2TariffPlan.annualResultTarget', 'Annual-result target')}
+        </span>
+      </div>
+      <div className="v2-tariff-price-signal">
+        <span>{t('v2TariffPlan.requiredPriceToday', 'Required price today')}</span>
+        <strong>{formatPrice(priceSignal?.requiredPriceToday)}</strong>
+      </div>
+      <div className="v2-tariff-price-context">
+        <div>
+          <span>{t('v2TariffPlan.currentComparatorPrice', 'Current comparator price')}</span>
+          <strong>{formatPrice(priceSignal?.currentComparatorPrice)}</strong>
+        </div>
+        <div>
+          <span>{t('v2TariffPlan.requiredIncreaseVsComparator', 'Required increase vs comparator')}</span>
+          <strong>{formatPercent(priceSignal?.requiredIncreasePct)}</strong>
+        </div>
+        <div>
+          <span>{t('v2TariffPlan.averageAnnualRollout', 'Average annual rollout')}</span>
+          <strong>{formatPercent(tariffPlan.recommendation.averageAnnualIncreasePct)}</strong>
+        </div>
+        <div>
+          <span>{t('v2TariffPlan.cumulativeCashFloor', 'Cumulative cash floor')}</span>
+          <strong>{formatPrice(priceSignal?.cumulativeCashFloorPrice)}</strong>
+        </div>
+      </div>
+      <div className="v2-keyvalue-list">
+        <div className="v2-keyvalue-row">
+          <span>{t('v2TariffPlan.targetRevenue', 'Target additional annual revenue')}</span>
+          <strong>{formatEur(tariffPlan.recommendation.targetAdditionalAnnualRevenue)}</strong>
+        </div>
+        <div className="v2-keyvalue-row">
+          <span>{t('v2TariffPlan.proposedRevenue', 'Proposed annual revenue')}</span>
+          <strong>{formatEur(tariffPlan.recommendation.proposedAnnualRevenue)}</strong>
+        </div>
+        <div className="v2-keyvalue-row">
+          <span>{t('v2TariffPlan.smoothingYears', 'Smoothing years')}</span>
+          <strong>{tariffPlan.recommendation.smoothingYears}</strong>
+        </div>
+        <div className="v2-keyvalue-row">
+          <span>{t('v2TariffPlan.smoothingStatus', '15% smoothing status')}</span>
+          <strong>{formatSmoothingStatus(tariffPlan.readinessChecklist.smoothingStatus)}</strong>
+        </div>
+      </div>
+      <div className="v2-vesinvest-table-wrap v2-tariff-summary-table-wrap">
+        <table className="v2-vesinvest-table v2-tariff-summary-table">
+          <thead>
+            <tr>
+              <th>{t('common.type', 'Type')}</th>
+              <th>{t('v2TariffPlan.current', 'Current')}</th>
+              <th>{t('v2TariffPlan.proposed', 'Proposed')}</th>
+              <th>{t('v2TariffPlan.annualIncrease', 'Annual increase')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {FEE_KEYS.map((key) => {
+              const fee = tariffPlan.recommendation.fees[key];
+              return (
+                <tr key={key}>
+                  <td>{feeLabels[key]}</td>
+                  <td>{formatTariffUnit(key, fee.currentUnit)}</td>
+                  <td>{formatTariffUnit(key, fee.proposedUnit)}</td>
+                  <td>{formatPercent(fee.annualIncreasePct)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="v2-tariff-readiness-compact">
+        {readinessRows.slice(0, 5).map((row) => (
+          <div key={row.label}>
+            <span>{row.label}</span>
+            <strong>{row.ready ? t('v2Overview.wizardSummaryYes', 'Yes') : t('v2Overview.wizardSummaryNo', 'No')}</strong>
+          </div>
+        ))}
+      </div>
+    </aside>
+  ) : null;
+  const canOpenAcceptedReports =
+    tariffPlan?.status === 'accepted' && !hasUnsavedTariffEdits;
+  const hasAcceptedTariffEdits =
+    tariffPlan?.status === 'accepted' && hasUnsavedTariffEdits;
+  const tariffStatusKey = hasAcceptedTariffEdits
+    ? 'statusAcceptedUnsaved'
+    : getTariffStatusKey(tariffPlan?.status);
 
   if (loading) {
     return <div className="v2-loading">{t('common.loading', 'Loading...')}</div>;
@@ -595,17 +707,21 @@ export const TariffPlanPageV2: React.FC<Props> = ({
           </div>
           <span
             className={`v2-badge ${
-              tariffPlan?.status === 'accepted'
+              tariffPlan?.status === 'accepted' && !hasUnsavedTariffEdits
                 ? 'v2-status-positive'
                 : 'v2-status-warning'
             }`}
           >
-            {t(`v2TariffPlan.${getTariffStatusKey(tariffPlan?.status)}`)}
+            {hasAcceptedTariffEdits
+              ? t('v2TariffPlan.statusAcceptedUnsaved', 'Changes not accepted')
+              : t(`v2TariffPlan.${tariffStatusKey}`)}
           </span>
         </div>
 
-        <div className="v2-vesinvest-evidence-grid">
-          <label className="v2-field">
+        <div className="v2-tariff-first-view">
+          <div className="v2-tariff-input-column">
+            <div className="v2-vesinvest-evidence-grid">
+              <label className="v2-field">
             <span>{t('v2TariffPlan.connectionFeeAverage', 'Connection fee average')}</span>
             <input
               className="v2-input"
@@ -781,6 +897,9 @@ export const TariffPlanPageV2: React.FC<Props> = ({
             }
           />
         </label>
+          </div>
+          {tariffSummaryPanel}
+        </div>
 
         <div className="v2-section-heading">
           <span className="v2-eyebrow">
@@ -839,9 +958,15 @@ export const TariffPlanPageV2: React.FC<Props> = ({
           <button type="button" className="v2-btn" onClick={() => void acceptTariffPlan()} disabled={busy || !tariffPlan}>
             {t('v2TariffPlan.accept', 'Accept tariff plan')}
           </button>
-          <button type="button" className="v2-btn" onClick={() => void createReport()} disabled={busy || tariffPlan?.status !== 'accepted' || hasUnsavedTariffEdits}>
-            {t('v2Reports.createReport', 'Create report')}
-          </button>
+          {canOpenAcceptedReports ? (
+            <button type="button" className="v2-btn" onClick={onGoToReports} disabled={busy}>
+              {t('v2Reports.openReports', 'Open Reports')}
+            </button>
+          ) : (
+            <button type="button" className="v2-btn" onClick={() => void createReport()} disabled={busy || tariffPlan?.status !== 'accepted' || hasUnsavedTariffEdits}>
+              {t('v2Reports.createReport', 'Create report')}
+            </button>
+          )}
         </div>
         {hasUnsavedTariffEdits && tariffPlan?.status === 'accepted' ? (
           <p className="v2-muted">
@@ -863,10 +988,22 @@ export const TariffPlanPageV2: React.FC<Props> = ({
               </p>
             </div>
             <span className="v2-badge">
-              {formatPercent(tariffPlan.recommendation.averageAnnualIncreasePct)}
+              {formatPrice(priceSignal?.requiredPriceToday)}
             </span>
           </div>
           <div className="v2-keyvalue-list">
+            <div className="v2-keyvalue-row">
+              <span>{t('v2TariffPlan.requiredPriceToday', 'Required price today')}</span>
+              <span>{formatPrice(priceSignal?.requiredPriceToday)}</span>
+            </div>
+            <div className="v2-keyvalue-row">
+              <span>{t('v2TariffPlan.currentComparatorPrice', 'Current comparator price')}</span>
+              <span>{formatPrice(priceSignal?.currentComparatorPrice)}</span>
+            </div>
+            <div className="v2-keyvalue-row">
+              <span>{t('v2TariffPlan.requiredIncreaseVsComparator', 'Required increase vs comparator')}</span>
+              <span>{formatPercent(priceSignal?.requiredIncreasePct)}</span>
+            </div>
             <div className="v2-keyvalue-row">
               <span>{t('v2TariffPlan.targetRevenue', 'Target additional annual revenue')}</span>
               <span>{formatEur(tariffPlan.recommendation.targetAdditionalAnnualRevenue)}</span>

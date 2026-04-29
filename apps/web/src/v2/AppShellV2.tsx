@@ -325,7 +325,12 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     setSetupPlanState((prev) => {
       const mergedState =
         nextState && prev?.activePlanId === nextState.activePlanId
-          ? { ...prev, ...nextState }
+          ? {
+              ...prev,
+              ...nextState,
+              linkedScenarioComputedFresh:
+                nextState.linkedScenarioComputedFresh ?? prev.linkedScenarioComputedFresh,
+            }
           : nextState;
       setSavedFeePathReportConflictPlanId((current) => {
         if (!current) {

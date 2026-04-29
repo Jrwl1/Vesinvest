@@ -24,7 +24,7 @@ export const AssetManagementPageV2: React.FC<Props> = ({
   onGoToReports,
   onWorkspaceChanged,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [planningContext, setPlanningContext] =
     React.useState<V2PlanningContextResponse | null>(null);
   const [importStatus, setImportStatus] =
@@ -67,6 +67,7 @@ export const AssetManagementPageV2: React.FC<Props> = ({
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
       <VesinvestPlanningPanel
         t={t}
+        language={i18n.language}
         isAdmin={isAdmin}
         planningContext={planningContext}
         linkedOrg={importStatus?.link ?? null}

@@ -93,6 +93,8 @@ vi.mock('../../OverviewPageV2', () => ({
       activePlanId: string | null;
       linkedScenarioId: string | null;
       classificationReviewRequired: boolean;
+      assetEvidenceReady?: boolean;
+      assetEvidenceMissingCount?: number;
       pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
       tariffPlanStatus?: 'draft' | 'accepted' | 'stale' | null;
       baselineChangedSinceAcceptedRevision: boolean;
@@ -327,6 +329,8 @@ vi.mock('../../OverviewPageV2', () => ({
               activePlanId: 'plan-1',
               linkedScenarioId: 'scenario-1',
               classificationReviewRequired: false,
+              assetEvidenceReady: true,
+              assetEvidenceMissingCount: 0,
               pricingStatus: 'verified',
               tariffPlanStatus: 'accepted',
               baselineChangedSinceAcceptedRevision: false,
@@ -555,6 +559,10 @@ export function registerAppShellV2NavigationDrawerSuite() {
   };
 
   const unlockSetupThroughOverview = async () => {
+    await waitFor(() => {
+      expect(getImportStatusV2Mock).toHaveBeenCalled();
+      expect(getPlanningContextV2Mock).toHaveBeenCalled();
+    });
     fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
     fireEvent.click(screen.getByRole('button', { name: 'set-plan-verified' }));
@@ -973,13 +981,7 @@ export function registerAppShellV2NavigationDrawerSuite() {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
-    await waitFor(() => {
-      expect(
-        (screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement)
-          .disabled,
-      ).toBe(false);
-    });
+    await unlockSetupThroughOverview();
     fireEvent.click(
       screen.getByRole('button', { name: 'open-forecast-handoff' }),
     );

@@ -225,6 +225,28 @@ export function VesinvestUtilityBindingSection({
     municipality: string | null;
   }) => void;
 }) {
+  if (!utilityBindingMissing && !utilityBindingMismatch) {
+    return (
+      <section className="v2-vesinvest-identity-strip" aria-label={t('v2Vesinvest.identityLock', 'Identity guardrail')}>
+        <div>
+          <span>{t('v2Vesinvest.utilityName', 'Utility name')}</span>
+          <strong>{linkedOrg?.nimi ?? draft.utilityName ?? '-'}</strong>
+        </div>
+        <div>
+          <span>{t('v2Vesinvest.businessId', 'Business ID')}</span>
+          <strong>{linkedOrg?.ytunnus ?? draft.businessId ?? '-'}</strong>
+        </div>
+        <div>
+          <span>{t('v2Vesinvest.identityVeeti', 'VEETI')}</span>
+          <strong>{linkedOrg?.veetiId ?? draft.veetiId ?? '-'}</strong>
+        </div>
+        <span className={`v2-badge ${toneClass('verified')}`}>
+          {t('v2Vesinvest.identityLinked', 'VEETI linked')}
+        </span>
+      </section>
+    );
+  }
+
   return (
     <VesinvestIdentitySurface
       t={t}

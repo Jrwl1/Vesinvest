@@ -51,7 +51,7 @@ export function buildForecastBaselineDatasetSourceLabel(params: {
   if (hasDocumentImport && hasWorkbookImport) {
     return t(
       'v2Forecast.baselineSourceDocumentWorkbookMixed',
-      'Source document + Excel repair',
+      'Evidence file + Excel repair',
     );
   }
   if (hasStatementImport && hasWorkbookImport) {
@@ -62,7 +62,7 @@ export function buildForecastBaselineDatasetSourceLabel(params: {
   }
   if (provenance?.kind === 'document_import') {
     return t('v2Forecast.baselineSourceDocumentImport', {
-      defaultValue: 'Source document ({{fileName}})',
+      defaultValue: 'Evidence file ({{fileName}})',
       fileName: normalizeImportedFileName(provenance.fileName, 'PDF document'),
     });
   }

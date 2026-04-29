@@ -359,7 +359,7 @@ export function registerReportsPageV2SmokeSuite() {
     expect((await screen.findAllByText('Perusmaksun muutos')).length).toBeGreaterThan(0);
     expect((await screen.findAllByText('5,00 %')).length).toBeGreaterThan(0);
     expect(
-      await screen.findByText(/Source document \(baseline-2023\.pdf\).+pp\. 3, 4/),
+      await screen.findByText(/(Evidence file|Lähdeaineisto|Underlag) \(baseline-2023\.pdf\).+pp\. 3, 4/),
     ).toBeTruthy();
     expect(await screen.findByText(/Revenue 95 000 EUR/)).toBeTruthy();
     expect(await screen.findByText(/Operating costs 70 000 EUR/)).toBeTruthy();
@@ -469,4 +469,3 @@ export function registerReportsPageV2SmokeSuite() {
 
   });
 }
-

@@ -191,14 +191,12 @@ export const ReportsListColumn: React.FC<ReportsListColumnProps> = ({
       {reports.length > 0 ? (
         <div className="v2-report-table v2-report-list">
           {reports.map((row) => {
-            const rowTitle =
-              row.title?.trim() ||
-              getReportDisplayTitle({
-                title: row.title,
-                scenarioName: row.ennuste.nimi ?? row.ennuste.id,
-                createdAt: row.createdAt,
-                t,
-              });
+            const rowTitle = getReportDisplayTitle({
+              title: row.title,
+              scenarioName: row.ennuste.nimi ?? row.ennuste.id,
+              createdAt: row.createdAt,
+              t,
+            });
             const rowScenarioLabel = getScenarioDisplayName(row.ennuste.nimi ?? row.ennuste.id, t);
             return (
               <button

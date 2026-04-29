@@ -27,7 +27,12 @@ type TariffDriverSummary = {
   peakInvestmentAmount: number | null;
   nearTermExpenseYears?: string | null;
 };
-type ReportPrimaryFeeSignal = { price: number | null; increase: number | null };
+type ReportFeeSignal = {
+  price: number | null;
+  increase: number | null;
+  priceLabel?: string;
+  increaseLabel?: string;
+};
 
 type ReportsPreviewColumnProps = {
   activeVariant: ReportVariantOption;
@@ -69,7 +74,8 @@ type ReportsPreviewColumnProps = {
   selectedReport: V2ReportDetail | null;
   selectedReportExportHint: string | null;
   selectedReportGeneratedAt: string;
-  selectedReportPrimaryFeeSignal: ReportPrimaryFeeSignal | null;
+  selectedReportPrimaryFeeSignal: ReportFeeSignal | null;
+  selectedReportCashFloorSignal: ReportFeeSignal | null;
   selectedReportScenarioName: string;
   selectedScenarioBranchLabel: string;
   selectedScenarioHorizonLabel: string;
@@ -111,6 +117,7 @@ export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
   selectedReport,
   selectedReportExportHint,
   selectedReportGeneratedAt,
+  selectedReportCashFloorSignal,
   selectedReportPrimaryFeeSignal,
   selectedReportScenarioName,
   selectedScenarioBranchLabel,
@@ -226,6 +233,57 @@ export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
                 >
                   {t('v2Reports.openForecast')}
                 </button>
+              </div>
+            </div>
+          </article>
+
+          <article className="v2-reports-document-preview">
+            <div className="v2-reports-document-page">
+              <div className="v2-reports-page-head">
+                <div>
+                  <strong>{t('app.title', 'Vesinvest')}</strong>
+                  <span>{selectedReportScenarioName}</span>
+                </div>
+                <div>
+                  <span>{reportVariantLabel(selectedReport.variant)}</span>
+                  <span>{selectedReportGeneratedAt}</span>
+                </div>
+              </div>
+              <h3>{t('v2Reports.documentPreviewTitle', 'Financial plan and tariff proposal')}</h3>
+              <div className="v2-reports-page-kpis">
+                <div>
+                  <span>{selectedReportPrimaryFeeSignal?.priceLabel ?? t('v2Forecast.requiredPriceToday', 'Required price today')}</span>
+                  <strong>{formatPrice(selectedReportPrimaryFeeSignal?.price ?? null)}</strong>
+                </div>
+                <div>
+                  <span>{selectedReportPrimaryFeeSignal?.increaseLabel ?? t('v2Forecast.requiredIncreaseVsCurrent', 'Required increase vs current')}</span>
+                  <strong>{formatPercent(selectedReportPrimaryFeeSignal?.increase ?? null)}</strong>
+                </div>
+                <div>
+                  <span>{t('v2Forecast.latestComparatorPrice', 'Latest full-year comparator price')}</span>
+                  <strong>
+                    {formatPrice(
+                      selectedReport.snapshot.scenario.baselinePriceTodayCombined ??
+                        selectedReport.requiredPriceToday,
+                    )}
+                  </strong>
+                </div>
+              </div>
+              <div className="v2-reports-page-section">
+                <strong>{t('v2Reports.acceptedBaselineYears', 'Accepted baseline years')}</strong>
+                <span>{selectedAcceptedBaselineYearsLabel}</span>
+              </div>
+              <div className="v2-reports-page-section">
+                <strong>{t('projection.v2.horizonLabel', 'Horizon')}</strong>
+                <span>{selectedScenarioHorizonLabel}</span>
+              </div>
+              <div className="v2-reports-page-section">
+                <strong>{t('v2Reports.cashSufficiencyFloor', 'Cumulative cash floor')}</strong>
+                <span>
+                  {formatPrice(selectedReportCashFloorSignal?.price ?? null)}
+                  {' / '}
+                  {formatPercent(selectedReportCashFloorSignal?.increase ?? null)}
+                </span>
               </div>
             </div>
           </article>
@@ -349,22 +407,12 @@ export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
 
             <article className="v2-kpi-strip v2-reports-secondary-kpis">
               <div>
-                <h3>{t('v2Forecast.requiredPriceCumulativeCash', 'Required price today (cumulative cash >= 0)')}</h3>
-                <p>
-                  {formatPrice(
-                    selectedReport.snapshot.scenario.requiredPriceTodayCombinedCumulativeCash ??
-                      selectedReport.requiredPriceToday,
-                  )}
-                </p>
+                <h3>{selectedReportPrimaryFeeSignal?.priceLabel ?? t('v2Forecast.requiredPriceToday', 'Required price today')}</h3>
+                <p>{formatPrice(selectedReportPrimaryFeeSignal?.price ?? null)}</p>
               </div>
               <div>
-                <h3>{t('v2Forecast.requiredIncreaseCumulativeCash', 'Required increase vs comparator (cumulative cash)')}</h3>
-                <p>
-                  {formatPercent(
-                    selectedReport.snapshot.scenario.requiredAnnualIncreasePctCumulativeCash ??
-                      selectedReport.requiredAnnualIncreasePct,
-                  )}
-                </p>
+                <h3>{selectedReportPrimaryFeeSignal?.increaseLabel ?? t('v2Forecast.requiredIncreaseVsCurrent', 'Required increase vs current')}</h3>
+                <p>{formatPercent(selectedReportPrimaryFeeSignal?.increase ?? null)}</p>
               </div>
               <div>
                 <h3>{t('v2Forecast.latestComparatorPrice', 'Latest full-year comparator price')}</h3>
@@ -590,7 +638,7 @@ export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
                                   <tr key={`${group.classKey}-${project.code}`}>
                                     <td>{project.code}</td>
                                     <td>{project.name}</td>
-                                    <td>{project.accountKey ?? '-'}</td>
+                                    <td>{resolveVesinvestGroupLabel(t, project.accountKey, null)}</td>
                                     <td>{formatEur(project.totalAmount)}</td>
                                   </tr>
                                 ))}
@@ -639,7 +687,7 @@ export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
                           {selectedVesinvestAppendix.depreciationPlan.map((row) => (
                             <tr key={`depreciation-plan-${row.classKey}`}>
                               <td>{resolveVesinvestGroupLabel(t, row.classKey, row.classLabel)}</td>
-                              <td>{row.accountKey ?? '-'}</td>
+                              <td>{resolveVesinvestGroupLabel(t, row.accountKey, null)}</td>
                               <td>{formatServiceSplitLabel(row.serviceSplit, t)}</td>
                               <td>
                                 {formatDepreciationMethod(

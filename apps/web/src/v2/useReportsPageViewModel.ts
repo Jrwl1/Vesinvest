@@ -58,7 +58,7 @@ type Params = {
   scenarioFilter: string;
   selectedReport: V2ReportDetail | null;
   selectedReportId: string | null;
-  setPreviewVariant: React.Dispatch<React.SetStateAction<ReportVariant>>;
+  setPreviewVariant: (variant: ReportVariant) => void;
   setScenarioFilter: React.Dispatch<React.SetStateAction<string>>;
   setSelectedReportId: React.Dispatch<React.SetStateAction<string | null>>;
 };
@@ -504,8 +504,8 @@ export function useReportsPageViewModel({
     const scenario = selectedReport?.snapshot.scenario ?? null;
     return {
       priceLabel: t(
-        'v2Forecast.requiredPriceAnnualResult',
-        'Required price today (annual result = 0)',
+        'v2Forecast.requiredPriceToday',
+        'Required price today',
       ),
       price:
         scenario?.requiredPriceTodayCombinedAnnualResult ??
@@ -520,6 +520,27 @@ export function useReportsPageViewModel({
         scenario?.requiredAnnualIncreasePctAnnualResult ??
         selectedReport?.requiredAnnualIncreasePct ??
         scenario?.requiredAnnualIncreasePctCumulativeCash ??
+        0,
+    };
+  }, [selectedReport, t]);
+  const selectedReportCashFloorSignal = React.useMemo(() => {
+    const scenario = selectedReport?.snapshot.scenario ?? null;
+    return {
+      priceLabel: t(
+        'v2Reports.cashSufficiencyFloor',
+        'Cumulative cash floor',
+      ),
+      price:
+        scenario?.requiredPriceTodayCombinedCumulativeCash ??
+        selectedReport?.requiredPriceToday ??
+        0,
+      increaseLabel: t(
+        'v2Reports.cashSufficiencyIncrease',
+        'Cash sufficiency increase',
+      ),
+      increase:
+        scenario?.requiredAnnualIncreasePctCumulativeCash ??
+        selectedReport?.requiredAnnualIncreasePct ??
         0,
     };
   }, [selectedReport, t]);
@@ -602,11 +623,16 @@ export function useReportsPageViewModel({
   const downloadMatchesPreview =
     selectedReport != null ? selectedReport.variant === previewVariant : true;
   const selectedReportHasPdf = Boolean(selectedReport?.pdfUrl);
+  const currentWorkflowBlockHint =
+    savedFeePathReportReadinessReason == null
+      ? null
+      : emptyStateReportReadinessHint;
   const canCreatePreviewPackage =
     selectedReport != null &&
     selectedReport.variant !== previewVariant &&
     selectedReport.snapshot.vesinvestPlan?.id != null &&
-    !creatingPreviewPackage;
+    !creatingPreviewPackage &&
+    currentWorkflowBlockHint == null;
   const canDownloadPdf =
     selectedReport != null &&
     selectedReportHasPdf &&
@@ -626,6 +652,13 @@ export function useReportsPageViewModel({
       );
     }
     if (!downloadMatchesPreview) {
+      if (currentWorkflowBlockHint) {
+        return t(
+          'v2Reports.exportSavedCurrentBlocked',
+          'Saved package can be exported. New packages are blocked until the current workflow is ready: {{reason}}',
+          { reason: currentWorkflowBlockHint },
+        );
+      }
       return t(
         'v2Reports.downloadUsesSavedVariant',
         'Create this package variant before downloading its PDF.',
@@ -635,7 +668,13 @@ export function useReportsPageViewModel({
       'v2Reports.exportReady',
       'Saved report is available for export.',
     );
-  }, [downloadMatchesPreview, downloadingPdf, selectedReportHasPdf, t]);
+  }, [
+    currentWorkflowBlockHint,
+    downloadMatchesPreview,
+    downloadingPdf,
+    selectedReportHasPdf,
+    t,
+  ]);
   const hasSelectedReportLayout = selectedReportId != null;
 
   return {
@@ -696,6 +735,7 @@ export function useReportsPageViewModel({
       selectedReport,
       selectedReportExportHint,
       selectedReportGeneratedAt,
+      selectedReportCashFloorSignal,
       selectedReportPrimaryFeeSignal,
       selectedReportScenarioName,
       selectedScenarioBranchLabel,

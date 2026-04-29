@@ -82,7 +82,7 @@ const baselineInput = {
   connectionFeeAverage: 3500,
   connectionFeeRevenue: 10500,
   connectionFeeNewConnections: 3,
-  connectionFeeBasis: 'Per connection',
+  connectionFeeBasis: 'Per anslutning',
   baseFeeRevenue: 18000,
   connectionCount: 1200,
   waterPrice: 1.5,
@@ -100,7 +100,7 @@ const allocationPolicy = {
   smoothingYears: 5,
   regionalVariationApplies: false,
   stormwaterApplies: false,
-  financialRiskAssessment: 'Medium',
+  financialRiskAssessment: 'Måttlig risk; följ upp betalningsförmåga och likviditet.',
 };
 
 const recommendationFees = {
@@ -176,6 +176,13 @@ const makeTariffPlan = (policy = allocationPolicy) => ({
     proposedAnnualRevenue: 477760,
     smoothingYears: 5,
     averageAnnualIncreasePct: 2.15,
+    priceSignal: {
+      currentComparatorPrice: 1.9,
+      requiredPriceToday: 2.54,
+      requiredIncreasePct: 33.68,
+      cumulativeCashFloorPrice: 4.25,
+      cumulativeCashFloorIncreasePct: 123.68,
+    },
     fees: recommendationFees,
     revenueTable: [],
     annualChangePath: [],
@@ -284,6 +291,10 @@ describe('TariffPlanPageV2', () => {
       expect(getTariffPlanV2).toHaveBeenCalledWith('plan-1');
       expect(screen.queryByText('Loading...')).toBeNull();
     });
+    expect(screen.getAllByText('Required price today').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/2[,.]54 EUR/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Current comparator price').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Required increase vs comparator').length).toBeGreaterThan(0);
     const applyRecommendation = screen.getByRole('button', {
       name: 'Apply recommendation',
     });
@@ -346,5 +357,43 @@ describe('TariffPlanPageV2', () => {
         }),
       );
     });
+  });
+
+  it('marks an accepted plan as not accepted when visible tariff fields change', async () => {
+    getTariffPlanV2.mockResolvedValue({
+      ...makeTariffPlan(),
+      status: 'accepted',
+      acceptedAt: '2026-04-25T09:30:00.000Z',
+    });
+
+    render(
+      <TariffPlanPageV2
+        onGoToAssetManagement={() => undefined}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading...')).toBeNull();
+    });
+    expect(screen.getByRole('button', { name: 'Open Reports' })).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Water price'), {
+      target: { value: '1.6' },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Changes not accepted')).toBeTruthy();
+    });
+    expect(screen.queryByRole('button', { name: 'Open Reports' })).toBeNull();
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Create report' }).disabled).toBe(
+      true,
+    );
+    expect(
+      screen.getByText(
+        'Visible tariff changes must be accepted before they can be reported.',
+      ),
+    ).toBeTruthy();
   });
 });

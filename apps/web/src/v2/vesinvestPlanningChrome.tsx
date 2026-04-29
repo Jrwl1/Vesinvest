@@ -392,12 +392,14 @@ export function VesinvestPlanStatusStrip({
         <p>
           <span
             className={`v2-badge ${toneClass(
-              draft.projects.length > 0 ? 'incomplete' : 'draft',
+              draft.projects.length > 0 && assetEvidenceReady ? 'verified' : draft.projects.length > 0 ? 'incomplete' : 'draft',
             )}`}
           >
-            {draft.projects.length > 0
-              ? t('v2Vesinvest.planDraftExists', 'Plan draft exists')
-              : t('v2Vesinvest.planDraftMissing', 'No plan rows yet')}
+            {draft.projects.length > 0 && assetEvidenceReady
+              ? t('v2Vesinvest.planReady', 'Plan ready')
+              : draft.projects.length > 0
+                ? t('v2Vesinvest.planNeedsEvidence', 'Plan needs evidence')
+                : t('v2Vesinvest.planDraftMissing', 'No plan rows yet')}
           </span>
         </p>
       </article>
@@ -592,41 +594,53 @@ export function VesinvestDerivedTotalsStrip({
       : t('v2Vesinvest.noHorizonYears', 'No horizon years');
 
   return (
-    <div className="v2-kpi-strip v2-kpi-strip-three v2-vesinvest-investment-picture">
-      <article>
-        <h3>{t('v2Vesinvest.horizonTotal', 'Horizon total')}</h3>
+    <section className="v2-vesinvest-investment-picture">
+      <div className="v2-vesinvest-investment-primary">
+        <span>{t('v2Vesinvest.horizonTotal', 'Horizon total')}</span>
         <strong>{formatEur(horizonTotal)}</strong>
         <p>{horizonLabel}</p>
-      </article>
-      <article>
-        <h3>{t('v2Vesinvest.peakAnnualInvestment', 'Peak annual investment')}</h3>
-        <p>
-          {peakYear
-            ? `${peakYear.year}: ${formatEur(peakYear.totalAmount)}`
-            : t('v2Vesinvest.none', 'None')}
-        </p>
-      </article>
-      <article>
-        <h3>{t('v2Vesinvest.fiveYearBands', 'Five-year bands')}</h3>
-        <p>
-          {fiveYearBands
-            .slice(0, 3)
-            .map((band) => `${band.startYear}-${band.endYear}: ${formatEur(band.totalAmount)}`)
-            .join(' | ') || t('v2Vesinvest.none', 'None')}
-        </p>
-      </article>
-      <article>
-        <h3>{t('v2Vesinvest.allocationSummary', 'Service split')}</h3>
-        <p>{`${t('v2Vesinvest.waterShort', 'Water')}: ${formatEur(waterTotal)} | ${t(
-          'v2Vesinvest.wastewaterShort',
-          'Wastewater',
-        )}: ${formatEur(wastewaterTotal)}`}</p>
-      </article>
-      <article>
-        <h3>{t('v2Vesinvest.projectCount', 'Projects')}</h3>
-        <strong>{draft.projects.length}</strong>
-        <p>{forecastSyncLabel ?? t('v2Vesinvest.forecastSyncUnknown', 'Forecast sync pending')}</p>
-      </article>
-    </div>
+      </div>
+      <div className="v2-vesinvest-investment-facts">
+        <div>
+          <span>{t('v2Vesinvest.peakAnnualInvestment', 'Peak annual investment')}</span>
+          <strong>
+            {peakYear
+              ? `${peakYear.year}: ${formatEur(peakYear.totalAmount)}`
+              : t('v2Vesinvest.none', 'None')}
+          </strong>
+        </div>
+        <div>
+          <span>{t('v2Vesinvest.allocationSummary', 'Service split')}</span>
+          <strong>
+            {`${t('v2Vesinvest.waterShort', 'Water')}: ${formatEur(waterTotal)} / ${t(
+              'v2Vesinvest.wastewaterShort',
+              'Wastewater',
+            )}: ${formatEur(wastewaterTotal)}`}
+          </strong>
+        </div>
+        <div>
+          <span>{t('v2Vesinvest.projectCount', 'Projects')}</span>
+          <strong>{draft.projects.length}</strong>
+        </div>
+        <div>
+          <span>{t('v2Vesinvest.forecastSyncStatus', 'Forecast sync')}</span>
+          <strong>{forecastSyncLabel ?? t('v2Vesinvest.forecastSyncUnknown', 'Forecast sync pending')}</strong>
+        </div>
+      </div>
+      <div className="v2-vesinvest-band-list" aria-label={t('v2Vesinvest.fiveYearBands', 'Five-year bands')}>
+        {fiveYearBands.slice(0, 4).map((band) => (
+          <div key={`${band.startYear}-${band.endYear}`}>
+            <span>{`${band.startYear}-${band.endYear}`}</span>
+            <strong>{formatEur(band.totalAmount)}</strong>
+          </div>
+        ))}
+        {fiveYearBands.length === 0 ? (
+          <div>
+            <span>{t('v2Vesinvest.fiveYearBands', 'Five-year bands')}</span>
+            <strong>{t('v2Vesinvest.none', 'None')}</strong>
+          </div>
+        ) : null}
+      </div>
+    </section>
   );
 }

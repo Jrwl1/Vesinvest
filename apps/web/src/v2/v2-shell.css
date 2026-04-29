@@ -867,12 +867,12 @@
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  border: 1px solid var(--v2-border);
+  gap: 5px;
+  border: 1px solid rgba(183, 192, 203, 0.58);
   border-radius: 8px;
-  background: var(--v2-surface-strong);
+  background: rgba(255, 255, 255, 0.54);
   color: var(--v2-muted);
-  padding: 5px 8px;
+  padding: 4px 7px;
   font: inherit;
   font-size: 0.73rem;
   line-height: 1.2;
@@ -881,7 +881,8 @@
 
 .v2-workflow-step strong {
   color: var(--v2-text);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
 .v2-workflow-step.active {

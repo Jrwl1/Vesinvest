@@ -176,7 +176,7 @@ describe('useForecastPageController', () => {
     useForecastInvestmentControllerMock.mockReturnValue(buildInvestmentController());
   });
 
-  it('switches the primary chart to cashflow when investments workbench is active', async () => {
+  it('keeps the price path primary when the investments workbench is active', () => {
     const setActivePrimaryChart = vi.fn();
     useForecastScenarioControllerMock.mockReturnValue(
       buildScenarioController({
@@ -191,9 +191,7 @@ describe('useForecastPageController', () => {
       }),
     );
 
-    await waitFor(() => {
-      expect(setActivePrimaryChart).toHaveBeenCalledWith('cashflow');
-    });
+    expect(setActivePrimaryChart).not.toHaveBeenCalledWith('cashflow');
   });
 
   it('switches the primary chart to price when revenue workbench is active', async () => {

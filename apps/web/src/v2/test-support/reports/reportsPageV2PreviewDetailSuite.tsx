@@ -362,7 +362,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
     expect((await screen.findAllByText('Perusmaksun muutos')).length).toBeGreaterThan(0);
     expect((await screen.findAllByText('5,00 %')).length).toBeGreaterThan(0);
     expect(
-      await screen.findByText(/Source document \(baseline-2023\.pdf\).+pp\. 3, 4/),
+      await screen.findByText(/(Evidence file|Lähdeaineisto|Underlag) \(baseline-2023\.pdf\).+pp\. 3, 4/),
     ).toBeTruthy();
     expect(await screen.findByText(/Revenue 95 000 EUR/)).toBeTruthy();
     expect(await screen.findByText(/Operating costs 70 000 EUR/)).toBeTruthy();
@@ -373,6 +373,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
     ).toBeNull();
     expect(screen.getAllByText('Vesiverkon saneeraus').length).toBeGreaterThan(1);
     expect(screen.getByText('Main rehabilitation')).toBeTruthy();
+    expect(screen.queryByText('sanering_water_network')).toBeNull();
     expect(screen.getByText('Poistosuunnitelma')).toBeTruthy();
     expect(screen.getAllByText('Tasapoisto 40 vuotta').length).toBeGreaterThan(1);
     expect(screen.getByText('Vesi')).toBeTruthy();

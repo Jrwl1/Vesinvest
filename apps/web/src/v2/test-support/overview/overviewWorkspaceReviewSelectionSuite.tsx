@@ -1279,7 +1279,7 @@ export function registerOverviewWorkspaceReviewSelectionSuite() {
       },
       manualEditedAt: '2026-03-08T10:00:00.000Z',
       manualEditedBy: 'tester',
-      manualReason: 'Prices and volumes patched from source document',
+      manualReason: 'Prices and volumes patched from evidence file',
       manualProvenance: {
         kind: 'document_import',
         fileName: 'source-2024.pdf',
@@ -1395,4 +1395,3 @@ export function registerOverviewWorkspaceReviewSelectionSuite() {
   });
   });
 }
-

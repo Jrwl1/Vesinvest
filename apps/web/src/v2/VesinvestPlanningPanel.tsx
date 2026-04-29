@@ -25,6 +25,7 @@ import { VesinvestRevisionSurface } from './vesinvestPlanningSections';
 
 type Props = {
   t: TFunction;
+  language?: string;
   isAdmin?: boolean;
   simplifiedSetup?: boolean;
   compactReviewMode?: boolean;
@@ -45,6 +46,7 @@ export type VesinvestOverviewFocusTarget = {
 
 export const VesinvestPlanningPanel: React.FC<Props> = ({
   t,
+  language,
   isAdmin = false,
   simplifiedSetup = false,
   compactReviewMode = false,
@@ -59,6 +61,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
 }) => {
   const controller = useVesinvestPlanningController({
     t,
+    language,
     isAdmin,
     simplifiedSetup,
     compactReviewMode,

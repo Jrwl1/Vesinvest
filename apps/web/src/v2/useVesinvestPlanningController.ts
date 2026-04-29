@@ -23,7 +23,10 @@ import {
   type V2VesinvestPlanSummary,
   type V2VesinvestProject,
 } from '../api';
-import { buildDefaultReportTitle } from './displayNames';
+import {
+  buildDefaultPackageReportTitle,
+  normalizeReportLocale,
+} from './displayNames';
 import { toDepreciationRuleDraft,type DepreciationRuleDraft } from './forecastModel';
 import { useVesinvestFeePathFocus } from './useVesinvestFeePathFocus';
 import { useVesinvestPlanningDerivedState } from './useVesinvestPlanningDerivedState';
@@ -45,6 +48,7 @@ import {
 } from './vesinvestPlanningModel';
 export const useVesinvestPlanningController = ({
   t,
+  language,
   isAdmin = false,
   simplifiedSetup = false,
   compactReviewMode: _compactReviewMode = false,
@@ -647,7 +651,12 @@ export const useVesinvestPlanningController = ({
         vesinvestPlanId: plan.id,
         ennusteId: plan.selectedScenarioId,
         variant: 'regulator_package',
-        title: buildDefaultReportTitle(t, linkedScenario.name),
+        locale: normalizeReportLocale(language),
+        title: buildDefaultPackageReportTitle(
+          t,
+          linkedScenario.name,
+          'regulator_package',
+        ),
       });
       setReportConflictCode(null);
       setInfo(t('v2Forecast.infoReportCreated', 'Report created.'));
@@ -695,6 +704,7 @@ export const useVesinvestPlanningController = ({
   }, [
     canCreateReport,
     linkedScenario,
+    language,
     onGoToReports,
     onSavedFeePathReportConflict,
     onPlansChanged,

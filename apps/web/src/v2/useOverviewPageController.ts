@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import {
   completeImportYearManuallyV2,
   getImportYearDataV2,
+  type V2ForecastScenario,
+  type V2ForecastScenarioListItem,
   type V2ImportYearDataResponse,
 } from '../api';
 import {
@@ -85,6 +87,43 @@ type ReviewWorkspaceYearSaveResult = {
   syncReady: boolean;
   yearData: V2ImportYearDataResponse;
 };
+
+type OverviewSelectedScenario =
+  | Pick<
+      V2ForecastScenario,
+      'id' | 'updatedAt' | 'computedFromUpdatedAt' | 'years' | 'yearlyInvestments'
+    >
+  | Pick<
+      V2ForecastScenarioListItem,
+      'id' | 'updatedAt' | 'computedFromUpdatedAt' | 'computedYears'
+    >;
+
+function isOverviewScenarioComputedFresh(
+  scenario: OverviewSelectedScenario | null,
+): boolean {
+  if (!scenario) {
+    return false;
+  }
+  const hasComputedRows =
+    'years' in scenario
+      ? scenario.years.length > 0
+      : (scenario.computedYears ?? 0) > 0;
+  if (
+    !hasComputedRows ||
+    !scenario.updatedAt ||
+    !scenario.computedFromUpdatedAt ||
+    scenario.computedFromUpdatedAt !== scenario.updatedAt
+  ) {
+    return false;
+  }
+  return !(
+    'yearlyInvestments' in scenario &&
+    scenario.yearlyInvestments.some(
+      (row) => row.amount > 0 && !row.depreciationRuleSnapshot,
+    )
+  );
+}
+
 function getPersistedManualReason(
   yearData: V2ImportYearDataResponse | undefined,
 ): string {
@@ -665,10 +704,17 @@ export function useOverviewPageController({
       investmentPlanReady:
         (activeVesinvestPlan.projectCount ?? 0) > 0 &&
         (activeVesinvestPlan.totalInvestmentAmount ?? 0) > 0,
-      linkedScenarioComputedFresh: undefined,
+      linkedScenarioComputedFresh:
+        activeVesinvestPlan.selectedScenarioId == null
+          ? false
+          : activeVesinvestScenario == null
+            ? undefined
+            : isOverviewScenarioComputedFresh(activeVesinvestScenario),
       classificationReviewRequired:
         activeVesinvestPlan.classificationReviewRequired === true,
-      assetEvidenceReady: activeVesinvestPlan.assetEvidenceReady === true,
+      assetEvidenceReady:
+        activeVesinvestPlan.assetEvidenceReady === true &&
+        activeVesinvestPlan.assetEvidenceMissingCount === 0,
       assetEvidenceMissingCount: activeVesinvestPlan.assetEvidenceMissingCount,
       pricingStatus: activeVesinvestPlan.pricingStatus ?? null,
       tariffPlanStatus: activeVesinvestPlan.tariffPlanStatus ?? null,
@@ -677,7 +723,7 @@ export function useOverviewPageController({
       investmentPlanChangedSinceFeeRecommendation:
         activeVesinvestPlan.investmentPlanChangedSinceFeeRecommendation === true,
     };
-  }, [activeVesinvestPlan]);
+  }, [activeVesinvestPlan, activeVesinvestScenario]);
   React.useEffect(() => {
     onSetupPlanStateChange?.(presentedPlanState);
   }, [onSetupPlanStateChange, presentedPlanState]);

@@ -229,7 +229,7 @@ export async function createDocumentImportState(params: {
       manualReason.trim().length > 0
         ? null
         : t('v2Overview.documentImportReasonDefault', {
-            defaultValue: 'Imported from source document: {{fileName}}',
+            defaultValue: 'Imported from evidence file: {{fileName}}',
             fileName: result.fileName,
           }),
     status: t(

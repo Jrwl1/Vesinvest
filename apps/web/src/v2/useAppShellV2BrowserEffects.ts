@@ -86,8 +86,12 @@ export function useAppShellV2BrowserEffects({
           setBlockedTabNotice(pendingPathTab);
           setActiveTab(fallbackTab);
           syncBrowserPath(fallbackTab, 'replace');
-          setPendingPathTab(null);
+        } else if (pendingPathTab != null) {
+          setBlockedTabNotice(null);
+          setActiveTab(pendingPathTab);
+          syncBrowserPath(pendingPathTab, 'replace');
         }
+        setPendingPathTab(null);
       } catch {
         // Overview will refresh truth once mounted.
       } finally {
@@ -113,7 +117,7 @@ export function useAppShellV2BrowserEffects({
     const bootstrapOverviewTruth = async () => {
       try {
         const snapshot = await loadWorkspaceBootstrapSnapshot();
-        if (cancelled || !snapshot.wizardState.reportsUnlocked) {
+        if (cancelled) {
           return;
         }
         applySetupWizardState(snapshot.wizardState);

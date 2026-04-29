@@ -1,5 +1,7 @@
 import type { TFunction } from 'i18next';
 
+import { getActiveDateLocale } from './activeDateLocale';
+
 import type {
   V2ForecastScenario,
   V2OverrideProvenance,
@@ -107,7 +109,7 @@ export const ASSUMPTION_LABEL_KEYS: Record<string, string> = {
 export const formatScenarioUpdatedAt = (value: string): string => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleDateString(undefined, {
+  return parsed.toLocaleDateString(getActiveDateLocale(), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

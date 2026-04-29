@@ -194,7 +194,7 @@ export function getDatasetSourceLabel(
   if (hasMixedDocumentWorkbookProvenance(provenance)) {
     return t(
       'v2Overview.datasetSourceDocumentWorkbookMixed',
-      'Source document + Excel repair',
+      'Evidence file + Excel repair',
     );
   }
   if (hasMixedStatementWorkbookProvenance(provenance)) {
@@ -205,7 +205,7 @@ export function getDatasetSourceLabel(
   }
   if (provenance?.kind === 'document_import') {
     return t('v2Overview.datasetSourceDocumentImport', {
-      defaultValue: 'Source document ({{fileName}})',
+      defaultValue: 'Evidence file ({{fileName}})',
       fileName: normalizeImportedFileName(provenance.fileName, 'PDF document'),
     });
   }
@@ -250,7 +250,7 @@ function getSourceLayerSourceLabel(
   ) {
     return t(
       'v2Overview.datasetSourceDocumentWorkbookMixed',
-      'Source document + Excel repair',
+      'Evidence file + Excel repair',
     );
   }
   if (
@@ -271,7 +271,7 @@ function getSourceLayerSourceLabel(
   }
   if (layer.provenanceKind === 'document_import') {
     return t('v2Overview.datasetSourceDocumentImport', {
-      defaultValue: 'Source document ({{fileName}})',
+      defaultValue: 'Evidence file ({{fileName}})',
       fileName: normalizeImportedFileName(layer.fileName, 'PDF document'),
     });
   }

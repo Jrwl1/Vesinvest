@@ -12,6 +12,10 @@ import {
   type V2ReportDetail,
   type V2ReportListItem,
 } from '../api';
+import {
+  buildDefaultPackageReportTitle,
+  normalizeReportLocale,
+} from './displayNames';
 import type { ReportVariant } from './reportReadinessModel';
 import { readForecastRuntimeState } from './reportReadinessModel';
 
@@ -26,7 +30,8 @@ export const useReportsPageController = ({
   focusedReportId,
   savedFeePathScenarioId,
 }: ReportsPageControllerOptions) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const reportLocaleLanguage = i18n?.language;
   const [reports, setReports] = React.useState<V2ReportListItem[]>([]);
   const [selectedReportId, setSelectedReportId] = React.useState<string | null>(
     null,
@@ -235,8 +240,13 @@ export const useReportsPageController = ({
       const created = await createReportV2({
         vesinvestPlanId,
         ennusteId: selectedReport.ennuste.id,
-        title: selectedReport.title,
         variant: previewVariant,
+        locale: normalizeReportLocale(reportLocaleLanguage),
+        title: buildDefaultPackageReportTitle(
+          t,
+          selectedReport.ennuste.nimi ?? selectedReport.ennuste.id,
+          previewVariant,
+        ),
       });
       await loadReports(created.reportId, true);
       setPreviewVariant(created.variant);
@@ -249,7 +259,25 @@ export const useReportsPageController = ({
     } finally {
       setCreatingPreviewPackage(false);
     }
-  }, [loadReports, previewVariant, selectedReport, t]);
+  }, [loadReports, previewVariant, reportLocaleLanguage, selectedReport, t]);
+
+  const handlePreviewVariantChange = React.useCallback(
+    (variant: ReportVariant) => {
+      setPreviewVariant(variant);
+      if (!selectedReport) {
+        return;
+      }
+      const matchingSavedPackage = reports.find(
+        (row) =>
+          row.variant === variant &&
+          row.ennuste.id === selectedReport.ennuste.id,
+      );
+      if (matchingSavedPackage) {
+        setSelectedReportId(matchingSavedPackage.id);
+      }
+    },
+    [reports, selectedReport],
+  );
 
   return {
     creatingPreviewPackage,
@@ -266,7 +294,7 @@ export const useReportsPageController = ({
     scenarioFilter,
     selectedReport,
     selectedReportId,
-    setPreviewVariant,
+    setPreviewVariant: handlePreviewVariantChange,
     setScenarioFilter,
     setSelectedReportId,
   };

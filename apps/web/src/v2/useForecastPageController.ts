@@ -8,7 +8,12 @@ import {
   deleteForecastScenarioV2,
   updateForecastScenarioV2,
 } from '../api';
-import { buildDefaultReportTitle, buildDefaultScenarioName, getScenarioDisplayName } from './displayNames';
+import {
+  buildDefaultPackageReportTitle,
+  buildDefaultScenarioName,
+  getScenarioDisplayName,
+  normalizeReportLocale,
+} from './displayNames';
 import { formatEur, formatNumber, formatPercent, formatPrice } from './format';
 import {
   getScenarioTypeToneClass,
@@ -47,7 +52,8 @@ export function useForecastPageController({
   onGoToOverviewFeePath,
   onComputedVersionChange,
 }: ForecastPageControllerProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const reportLocaleLanguage = i18n?.language;
   const depreciationFeatureEnabled =
     import.meta.env.VITE_V2_DEPRECIATION_RULES_ENABLED !== 'false';
 
@@ -128,10 +134,6 @@ export function useForecastPageController({
   }, [scenarioController.activeWorkbench]);
 
   React.useEffect(() => {
-    if (scenarioController.activeWorkbench === 'investments') {
-      scenarioController.setActivePrimaryChart('cashflow');
-      return;
-    }
     if (scenarioController.activeWorkbench === 'revenue') {
       scenarioController.setActivePrimaryChart('price');
     }
@@ -367,11 +369,13 @@ export function useForecastPageController({
         vesinvestPlanId: activePlan.id,
         ennusteId: scenarioController.selectedScenarioId,
         variant: 'regulator_package',
-        title: buildDefaultReportTitle(
+        locale: normalizeReportLocale(reportLocaleLanguage),
+        title: buildDefaultPackageReportTitle(
           t,
           scenarioController.scenario?.name ??
             (scenarioController.draftName.trim() ||
               scenarioController.selectedScenarioListItem?.name),
+          'regulator_package',
         ),
       });
       scenarioController.setInfo(t('v2Forecast.infoReportCreated', 'Report created.'));
@@ -416,6 +420,7 @@ export function useForecastPageController({
     onGoToAssetManagement,
     onGoToOverviewFeePath,
     onReportCreated,
+    reportLocaleLanguage,
     reportReadinessHint,
     scenarioController,
     t,

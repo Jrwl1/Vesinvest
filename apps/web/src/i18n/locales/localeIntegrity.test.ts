@@ -434,6 +434,7 @@ const refreshedFlowLocaleKeys = [
   'v2Reports.creatingPackage',
   'v2Reports.errorCreateVariantMissingPlan',
   'v2Reports.errorCreateVariantFailed',
+  'v2Reports.exportSavedCurrentBlocked',
   'v2Reports.acceptedBaselineYears',
   'v2Reports.downloadingPdf',
   'v2Reports.requiredCombinedPriceToday',

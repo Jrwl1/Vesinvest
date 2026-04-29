@@ -6,16 +6,79 @@
 }
 
 .v2-vesinvest-investment-picture {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.2fr) minmax(240px, 1fr);
+  gap: 10px;
+  border: 1px solid var(--v2-border);
+  border-radius: 8px;
+  background: var(--v2-surface-strong);
+  padding: 12px;
 }
 
-.v2-vesinvest-investment-picture article {
-  align-content: start;
+.v2-vesinvest-investment-primary,
+.v2-vesinvest-investment-facts > div,
+.v2-vesinvest-band-list > div {
+  border: 1px solid rgba(183, 192, 203, 0.78);
+  border-radius: 8px;
+  background: var(--v2-surface-soft);
+  padding: 10px;
+  display: grid;
+  gap: 5px;
+}
+
+.v2-vesinvest-investment-primary strong {
+  font-size: 1.28rem;
+}
+
+.v2-vesinvest-investment-picture span {
+  color: var(--v2-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
 }
 
 .v2-vesinvest-investment-picture strong {
-  font-size: 1.15rem;
-  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.v2-vesinvest-investment-picture p {
+  margin: 0;
+  color: var(--v2-muted);
+  font-size: 0.82rem;
+}
+
+.v2-vesinvest-investment-facts,
+.v2-vesinvest-band-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-vesinvest-identity-strip {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  border: 1px solid var(--v2-border);
+  border-radius: 8px;
+  background: var(--v2-surface-soft);
+  padding: 8px 12px;
+}
+
+.v2-vesinvest-identity-strip > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.v2-vesinvest-identity-strip span:not(.v2-badge) {
+  color: var(--v2-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.v2-vesinvest-identity-strip strong {
+  font-size: 0.85rem;
 }
 
 .v2-vesinvest-panel-compact {
@@ -29,6 +92,102 @@
   border: 1px solid var(--v2-border);
   border-radius: var(--v2-card-radius);
   background: var(--v2-surface-strong);
+}
+
+.v2-tariff-first-view {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.v2-tariff-input-column,
+.v2-tariff-summary-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.v2-tariff-summary-panel {
+  border: 1px solid var(--v2-border);
+  border-radius: 8px;
+  background: var(--v2-surface-soft);
+  padding: 14px;
+}
+
+.v2-tariff-summary-table {
+  min-width: 560px;
+}
+
+.v2-tariff-summary-table-wrap {
+  max-height: 260px;
+}
+
+.v2-tariff-price-signal {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.v2-tariff-price-signal span,
+.v2-tariff-price-context span {
+  color: var(--v2-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.v2-tariff-price-signal strong {
+  color: var(--v2-text);
+  font-size: clamp(2rem, 3.2vw, 2.9rem);
+  font-weight: 760;
+  line-height: 1;
+}
+
+.v2-tariff-price-context {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--v2-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.v2-tariff-price-context > div {
+  display: grid;
+  gap: 4px;
+  padding: 9px 10px;
+  border-right: 1px solid var(--v2-border);
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.v2-tariff-price-context > div:nth-child(2n) {
+  border-right: 0;
+}
+
+.v2-tariff-price-context > div:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+
+.v2-tariff-price-context strong {
+  font-size: 0.98rem;
+}
+
+.v2-tariff-readiness-compact {
+  display: grid;
+  gap: 6px;
+}
+
+.v2-tariff-readiness-compact > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--v2-border);
+  padding-top: 6px;
+  font-size: 0.82rem;
+}
+
+.v2-tariff-readiness-compact span {
+  color: var(--v2-muted);
 }
 
 .v2-tariff-allocation-mode {
@@ -136,7 +295,11 @@
 
 @media (max-width: 1180px) {
   .v2-vesinvest-investment-picture {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+  }
+
+  .v2-tariff-first-view {
+    grid-template-columns: 1fr;
   }
 }
 

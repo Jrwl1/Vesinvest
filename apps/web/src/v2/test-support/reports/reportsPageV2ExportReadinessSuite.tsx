@@ -35,7 +35,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
     listReportsV2.mockResolvedValue([
       {
         id: 'report-1',
-        title: 'Forecast report Water Utility 2026-04-09',
+        title: 'Forecast report Water Utility Vesinvest v2 2026-04-09',
         createdAt: '2026-04-09T08:00:00.000Z',
         ennuste: { id: 'scenario-1', nimi: 'Water Utility Vesinvest v2' },
         baselineYear: 2024,
@@ -49,7 +49,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
     ]);
     getReportV2.mockResolvedValue({
       id: 'report-1',
-      title: 'Forecast report Water Utility 2026-04-09',
+      title: 'Forecast report Water Utility Vesinvest v2 2026-04-09',
       createdAt: '2026-04-09T08:00:00.000Z',
       baselineYear: 2024,
       requiredPriceToday: 3.2,
@@ -380,6 +380,28 @@ export function registerReportsPageV2ExportReadinessSuite() {
     });
   });
 
+  it('keeps a matching saved package export-ready even when live workflow truth is unavailable', async () => {
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        savedFeePathPlanRequired={true}
+        savedFeePathPlanId={null}
+        onGoToForecast={() => undefined}
+        onFocusedReportChange={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getReportV2).toHaveBeenCalledWith('report-1');
+    });
+
+    expect(
+      await screen.findByText(/Tallennettu raportti on valmis/u),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Uudet paketit/u)).toBeNull();
+  });
+
   it('keeps the saved report title in the document header', async () => {
     const { container } = render(
       <ReportsPageV2
@@ -441,7 +463,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
   it('disables export when the saved report has no PDF available', async () => {
     getReportV2.mockResolvedValueOnce({
       id: 'report-1',
-      title: 'Forecast report Water Utility 2026-04-09',
+      title: 'Forecast report Water Utility Vesinvest v2 2026-04-09',
       createdAt: '2026-04-09T08:00:00.000Z',
       baselineYear: 2024,
       requiredPriceToday: 3.2,
@@ -511,7 +533,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
   it('keeps the unavailable export message authoritative when preview also differs from the saved variant', async () => {
     getReportV2.mockResolvedValueOnce({
       id: 'report-1',
-      title: 'Forecast report Water Utility 2026-04-09',
+      title: 'Forecast report Water Utility Vesinvest v2 2026-04-09',
       createdAt: '2026-04-09T08:00:00.000Z',
       baselineYear: 2024,
       requiredPriceToday: 3.2,
@@ -620,7 +642,7 @@ export function registerReportsPageV2ExportReadinessSuite() {
   it('derives accepted baseline years from saved baseline provenance when the explicit list is missing', async () => {
     getReportV2.mockResolvedValueOnce({
       id: 'report-1',
-      title: 'Forecast report Water Utility 2026-04-09',
+      title: 'Forecast report Water Utility Vesinvest v2 2026-04-09',
       createdAt: '2026-04-09T08:00:00.000Z',
       baselineYear: 2024,
       requiredPriceToday: 3.2,

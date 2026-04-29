@@ -430,8 +430,8 @@ export function useForecastPageDerivedState({
 
   const primaryUnderfundingStartYear = React.useMemo(
     () =>
-      scenarioController.scenario?.feeSufficiency.cumulativeCash.underfundingStartYear ??
       scenarioController.scenario?.feeSufficiency.annualResult.underfundingStartYear ??
+      scenarioController.scenario?.feeSufficiency.cumulativeCash.underfundingStartYear ??
       null,
     [
       scenarioController.scenario?.feeSufficiency.annualResult.underfundingStartYear,

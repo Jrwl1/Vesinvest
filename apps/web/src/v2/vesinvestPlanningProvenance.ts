@@ -75,7 +75,7 @@ export const datasetSourceLabel = (
     return withDocumentEvidence(
       t(
         'v2Reports.baselineSourceDocumentWorkbookMixed',
-        'Source document + Excel repair',
+        'Evidence file + Excel repair',
       ),
       [documentFileName],
     );
@@ -98,7 +98,7 @@ export const datasetSourceLabel = (
   if (hasDocumentImport) {
     return withDocumentEvidence(
       t('v2Reports.baselineSourceDocumentImport', {
-        defaultValue: 'Source document ({{fileName}})',
+        defaultValue: 'Evidence file ({{fileName}})',
         fileName: documentFileName,
       }),
     );

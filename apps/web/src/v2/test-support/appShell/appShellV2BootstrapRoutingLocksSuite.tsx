@@ -92,7 +92,11 @@ vi.mock('../../OverviewPageV2', () => ({
     onSetupPlanStateChange?: (state: {
       activePlanId: string | null;
       linkedScenarioId: string | null;
+      investmentPlanReady?: boolean;
+      linkedScenarioComputedFresh?: boolean;
       classificationReviewRequired: boolean;
+      assetEvidenceReady?: boolean;
+      assetEvidenceMissingCount?: number;
       pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
       tariffPlanStatus?: 'draft' | 'accepted' | 'stale' | null;
       baselineChangedSinceAcceptedRevision: boolean;
@@ -326,7 +330,11 @@ vi.mock('../../OverviewPageV2', () => ({
             props.onSetupPlanStateChange?.({
               activePlanId: 'plan-1',
               linkedScenarioId: 'scenario-1',
+              investmentPlanReady: true,
+              linkedScenarioComputedFresh: undefined,
               classificationReviewRequired: false,
+              assetEvidenceReady: true,
+              assetEvidenceMissingCount: 0,
               pricingStatus: 'verified',
               tariffPlanStatus: 'accepted',
               baselineChangedSinceAcceptedRevision: false,
@@ -824,6 +832,163 @@ export function registerAppShellV2BootstrapRoutingLocksSuite() {
     await waitFor(() => {
       expect(window.location.pathname).toBe('/reports');
     });
+  });
+
+  it('hydrates ready workflow truth on direct /tariff-plan entry', async () => {
+    window.history.replaceState({}, '', '/tariff-plan');
+    primeVerifiedBaselineImportStatus();
+    getPlanningContextV2Mock.mockResolvedValue(
+      buildPlanningContext({
+        canCreateScenario: true,
+        baselineYears: [{ year: 2024 }],
+        activePlan: {
+          baselineStatus: 'verified',
+          pricingStatus: 'verified',
+          tariffPlanStatus: 'accepted',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+          assetEvidenceReady: true,
+          assetEvidenceMissingCount: 0,
+        },
+      }),
+    );
+    getForecastScenarioV2Mock.mockResolvedValue(buildReadyScenario());
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('tariff-plan-content')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Overview' }).getAttribute('title')).toContain(
+      'Overview: Accepted',
+    );
+    expect(screen.getByRole('button', { name: 'Asset Management' }).getAttribute('title')).toContain(
+      'Asset Management: Ready',
+    );
+    expect(screen.getByRole('button', { name: 'Forecast' }).getAttribute('title')).toContain(
+      'Forecast: Fresh',
+    );
+    expect(screen.getByRole('button', { name: 'Tariff Plan' }).getAttribute('title')).toContain(
+      'Tariff Plan: Accepted',
+    );
+    expect(screen.getByRole('button', { name: 'Reports' }).getAttribute('title')).toContain(
+      'Reports: Available',
+    );
+    expect(screen.getByText('Report-ready scenario')).toBeTruthy();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/tariff-plan');
+    });
+  });
+
+  it('hydrates ready workflow truth on direct /reports entry', async () => {
+    window.history.replaceState({}, '', '/reports');
+    primeVerifiedBaselineImportStatus();
+    getPlanningContextV2Mock.mockResolvedValue(
+      buildPlanningContext({
+        canCreateScenario: true,
+        baselineYears: [{ year: 2024 }],
+        activePlan: {
+          baselineStatus: 'verified',
+          pricingStatus: 'verified',
+          tariffPlanStatus: 'accepted',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+          assetEvidenceReady: true,
+          assetEvidenceMissingCount: 0,
+        },
+      }),
+    );
+    getForecastScenarioV2Mock.mockResolvedValue(buildReadyScenario());
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('reports-content:-')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Overview' }).getAttribute('title')).toContain(
+      'Overview: Accepted',
+    );
+    expect(screen.getByRole('button', { name: 'Asset Management' }).getAttribute('title')).toContain(
+      'Asset Management: Ready',
+    );
+    expect(screen.getByRole('button', { name: 'Forecast' }).getAttribute('title')).toContain(
+      'Forecast: Fresh',
+    );
+    expect(screen.getByRole('button', { name: 'Tariff Plan' }).getAttribute('title')).toContain(
+      'Tariff Plan: Accepted',
+    );
+    expect(screen.getByRole('button', { name: 'Reports' }).getAttribute('title')).toContain(
+      'Reports: Available',
+    );
+    expect(screen.getByText('Report-ready scenario')).toBeTruthy();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/reports');
+    });
+  });
+
+  it('preserves overview bootstrap scenario freshness when Overview reports partial plan state', async () => {
+    window.history.replaceState({}, '', '/');
+    primeVerifiedBaselineImportStatus();
+    getPlanningContextV2Mock.mockResolvedValue(
+      buildPlanningContext({
+        canCreateScenario: true,
+        baselineYears: [{ year: 2024 }],
+        activePlan: {
+          baselineStatus: 'verified',
+          pricingStatus: 'verified',
+          tariffPlanStatus: 'accepted',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+          assetEvidenceReady: true,
+          assetEvidenceMissingCount: 0,
+        },
+      }),
+    );
+    getForecastScenarioV2Mock.mockResolvedValue(buildReadyScenario());
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('Report-ready scenario')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'set-plan-verified' }));
+
+    expect(screen.getByRole('button', { name: 'Forecast' }).getAttribute('title')).toContain(
+      'Forecast: Fresh',
+    );
+    expect(screen.getByRole('button', { name: 'Reports' }).getAttribute('title')).toContain(
+      'Reports: Available',
+    );
   });
 
   it('opens Reports from nav after forecast unlock so readiness blockers can be shown there', async () => {

@@ -1122,6 +1122,11 @@
   gap: 8px;
 }
 
+.v2-tariff-answer-card-inline {
+  border-top: 1px solid var(--v2-border);
+  padding-top: 14px;
+}
+
 .v2-forecast-driver-card {
   display: grid;
   gap: 8px;

@@ -6,6 +6,48 @@ const LEGACY_REPORT_PREFIXES = [
   'Forecast report',
   'Prognosrapport',
 ] as const;
+const PACKAGE_TITLE_SUFFIXES = [
+  {
+    legacy: 'Regulator package',
+    labelKey: 'v2Reports.variantRegulator',
+    fallback: 'Regulator package',
+  },
+  {
+    legacy: 'Board package',
+    labelKey: 'v2Reports.variantBoard',
+    fallback: 'Board package',
+  },
+  {
+    legacy: 'Internal appendix',
+    labelKey: 'v2Reports.variantInternal',
+    fallback: 'Internal appendix',
+  },
+] as const;
+type ReportPackageVariant =
+  | 'regulator_package'
+  | 'board_package'
+  | 'internal_appendix';
+export type ReportLocale = 'en' | 'fi' | 'sv';
+
+export function normalizeReportLocale(language: string | null | undefined): ReportLocale {
+  const normalized = language?.toLowerCase() ?? '';
+  if (normalized.startsWith('sv')) return 'sv';
+  if (normalized.startsWith('fi')) return 'fi';
+  return 'en';
+}
+
+export function getReportVariantDisplayLabel(
+  variant: ReportPackageVariant,
+  t: TFunction,
+): string {
+  const suffix =
+    variant === 'regulator_package'
+      ? PACKAGE_TITLE_SUFFIXES[0]
+      : variant === 'board_package'
+        ? PACKAGE_TITLE_SUFFIXES[1]
+        : PACKAGE_TITLE_SUFFIXES[2];
+  return t(suffix.labelKey, suffix.fallback);
+}
 
 function toIsoDateLabel(value: Date | string): string {
   const parsed = value instanceof Date ? value : new Date(value);
@@ -80,6 +122,18 @@ export function buildDefaultReportTitle(
     : `${baseTitle} ${reportDate}`;
 }
 
+export function buildDefaultPackageReportTitle(
+  t: TFunction,
+  scenarioName: string | null | undefined,
+  variant: ReportPackageVariant,
+  value: Date | string = new Date(),
+): string {
+  return `${buildDefaultReportTitle(t, scenarioName, value)} - ${getReportVariantDisplayLabel(
+    variant,
+    t,
+  )}`;
+}
+
 export function getReportDisplayTitle(params: {
   title: string | null | undefined;
   scenarioName: string | null | undefined;
@@ -92,19 +146,41 @@ export function getReportDisplayTitle(params: {
     return buildDefaultReportTitle(t, scenarioName, createdAt);
   }
 
+  const packageSuffix = PACKAGE_TITLE_SUFFIXES.find((suffix) =>
+    trimmed.endsWith(` - ${suffix.legacy}`),
+  );
+  const titleCore = packageSuffix
+    ? trimmed.slice(0, -` - ${packageSuffix.legacy}`.length)
+    : trimmed;
   const hasKnownPrefix = LEGACY_REPORT_PREFIXES.some((prefix) =>
-    trimmed.startsWith(`${prefix} `),
+    titleCore.startsWith(`${prefix} `),
   );
   if (!hasKnownPrefix) return trimmed;
 
   const createdIsoDate = toIsoDateLabel(createdAt);
   const createdLegacyFiDate = toLegacyFiDateLabel(createdAt);
-  const looksLikeDefaultTitle =
-    trimmed.endsWith(` ${createdIsoDate}`) ||
-    (createdLegacyFiDate.length > 0 &&
-      trimmed.endsWith(` ${createdLegacyFiDate}`));
+  const scenarioLabels = [
+    scenarioName?.trim(),
+    getScenarioDisplayName(scenarioName, t),
+  ].filter((value): value is string => typeof value === 'string' && value.length > 0);
+  const legacyDefaultTitles = LEGACY_REPORT_PREFIXES.flatMap((prefix) =>
+    scenarioLabels.flatMap((scenarioLabel) => {
+      const values = [
+        `${prefix} ${scenarioLabel}`,
+        `${prefix} ${scenarioLabel} ${createdIsoDate}`,
+      ];
+      if (createdLegacyFiDate.length > 0) {
+        values.push(`${prefix} ${scenarioLabel} ${createdLegacyFiDate}`);
+      }
+      return values;
+    }),
+  );
+  const looksLikeDefaultTitle = legacyDefaultTitles.includes(titleCore);
 
   if (!looksLikeDefaultTitle) return trimmed;
 
-  return buildDefaultReportTitle(t, scenarioName, createdAt);
+  const defaultTitle = buildDefaultReportTitle(t, scenarioName, createdAt);
+  return packageSuffix
+    ? `${defaultTitle} - ${t(packageSuffix.labelKey, packageSuffix.fallback)}`
+    : defaultTitle;
 }

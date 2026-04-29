@@ -1055,13 +1055,13 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
     );
 
     expect(
-      await screen.findByText(/Source document \(baseline-2024\.pdf\).+pp\. 3, 4/),
+      await screen.findByText(/(Evidence file|Lähdeaineisto|Underlag) \(baseline-2024\.pdf\).+pp\. 3, 4/),
     ).toBeTruthy();
     expect(await screen.findByText(/Revenue 95 000 EUR/)).toBeTruthy();
     expect(await screen.findByText(/Operating costs 70 000 EUR/)).toBeTruthy();
   });
 
-  it('keeps the source document filename visible when Excel repair is mixed into the same dataset', async () => {
+  it('keeps the evidence filename visible when Excel repair is mixed into the same dataset', async () => {
     getVesinvestPlanV2.mockResolvedValue(
       makePlan({
         baselineStatus: 'verified',
@@ -1136,7 +1136,7 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
 
     expect(
       await screen.findByText(
-        /Source document \+ Excel repair.+baseline-2024\.pdf.+pp\. 3, 4/,
+        /(Evidence file|Lähdeaineisto|Underlag) \+ Excel.+baseline-2024\.pdf.+pp\. 3, 4/,
       ),
     ).toBeTruthy();
     expect(

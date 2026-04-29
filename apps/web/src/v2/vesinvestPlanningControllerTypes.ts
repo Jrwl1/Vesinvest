@@ -24,6 +24,7 @@ export type VesinvestOverviewFocusTarget = {
 
 export type VesinvestPlanningControllerParams = {
   t: TFunction;
+  language?: string;
   isAdmin?: boolean;
   simplifiedSetup?: boolean;
   compactReviewMode?: boolean;

@@ -5,6 +5,7 @@ import type {
   V2YearlyInvestmentPlanInput,
   V2YearlyInvestmentPlanRow,
 } from '../api';
+import { getActiveDateLocale } from './activeDateLocale';
 import { formatEur } from './format';
 import type { RiskPresetId } from './riskScenario';
 
@@ -176,7 +177,7 @@ export const resolveInvestmentProgramTotal = (
 export const formatScenarioUpdatedAt = (value: string): string => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleDateString(undefined, {
+  return parsed.toLocaleDateString(getActiveDateLocale(), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

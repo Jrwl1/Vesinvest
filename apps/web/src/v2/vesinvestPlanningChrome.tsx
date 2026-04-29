@@ -225,9 +225,8 @@ export function VesinvestPlanningActionRow({
   utilityBindingMissing,
   showDownstreamActions,
   pricingReady,
-  canCreateReport,
   persist,
-  handleCreateReport,
+  onOpenReports,
 }: {
   t: TFunction;
   activeWorkspaceView: VesinvestWorkspaceView;
@@ -244,9 +243,8 @@ export function VesinvestPlanningActionRow({
   utilityBindingMissing: boolean;
   showDownstreamActions: boolean;
   pricingReady: boolean;
-  canCreateReport: boolean;
   persist: (mode: 'create' | 'save' | 'sync' | 'clone') => Promise<void>;
-  handleCreateReport: () => Promise<void>;
+  onOpenReports: () => void;
 }) {
   return (
     <div className="v2-vesinvest-action-stack">
@@ -284,10 +282,10 @@ export function VesinvestPlanningActionRow({
             <button
               type="button"
               className={reportActionClass}
-              onClick={() => void handleCreateReport()}
-              disabled={busy || !canCreateReport}
+              onClick={onOpenReports}
+              disabled={busy}
             >
-              {t('v2Forecast.createReport', 'Create report')}
+              {t('v2Reports.openReports', 'Open Reports')}
             </button>
           </>
         ) : null}
@@ -564,22 +562,48 @@ export function VesinvestDerivedTotalsStrip({
   draft,
   yearTotals,
   fiveYearBands,
+  forecastSyncLabel,
 }: {
   t: TFunction;
   draft: VesinvestDraft;
   yearTotals: YearTotal[];
   fiveYearBands: FiveYearBand[];
+  forecastSyncLabel?: string | null;
 }) {
+  const horizonRows = yearTotals.filter((item) => item.totalAmount > 0);
+  const horizonTotal = horizonRows.reduce((sum, item) => sum + item.totalAmount, 0);
+  const waterTotal = draft.projects.reduce(
+    (sum, project) => sum + (project.waterAmount ?? 0),
+    0,
+  );
+  const wastewaterTotal = draft.projects.reduce(
+    (sum, project) => sum + (project.wastewaterAmount ?? 0),
+    0,
+  );
+  const peakYear =
+    horizonRows.length > 0
+      ? horizonRows.reduce((current, item) =>
+          item.totalAmount > current.totalAmount ? item : current,
+        )
+      : null;
+  const horizonLabel =
+    horizonRows.length > 0
+      ? `${horizonRows[0]!.year}-${horizonRows[horizonRows.length - 1]!.year}`
+      : t('v2Vesinvest.noHorizonYears', 'No horizon years');
+
   return (
-    <div className="v2-kpi-strip v2-kpi-strip-three">
+    <div className="v2-kpi-strip v2-kpi-strip-three v2-vesinvest-investment-picture">
       <article>
-        <h3>{t('v2Vesinvest.yearlySummary', 'Annual derived totals')}</h3>
+        <h3>{t('v2Vesinvest.horizonTotal', 'Horizon total')}</h3>
+        <strong>{formatEur(horizonTotal)}</strong>
+        <p>{horizonLabel}</p>
+      </article>
+      <article>
+        <h3>{t('v2Vesinvest.peakAnnualInvestment', 'Peak annual investment')}</h3>
         <p>
-          {yearTotals
-            .filter((item) => item.totalAmount > 0)
-            .slice(0, 3)
-            .map((item) => `${item.year}: ${formatEur(item.totalAmount)}`)
-            .join(' | ') || t('v2Vesinvest.none', 'None')}
+          {peakYear
+            ? `${peakYear.year}: ${formatEur(peakYear.totalAmount)}`
+            : t('v2Vesinvest.none', 'None')}
         </p>
       </article>
       <article>
@@ -593,23 +617,15 @@ export function VesinvestDerivedTotalsStrip({
       </article>
       <article>
         <h3>{t('v2Vesinvest.allocationSummary', 'Service split')}</h3>
-        <p>
-          {draft.projects
-            .slice(0, 3)
-            .map(
-              (project) =>
-                `${project.code}: ${formatEur(project.waterAmount ?? 0)} / ${formatEur(
-                  project.wastewaterAmount ?? 0,
-                )}`,
-            )
-            .join(' | ') || t('v2Vesinvest.none', 'None')}
-        </p>
-        <small>
-          {t(
-            'v2Vesinvest.allocationSummaryHint',
-            'Water and wastewater totals are derived from the yearly allocation split above.',
-          )}
-        </small>
+        <p>{`${t('v2Vesinvest.waterShort', 'Water')}: ${formatEur(waterTotal)} | ${t(
+          'v2Vesinvest.wastewaterShort',
+          'Wastewater',
+        )}: ${formatEur(wastewaterTotal)}`}</p>
+      </article>
+      <article>
+        <h3>{t('v2Vesinvest.projectCount', 'Projects')}</h3>
+        <strong>{draft.projects.length}</strong>
+        <p>{forecastSyncLabel ?? t('v2Vesinvest.forecastSyncUnknown', 'Forecast sync pending')}</p>
       </article>
     </div>
   );

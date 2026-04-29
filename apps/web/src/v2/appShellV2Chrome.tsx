@@ -48,6 +48,14 @@ export function AppShellV2Header({
   orgChipLabel: string;
   orgChipName: string | null;
 }) {
+  const workflowLabels: Record<TabId, string> = {
+    overview: t('v2Shell.workflowBaseline', 'Baseline'),
+    asset_management: t('v2Shell.workflowAssetPlan', 'Asset plan'),
+    ennuste: t('v2Shell.workflowForecast', 'Forecast'),
+    tariff_plan: t('v2Shell.workflowTariffPlan', 'Tariff plan'),
+    reports: t('v2Shell.workflowReports', 'Reports'),
+  };
+
   return (
     <header className="v2-app-header">
       <div className="v2-app-header-inner">
@@ -95,7 +103,10 @@ export function AppShellV2Header({
                   className="v2-nav-status-dot"
                   aria-hidden="true"
                 />
-                <span>{tabLabels[tab]}</span>
+                <span className="v2-nav-label">{tabLabels[tab]}</span>
+                <span className="v2-nav-status-label" aria-hidden="true">
+                  {status.label}
+                </span>
                 <span id={statusDescriptionId} className="v2-sr-only">
                   {statusTitle}
                 </span>
@@ -118,6 +129,29 @@ export function AppShellV2Header({
         </div>
       </div>
       <div className="v2-header-meta">
+        <div
+          className="v2-workflow-strip"
+          aria-label={t('v2Shell.workflowStrip', 'Workflow status')}
+        >
+          {TABS.map((tab) => {
+            const status = tabStatuses[tab];
+            return (
+              <button
+                key={tab}
+                type="button"
+                className={`v2-workflow-step ${activeTab === tab ? 'active' : ''} v2-workflow-step-${status.tone}`}
+                onClick={() => handleTabChange(tab)}
+                onMouseEnter={() => preloadTab(tab)}
+                aria-current={activeTab === tab ? 'step' : undefined}
+                aria-disabled={isTabLocked(tab) || undefined}
+                title={`${workflowLabels[tab]}: ${status.label}`}
+              >
+                <span>{workflowLabels[tab]}</span>
+                <strong>{status.label}</strong>
+              </button>
+            );
+          })}
+        </div>
         <div className="v2-header-statuses">
           <span className={`v2-badge ${connectionChipToneClass}`}>{connectionChipLabel}</span>
           <span className="v2-badge v2-status-provenance v2-org-chip">

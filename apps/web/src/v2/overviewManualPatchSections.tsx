@@ -139,7 +139,7 @@ export const OverviewManualPatchActionSection: React.FC<{
           onClick={handleSwitchToWorkbookImportMode}
           disabled={manualPatchBusy || workbookImportBusy}
         >
-          {t('v2Overview.workbookImportAction', 'Import KVA workbook')}
+          {t('v2Overview.workbookImportAction', 'Repair from Excel')}
         </button>
         <button
           type="button"

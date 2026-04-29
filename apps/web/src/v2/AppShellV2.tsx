@@ -138,13 +138,16 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     typeof forecastRuntimeState.selectedScenarioId === 'string' &&
     forecastRuntimeState.selectedScenarioId.length > 0 &&
     forecastRuntimeState.selectedScenarioId !== linkedSavedFeePathScenarioId;
+  const assetEvidenceSatisfied =
+    setupPlanState?.assetEvidenceReady === true &&
+    setupPlanState.assetEvidenceMissingCount === 0;
   const currentReportReady =
     setupWizardState?.forecastUnlocked === true &&
     setupPlanState != null &&
     !runtimeScenarioOffLinkedFeePath &&
     savedFeePathReportConflictPlanId !== setupPlanState.activePlanId &&
     setupPlanState.classificationReviewRequired !== true &&
-    setupPlanState.assetEvidenceReady === true &&
+    assetEvidenceSatisfied &&
     setupPlanState.pricingStatus === 'verified' &&
     setupPlanState.tariffPlanStatus === 'accepted' &&
     setupPlanState.linkedScenarioComputedFresh === true &&
@@ -212,6 +215,8 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
       notStarted: t('v2Shell.statusNotStarted', 'Not started'),
       needsWork: t('v2Shell.statusNeedsWork', 'Needs work'),
       ready: t('v2Shell.statusReady', 'Ready'),
+      fresh: t('v2Shell.statusFresh', 'Fresh'),
+      available: t('v2Shell.statusAvailable', 'Available'),
       blocked: t('v2Shell.statusBlocked', 'Blocked'),
       accepted: t('v2Shell.statusAccepted', 'Accepted'),
       stale: t('v2Shell.statusStale', 'Stale'),
@@ -230,7 +235,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
       overview: !hasSelectedUtility
         ? status('neutral', statusLabels.notStarted)
         : baselineVerified
-          ? status('positive', statusLabels.ready)
+          ? status('positive', statusLabels.accepted)
           : hasBlockingBaselineYears
             ? status('danger', statusLabels.blocked)
             : status('warning', statusLabels.needsWork),
@@ -239,15 +244,15 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
         : hasHardPlanBlocker
           ? status('danger', statusLabels.blocked)
           : setupPlanState?.investmentPlanReady === true &&
-              setupPlanState?.assetEvidenceReady === true
+              assetEvidenceSatisfied
             ? status('positive', statusLabels.ready)
             : status('warning', statusLabels.needsWork),
       ennuste: !baselineVerified
         ? status('neutral', statusLabels.notStarted)
-        : runtimeScenarioOffLinkedFeePath
-          ? status('warning', statusLabels.stale)
+          : runtimeScenarioOffLinkedFeePath
+            ? status('warning', statusLabels.stale)
           : setupPlanState?.linkedScenarioComputedFresh === true
-            ? status('positive', statusLabels.ready)
+            ? status('positive', statusLabels.fresh)
             : setupPlanState?.linkedScenarioId
               ? status('warning', statusLabels.stale)
               : status('warning', statusLabels.needsWork),
@@ -265,7 +270,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
         : hasHardPlanBlocker
           ? status('danger', statusLabels.blocked)
           : currentReportReady
-            ? status('positive', statusLabels.ready)
+            ? status('positive', statusLabels.available)
             : status('warning', statusLabels.needsWork),
     };
   }, [
@@ -273,7 +278,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     hasSelectedUtility,
     runtimeScenarioOffLinkedFeePath,
     setupPlanState?.activePlanId,
-    setupPlanState?.assetEvidenceReady,
+    assetEvidenceSatisfied,
     setupPlanState?.classificationReviewRequired,
     setupPlanState?.investmentPlanReady,
     setupPlanState?.linkedScenarioComputedFresh,
@@ -335,6 +340,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
           mergedState.linkedScenarioComputedFresh === true &&
           mergedState.classificationReviewRequired !== true &&
           mergedState.assetEvidenceReady === true &&
+          mergedState.assetEvidenceMissingCount === 0 &&
           mergedState.baselineChangedSinceAcceptedRevision !== true &&
           mergedState.investmentPlanChangedSinceFeeRecommendation !== true
         ) {
@@ -415,8 +421,10 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
             linkedScenarioComputedFresh:
               isBootstrapScenarioComputedFresh(selectedScenario),
             classificationReviewRequired: workflowPlan.classificationReviewRequired === true,
-            assetEvidenceReady: workflowPlan.assetEvidenceReady === true,
-            assetEvidenceMissingCount: workflowPlan.assetEvidenceMissingCount ?? 0,
+            assetEvidenceReady:
+              workflowPlan.assetEvidenceReady === true &&
+              workflowPlan.assetEvidenceMissingCount === 0,
+            assetEvidenceMissingCount: workflowPlan.assetEvidenceMissingCount,
             pricingStatus: workflowPlan.pricingStatus ?? null,
             tariffPlanStatus: workflowPlan.tariffPlanStatus ?? null,
             baselineChangedSinceAcceptedRevision:
@@ -474,7 +482,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
         if (setupPlanState?.classificationReviewRequired) {
           return 'asset_management';
         }
-        if (setupPlanState?.assetEvidenceReady === false) {
+        if (!assetEvidenceSatisfied) {
           return 'asset_management';
         }
         if (setupPlanState?.tariffPlanStatus !== 'accepted') {
@@ -486,7 +494,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     },
     [
       setupPlanState?.classificationReviewRequired,
-      setupPlanState?.assetEvidenceReady,
+      assetEvidenceSatisfied,
       setupPlanState?.tariffPlanStatus,
     ],
   );
@@ -497,7 +505,10 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
         if (snapshot.planState?.classificationReviewRequired) {
           return 'asset_management';
         }
-        if (snapshot.planState?.assetEvidenceReady === false) {
+        if (
+          snapshot.planState?.assetEvidenceReady !== true ||
+          snapshot.planState.assetEvidenceMissingCount !== 0
+        ) {
           return 'asset_management';
         }
         if (snapshot.planState?.tariffPlanStatus !== 'accepted') {
@@ -528,7 +539,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
       );
     }
     if (tab === 'reports' && setupWizardState?.forecastUnlocked) {
-      if (setupPlanState?.assetEvidenceReady === false) {
+      if (!assetEvidenceSatisfied) {
         return t(
           'v2Vesinvest.assetEvidenceReportBlocked',
           'Complete asset-management evidence before creating reports.',
@@ -551,7 +562,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     );
   }, [
     setupPlanState?.classificationReviewRequired,
-    setupPlanState?.assetEvidenceReady,
+    assetEvidenceSatisfied,
     setupPlanState?.tariffPlanStatus,
     setupWizardState?.forecastUnlocked,
     t,
@@ -654,7 +665,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     if (tab === 'reports' && setupWizardState?.forecastUnlocked && setupPlanState?.classificationReviewRequired) {
       return t('v2Shell.tabs.assetManagement', 'Asset Management');
     }
-    if (tab === 'reports' && setupWizardState?.forecastUnlocked && setupPlanState?.assetEvidenceReady === false) {
+    if (tab === 'reports' && setupWizardState?.forecastUnlocked && !assetEvidenceSatisfied) {
       return t('v2Shell.tabs.assetManagement', 'Asset Management');
     }
     if (tab === 'reports' && setupWizardState?.forecastUnlocked && setupPlanState?.tariffPlanStatus !== 'accepted') {
@@ -670,7 +681,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
   }, [
     reportsNeedFeePathRecovery,
     setupPlanState?.classificationReviewRequired,
-    setupPlanState?.assetEvidenceReady,
+    assetEvidenceSatisfied,
     setupPlanState?.tariffPlanStatus,
     setupWizardState?.forecastUnlocked,
     t,
@@ -685,7 +696,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
         handleGoToAssetManagement();
         return;
       }
-      if (setupPlanState?.assetEvidenceReady === false) {
+      if (!assetEvidenceSatisfied) {
         handleGoToAssetManagement();
         return;
       }
@@ -714,6 +725,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     handleGoToTariffPlan,
     handleGoToAssetManagement,
     handleGoToOverviewFeePath,
+    assetEvidenceSatisfied,
     reportsNeedFeePathRecovery,
     setupPlanState?.activePlanId,
     setupPlanState?.assetEvidenceReady,

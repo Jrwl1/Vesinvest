@@ -636,7 +636,7 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                         );
                       }}
                     >
-                      {t('v2Overview.workbookImportAction', 'Import KVA workbook')}
+                      {t('v2Overview.workbookImportAction', 'Repair from Excel')}
                     </button>
                   </div>
                 ) : null}

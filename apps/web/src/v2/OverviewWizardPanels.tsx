@@ -475,7 +475,6 @@ export const OverviewForecastHandoffStep: React.FC<
   renderYearValuePreview,
   openForecastButtonClass,
   onReopenYearReview,
-  onDeleteYear,
   onExcludeYear,
   onRestoreYear,
   onRestoreVeeti,
@@ -489,10 +488,16 @@ export const OverviewForecastHandoffStep: React.FC<
   <section className="v2-card v2-overview-handoff-card">
     <div className="v2-section-header">
       <div>
-        <h2>{t('v2Overview.baselineIncludedYears')}</h2>
+        <h2>{t('v2Overview.acceptedBaselineTitle', 'Accepted baseline')}</h2>
+        <p>
+          {t(
+            'v2Overview.acceptedBaselineBody',
+            'Historical years are accepted and ready for asset planning.',
+          )}
+        </p>
       </div>
       <span className="v2-badge v2-status-positive">
-        {t('v2Overview.wizardSummaryYes')}
+        {t('v2Shell.statusAccepted', 'Accepted')}
       </span>
     </div>
 
@@ -508,12 +513,16 @@ export const OverviewForecastHandoffStep: React.FC<
 
     <div className="v2-overview-handoff-summary">
       <article className="v2-overview-handoff-summary-item">
-        <span>{t('v2Overview.baselineIncludedYears')}</span>
+        <span>{t('v2Overview.baselineIncludedYears', 'Included years')}</span>
         <strong>{acceptedPlanningYearRows.length}</strong>
       </article>
       <article className="v2-overview-handoff-summary-item">
-        <span>{t('v2Overview.baselineClosureChanged', 'Changed in review')}</span>
+        <span>{t('v2Overview.correctedRepairedYears', 'Corrected / repaired years')}</span>
         <strong>{correctedAcceptedYearCount}</strong>
+      </article>
+      <article className="v2-overview-handoff-summary-item">
+        <span>{t('v2Overview.baselineAcceptanceState', 'Acceptance')}</span>
+        <strong>{t('v2Overview.allChangesAccepted', 'All changes accepted')}</strong>
       </article>
     </div>
 
@@ -565,6 +574,14 @@ export const OverviewForecastHandoffStep: React.FC<
                 ) : null}
               </div>
               <div className="v2-actions-row v2-overview-handoff-year-primary-actions">
+                <details className="v2-overview-handoff-year-details-shell">
+                  <summary className="v2-btn v2-btn-small">
+                    {t('v2Overview.viewDetails', 'View details')}
+                  </summary>
+                  <div className="v2-overview-handoff-year-details">
+                    {renderYearValuePreview(row.vuosi, availability)}
+                  </div>
+                </details>
                 <button
                   type="button"
                   className="v2-btn v2-btn-small"
@@ -574,30 +591,51 @@ export const OverviewForecastHandoffStep: React.FC<
                 </button>
               </div>
               <details className="v2-overview-handoff-year-actions-shell">
-                <summary>{t('common.actions', 'Actions')}</summary>
+                <summary>{t('v2Overview.moreActions', 'More actions')}</summary>
                 <div className="v2-actions-row v2-overview-handoff-year-actions">
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={() => onReopenYearReview(row.vuosi)}
+                  >
+                    {t('v2Overview.manualCorrection', 'Manual correction')}
+                  </button>
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={() => onReopenYearReview(row.vuosi)}
+                  >
+                    {t('v2Overview.repairFromExcel', 'Repair from Excel')}
+                  </button>
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={() => onReopenYearReview(row.vuosi)}
+                  >
+                    {t('v2Overview.repairFromPdf', 'Repair from PDF')}
+                  </button>
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={() => onReopenYearReview(row.vuosi)}
+                  >
+                    {t('v2Overview.uploadEvidenceFile', 'Upload evidence file')}
+                  </button>
                   {corrected || row.sourceStatus !== 'VEETI' ? (
                     <button
                       type="button"
                       className="v2-btn v2-btn-small"
                       onClick={() => onRestoreVeeti(row.vuosi)}
                     >
-                      {t('v2Overview.applyVeetiValues', 'Apply VEETI values')}
+                      {t('v2Overview.restoreVeetiValues', 'Restore VEETI values')}
                     </button>
                   ) : null}
                   <button
                     type="button"
-                    className="v2-btn v2-btn-small"
+                    className="v2-btn v2-btn-small v2-btn-danger"
                     onClick={() => onExcludeYear(row.vuosi)}
                   >
-                    {t('v2Overview.excludeYearFromPlan', 'Exclude from plan')}
-                  </button>
-                  <button
-                    type="button"
-                    className="v2-btn v2-btn-small v2-btn-danger"
-                    onClick={() => onDeleteYear(row.vuosi)}
-                  >
-                    {t('common.delete', 'Delete')}
+                    {t('v2Overview.excludeYear', 'Exclude year')}
                   </button>
                 </div>
               </details>

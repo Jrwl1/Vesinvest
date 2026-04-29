@@ -194,13 +194,13 @@ export function getDatasetSourceLabel(
   if (hasMixedDocumentWorkbookProvenance(provenance)) {
     return t(
       'v2Overview.datasetSourceDocumentWorkbookMixed',
-      'Source document + workbook repair',
+      'Source document + Excel repair',
     );
   }
   if (hasMixedStatementWorkbookProvenance(provenance)) {
     return t(
       'v2Overview.datasetSourceStatementWorkbookMixed',
-      'Statement PDF + workbook repair',
+      'Statement PDF + Excel repair',
     );
   }
   if (provenance?.kind === 'document_import') {
@@ -226,8 +226,8 @@ export function getDatasetSourceLabel(
   }
   if (provenance?.kind === 'kva_import' || provenance?.kind === 'excel_import') {
     return t('v2Overview.datasetSourceWorkbookImport', {
-      defaultValue: 'Workbook import ({{fileName}})',
-      fileName: normalizeImportedFileName(provenance.fileName, 'Excel workbook'),
+      defaultValue: 'Excel repair ({{fileName}})',
+      fileName: normalizeImportedFileName(provenance.fileName, 'Excel file'),
     });
   }
   if (source === 'manual') {
@@ -250,7 +250,7 @@ function getSourceLayerSourceLabel(
   ) {
     return t(
       'v2Overview.datasetSourceDocumentWorkbookMixed',
-      'Source document + workbook repair',
+      'Source document + Excel repair',
     );
   }
   if (
@@ -260,7 +260,7 @@ function getSourceLayerSourceLabel(
   ) {
     return t(
       'v2Overview.datasetSourceStatementWorkbookMixed',
-      'Statement PDF + workbook repair',
+      'Statement PDF + Excel repair',
     );
   }
   if (layer.provenanceKind === 'qdis_import') {
@@ -289,8 +289,8 @@ function getSourceLayerSourceLabel(
     layer.provenanceKind === 'excel_import'
   ) {
     return t('v2Overview.datasetSourceWorkbookImport', {
-      defaultValue: 'Workbook import ({{fileName}})',
-      fileName: normalizeImportedFileName(layer.fileName, 'Excel workbook'),
+      defaultValue: 'Excel repair ({{fileName}})',
+      fileName: normalizeImportedFileName(layer.fileName, 'Excel file'),
     });
   }
   if (layer.source === 'manual') {

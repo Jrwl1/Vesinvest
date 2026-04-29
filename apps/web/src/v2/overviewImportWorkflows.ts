@@ -122,7 +122,7 @@ export async function createWorkbookImportState(params: {
         : t(
             'v2Overview.workbookImportReasonDefault',
             {
-              defaultValue: 'Imported from KVA workbook: {{fileName}}',
+              defaultValue: 'Imported from Excel source file: {{fileName}}',
               fileName: preview.document.fileName,
             },
           ),

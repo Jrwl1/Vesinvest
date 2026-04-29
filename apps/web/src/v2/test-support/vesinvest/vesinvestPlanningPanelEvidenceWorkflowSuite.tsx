@@ -85,6 +85,16 @@ const linkedOrg = {
   veetiId: 1535,
 };
 
+const completedAssetEvidence = {
+  assetEvidenceState: { notes: 'Asset inventory reviewed and current.' },
+  conditionStudyState: { notes: 'Condition study coverage reviewed.' },
+  maintenanceEvidenceState: { notes: 'Maintenance logs reviewed.' },
+  municipalPlanContext: { notes: 'Municipal planning drivers captured.' },
+  financialRiskState: { notes: 'Financial and delivery risks reviewed.' },
+  publicationState: { notes: 'Publication boundaries confirmed.' },
+  communicationState: { notes: 'Board and customer communication reviewed.' },
+};
+
 const makePlan = (overrides: Record<string, unknown> = {}) => ({
   id: 'plan-1',
   name: 'Water Utility Vesinvest',
@@ -392,6 +402,7 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
     syncVesinvestPlanToForecastV2.mockResolvedValue({
       plan: makePlan({
         ...updatedPlan,
+        ...completedAssetEvidence,
         status: 'active',
         pricingStatus: 'verified',
         feeRecommendationStatus: 'verified',
@@ -400,6 +411,11 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
       scenarioId: 'scenario-1',
     });
     const onGoToForecast = vi.fn();
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        ...completedAssetEvidence,
+      }),
+    );
 
     render(
       <VesinvestPlanningPanel
@@ -576,6 +592,7 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
     ]);
     getVesinvestPlanV2.mockResolvedValue(
       makePlan({
+        ...completedAssetEvidence,
         selectedScenarioId: 'scenario-1',
         feeRecommendationStatus: 'verified',
       }),
@@ -591,8 +608,8 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
       />,
     );
 
-    const createReportButton = await screen.findByRole('button', {
-      name: 'Create report',
+    const openReportsButton = await screen.findByRole('button', {
+      name: 'Open Reports',
     });
     const openPricingButton = screen.getByRole('button', {
       name: 'Open Tariff Plan',
@@ -601,9 +618,9 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
       name: 'New revision',
     });
 
-    expect(createReportButton.className).not.toContain('v2-btn-primary');
+    expect(openReportsButton.className).not.toContain('v2-btn-primary');
     expect(openPricingButton.className).toContain('v2-btn-primary');
-    expect(createReportButton.closest('.v2-actions-row')).not.toBe(
+    expect(openReportsButton.closest('.v2-actions-row')).not.toBe(
       newRevisionButton.closest('.v2-actions-row'),
     );
   });
@@ -680,6 +697,7 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
     ]);
     getVesinvestPlanV2.mockResolvedValue(
       makePlan({
+        ...completedAssetEvidence,
         baselineStatus: 'verified',
         totalInvestmentAmount: 0,
         yearlyTotals: [{ year: 2026, totalAmount: 0, waterAmount: 0, wastewaterAmount: 0 }],
@@ -1043,7 +1061,7 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
     expect(await screen.findByText(/Operating costs 70 000 EUR/)).toBeTruthy();
   });
 
-  it('keeps the source document filename visible when workbook repair is mixed into the same dataset', async () => {
+  it('keeps the source document filename visible when Excel repair is mixed into the same dataset', async () => {
     getVesinvestPlanV2.mockResolvedValue(
       makePlan({
         baselineStatus: 'verified',
@@ -1118,17 +1136,17 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
 
     expect(
       await screen.findByText(
-        /Source document \+ workbook repair.+baseline-2024\.pdf.+pp\. 3, 4/,
+        /Source document \+ Excel repair.+baseline-2024\.pdf.+pp\. 3, 4/,
       ),
     ).toBeTruthy();
     expect(
       await screen.findByText(
-        /Document-backed values and workbook repairs both affect this year\..+baseline-2024\.pdf.+pp\. 3, 4/,
+        /Document-backed values and Excel repairs both affect this year\..+baseline-2024\.pdf.+pp\. 3, 4/,
       ),
     ).toBeTruthy();
   });
 
-  it('keeps the statement filename visible when workbook repair is mixed into the same dataset', async () => {
+  it('keeps the statement filename visible when Excel repair is mixed into the same dataset', async () => {
     getVesinvestPlanV2.mockResolvedValue(
       makePlan({
         baselineStatus: 'verified',
@@ -1198,11 +1216,11 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
     );
 
     expect(
-      await screen.findByText(/Statement PDF \+ workbook repair.+bokslut-2024\.pdf/),
+      await screen.findByText(/Statement PDF \+ Excel repair.+bokslut-2024\.pdf/),
     ).toBeTruthy();
     expect(
       await screen.findByText(
-        /Statement-backed values and workbook repairs both affect this year\..+bokslut-2024\.pdf/,
+        /Statement-backed values and Excel repairs both affect this year\..+bokslut-2024\.pdf/,
       ),
     ).toBeTruthy();
   });

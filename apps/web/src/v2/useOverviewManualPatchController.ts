@@ -222,7 +222,7 @@ export function useOverviewManualPatchController({
             ? err.message
             : t(
                 'v2Overview.workbookImportFailed',
-                'Workbook import preview failed.',
+                'Excel repair preview failed.',
               ),
         );
         setWorkbookImportStatus(null);
@@ -326,7 +326,7 @@ export function useOverviewManualPatchController({
       editor.setManualPatchError(
         t(
           'v2Overview.workbookImportNoPreview',
-          'Upload the KVA workbook and review the comparison before saving workbook choices.',
+          'Upload the Excel source file and review the comparison before saving file choices.',
         ),
       );
       return null;
@@ -364,7 +364,7 @@ export function useOverviewManualPatchController({
             editor.manualReason.trim() ||
             t(
               'v2Overview.workbookImportReasonDefault',
-              'Imported from KVA workbook: {{fileName}}',
+              'Imported from Excel source file: {{fileName}}',
               { fileName: workbookImportPreview.document.fileName },
             ),
           financials,

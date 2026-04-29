@@ -735,14 +735,7 @@ export function registerOverviewWorkspaceHandoffDetailsSuite() {
       }),
     );
 
-    const baselinePlanningDisclosure = document.querySelector(
-      '.v2-overview-planning-shell-toggle',
-    ) as HTMLDetailsElement | null;
-    expect(baselinePlanningDisclosure).toBeTruthy();
-    fireEvent.click(
-      baselinePlanningDisclosure!.querySelector('summary') as HTMLElement,
-    );
-    expect(baselinePlanningDisclosure?.open).toBe(true);
+    expect(document.querySelector('.v2-overview-planning-shell-toggle')).toBeNull();
 
     fireEvent.click(
       await screen.findByRole('button', { name: 'Luo suunnittelupohja' }),
@@ -756,12 +749,8 @@ export function registerOverviewWorkspaceHandoffDetailsSuite() {
         years: '2024',
       })),
     ).toBeTruthy();
-    const handoffPlanningDisclosure = document.querySelector(
-      '.v2-overview-planning-shell-toggle',
-    ) as HTMLDetailsElement | null;
-    expect(
-      handoffPlanningDisclosure == null || handoffPlanningDisclosure.open === false,
-    ).toBe(true);
+    expect(await screen.findByRole('heading', { name: 'Tarkista tuodut vuodet' })).toBeTruthy();
+    expect(document.querySelector('.v2-overview-planning-shell-toggle')).toBeNull();
     expect(
       screen.queryByText(localeText('v2Overview.wizardSummaryBaselineReady')),
     ).toBeNull();
@@ -831,7 +820,7 @@ export function registerOverviewWorkspaceHandoffDetailsSuite() {
     });
   });
 
-  it('keeps forecast unlocked when only the imported current-year estimate is incomplete', async () => {
+  it('keeps the accepted baseline handoff when only the imported current-year estimate is incomplete', async () => {
     const currentYear = new Date().getFullYear();
     const templateYear = buildOverviewResponse().importStatus.years[0];
     const onSetupWizardStateChange = vi.fn();
@@ -892,16 +881,10 @@ export function registerOverviewWorkspaceHandoffDetailsSuite() {
       />,
     );
 
-    await waitFor(() => {
-      expect(getLatestSetupWizardState(onSetupWizardStateChange)).toMatchObject({
-        forecastUnlocked: true,
-        summary: {
-          blockedYearCount: 0,
-          pendingReviewCount: 0,
-          baselineReady: true,
-        },
-      });
-    });
+    expect(await screen.findByRole('button', { name: 'Avaa omaisuudenhallinta' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Luo suunnittelupohja' })).toBeNull();
+    expect(document.querySelector('.v2-overview-planning-shell-toggle')).toBeNull();
   });
 
   it('does not collapse to the baseline handoff when only one imported workspace year is accepted', async () => {
@@ -1076,7 +1059,7 @@ export function registerOverviewWorkspaceHandoffDetailsSuite() {
     expect(document.querySelector('[data-review-group-year$="-2024"]')).toBeTruthy();
   });
 
-  it('keeps the forecast handoff as the only mounted primary step once baseline work is complete', async () => {
+  it('keeps the accepted baseline handoff as the only mounted primary step once baseline work is complete', async () => {
     const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
@@ -1126,7 +1109,7 @@ export function registerOverviewWorkspaceHandoffDetailsSuite() {
     );
 
     expect(
-      (await screen.findByRole('button', { name: 'Avaa Ennuste' })).className,
+      (await screen.findByRole('button', { name: 'Avaa omaisuudenhallinta' })).className,
     ).toContain('v2-btn-primary');
     expect(
       screen.queryByText(
@@ -1164,10 +1147,11 @@ export function registerOverviewWorkspaceHandoffDetailsSuite() {
       }),
     ).toBeNull();
     expect(document.querySelector('.v2-overview-handoff-actions-card')).toBeNull();
-    expect(screen.getAllByRole('button', { name: 'Avaa Ennuste' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Avaa omaisuudenhallinta' })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();
   });
 
-  it('keeps the Forecast handoff ahead of the Vesinvest workspace once baseline work is complete', async () => {
+  it('does not mount the Vesinvest workspace inside Overview once baseline work is complete', async () => {
     const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
@@ -1216,21 +1200,17 @@ export function registerOverviewWorkspaceHandoffDetailsSuite() {
       />,
     );
 
-    expect(await screen.findByRole('button', { name: 'Avaa Ennuste' })).toBeTruthy();
-
-    const handoffHeading = screen.getByRole('heading', { name: 'Mukana olevat vuodet' });
-    const handoffCard = handoffHeading.closest('[class*="v2-overview-handoff"]');
-    const planningPanel = screen.getByTestId('vesinvest-panel');
-
-    expect(handoffCard).toBeTruthy();
-    expect(planningPanel).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Avaa omaisuudenhallinta' })).toBeTruthy();
     expect(
-      handoffCard!.compareDocumentPosition(planningPanel) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+      screen.getByRole('heading', {
+        name: localeText('v2Overview.acceptedBaselineTitle'),
+      }),
     ).toBeTruthy();
+    expect(screen.queryByTestId('vesinvest-panel')).toBeNull();
+    expect(document.querySelector('.v2-overview-planning-shell-toggle')).toBeNull();
   });
 
-  it('collapses the demoted Vesinvest workspace during the forecast handoff', async () => {
+  it('keeps the accepted baseline handoff free of a demoted Vesinvest disclosure', async () => {
     const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
@@ -1279,21 +1259,12 @@ export function registerOverviewWorkspaceHandoffDetailsSuite() {
       />,
     );
 
-    expect(await screen.findByRole('button', { name: 'Avaa Ennuste' })).toBeTruthy();
-
-    const planningDisclosure = document.querySelector(
-      '.v2-overview-planning-shell-toggle',
-    ) as HTMLDetailsElement | null;
-
-    expect(planningDisclosure).toBeTruthy();
-    expect(planningDisclosure?.open).toBe(false);
-
-    fireEvent.click(planningDisclosure!.querySelector('summary') as HTMLElement);
-
-    expect(planningDisclosure?.open).toBe(true);
+    expect(await screen.findByRole('button', { name: 'Avaa omaisuudenhallinta' })).toBeTruthy();
+    expect(screen.queryByTestId('vesinvest-panel')).toBeNull();
+    expect(document.querySelector('.v2-overview-planning-shell-toggle')).toBeNull();
   });
 
-  it('keeps the collapsed Vesinvest disclosure open after the saved-fee-path focus target is consumed', async () => {
+  it('leaves saved-fee-path focus targets for the Asset Management tab instead of consuming them in Overview', async () => {
     const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
     const onOverviewFocusTargetConsumed = vi.fn();
     const focusTarget = { kind: 'saved_fee_path' as const, planId: 'plan-selected' };
@@ -1359,16 +1330,9 @@ export function registerOverviewWorkspaceHandoffDetailsSuite() {
       />,
     );
 
-    await waitFor(() => {
-      expect(onOverviewFocusTargetConsumed).toHaveBeenCalledTimes(1);
-    });
-
-    const planningDisclosure = document.querySelector(
-      '.v2-overview-planning-shell-toggle',
-    ) as HTMLDetailsElement | null;
-
-    expect(planningDisclosure).toBeTruthy();
-    expect(planningDisclosure?.open).toBe(true);
+    expect(await screen.findByRole('button', { name: 'Avaa omaisuudenhallinta' })).toBeTruthy();
+    expect(onOverviewFocusTargetConsumed).not.toHaveBeenCalled();
+    expect(document.querySelector('.v2-overview-planning-shell-toggle')).toBeNull();
 
     rerender(
       <OverviewPageV2
@@ -1380,14 +1344,8 @@ export function registerOverviewWorkspaceHandoffDetailsSuite() {
       />,
     );
 
-    expect(
-      (
-        document.querySelector(
-          '.v2-overview-planning-shell-toggle',
-        ) as HTMLDetailsElement | null
-      )?.open,
-    ).toBe(true);
-    expect(onOverviewFocusTargetConsumed).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('.v2-overview-planning-shell-toggle')).toBeNull();
+    expect(onOverviewFocusTargetConsumed).not.toHaveBeenCalled();
   });
 
   it('promotes a stale baseline-creation continue step to the forecast handoff when baseline truth is already ready', () => {

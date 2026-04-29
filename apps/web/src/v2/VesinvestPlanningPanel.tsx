@@ -134,9 +134,8 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
       utilityBindingMissing={controller.utilityBindingMissing}
       showDownstreamActions={controller.showDownstreamActions}
       pricingReady={controller.pricingReady}
-      canCreateReport={controller.canCreateReport}
       persist={controller.persist}
-      handleCreateReport={controller.handleCreateReport}
+      onOpenReports={onGoToReports}
     />
   );
 
@@ -201,6 +200,18 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
       />
 
       {loadingState}
+
+      <VesinvestDerivedTotalsStrip
+        t={t}
+        draft={controller.draft}
+        yearTotals={controller.yearTotals}
+        fiveYearBands={controller.fiveYearBands}
+        forecastSyncLabel={controller.pricingReady
+          ? t('v2Vesinvest.forecastSyncReady', 'Forecast sync ready')
+          : controller.selectedSummary?.pricingStatus === 'provisional'
+            ? t('v2Vesinvest.forecastSyncDraft', 'Forecast sync provisional')
+            : t('v2Vesinvest.forecastSyncPending', 'Forecast sync pending')}
+      />
 
       <VesinvestPlanStatusStrip
         t={t}
@@ -285,13 +296,6 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
               updateProjectAllocation={controller.updateProjectAllocation}
             />
           ) : null}
-
-          <VesinvestDerivedTotalsStrip
-            t={t}
-            draft={controller.draft}
-            yearTotals={controller.yearTotals}
-            fiveYearBands={controller.fiveYearBands}
-          />
         </>
       )}
     </section>

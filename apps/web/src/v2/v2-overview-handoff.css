@@ -28,7 +28,7 @@
 
 .v2-overview-handoff-summary {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -161,6 +161,28 @@
   margin-top: 0;
   align-items: center;
   gap: 8px;
+}
+
+.v2-overview-handoff-year-details-shell {
+  display: inline-block;
+}
+
+.v2-overview-handoff-year-details-shell > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.v2-overview-handoff-year-details-shell > summary::-webkit-details-marker {
+  display: none;
+}
+
+.v2-overview-handoff-year-details {
+  margin-top: 10px;
+  min-width: min(32rem, calc(100vw - 48px));
+  padding: 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-row-radius);
+  background: var(--v2-surface-strong);
 }
 
 .v2-overview-handoff-year-actions-shell {

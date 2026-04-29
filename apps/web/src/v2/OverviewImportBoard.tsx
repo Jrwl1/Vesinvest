@@ -451,7 +451,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
                 }
                 disabled={syncing || importingYears}
               >
-                {t('v2Overview.workbookImportAction', 'Import KVA workbook')}
+                {t('v2Overview.workbookImportAction', 'Repair from Excel')}
               </button>
             </>
           ) : !isManageMode ? (

@@ -51,13 +51,13 @@ export function buildForecastBaselineDatasetSourceLabel(params: {
   if (hasDocumentImport && hasWorkbookImport) {
     return t(
       'v2Forecast.baselineSourceDocumentWorkbookMixed',
-      'Source document + workbook repair',
+      'Source document + Excel repair',
     );
   }
   if (hasStatementImport && hasWorkbookImport) {
     return t(
       'v2Forecast.baselineSourceStatementWorkbookMixed',
-      'Statement PDF + workbook repair',
+      'Statement PDF + Excel repair',
     );
   }
   if (provenance?.kind === 'document_import') {
@@ -83,8 +83,8 @@ export function buildForecastBaselineDatasetSourceLabel(params: {
   }
   if (provenance?.kind === 'kva_import' || provenance?.kind === 'excel_import') {
     return t('v2Forecast.baselineSourceWorkbookImport', {
-      defaultValue: 'Workbook import ({{fileName}})',
-      fileName: normalizeImportedFileName(provenance.fileName, 'Excel workbook'),
+      defaultValue: 'Excel repair ({{fileName}})',
+      fileName: normalizeImportedFileName(provenance.fileName, 'Excel file'),
     });
   }
   if (source === 'manual') {

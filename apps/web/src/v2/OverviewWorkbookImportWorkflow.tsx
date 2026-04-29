@@ -61,7 +61,7 @@ export const OverviewWorkbookImportWorkflow: React.FC<Props> = ({
       <h4>
         {t(
           'v2Overview.workbookImportWorkflowTitle',
-          'Import KVA workbook for year {{year}}',
+          'Repair from Excel for year {{year}}',
           { year: yearLabel },
         )}
       </h4>
@@ -69,7 +69,7 @@ export const OverviewWorkbookImportWorkflow: React.FC<Props> = ({
     <p className="v2-muted">
       {t(
         'v2Overview.workbookImportWorkflowBody',
-        'Upload one KVA workbook, review the matched years, and choose row by row whether to keep VEETI or apply workbook values before saving.',
+        'Upload one Excel source file, review the matched years, and choose row by row whether to keep VEETI or apply file values before saving.',
       )}
     </p>
     <div className="v2-statement-import-actions">
@@ -83,7 +83,7 @@ export const OverviewWorkbookImportWorkflow: React.FC<Props> = ({
           workbookImportPreview
             ? 'v2Overview.workbookImportReplaceFile'
             : 'v2Overview.workbookImportUploadFile',
-          workbookImportPreview ? 'Choose another workbook' : 'Upload KVA workbook',
+          workbookImportPreview ? 'Choose another Excel file' : 'Upload Excel file',
         )}
       </button>
       {workbookImportPreview ? (
@@ -100,7 +100,7 @@ export const OverviewWorkbookImportWorkflow: React.FC<Props> = ({
           <h4>
             {t(
               'v2Overview.workbookImportDiffTitle',
-              'VEETI and workbook values by year',
+                'VEETI and Excel values by year',
             )}
           </h4>
         </div>
@@ -116,7 +116,7 @@ export const OverviewWorkbookImportWorkflow: React.FC<Props> = ({
               <div className="v2-statement-import-diff-head">
                 <span>{t('v2Overview.statementImportDiffField', 'Field')}</span>
                 <span>{t('v2Overview.statementImportDiffVeeti', 'VEETI')}</span>
-                <span>{t('v2Overview.workbookImportDiffWorkbook', 'Workbook')}</span>
+                <span>{t('v2Overview.workbookImportDiffWorkbook', 'Excel file')}</span>
                 <span>{t('v2Overview.workbookImportChoice', 'Choice')}</span>
               </div>
               {year.rows.map((row) => (
@@ -137,7 +137,7 @@ export const OverviewWorkbookImportWorkflow: React.FC<Props> = ({
                   </span>
                   <span>
                     {row.workbookValue == null
-                      ? t('v2Overview.workbookImportMissingValue', 'Not found in workbook')
+                      ? t('v2Overview.workbookImportMissingValue', 'Not found in file')
                       : formatEur(row.workbookValue)}
                   </span>
                   <span className="v2-actions-row">
@@ -167,7 +167,7 @@ export const OverviewWorkbookImportWorkflow: React.FC<Props> = ({
                         )
                       }
                     >
-                      {t('v2Overview.workbookChoiceApply', 'Apply workbook')}
+                      {t('v2Overview.workbookChoiceApply', 'Apply file value')}
                     </button>
                   </span>
                 </div>
@@ -180,7 +180,7 @@ export const OverviewWorkbookImportWorkflow: React.FC<Props> = ({
       <p className="v2-muted v2-statement-import-placeholder">
         {t(
           'v2Overview.workbookImportAwaitingFile',
-          'Upload the KVA workbook to populate the year-by-year comparison before saving any workbook choices.',
+          'Upload the Excel source file to populate the year-by-year comparison before saving any file choices.',
         )}
       </p>
     )}

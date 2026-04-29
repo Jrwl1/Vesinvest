@@ -1020,7 +1020,7 @@ export function registerEnnustePageV2ReadinessHandoffSuite() {
     render(<EnnustePageV2 onReportCreated={() => undefined} />);
 
     expect(
-      (await screen.findAllByText('Workbook import (kronoby-kva.xlsx)')).length,
+      (await screen.findAllByText('Excel repair (kronoby-kva.xlsx)')).length,
     ).toBeGreaterThan(0);
 
   });

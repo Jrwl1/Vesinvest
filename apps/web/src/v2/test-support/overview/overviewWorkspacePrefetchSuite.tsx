@@ -165,7 +165,7 @@ export function registerOverviewWorkspacePrefetchSuite() {
 
     expect(
       await screen.findByRole('button', {
-        name: localeText('v2Overview.openForecast'),
+        name: localeText('v2Overview.openAssetManagement'),
       }),
     ).toBeTruthy();
     expect(
@@ -445,7 +445,7 @@ export function registerOverviewWorkspacePrefetchSuite() {
           overrideMeta: {
             editedAt: '2026-03-08T10:00:00.000Z',
             editedBy: 'tester',
-            reason: 'Statement + workbook repair',
+            reason: 'Statement + Excel repair',
             provenance: {
               kind: 'kva_import',
               fileName: 'kronoby-kva.xlsx',
@@ -585,7 +585,7 @@ export function registerOverviewWorkspacePrefetchSuite() {
             overrideMeta: {
               editedAt: '2026-03-08T10:00:00.000Z',
               editedBy: 'tester',
-              reason: 'Statement + workbook repair',
+              reason: 'Statement + Excel repair',
               provenance: {
                 kind: 'kva_import',
                 fileName: 'kronoby-kva.xlsx',
@@ -740,8 +740,6 @@ export function registerOverviewWorkspacePrefetchSuite() {
   });
   });
 }
-
-
 
 
 

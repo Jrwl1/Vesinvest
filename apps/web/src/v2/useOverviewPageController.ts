@@ -669,7 +669,7 @@ export function useOverviewPageController({
       classificationReviewRequired:
         activeVesinvestPlan.classificationReviewRequired === true,
       assetEvidenceReady: activeVesinvestPlan.assetEvidenceReady === true,
-      assetEvidenceMissingCount: activeVesinvestPlan.assetEvidenceMissingCount ?? 0,
+      assetEvidenceMissingCount: activeVesinvestPlan.assetEvidenceMissingCount,
       pricingStatus: activeVesinvestPlan.pricingStatus ?? null,
       tariffPlanStatus: activeVesinvestPlan.tariffPlanStatus ?? null,
       baselineChangedSinceAcceptedRevision:

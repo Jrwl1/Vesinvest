@@ -214,7 +214,7 @@ export function registerOverviewReviewFlowSummarySuite() {
     );
 
     const managementRow = screen
-      .getByRole('button', { name: localeText('v2Overview.openForecast') })
+      .getByRole('button', { name: localeText('v2Overview.openAssetManagement') })
       .closest('.v2-overview-handoff-management-row') as HTMLElement;
     const reopenReviewButtons = screen.getAllByRole('button', {
       name: localeText('v2Overview.reopenReview'),
@@ -232,7 +232,7 @@ export function registerOverviewReviewFlowSummarySuite() {
     );
     expect(
       document.querySelectorAll('.v2-overview-handoff-summary-item'),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
     expect(
       document.querySelectorAll('.v2-overview-handoff-summary-item strong')[1]
         ?.textContent,
@@ -244,11 +244,12 @@ export function registerOverviewReviewFlowSummarySuite() {
       document.querySelector('.v2-overview-handoff-year-actions-shell'),
     ).toBeTruthy();
     expect(
-      screen.getByRole('button', { name: localeText('common.delete') }).closest('details'),
+      screen.getByText(localeText('v2Overview.moreActions')).closest('details'),
     ).toBe(document.querySelector('.v2-overview-handoff-year-actions-shell'));
-    expect(
-      screen.getByRole('button', { name: localeText('common.delete') }).closest('.v2-actions-row'),
-    ).toBe(document.querySelector('.v2-overview-handoff-year-actions'));
+    expect(screen.getByRole('button', { name: localeText('v2Overview.manualCorrection') })).toBeTruthy();
+    expect(screen.getByRole('button', { name: localeText('v2Overview.repairFromExcel') })).toBeTruthy();
+    expect(screen.getByRole('button', { name: localeText('v2Overview.repairFromPdf') })).toBeTruthy();
+    expect(screen.getByRole('button', { name: localeText('v2Overview.uploadEvidenceFile') })).toBeTruthy();
     expect(renderYearValuePreview).toHaveBeenCalledWith(
       2024,
       {
@@ -261,12 +262,12 @@ export function registerOverviewReviewFlowSummarySuite() {
     fireEvent.click(reopenReviewButtons[0]!);
     expect(onReopenYearReview).toHaveBeenCalledWith(2024);
     fireEvent.click(
-      screen.getByRole('button', { name: localeText('v2Overview.applyVeetiValues') }),
+      screen.getByRole('button', { name: localeText('v2Overview.restoreVeetiValues') }),
     );
     expect(onRestoreVeeti).toHaveBeenCalledWith(2024);
     fireEvent.click(
       screen.getByRole('button', {
-        name: localeText('v2Overview.excludeYearFromPlan'),
+        name: localeText('v2Overview.excludeYear'),
       }),
     );
     expect(onExcludeYear).toHaveBeenCalledWith(2024);
@@ -277,11 +278,7 @@ export function registerOverviewReviewFlowSummarySuite() {
     );
     expect(onRestoreYear).toHaveBeenCalledWith(2022);
     fireEvent.click(
-      screen.getByRole('button', { name: localeText('common.delete') }),
-    );
-    expect(onDeleteYear).toHaveBeenCalledWith(2024);
-    fireEvent.click(
-      screen.getByRole('button', { name: localeText('v2Overview.openForecast') }),
+      screen.getByRole('button', { name: localeText('v2Overview.openAssetManagement') }),
     );
     expect(onOpenForecast).toHaveBeenCalled();
     expect(screen.getByText(/1 dataset/)).toBeTruthy();
@@ -1296,4 +1293,3 @@ export function registerOverviewReviewFlowSummarySuite() {
   });
   });
 }
-

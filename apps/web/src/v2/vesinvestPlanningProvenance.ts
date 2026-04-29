@@ -75,7 +75,7 @@ export const datasetSourceLabel = (
     return withDocumentEvidence(
       t(
         'v2Reports.baselineSourceDocumentWorkbookMixed',
-        'Source document + workbook repair',
+        'Source document + Excel repair',
       ),
       [documentFileName],
     );
@@ -84,7 +84,7 @@ export const datasetSourceLabel = (
     return appendDetailSuffix(
       t(
         'v2Reports.baselineSourceStatementWorkbookMixed',
-        'Statement PDF + workbook repair',
+        'Statement PDF + Excel repair',
       ),
       [
         getImportedFileNameByKind(
@@ -123,8 +123,8 @@ export const datasetSourceLabel = (
     dataset.provenance?.kind === 'excel_import'
   ) {
     return t('v2Reports.baselineSourceWorkbookImport', {
-      defaultValue: 'Workbook import ({{fileName}})',
-      fileName: normalizeImportedFileName(dataset.provenance.fileName, 'Excel workbook'),
+      defaultValue: 'Excel repair ({{fileName}})',
+      fileName: normalizeImportedFileName(dataset.provenance.fileName, 'Excel file'),
     });
   }
   if (dataset.source === 'manual') {
@@ -171,7 +171,7 @@ export const datasetSourceNote = (
     return appendDetailSuffix(
       t(
         'v2Reports.baselineDocumentWorkbookDetail',
-        'Document-backed values and workbook repairs both affect this year.',
+        'Document-backed values and Excel repairs both affect this year.',
       ),
       [documentFileName, ...documentEvidenceDetail],
     );
@@ -180,7 +180,7 @@ export const datasetSourceNote = (
     return appendDetailSuffix(
       t(
         'v2Reports.baselineStatementWorkbookDetail',
-        'Statement-backed values and workbook repairs both affect this year.',
+        'Statement-backed values and Excel repairs both affect this year.',
       ),
       [
         getImportedFileNameByKind(
@@ -223,8 +223,8 @@ export const datasetSourceNote = (
     dataset.provenance?.kind === 'excel_import'
   ) {
     return t('v2Reports.baselineWorkbookImportDetail', {
-      defaultValue: 'Workbook-backed values came from {{fileName}}',
-      fileName: normalizeImportedFileName(dataset.provenance.fileName, 'Excel workbook'),
+      defaultValue: 'Excel-backed values came from {{fileName}}',
+      fileName: normalizeImportedFileName(dataset.provenance.fileName, 'Excel file'),
     });
   }
   if (dataset.source === 'manual' && dataset.reason) {

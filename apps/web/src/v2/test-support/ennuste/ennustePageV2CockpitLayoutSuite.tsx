@@ -45,9 +45,10 @@ async function openInvestmentWorkbench() {
   fireEvent.click(
     await screen.findByRole('button', { name: 'Investment program' }),
   );
-  return (await screen.findByRole('textbox', {
-    name: 'Scenario name',
-  })).closest('section') as HTMLElement;
+  const headings = await screen.findAllByRole('heading', {
+    name: 'Investment program',
+  });
+  return headings[headings.length - 1].closest('section') as HTMLElement;
 }
 
 function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
@@ -565,18 +566,24 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
     expect(screen.queryByText('Funding pressure and result views')).toBeNull();
     const investmentWorkbench = await openInvestmentWorkbench();
     expect(investmentWorkbench).toBeTruthy();
-    expect(screen.getByText('Main line renewal')).toBeTruthy();
-    expect(screen.getAllByText('P-001').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Water network rehabilitation').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Straight-line 40 years').length).toBeGreaterThan(0);
-    expect(screen.getAllByDisplayValue('70000').length).toBeGreaterThan(0);
-    expect(screen.getAllByDisplayValue('50000').length).toBeGreaterThan(0);
-    expect(document.querySelector('datalist#v2-investment-program-group-options')).toBeNull();
-    expect(screen.getByText('Full annual table')).toBeTruthy();
-    fireEvent.click(screen.getByText('Full annual table'));
     expect(
-      await screen.findByRole('button', { name: 'Repeat near-term template' }),
+      within(investmentWorkbench).getByText(
+        'Investment rows are edited in Asset Management. Forecast uses the synced plan for calculations.',
+      ),
     ).toBeTruthy();
+    expect(
+      within(investmentWorkbench).getByRole('button', { name: 'Asset Management' }),
+    ).toBeTruthy();
+    expect(within(investmentWorkbench).getByText('Total investments')).toBeTruthy();
+    expect(within(investmentWorkbench).getByText('Forecast years')).toBeTruthy();
+    expect(within(investmentWorkbench).getByText('Computed version')).toBeTruthy();
+    expect(screen.queryByText('Main line renewal')).toBeNull();
+    expect(screen.queryByText('P-001')).toBeNull();
+    expect(screen.queryByDisplayValue('70000')).toBeNull();
+    expect(screen.queryByDisplayValue('50000')).toBeNull();
+    expect(document.querySelector('datalist#v2-investment-program-group-options')).toBeNull();
+    expect(screen.queryByText('Full annual table')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Repeat near-term template' })).toBeNull();
     expect(document.querySelector('input[name="yearlyInvestmentCategory-2024"]')).toBeNull();
     expect(document.querySelector('select[name="yearlyInvestmentType-2024"]')).toBeNull();
     expect(document.querySelector('select[name="yearlyInvestmentConfidence-2024"]')).toBeNull();
@@ -797,7 +804,7 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
     expect(screen.queryByText('Create your first scenario')).toBeNull();
   });
 
-  it('groups long-range investment years and keeps the full annual table on demand', async () => {
+  it('keeps long-range investment detail in Asset Management instead of Forecast', async () => {
     const expandedStressScenario = {
       ...buildStressScenario(),
       yearlyInvestments: Array.from({ length: 10 }, (_, index) => ({
@@ -819,26 +826,18 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
     );
 
     await openInvestmentWorkbench();
-    expect(screen.getByText('Grouped long-range blocks')).toBeTruthy();
-    expect(screen.getByText(/Long-range block 2029-2033/)).toBeTruthy();
-    const analystToolsSummary = screen.getByText('Full annual table');
-    const analystToolsDetails = analystToolsSummary.closest('details');
-    expect(analystToolsDetails?.open).toBe(false);
-
-    fireEvent.click(analystToolsSummary);
-    fireEvent.click(screen.getByText(/Long-range block 2029-2033/));
-
-    expect(analystToolsDetails?.open).toBe(true);
-    expect(
-      screen.getByRole('button', { name: 'Repeat near-term template' }),
-    ).toBeTruthy();
+    expect(screen.queryByText('Grouped long-range blocks')).toBeNull();
+    expect(screen.queryByText(/Long-range block 2029-2033/)).toBeNull();
+    expect(screen.queryByText('Full annual table')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Repeat near-term template' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Asset Management' })).toBeTruthy();
     expect(screen.getAllByRole('heading', { name: 'Investment program' })).toHaveLength(1);
     expect(
       container.querySelectorAll('.v2-investment-summary-strip article'),
-    ).toHaveLength(3);
+    ).toHaveLength(0);
     expect(
       container.querySelectorAll('.v2-investment-impact-strip article'),
-    ).toHaveLength(4);
+    ).toHaveLength(0);
     expectNoDuplicateIds(container);
   });
 
@@ -862,7 +861,7 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
     ).toBe('stress-1');
   });
 
-  it('saves investment program target and service split fields from the start surface', async () => {
+  it('hands investment program edits off to Asset Management', async () => {
     updateForecastScenarioV2.mockResolvedValue({
       ...buildBaseScenario(),
       updatedAt: '2026-03-09T09:30:00.000Z',
@@ -889,9 +888,12 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
       ],
     });
 
+    const onGoToAssetManagement = vi.fn();
+
     render(
       <EnnustePageV2
         onReportCreated={() => undefined}
+        onGoToAssetManagement={onGoToAssetManagement}
         initialScenarioId="base-1"
         computedFromUpdatedAtByScenario={{
           'base-1': '2026-03-09T07:00:00.000Z',
@@ -900,73 +902,17 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
     );
 
     const investmentProgramSection = await openInvestmentWorkbench();
-    const investmentProgramTable = investmentProgramSection.querySelector(
-      '.v2-investment-program-table',
-    ) as HTMLElement | null;
-    expect(investmentProgramTable).toBeTruthy();
-    const investmentProgramWithin = within(investmentProgramTable!);
+    const investmentProgramWithin = within(investmentProgramSection);
 
-    expect(
-      investmentProgramWithin.queryByRole('textbox', { name: 'Target 2024' }),
-    ).toBeNull();
-    expect(
-      investmentProgramWithin.queryByRole('combobox', { name: 'Type 2024' }),
-    ).toBeNull();
-    expect(
-      investmentProgramWithin.queryByRole('combobox', { name: 'Group 2024' }),
-    ).toBeNull();
-    expect(
-      investmentProgramWithin.queryByRole('combobox', {
-        name: 'Depreciation rule 2024',
-      }),
-    ).toBeNull();
-    fireEvent.change(
-      investmentProgramWithin.getByRole('spinbutton', {
-        name: 'Water EUR 2024',
-      }),
-      {
-        target: { value: '75000' },
-      },
-    );
-    fireEvent.change(
-      investmentProgramWithin.getByRole('spinbutton', {
-        name: 'Wastewater EUR 2024',
-      }),
-      {
-        target: { value: '50000' },
-      },
-    );
-    fireEvent.change(investmentProgramWithin.getByRole('textbox', { name: 'Note 2024' }), {
-      target: { value: 'Priority 1' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    expect(investmentProgramSection.querySelector('.v2-investment-program-table')).toBeNull();
+    expect(investmentProgramWithin.queryByRole('textbox', { name: 'Target 2024' })).toBeNull();
+    expect(investmentProgramWithin.queryByRole('spinbutton', { name: 'Water EUR 2024' })).toBeNull();
+    expect(investmentProgramWithin.queryByRole('textbox', { name: 'Note 2024' })).toBeNull();
+    const callsBeforeClick = onGoToAssetManagement.mock.calls.length;
+    fireEvent.click(investmentProgramWithin.getByRole('button', { name: 'Asset Management' }));
 
-    await waitFor(() => {
-      expect(updateForecastScenarioV2).toHaveBeenCalledWith(
-        'base-1',
-        expect.objectContaining({
-          yearlyInvestments: expect.arrayContaining([
-            expect.objectContaining({
-              year: 2024,
-              amount: 125000,
-              target: 'Main line renewal',
-              category: 'network',
-              vesinvestPlanId: 'plan-1',
-              vesinvestProjectId: 'project-1',
-              allocationId: 'allocation-2024',
-              projectCode: 'P-001',
-              groupKey: 'sanering_water_network',
-              accountKey: 'sanering_water_network',
-              reportGroupKey: 'network_rehabilitation',
-              depreciationClassKey: 'network',
-              waterAmount: 75000,
-              wastewaterAmount: 50000,
-              note: 'Priority 1',
-            }),
-          ]),
-        }),
-      );
-    });
+    expect(onGoToAssetManagement).toHaveBeenCalledTimes(callsBeforeClick + 1);
+    expect(updateForecastScenarioV2).not.toHaveBeenCalled();
   });
 
   it('shows missing synced depreciation snapshots as a warning without blocking unrelated draft saves', async () => {
@@ -994,25 +940,12 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
     );
 
     const investmentProgramSection = await openInvestmentWorkbench();
-    const noteInput = investmentProgramSection.querySelector(
-      'input[name="investmentProgramNote-2024"]',
-    ) as HTMLInputElement | null;
-    expect(noteInput).toBeTruthy();
 
-    fireEvent.change(noteInput!, {
-      target: { value: 'Forecast analyst note' },
-    });
-
+    expect(investmentProgramSection.querySelector('.v2-investment-program-table')).toBeNull();
     expect(
-      await screen.findAllByText('Depreciation snapshots are missing for years: 2025'),
-    ).toHaveLength(1);
-    expect(
-      (screen.getByRole('button', { name: 'Save draft' }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(false);
-    expect(
-      screen.getByRole('button', { name: 'Save draft' }).getAttribute('title'),
+      screen.queryByText('Depreciation snapshots are missing for years: 2025'),
     ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull();
     expect(
       screen.queryByRole('button', { name: 'Continue to depreciation plans' }),
     ).toBeNull();
@@ -1069,21 +1002,10 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
       ),
     ).toBeNull();
 
-    const totalInput = investmentProgramSection.querySelector(
-      'input[name="investmentProgramTotal-2026"]',
-    ) as HTMLInputElement | null;
-    expect(totalInput).toBeTruthy();
-
-    fireEvent.change(totalInput!, {
-      target: { value: '1000' },
-    });
-    fireEvent.blur(totalInput!);
-
     expect(
-      await within(investmentProgramSection).findByText(
-        'Select a depreciation rule before saving this investment.',
-      ),
-    ).toBeTruthy();
+      investmentProgramSection.querySelector('input[name="investmentProgramTotal-2026"]'),
+    ).toBeNull();
+    expect(within(investmentProgramSection).getByRole('button', { name: 'Asset Management' })).toBeTruthy();
   });
 
   it('keeps empty investment rows neutral even when depreciation rules are unavailable', async () => {
@@ -1135,17 +1057,18 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
     const investmentProgramWithin = within(investmentProgramSection);
 
     expect(
-      await screen.findByText(
+      screen.queryByText(
         'Depreciation rules are missing for this scenario. Refresh the scenario before saving investment years.',
       ),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(
       investmentProgramWithin.queryByText('Depreciation rules unavailable'),
     ).toBeNull();
-    expect(investmentProgramWithin.getAllByText('None').length).toBeGreaterThan(0);
+    expect(investmentProgramSection.querySelector('.v2-investment-program-table')).toBeNull();
+    expect(investmentProgramWithin.getByRole('button', { name: 'Asset Management' })).toBeTruthy();
   });
 
-  it('keeps linked depreciation snapshots visible even when editable rules are unavailable', async () => {
+  it('keeps synced investment totals visible even when editable rules are unavailable', async () => {
     listDepreciationRulesV2.mockResolvedValue([]);
     listScenarioDepreciationRulesV2.mockResolvedValue([]);
 
@@ -1160,18 +1083,15 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
     );
 
     const investmentProgramSection = await openInvestmentWorkbench();
-    const investmentProgramTable = investmentProgramSection.querySelector(
-      '.v2-investment-program-table',
-    ) as HTMLElement | null;
-    expect(investmentProgramTable).toBeTruthy();
-    const investmentProgramWithin = within(investmentProgramTable!);
+    const investmentProgramWithin = within(investmentProgramSection);
 
     expect(
-      await screen.findByText(
+      screen.queryByText(
         'Depreciation rules are missing for this scenario. Refresh the scenario before saving investment years.',
       ),
-    ).toBeTruthy();
-    expect(investmentProgramWithin.getAllByText('Straight-line 40 years').length).toBeGreaterThan(0);
+    ).toBeNull();
+    expect(investmentProgramSection.querySelector('.v2-investment-program-table')).toBeNull();
+    expect(investmentProgramWithin.getByText('Total investments')).toBeTruthy();
     expect(investmentProgramWithin.queryByText('Depreciation rules unavailable')).toBeNull();
   });
 
@@ -1224,17 +1144,18 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
     const investmentProgramWithin = within(investmentProgramSection);
 
     expect(
-      await screen.findByText(
+      screen.queryByText(
         'Depreciation rules are missing for this scenario. Refresh the scenario before saving investment years.',
       ),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(
       investmentProgramWithin.queryByText('Depreciation rules unavailable'),
     ).toBeNull();
-    expect(investmentProgramWithin.getAllByText('None').length).toBeGreaterThan(0);
+    expect(investmentProgramSection.querySelector('.v2-investment-program-table')).toBeNull();
+    expect(investmentProgramWithin.getByRole('button', { name: 'Asset Management' })).toBeTruthy();
   });
 
-  it('keeps investment totals and depreciation impact visible in one stacked planning flow', async () => {
+  it('keeps investment totals visible in the Forecast planning flow', async () => {
     render(
       <EnnustePageV2
         onReportCreated={() => undefined}
@@ -1245,17 +1166,13 @@ export function registerEnnustePageV2CockpitLayoutSuite() {
       />,
     );
 
-    await openInvestmentWorkbench();
+    const investmentProgramSection = await openInvestmentWorkbench();
 
-    expect(
-      screen.getByRole('button', { name: 'Copy first year to all' }),
-    ).toBeTruthy();
-    expect(
-      await screen.findByText('Investment plan effect'),
-    ).toBeTruthy();
-    expect(
-      screen.getAllByText('Required price today (annual result = 0)').length,
-    ).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Copy first year to all' })).toBeNull();
+    expect(within(investmentProgramSection).getByText('Total investments')).toBeTruthy();
+    expect(within(investmentProgramSection).getByText('Forecast years')).toBeTruthy();
+    expect(within(investmentProgramSection).getByRole('button', { name: 'Asset Management' })).toBeTruthy();
+    expect(screen.getAllByRole('heading', { name: 'Required price today' }).length).toBeGreaterThan(0);
   });
 
   });

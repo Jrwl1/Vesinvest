@@ -485,6 +485,8 @@ export function registerAppShellV2SavedFeePathSuite() {
     lastReviewedAt: null,
     reviewDueAt: null,
     classificationReviewRequired: false,
+    assetEvidenceReady: true,
+    assetEvidenceMissingCount: 0,
     baselineChangedSinceAcceptedRevision: false,
     investmentPlanChangedSinceFeeRecommendation: false,
     updatedAt: '2026-03-25T12:00:00.000Z',

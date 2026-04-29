@@ -698,11 +698,29 @@
   background: transparent;
   color: var(--v2-muted);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 7px 10px;
+  gap: 6px;
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,
     color 0.15s ease;
+}
+
+.v2-nav-label {
+  color: inherit;
+  white-space: nowrap;
+}
+
+.v2-nav-status-label {
+  border: 1px solid var(--v2-border);
+  border-radius: 6px;
+  background: var(--v2-surface-soft);
+  color: var(--v2-muted);
+  padding: 2px 5px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .v2-nav-btn:hover,
@@ -720,6 +738,30 @@
   background: var(--v2-primary);
   color: #ffffff;
   box-shadow: none;
+}
+
+.v2-nav-btn.active .v2-nav-status-label {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.v2-nav-status-warning .v2-nav-status-label {
+  border-color: rgba(177, 114, 31, 0.24);
+  background: #f8efe2;
+  color: #8a5c18;
+}
+
+.v2-nav-status-positive .v2-nav-status-label {
+  border-color: rgba(44, 122, 87, 0.22);
+  background: #e7f1eb;
+  color: #236346;
+}
+
+.v2-nav-status-danger .v2-nav-status-label {
+  border-color: rgba(166, 71, 61, 0.24);
+  background: var(--v2-danger-soft);
+  color: var(--v2-danger);
 }
 
 .v2-account-btn,
@@ -803,6 +845,62 @@
   color: var(--v2-text);
 }
 
+.v2-header-meta {
+  width: min(var(--v2-page-width), 100%);
+  margin: 8px auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v2-workflow-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.v2-workflow-step {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--v2-border);
+  border-radius: 8px;
+  background: var(--v2-surface-strong);
+  color: var(--v2-muted);
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 0.73rem;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.v2-workflow-step strong {
+  color: var(--v2-text);
+  font-size: 0.72rem;
+}
+
+.v2-workflow-step.active {
+  border-color: rgba(43, 79, 136, 0.28);
+  color: var(--v2-primary);
+}
+
+.v2-workflow-step-positive strong {
+  color: #236346;
+}
+
+.v2-workflow-step-warning strong {
+  color: #8a5c18;
+}
+
+.v2-workflow-step-danger strong {
+  color: var(--v2-danger);
+}
+
 @media (max-width: 1024px) {
   .v2-app-header-inner {
     grid-template-columns: 1fr auto;
@@ -829,6 +927,8 @@
 
   .v2-header-meta {
     justify-content: flex-start;
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .v2-header-statuses {
@@ -878,6 +978,14 @@
   .v2-main-nav {
     width: 100%;
     overflow-x: auto;
+  }
+
+  .v2-nav-status-label {
+    display: none;
+  }
+
+  .v2-workflow-strip {
+    width: 100%;
   }
 
   .v2-account-btn {

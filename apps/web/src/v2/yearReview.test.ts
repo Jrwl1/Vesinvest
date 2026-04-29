@@ -325,7 +325,7 @@ describe('yearReview helpers', () => {
       overrideMeta: {
         editedAt: '2026-03-08T10:00:00.000Z',
         editedBy: 'tester',
-        reason: 'Statement + workbook repair',
+        reason: 'Statement + Excel repair',
         provenance: {
           kind: 'kva_import',
           fileName: 'kronoby-kva.xlsx',

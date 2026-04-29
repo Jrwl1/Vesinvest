@@ -450,7 +450,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                         className="v2-btn v2-btn-small v2-btn-quiet"
                         aria-label={`${t(
                           'v2Overview.workbookImportAction',
-                          'Import KVA workbook',
+                          'Repair from Excel',
                         )} ${row.year}`}
                         onClick={() =>
                           void openInlineCardEditor(
@@ -463,7 +463,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                         }
                         disabled={yearBusy}
                       >
-                        {t('v2Overview.workbookImportAction', 'Import KVA workbook')}
+                        {t('v2Overview.workbookImportAction', 'Repair from Excel')}
                       </button>
                     </div>
                   </>

@@ -65,32 +65,34 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
     : scenarioTypeOptions.filter((option): option is Exclude<typeof draftScenarioType, 'base'> => option !== 'base');
   const primaryHeroCard = {
     key: 'required-price',
-    label: primaryFeeSignal.priceLabel,
+    label: t('v2Forecast.requiredPriceToday', 'Required price today'),
     value: formatPrice(primaryFeeSignal.price),
   };
   const supportingHeroCards = [
     {
+      key: 'current-comparator',
+      label: t('v2Forecast.currentComparatorPrice', 'Current comparator price'),
+      value: formatPrice(scenario.baselinePriceTodayCombined ?? 0),
+    },
+    {
       key: 'required-increase',
       label: t(
-        'v2Forecast.requiredIncreaseFromToday',
-        'Required increase from current combined price',
+        'v2Forecast.requiredIncreaseVsCurrent',
+        'Required increase vs current',
       ),
       value: formatPercent(currentRequiredIncreaseFromToday),
+    },
+    {
+      key: 'projected-horizon-price',
+      label: t('v2Forecast.projectedHorizonPrice', 'Projected horizon price'),
+      value: controller.latestPricePoint
+        ? formatPrice(controller.latestPricePoint.combinedPrice)
+        : t('v2Forecast.reportStateMissing'),
     },
     {
       key: 'underfunding-start',
       label: t('v2Forecast.underfundingStarts', 'Underfunding starts'),
       value: primaryUnderfundingStartYear ?? t('v2Forecast.noUnderfunding', 'None'),
-    },
-    {
-      key: 'current-fee',
-      label: t('v2Forecast.currentFeeLevel'),
-      value: formatPrice(scenario.baselinePriceTodayCombined ?? 0),
-    },
-    {
-      key: 'peak-gap',
-      label: t('v2Forecast.peakCumulativeGap', 'Peak cumulative gap'),
-      value: formatEur(scenario.feeSufficiency.cumulativeCash.peakGap),
     },
     {
       key: 'total-investments',

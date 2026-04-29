@@ -5,8 +5,61 @@
   max-width: 100%;
 }
 
+.v2-vesinvest-investment-picture {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.v2-vesinvest-investment-picture article {
+  align-content: start;
+}
+
+.v2-vesinvest-investment-picture strong {
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
 .v2-vesinvest-panel-compact {
   gap: 12px;
+}
+
+.v2-tariff-allocation-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-card-radius);
+  background: var(--v2-surface-strong);
+}
+
+.v2-tariff-allocation-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--v2-border);
+  border-radius: 8px;
+  background: var(--v2-surface);
+}
+
+.v2-tariff-allocation-mode button {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--v2-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.v2-tariff-allocation-mode button.active {
+  background: #123b80;
+  color: #fff;
+}
+
+.v2-tariff-allocation-mode button:disabled {
+  cursor: default;
 }
 
 .v2-vesinvest-identity-form {
@@ -79,6 +132,12 @@
   min-width: 7.25rem;
   text-align: right;
   white-space: nowrap;
+}
+
+@media (max-width: 1180px) {
+  .v2-vesinvest-investment-picture {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .v2-vesinvest-matrix-group-row td {

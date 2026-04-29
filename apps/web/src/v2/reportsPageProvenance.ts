@@ -46,7 +46,7 @@ export function createBaselineDatasetSourceLabel(t: TFunction) {
       return withDocumentEvidence(
         t(
           'v2Reports.baselineSourceDocumentWorkbookMixed',
-          'Source document + workbook repair',
+          'Source document + Excel repair',
         ),
         [documentFileName],
       );
@@ -55,7 +55,7 @@ export function createBaselineDatasetSourceLabel(t: TFunction) {
       return appendDetailSuffix(
         t(
           'v2Reports.baselineSourceStatementWorkbookMixed',
-          'Statement PDF + workbook repair',
+          'Statement PDF + Excel repair',
         ),
         [
           getImportedFileNameByKind(
@@ -94,10 +94,10 @@ export function createBaselineDatasetSourceLabel(t: TFunction) {
       provenance?.kind === 'excel_import'
     ) {
       return t('v2Reports.baselineSourceWorkbookImport', {
-        defaultValue: 'Workbook import ({{fileName}})',
+        defaultValue: 'Excel repair ({{fileName}})',
         fileName: normalizeImportedFileName(
           provenance.fileName,
-          'Excel workbook',
+          'Excel file',
         ),
       });
     }
@@ -202,7 +202,7 @@ export function createDatasetPublicationNote(t: TFunction) {
       return appendDetailSuffix(
         t(
           'v2Reports.baselineDocumentWorkbookDetail',
-          'Document-backed values and workbook repairs both affect this year.',
+          'Document-backed values and Excel repairs both affect this year.',
         ),
         [documentFileName, ...documentEvidenceDetail],
       );
@@ -211,7 +211,7 @@ export function createDatasetPublicationNote(t: TFunction) {
       return appendDetailSuffix(
         t(
           'v2Reports.baselineStatementWorkbookDetail',
-          'Statement-backed values and workbook repairs both affect this year.',
+          'Statement-backed values and Excel repairs both affect this year.',
         ),
         [
           getImportedFileNameByKind(
@@ -257,10 +257,10 @@ export function createDatasetPublicationNote(t: TFunction) {
       dataset.provenance?.kind === 'excel_import'
     ) {
       return t('v2Reports.baselineWorkbookImportDetail', {
-        defaultValue: 'Workbook-backed values came from {{fileName}}',
+        defaultValue: 'Excel-backed values came from {{fileName}}',
         fileName: normalizeImportedFileName(
           dataset.provenance.fileName,
-          'Excel workbook',
+          'Excel file',
         ),
       });
     }

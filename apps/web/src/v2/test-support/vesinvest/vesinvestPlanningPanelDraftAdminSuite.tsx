@@ -362,14 +362,19 @@ export function registerVesinvestPlanningPanelDraftAdminSuite() {
     const projectCodeInput = container.querySelector(
       'input[name="vesinvest-project-code-0"]',
     ) as HTMLInputElement | null;
-    const allocationInput = container.querySelector(
-      'input[name="vesinvest-allocation-0-totalAmount-2026"]',
-    ) as HTMLInputElement | null;
-
     expect(projectNameInput).toBeTruthy();
     expect(projectCodeInput).toBeTruthy();
-    expect(allocationInput).toBeTruthy();
+    expect(
+      screen.getAllByRole('button', { name: 'Edit yearly allocations' }).length,
+    ).toBeGreaterThan(0);
 
+    fireEvent.click(screen.getAllByRole('button', { name: 'Edit yearly allocations' })[0]!);
+    const allocationDialog = screen.getByRole('dialog', {
+      name: 'Edit yearly allocations',
+    });
+    const allocationInput = within(allocationDialog).getByLabelText(
+      'P-101 2026 Total',
+    ) as HTMLInputElement;
     fireEvent.change(allocationInput!, { target: { value: '250000' } });
 
     await waitFor(() => {
@@ -377,6 +382,8 @@ export function registerVesinvestPlanningPanelDraftAdminSuite() {
       expect(projectNameInput?.value).toBe('Fresh project');
       expect(allocationInput?.value).toBe('250000');
     });
+    expect(allocationDialog.textContent).toMatch(/250\s*000/u);
+    fireEvent.click(within(allocationDialog).getByRole('button', { name: 'Close' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Vesinvest plan' }));
 
@@ -515,17 +522,7 @@ export function registerVesinvestPlanningPanelDraftAdminSuite() {
     expect(screen.getByRole('dialog')).toBeTruthy();
   });
 
-  it('focuses the first yearly allocation after adding a new project', async () => {
-    const requestAnimationFrameSpy = vi
-      .spyOn(window, 'requestAnimationFrame')
-      .mockImplementation((callback: FrameRequestCallback) => {
-        callback(0);
-        return 1;
-      });
-    const cancelAnimationFrameSpy = vi
-      .spyOn(window, 'cancelAnimationFrame')
-      .mockImplementation(() => undefined);
-
+  it('keeps yearly allocation editing explicit after adding a new project', async () => {
     render(
       <VesinvestPlanningPanel
         t={t as any}
@@ -545,14 +542,13 @@ export function registerVesinvestPlanningPanelDraftAdminSuite() {
     });
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Add project' }));
 
-    await waitFor(() => {
-      expect(document.activeElement).toBe(
-        screen.getByLabelText('P-002 2026 Total'),
-      );
-    });
-
-    requestAnimationFrameSpy.mockRestore();
-    cancelAnimationFrameSpy.mockRestore();
+    expect(screen.queryByLabelText('P-002 2026 Total')).toBeNull();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Edit yearly allocations' })[0]!);
+    expect(
+      within(screen.getByRole('dialog', { name: 'Edit yearly allocations' })).getByLabelText(
+        'P-002 2026 Total',
+      ),
+    ).toBeTruthy();
   });
 
   it('saves an org-scoped group override from the admin editor', async () => {
@@ -656,5 +652,3 @@ export function registerVesinvestPlanningPanelDraftAdminSuite() {
 
   });
 }
-
-

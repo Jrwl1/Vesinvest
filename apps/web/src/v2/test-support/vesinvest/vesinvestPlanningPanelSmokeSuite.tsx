@@ -372,14 +372,19 @@ export function registerVesinvestPlanningPanelSmokeSuite() {
     const projectCodeInput = container.querySelector(
       'input[name="vesinvest-project-code-0"]',
     ) as HTMLInputElement | null;
-    const allocationInput = container.querySelector(
-      'input[name="vesinvest-allocation-0-totalAmount-2026"]',
-    ) as HTMLInputElement | null;
-
     expect(projectNameInput).toBeTruthy();
     expect(projectCodeInput).toBeTruthy();
-    expect(allocationInput).toBeTruthy();
+    expect(
+      screen.getAllByRole('button', { name: 'Edit yearly allocations' }).length,
+    ).toBeGreaterThan(0);
 
+    fireEvent.click(screen.getAllByRole('button', { name: 'Edit yearly allocations' })[0]!);
+    const allocationDialog = screen.getByRole('dialog', {
+      name: 'Edit yearly allocations',
+    });
+    const allocationInput = within(allocationDialog).getByLabelText(
+      'P-101 2026 Total',
+    ) as HTMLInputElement;
     fireEvent.change(allocationInput!, { target: { value: '250000' } });
 
     await waitFor(() => {
@@ -387,6 +392,8 @@ export function registerVesinvestPlanningPanelSmokeSuite() {
       expect(projectNameInput?.value).toBe('Fresh project');
       expect(allocationInput?.value).toBe('250000');
     });
+    expect(allocationDialog.textContent).toMatch(/250\s*000/u);
+    fireEvent.click(within(allocationDialog).getByRole('button', { name: 'Close' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Vesinvest plan' }));
 

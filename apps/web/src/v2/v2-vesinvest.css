@@ -421,6 +421,41 @@
   background: var(--v2-surface, #fff);
 }
 
+.v2-vesinvest-row-actions {
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.v2-vesinvest-allocation-editor {
+  width: min(920px, calc(100vw - 48px));
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: hidden;
+}
+
+.v2-vesinvest-allocation-totals {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.v2-vesinvest-allocation-editor-wrap {
+  max-height: min(560px, calc(100vh - 260px));
+  overflow: auto;
+}
+
+.v2-vesinvest-allocation-editor-table {
+  min-width: 720px;
+}
+
+.v2-vesinvest-allocation-editor-table th:first-child,
+.v2-vesinvest-allocation-editor-table td:first-child {
+  width: 92px;
+}
+
+.v2-vesinvest-allocation-input {
+  min-width: 13ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .v2-vesinvest-section {
   display: grid;
   gap: 12px;

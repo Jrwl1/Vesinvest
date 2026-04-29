@@ -59,6 +59,25 @@ export function VesinvestPlanningInvestmentWorkspace({
     value: number,
   ) => void;
 }) {
+  const [allocationEditorProjectIndex, setAllocationEditorProjectIndex] =
+    React.useState<number | null>(null);
+  const allocationEditorProject =
+    allocationEditorProjectIndex == null
+      ? null
+      : draft.projects[allocationEditorProjectIndex] ?? null;
+  const allocationEditorTotals = React.useMemo(() => {
+    if (!allocationEditorProject) {
+      return { totalAmount: 0, waterAmount: 0, wastewaterAmount: 0 };
+    }
+    return allocationEditorProject.allocations.reduce(
+      (sum, item) => ({
+        totalAmount: sum.totalAmount + (item.totalAmount ?? 0),
+        waterAmount: sum.waterAmount + (item.waterAmount ?? 0),
+        wastewaterAmount: sum.wastewaterAmount + (item.wastewaterAmount ?? 0),
+      }),
+      { totalAmount: 0, waterAmount: 0, wastewaterAmount: 0 },
+    );
+  }, [allocationEditorProject]);
   const bucketLabel = (key: string) =>
     key === 'years_1_5' || key === 'years_0_5'
       ? t('v2Vesinvest.lawBucketYears05', 'Years 1-5')
@@ -322,18 +341,27 @@ export function VesinvestPlanningInvestmentWorkspace({
                   <td>{formatEur(project.wastewaterAmount ?? 0)}</td>
                   <td>{formatEur(project.totalAmount ?? 0)}</td>
                   <td>
-                    <button
-                      type="button"
-                      className="v2-btn v2-btn-small v2-btn-danger"
-                      onClick={() =>
-                        setDraft((current) => ({
-                          ...current,
-                          projects: current.projects.filter((_, projectIndex) => projectIndex !== index),
-                        }))
-                      }
-                    >
-                      {t('common.delete', 'Delete')}
-                    </button>
+                    <div className="v2-actions-row v2-vesinvest-row-actions">
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small"
+                        onClick={() => setAllocationEditorProjectIndex(index)}
+                      >
+                        {t('v2Vesinvest.editYearlyAllocations', 'Edit yearly allocations')}
+                      </button>
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small v2-btn-danger"
+                        onClick={() =>
+                          setDraft((current) => ({
+                            ...current,
+                            projects: current.projects.filter((_, projectIndex) => projectIndex !== index),
+                          }))
+                        }
+                      >
+                        {t('common.delete', 'Delete')}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -409,38 +437,116 @@ export function VesinvestPlanningInvestmentWorkspace({
                   />
                 </label>
               </div>
-              <div className="v2-vesinvest-table-wrap">
-                <table className="v2-vesinvest-table v2-vesinvest-allocation-table">
-                  <thead>
-                    <tr>
-                      <th>{t('v2Vesinvest.allocationMetric', 'Split')}</th>
-                      {draft.horizonYearsRange.map((year) => (
-                        <th key={year}>{year}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(['totalAmount', 'waterAmount', 'wastewaterAmount'] as const).map((fieldKey) => (
-                      <tr key={`${project.code}-${fieldKey}`}>
-                        <td>{allocationFieldLabel(t, fieldKey)}</td>
-                        {draft.horizonYearsRange.map((year) => {
-                          const allocation = project.allocations.find((item) => item.year === year) ?? null;
-                          return (
-                            <td key={`${project.code}-${fieldKey}-${year}`}>
+              <div className="v2-actions-row">
+                <button
+                  type="button"
+                  className="v2-btn"
+                  onClick={() => setAllocationEditorProjectIndex(projectIndex)}
+                >
+                  {t('v2Vesinvest.editYearlyAllocations', 'Edit yearly allocations')}
+                </button>
+              </div>
+            </section>
+          ))}
+        </VesinvestProjectDetailsSurface>
+      ) : null}
+
+      {allocationEditorProject && allocationEditorProjectIndex != null ? (
+        <div
+          className="v2-modal-backdrop"
+          onClick={() => setAllocationEditorProjectIndex(null)}
+        >
+          <div
+            className="v2-modal-card v2-vesinvest-allocation-editor"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="vesinvest-allocation-editor-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="v2-section-header">
+              <div>
+                <p className="v2-overview-eyebrow">{allocationEditorProject.code}</p>
+                <h3 id="vesinvest-allocation-editor-title">
+                  {t('v2Vesinvest.editYearlyAllocations', 'Edit yearly allocations')}
+                </h3>
+                <p className="v2-muted">
+                  {allocationEditorProject.name ||
+                    t('v2Vesinvest.projectUnnamed', 'Unnamed project')}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="v2-btn"
+                onClick={() => setAllocationEditorProjectIndex(null)}
+              >
+                {t('common.close', 'Close')}
+              </button>
+            </div>
+
+            <div className="v2-overview-year-summary-grid v2-vesinvest-allocation-totals">
+              <div>
+                <span>{t('v2Vesinvest.projectTotal', 'Total')}</span>
+                <strong>{formatEur(allocationEditorTotals.totalAmount)}</strong>
+              </div>
+              <div>
+                <span>{t('v2Vesinvest.projectWaterTotal', 'Water total')}</span>
+                <strong>{formatEur(allocationEditorTotals.waterAmount)}</strong>
+              </div>
+              <div>
+                <span>{t('v2Vesinvest.projectWastewaterTotal', 'Wastewater total')}</span>
+                <strong>{formatEur(allocationEditorTotals.wastewaterAmount)}</strong>
+              </div>
+              <div>
+                <span>{t('v2Vesinvest.fundedYears', 'Funded years')}</span>
+                <strong>
+                  {allocationEditorProject.allocations
+                    .filter(
+                      (allocation) =>
+                        allocation.totalAmount > 0 ||
+                        allocation.waterAmount > 0 ||
+                        allocation.wastewaterAmount > 0,
+                    )
+                    .map((allocation) => allocation.year)
+                    .join(', ') || t('v2Vesinvest.none', 'None')}
+                </strong>
+              </div>
+            </div>
+
+            <div className="v2-vesinvest-table-wrap v2-vesinvest-allocation-editor-wrap">
+              <table className="v2-vesinvest-table v2-vesinvest-allocation-editor-table">
+                <thead>
+                  <tr>
+                    <th>{t('common.year', 'Year')}</th>
+                    <th>{allocationFieldLabel(t, 'totalAmount')}</th>
+                    <th>{allocationFieldLabel(t, 'waterAmount')}</th>
+                    <th>{allocationFieldLabel(t, 'wastewaterAmount')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {draft.horizonYearsRange.map((year) => {
+                    const allocation =
+                      allocationEditorProject.allocations.find((item) => item.year === year) ??
+                      null;
+                    return (
+                      <tr key={`${allocationEditorProject.code}-${year}`}>
+                        <td>{year}</td>
+                        {(['totalAmount', 'waterAmount', 'wastewaterAmount'] as const).map(
+                          (fieldKey) => (
+                            <td key={`${allocationEditorProject.code}-${year}-${fieldKey}`}>
                               <input
-                                id={`vesinvest-allocation-${projectIndex}-${fieldKey}-${year}`}
-                                name={`vesinvest-allocation-${projectIndex}-${fieldKey}-${year}`}
-                                aria-label={`${project.code} ${year} ${allocationFieldLabel(
+                                id={`vesinvest-allocation-${allocationEditorProjectIndex}-${fieldKey}-${year}`}
+                                name={`vesinvest-allocation-${allocationEditorProjectIndex}-${fieldKey}-${year}`}
+                                aria-label={`${allocationEditorProject.code} ${year} ${allocationFieldLabel(
                                   t,
                                   fieldKey,
                                 )}`}
-                                className="v2-input"
+                                className="v2-input v2-number-input v2-vesinvest-allocation-input"
                                 type="number"
                                 min={0}
                                 value={allocation?.[fieldKey] ?? 0}
                                 onChange={(event) =>
                                   updateProjectAllocation(
-                                    projectIndex,
+                                    allocationEditorProjectIndex,
                                     year,
                                     fieldKey,
                                     Number(event.target.value || 0),
@@ -448,16 +554,16 @@ export function VesinvestPlanningInvestmentWorkspace({
                                 }
                               />
                             </td>
-                          );
-                        })}
+                          ),
+                        )}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          ))}
-        </VesinvestProjectDetailsSurface>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       ) : null}
     </>
   );

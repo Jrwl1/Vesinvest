@@ -128,7 +128,27 @@ Implement the v3 Vesinvest V2 frontend target across the shell, Overview, Asset 
     - Forecast and Reports scenario dates now use the active app locale; `src/v2/dateFormatting.test.ts` covers Swedish `29 apr. 2026` formatting.
     - Targeted hostile re-audit after these fixes found no remaining P0/P1/P2 findings; duplicate shell/status badges are accepted residual P3 polish, not a workflow-truth blocker.
     - `pnpm --filter ./apps/web test -- src/v2/AppShellV2.bootstrap-routing.locks.test.tsx src/v2/AppShellV2.saved-fee-path.test.tsx src/v2/ReportsPageV2.preview-detail.test.tsx src/v2/ReportsPageV2.export-readiness.test.tsx src/v2/EnnustePageV2.cockpit-layout.test.tsx src/v2/VesinvestPlanningPanel.test.tsx src/v2/TariffPlanPageV2.test.tsx src/v2/displayNames.test.ts src/v2/dateFormatting.test.ts src/i18n/locales/localeIntegrity.test.ts` passed.
+- Live deployment hostile audit follow-up:
+  - Target: deployed `vesipolku.jrwl.io` and current `codex/frontend` tree after merge/push.
+  - Scope remains desktop-first; mobile polish is still out of scope.
+  - Findings to close before commit:
+    - Asset Management must not imply evidence readiness when only the baseline is verified.
+    - Asset Management handoff must sync to Forecast, not route directly to Tariff Plan.
+    - Reports must allow creating the first ready package from the preview/list surface.
+    - Tariff Plan accepted state must not keep Save/Accept actions live when nothing changed.
+    - Tariff Plan must explain annual-result price versus cumulative cash floor when they diverge.
+    - Login/auth and V2 Swedish/Finnish paths must avoid raw English fallback leaks.
   - Final mechanical gates after hostile-audit fixes:
     - `pnpm smoke:v2` passed.
     - `pnpm check:harness` passed.
     - `git diff --check` passed with CRLF normalization warnings only.
+  - Follow-up fixes after independent 5.5 xhigh audit:
+    - Reports first-package creation now requires a saved fee-path plan, saved scenario id, and `verified` pricing status before creating/exporting a package.
+    - Login no longer renders raw backend messages for credential or generic API failures.
+    - Reports aggregate smoke coverage now asserts generic evidence language and current package-export guard copy.
+  - Follow-up verification:
+    - `pnpm --filter ./apps/web test -- src/v2/ReportsPageV2.test.tsx src/v2/ReportsPageV2.routing-empty-state.test.tsx src/v2/ReportsPageV2.preview-detail.test.tsx src/v2/ReportsPageV2.export-readiness.test.tsx src/v2/TariffPlanPageV2.test.tsx src/components/LoginForm.test.tsx src/i18n/locales/localeIntegrity.test.ts` passed.
+    - `pnpm --filter ./apps/web test -- src/v2/VesinvestPlanningPanel.test.tsx src/v2/VesinvestPlanningPanel.evidence-workflow.test.tsx src/v2/VesinvestPlanningPanel.report-handoff.test.tsx src/v2/AppShellV2.bootstrap-routing.locks.test.tsx` passed.
+    - `pnpm --filter ./apps/web exec tsc --noEmit --pretty false` passed.
+    - `pnpm smoke:v2` passed.
+    - Final independent 5.5 xhigh re-audit returned no P0/P1/P2 findings.

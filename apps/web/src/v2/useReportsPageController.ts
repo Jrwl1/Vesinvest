@@ -22,12 +22,14 @@ import { readForecastRuntimeState } from './reportReadinessModel';
 export type ReportsPageControllerOptions = {
   refreshToken: number;
   focusedReportId: string | null;
+  savedFeePathPlanId?: string | null;
   savedFeePathScenarioId?: string | null;
 };
 
 export const useReportsPageController = ({
   refreshToken,
   focusedReportId,
+  savedFeePathPlanId,
   savedFeePathScenarioId,
 }: ReportsPageControllerOptions) => {
   const { t, i18n } = useTranslation();
@@ -261,6 +263,54 @@ export const useReportsPageController = ({
     }
   }, [loadReports, previewVariant, reportLocaleLanguage, selectedReport, t]);
 
+  const handleCreateFirstPackage = React.useCallback(async () => {
+    const scenarioId = savedFeePathScenarioId ?? emptyStateScenario?.id ?? null;
+    if (!savedFeePathPlanId || !scenarioId) {
+      setError(
+        t(
+          'v2Reports.errorCreateFirstPackageMissingContext',
+          'A ready Vesinvest plan and computed forecast are required before creating a report package.',
+        ),
+      );
+      return;
+    }
+
+    setCreatingPreviewPackage(true);
+    setError(null);
+    try {
+      const created = await createReportV2({
+        vesinvestPlanId: savedFeePathPlanId,
+        ennusteId: scenarioId,
+        variant: previewVariant,
+        locale: normalizeReportLocale(reportLocaleLanguage),
+        title: buildDefaultPackageReportTitle(
+          t,
+          emptyStateScenario?.name ?? scenarioId,
+          previewVariant,
+        ),
+      });
+      await loadReports(created.reportId, true);
+      setPreviewVariant(created.variant);
+    } catch (err) {
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : t('v2Reports.errorCreateVariantFailed', 'Failed to create report package.'),
+      );
+    } finally {
+      setCreatingPreviewPackage(false);
+    }
+  }, [
+    emptyStateScenario?.id,
+    emptyStateScenario?.name,
+    loadReports,
+    previewVariant,
+    reportLocaleLanguage,
+    savedFeePathPlanId,
+    savedFeePathScenarioId,
+    t,
+  ]);
+
   const handlePreviewVariantChange = React.useCallback(
     (variant: ReportVariant) => {
       setPreviewVariant(variant);
@@ -285,6 +335,7 @@ export const useReportsPageController = ({
     emptyStateScenario,
     error,
     handleCreatePreviewPackage,
+    handleCreateFirstPackage,
     handleDownloadPdf,
     loadReports,
     loadingDetail,

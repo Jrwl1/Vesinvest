@@ -35,6 +35,7 @@ type Params = {
   creatingPreviewPackage: boolean;
   downloadingPdf: boolean;
   emptyStateScenario: V2ForecastScenario | null;
+  handleCreateFirstPackage: () => Promise<void> | void;
   handleCreatePreviewPackage: () => Promise<void> | void;
   handleDownloadPdf: () => Promise<void> | void;
   loadReports: () => Promise<void> | void;
@@ -68,6 +69,7 @@ export function useReportsPageViewModel({
   creatingPreviewPackage,
   downloadingPdf,
   emptyStateScenario,
+  handleCreateFirstPackage,
   handleCreatePreviewPackage,
   handleDownloadPdf,
   loadReports,
@@ -136,6 +138,9 @@ export function useReportsPageViewModel({
     if (!savedFeePathPlanId) {
       return savedFeePathPlanRequired ? 'missingActivePlan' as const : null;
     }
+    if (!savedFeePathScenarioId) {
+      return 'missingScenario' as const;
+    }
     if (savedFeePathReportConflictActive) {
       return 'staleSavedFeePath' as const;
     }
@@ -152,8 +157,7 @@ export function useReportsPageViewModel({
       return 'missingAcceptedTariffPlan' as const;
     }
     if (
-      (savedFeePathPricingStatus != null &&
-        savedFeePathPricingStatus !== 'verified') ||
+      savedFeePathPricingStatus !== 'verified' ||
       savedFeePathBaselineChangedSinceAcceptedRevision ||
       savedFeePathInvestmentPlanChangedSinceFeeRecommendation
     ) {
@@ -168,6 +172,7 @@ export function useReportsPageViewModel({
     savedFeePathPlanId,
     savedFeePathPlanRequired,
     savedFeePathPricingStatus,
+    savedFeePathScenarioId,
     savedFeePathTariffPlanStatus,
     savedFeePathReportConflictActive,
   ]);
@@ -186,7 +191,10 @@ export function useReportsPageViewModel({
     ],
   );
 
-  const emptyStateCanCreateReport = emptyStateReportReadinessReason == null;
+  const emptyStateCanCreateReport =
+    emptyStateReportReadinessReason == null &&
+    Boolean(savedFeePathPlanId) &&
+    Boolean(savedFeePathScenarioId);
   const emptyStateForecastLabel = React.useMemo(() => {
     switch (emptyStateForecastFreshnessState) {
       case 'current':
@@ -305,6 +313,12 @@ export function useReportsPageViewModel({
   }, [emptyStateReportReadinessReason, savedFeePathTariffPlanStatus, t]);
 
   const emptyStateCtaLabel = React.useMemo(() => {
+    if (emptyStateCanCreateReport) {
+      return t(
+        'v2Reports.createFirstPackage',
+        'Create report package',
+      );
+    }
     switch (emptyStateReportReadinessReason) {
       case 'missingActivePlan':
       case 'assetEvidenceIncomplete':
@@ -333,9 +347,13 @@ export function useReportsPageViewModel({
           'Open Forecast to create report',
         );
     }
-  }, [emptyStateReportReadinessReason, t]);
+  }, [emptyStateCanCreateReport, emptyStateReportReadinessReason, t]);
 
   const handleEmptyStateAction = React.useCallback(() => {
+    if (emptyStateCanCreateReport) {
+      void handleCreateFirstPackage();
+      return;
+    }
     if (emptyStateReportReadinessReason === 'missingActivePlan') {
       onGoToAssetManagement?.();
       return;
@@ -357,6 +375,8 @@ export function useReportsPageViewModel({
   }, [
     emptyStateReportReadinessReason,
     emptyStateScenario?.id,
+    emptyStateCanCreateReport,
+    handleCreateFirstPackage,
     onGoToAssetManagement,
     onGoToForecast,
     onGoToOverviewFeePath,
@@ -697,6 +717,8 @@ export function useReportsPageViewModel({
     listColumnProps: {
       emptyStateComputedVersionLabel,
       emptyStateCtaLabel,
+      emptyStateActionBusy: creatingPreviewPackage,
+      emptyStateActionBusyLabel: t('v2Reports.creatingPackage', 'Creating package...'),
       emptyStateForecastLabel,
       emptyStateForecastToneClass,
       emptyStateReportReadinessHint,

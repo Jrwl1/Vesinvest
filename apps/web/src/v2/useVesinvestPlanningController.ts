@@ -595,6 +595,48 @@ export const useVesinvestPlanningController = ({
     },
     [draft, linkedOrg, onGoToForecast, onPlansChanged, plan?.id, refreshSummaries, t, baselineSnapshot],
   );
+  const reportReadinessHint = React.useMemo(() => {
+    switch (reportReadinessReason) {
+      case 'unsavedChanges':
+        return t(
+          'v2Forecast.unsavedHint',
+          'You have unsaved changes. Save and compute results before creating report.',
+        );
+      case 'classificationReviewRequired':
+        return t(
+          'v2Forecast.classificationReviewRequired',
+          'Review and save the Vesinvest class plan before creating a report.',
+        );
+      case 'missingDepreciationSnapshots':
+        return t(
+          'v2Forecast.depreciationSnapshotsMissingHint',
+          'Refresh the synced Vesinvest class plan and recompute results before creating report.',
+        );
+      case 'staleComputeToken':
+        return t(
+          'v2Forecast.staleComputeHint',
+          'Saved inputs changed after the last calculation. Recompute results before creating report.',
+        );
+      case 'assetEvidenceIncomplete':
+        return t(
+          'v2Vesinvest.assetEvidenceReportBlocked',
+          'Complete asset-management evidence before creating reports.',
+        );
+      case 'missingTariffPlan':
+        return t(
+          'v2TariffPlan.acceptBeforeReports',
+          'Accept the tariff plan before creating reports.',
+        );
+      case null:
+      case undefined:
+        return null;
+      default:
+        return t(
+          'v2Forecast.computeBeforeReport',
+          'Recompute results before creating report.',
+        );
+    }
+  }, [reportReadinessReason, t]);
   const handleCreateReport = React.useCallback(async () => {
     if (!plan?.id || !plan.selectedScenarioId || !linkedScenario) {
       setError(
@@ -605,40 +647,11 @@ export const useVesinvestPlanningController = ({
     }
     if (!canCreateReport) {
       const message =
-        reportReadinessReason === 'unsavedChanges'
-          ? t(
-              'v2Forecast.unsavedHint',
-              'You have unsaved changes. Save and compute results before creating report.',
-            )
-          : reportReadinessReason === 'classificationReviewRequired'
-            ? t(
-                'v2Forecast.classificationReviewRequired',
-                'Review and save the Vesinvest class plan before creating a report.',
-              )
-            : reportReadinessReason === 'missingDepreciationSnapshots'
-              ? t(
-                  'v2Forecast.depreciationSnapshotsMissingHint',
-                  'Refresh the synced Vesinvest class plan and recompute results before creating report.',
-                )
-            : reportReadinessReason === 'staleComputeToken'
-              ? t(
-                  'v2Forecast.staleComputeHint',
-                  'Saved inputs changed after the last calculation. Recompute results before creating report.',
-                )
-              : reportReadinessReason === 'assetEvidenceIncomplete'
-                ? t(
-                    'v2Vesinvest.assetEvidenceReportBlocked',
-                    'Complete asset-management evidence before creating reports.',
-                  )
-              : reportReadinessReason === 'missingTariffPlan'
-                ? t(
-                    'v2TariffPlan.acceptBeforeReports',
-                    'Accept the tariff plan before creating reports.',
-                  )
-                : t(
-                    'v2Forecast.computeBeforeReport',
-                    'Recompute results before creating report.',
-                  );
+        reportReadinessHint ??
+        t(
+          'v2Forecast.computeBeforeReport',
+          'Recompute results before creating report.',
+        );
       setError(message);
       setInfo(null);
       return;
@@ -712,6 +725,7 @@ export const useVesinvestPlanningController = ({
     plan?.selectedScenarioId,
     refreshSummaries,
     reportReadinessReason,
+    reportReadinessHint,
     t,
   ]);
   const setDraftField = React.useCallback(
@@ -742,7 +756,7 @@ export const useVesinvestPlanningController = ({
   const projectActionClass = shouldLeadAddProject ? 'v2-btn v2-btn-primary' : 'v2-btn';
   const saveActionClass = shouldLeadSave ? 'v2-btn v2-btn-primary' : 'v2-btn';
   const syncActionClass = shouldLeadSync ? 'v2-btn v2-btn-primary' : 'v2-btn';
-  const reportActionClass = 'v2-btn';
+  const reportActionClass = canCreateReport ? 'v2-btn v2-btn-primary' : 'v2-btn';
 
   return {
     groups,
@@ -798,6 +812,7 @@ export const useVesinvestPlanningController = ({
     hasSavedPricingOutput,
     revisionStatusMessage,
     reportReadinessReason,
+    reportReadinessHint,
     canCreateReport,
     updateProject,
     updateGroupDraft,

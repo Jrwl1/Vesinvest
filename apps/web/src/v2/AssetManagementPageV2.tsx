@@ -19,8 +19,8 @@ type Props = {
 
 export const AssetManagementPageV2: React.FC<Props> = ({
   isAdmin,
-  onGoToForecast: _onGoToForecast,
-  onGoToTariffPlan,
+  onGoToForecast,
+  onGoToTariffPlan: _onGoToTariffPlan,
   onGoToReports,
   onWorkspaceChanged,
 }) => {
@@ -71,7 +71,7 @@ export const AssetManagementPageV2: React.FC<Props> = ({
         isAdmin={isAdmin}
         planningContext={planningContext}
         linkedOrg={importStatus?.link ?? null}
-        onGoToForecast={onGoToTariffPlan}
+        onGoToForecast={onGoToForecast}
         onGoToReports={onGoToReports}
         onPlansChanged={loadWorkspace}
       />

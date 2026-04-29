@@ -354,7 +354,7 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
       />,
     );
 
-    await screen.findByRole('heading', { name: 'Utility name' });
+    await screen.findByText('Utility name');
     expect(screen.getByRole('heading', { name: 'Plan state' })).toBeTruthy();
     expect(screen.queryByText('Plan revision')).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Class-owned depreciation plan' })).toBeNull();
@@ -375,7 +375,7 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
       />,
     );
 
-    await screen.findByRole('heading', { name: 'Utility name' });
+    await screen.findByText('Utility name');
     expect(screen.getByText('Plan revision')).toBeTruthy();
     expect(screen.getAllByRole('button', { name: 'Add project' }).length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: 'Grouped horizon layout' })).toBeTruthy();
@@ -431,7 +431,7 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
     fireEvent.change(projectNameInput, {
       target: { value: 'Updated rehabilitation' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Open Tariff Plan' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sync to Forecast' }));
 
     await waitFor(() => {
       expect(updateVesinvestPlanV2).toHaveBeenCalledWith(
@@ -586,6 +586,7 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
       makeSummary({
         selectedScenarioId: 'scenario-1',
         pricingStatus: 'verified',
+        tariffPlanStatus: 'accepted',
         baselineStatus: 'verified',
         investmentPlanChangedSinceFeeRecommendation: false,
       }),
@@ -611,15 +612,15 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
     const openReportsButton = await screen.findByRole('button', {
       name: 'Open Reports',
     });
-    const openPricingButton = screen.getByRole('button', {
-      name: 'Open Tariff Plan',
+    const syncToForecastButton = screen.getByRole('button', {
+      name: 'Sync to Forecast',
     });
     const newRevisionButton = screen.getByRole('button', {
       name: 'New revision',
     });
 
-    expect(openReportsButton.className).not.toContain('v2-btn-primary');
-    expect(openPricingButton.className).toContain('v2-btn-primary');
+    expect(openReportsButton.className).toContain('v2-btn-primary');
+    expect(syncToForecastButton.className).not.toContain('v2-btn-primary');
     expect(openReportsButton.closest('.v2-actions-row')).not.toBe(
       newRevisionButton.closest('.v2-actions-row'),
     );
@@ -734,7 +735,7 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
 
     await screen.findByDisplayValue('Main rehabilitation');
     expect(
-      (screen.getByRole('button', { name: 'Open Tariff Plan' }) as HTMLButtonElement)
+      (screen.getByRole('button', { name: 'Sync to Forecast' }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
     expect(

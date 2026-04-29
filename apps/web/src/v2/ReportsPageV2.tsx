@@ -51,6 +51,7 @@ export const ReportsPageV2: React.FC<Props> = ({
     downloadingPdf,
     emptyStateScenario,
     error,
+    handleCreateFirstPackage,
     handleCreatePreviewPackage,
     handleDownloadPdf,
     loadReports,
@@ -67,6 +68,7 @@ export const ReportsPageV2: React.FC<Props> = ({
   } = useReportsPageController({
     focusedReportId,
     refreshToken,
+    savedFeePathPlanId,
     savedFeePathScenarioId,
   });
   const { hasSelectedReportLayout, listColumnProps, previewColumnProps } =
@@ -75,6 +77,7 @@ export const ReportsPageV2: React.FC<Props> = ({
       creatingPreviewPackage,
       downloadingPdf,
       emptyStateScenario,
+      handleCreateFirstPackage,
       handleCreatePreviewPackage,
       handleDownloadPdf,
       loadReports,

@@ -363,7 +363,7 @@ export function registerReportsPageV2SmokeSuite() {
     ).toBeTruthy();
     expect(await screen.findByText(/Revenue 95 000 EUR/)).toBeTruthy();
     expect(await screen.findByText(/Operating costs 70 000 EUR/)).toBeTruthy();
-    expect(await screen.findByText('Työkirjaimportti (kva-2024.xlsx)')).toBeTruthy();
+    expect(await screen.findByText('Excel-korjaus (kva-2024.xlsx)')).toBeTruthy();
     expect(await screen.findByText('2026-2030 (5)')).toBeTruthy();
     expect(
       screen.queryByText('Lähivuosien kuluoletukset (muokattava)'),
@@ -391,7 +391,9 @@ export function registerReportsPageV2SmokeSuite() {
     });
 
     expect(
-      await screen.findByText('Tallennettu raportti on valmis vietäväksi.'),
+      await screen.findByText(
+        'Tallennettu raportti on valmis vietäväksi hyväksytystä maksusuunnitelmasta.',
+      ),
     ).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Viranomaispaketti' }));
@@ -402,10 +404,12 @@ export function registerReportsPageV2SmokeSuite() {
         screen.getByRole('button', { name: 'Lataa PDF' }).hasAttribute('disabled'),
       ).toBe(true);
       expect(
-        screen.getByText(/PDF-vienti.+tallennettua raporttiversiota/u),
+        screen.getByText('Luo tämä raporttipaketti ennen PDF:n lataamista.'),
       ).toBeTruthy();
       expect(
-        screen.queryByText('Tallennettu raportti on valmis vietäväksi.'),
+        screen.queryByText(
+          'Tallennettu raportti on valmis vietäväksi hyväksytystä maksusuunnitelmasta.',
+        ),
       ).toBeNull();
     });
   });

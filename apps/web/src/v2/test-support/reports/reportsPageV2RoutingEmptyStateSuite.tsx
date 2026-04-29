@@ -5,12 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReportsPageV2 } from '../../ReportsPageV2';
 
 const downloadReportPdfV2 = vi.fn();
+const createReportV2 = vi.fn();
 const getForecastScenarioV2 = vi.fn();
 const getReportV2 = vi.fn();
 const listForecastScenariosV2 = vi.fn();
 const listReportsV2 = vi.fn();
 
 vi.mock('../../../api', () => ({
+  createReportV2: (...args: unknown[]) => createReportV2(...args),
   downloadReportPdfV2: (...args: unknown[]) => downloadReportPdfV2(...args),
   getForecastScenarioV2: (...args: unknown[]) => getForecastScenarioV2(...args),
   getReportV2: (...args: unknown[]) => getReportV2(...args),
@@ -24,6 +26,7 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
   describe('ReportsPageV2 routing and empty state', () => {
   beforeEach(() => {
     downloadReportPdfV2.mockReset();
+    createReportV2.mockReset();
     getForecastScenarioV2.mockReset();
     getReportV2.mockReset();
     listForecastScenariosV2.mockReset();
@@ -44,6 +47,10 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
         pdfUrl: '/v2/reports/report-1/pdf',
       },
     ]);
+    createReportV2.mockResolvedValue({
+      reportId: 'report-new',
+      variant: 'regulator_package',
+    });
     getReportV2.mockResolvedValue({
       id: 'report-1',
       title: 'Forecast report Water Utility 2026-04-09',
@@ -469,6 +476,7 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
         onGoToForecast={onGoToForecast}
         savedFeePathPlanId="plan-1"
         savedFeePathScenarioId="base-1"
+        savedFeePathPricingStatus="verified"
         savedFeePathTariffPlanStatus="accepted"
         savedFeePathAssetEvidenceReady={true}
         onFocusedReportChange={() => undefined}
@@ -479,10 +487,19 @@ export function registerReportsPageV2RoutingEmptyStateSuite() {
     expect(getForecastScenarioV2).toHaveBeenCalledWith('base-1');
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Avaa Ennuste luodaksesi raportin' }),
+      screen.getByRole('button', { name: 'Luo raporttipaketti' }),
     );
 
-    expect(onGoToForecast).toHaveBeenCalledWith('base-1');
+    await waitFor(() => {
+      expect(createReportV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          vesinvestPlanId: 'plan-1',
+          ennusteId: 'base-1',
+          variant: 'regulator_package',
+        }),
+      );
+    });
+    expect(onGoToForecast).not.toHaveBeenCalled();
   });
 
   it('returns stale saved fee-path report flows back to Overview instead of opening Forecast', async () => {

@@ -17,6 +17,8 @@ type EmptyStateScenario = {
 };
 
 type ReportsListColumnProps = {
+  emptyStateActionBusy: boolean;
+  emptyStateActionBusyLabel: string;
   emptyStateComputedVersionLabel: string;
   emptyStateCtaLabel: string;
   emptyStateForecastLabel: string;
@@ -44,6 +46,8 @@ type ReportsListColumnProps = {
 };
 
 export const ReportsListColumn: React.FC<ReportsListColumnProps> = ({
+  emptyStateActionBusy,
+  emptyStateActionBusyLabel,
   emptyStateComputedVersionLabel,
   emptyStateCtaLabel,
   emptyStateForecastLabel,
@@ -182,8 +186,13 @@ export const ReportsListColumn: React.FC<ReportsListColumnProps> = ({
             <span>{t('v2Overview.wizardContextNext', 'Next')}</span>
             <strong>{emptyStateCtaLabel}</strong>
           </div>
-          <button type="button" className="v2-btn v2-btn-primary" onClick={handleEmptyStateAction}>
-            {emptyStateCtaLabel}
+          <button
+            type="button"
+            className="v2-btn v2-btn-primary"
+            onClick={handleEmptyStateAction}
+            disabled={emptyStateActionBusy}
+          >
+            {emptyStateActionBusy ? emptyStateActionBusyLabel : emptyStateCtaLabel}
           </button>
         </div>
       ) : null}

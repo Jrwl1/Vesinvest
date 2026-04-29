@@ -377,6 +377,17 @@ describe('TariffPlanPageV2', () => {
     await waitFor(() => {
       expect(screen.queryByText('Loading...')).toBeNull();
     });
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Save' }).disabled).toBe(
+      true,
+    );
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', { name: 'Tariff plan accepted' }).disabled,
+    ).toBe(true);
+    expect(
+      screen.getByText(
+        'Annual-result price is the primary tariff target; the cumulative cash floor is higher because it tests cash sufficiency without relying on accumulated surplus.',
+      ),
+    ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open Reports' })).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText('Water price'), {

@@ -201,6 +201,54 @@ describe('LoginForm demo entry states', () => {
     });
   });
 
+  it('localizes credential and backend login failures instead of showing raw API text', async () => {
+    const unauthorized = Object.assign(new Error('Invalid credentials'), {
+      status: 401,
+    });
+    apiMocks.login.mockRejectedValueOnce(unauthorized);
+
+    render(
+      <LoginForm
+        onSuccess={() => undefined}
+        demoState="unavailable"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Email'), {
+      target: { value: 'user@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText('Password'), {
+      target: { value: 'wrong-pass' },
+    });
+    fireEvent.submit(screen.getByRole('button', { name: 'Sign in' }).closest('form')!);
+
+    expect(await screen.findByText('Email or password is incorrect.')).toBeTruthy();
+    expect(screen.queryByText('Invalid credentials')).toBeNull();
+
+    cleanup();
+    apiMocks.login.mockRejectedValueOnce(
+      Object.assign(new Error('Request failed (500)'), { status: 500 }),
+    );
+
+    render(
+      <LoginForm
+        onSuccess={() => undefined}
+        demoState="unavailable"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Email'), {
+      target: { value: 'user@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText('Password'), {
+      target: { value: 'secret-pass' },
+    });
+    fireEvent.submit(screen.getByRole('button', { name: 'Sign in' }).closest('form')!);
+
+    expect(await screen.findByText('Login failed')).toBeTruthy();
+    expect(screen.queryByText('Request failed (500)')).toBeNull();
+  });
+
   it('uses task-first entry copy without repeating sign-in chrome in the card header', () => {
     render(
       <LoginForm

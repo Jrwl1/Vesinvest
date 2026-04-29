@@ -584,6 +584,10 @@ export const TariffPlanPageV2: React.FC<Props> = ({
           : tariffPlan.updatedAt,
       )
     : '-';
+  const shouldExplainCashFloorConstraint =
+    priceSignal?.cumulativeCashFloorPrice != null &&
+    priceSignal.requiredPriceToday != null &&
+    priceSignal.cumulativeCashFloorPrice > priceSignal.requiredPriceToday;
   const tariffSummaryPanel = tariffPlan ? (
     <aside className="v2-tariff-summary-panel">
       <div className="v2-section-header">
@@ -619,6 +623,14 @@ export const TariffPlanPageV2: React.FC<Props> = ({
           <strong>{formatPrice(priceSignal?.cumulativeCashFloorPrice)}</strong>
         </div>
       </div>
+      {shouldExplainCashFloorConstraint ? (
+        <p className="v2-muted v2-tariff-risk-note">
+          {t(
+            'v2TariffPlan.cashFloorConstraintHint',
+            'Annual-result price is the primary tariff target; the cumulative cash floor is higher because it tests cash sufficiency without relying on accumulated surplus.',
+          )}
+        </p>
+      ) : null}
       <div className="v2-keyvalue-list">
         <div className="v2-keyvalue-row">
           <span>{t('v2TariffPlan.targetRevenue', 'Target additional annual revenue')}</span>
@@ -1010,11 +1022,27 @@ export const TariffPlanPageV2: React.FC<Props> = ({
         </div>
 
         <div className="v2-actions-row">
-          <button type="button" className="v2-btn v2-btn-primary" onClick={() => void saveTariffPlan()} disabled={busy}>
+          <button
+            type="button"
+            className="v2-btn v2-btn-primary"
+            onClick={() => void saveTariffPlan()}
+            disabled={busy || (tariffPlan != null && !hasUnsavedTariffEdits)}
+          >
             {busy ? t('common.loading', 'Loading...') : t('common.save', 'Save')}
           </button>
-          <button type="button" className="v2-btn" onClick={() => void acceptTariffPlan()} disabled={busy || !tariffPlan}>
-            {t('v2TariffPlan.accept', 'Accept tariff plan')}
+          <button
+            type="button"
+            className="v2-btn"
+            onClick={() => void acceptTariffPlan()}
+            disabled={
+              busy ||
+              !tariffPlan ||
+              (tariffPlan.status === 'accepted' && !hasUnsavedTariffEdits)
+            }
+          >
+            {tariffPlan?.status === 'accepted' && !hasUnsavedTariffEdits
+              ? t('v2TariffPlan.acceptedAction', 'Tariff plan accepted')
+              : t('v2TariffPlan.accept', 'Accept tariff plan')}
           </button>
           {canOpenAcceptedReports ? (
             <button type="button" className="v2-btn" onClick={onGoToReports} disabled={busy}>

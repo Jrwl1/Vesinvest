@@ -225,6 +225,8 @@ export function VesinvestPlanningActionRow({
   utilityBindingMissing,
   showDownstreamActions,
   pricingReady,
+  canCreateReport,
+  reportReadinessHint,
   persist,
   onOpenReports,
 }: {
@@ -243,6 +245,8 @@ export function VesinvestPlanningActionRow({
   utilityBindingMissing: boolean;
   showDownstreamActions: boolean;
   pricingReady: boolean;
+  canCreateReport: boolean;
+  reportReadinessHint: string | null;
   persist: (mode: 'create' | 'save' | 'sync' | 'clone') => Promise<void>;
   onOpenReports: () => void;
 }) {
@@ -277,16 +281,20 @@ export function VesinvestPlanningActionRow({
               onClick={() => void persist('sync')}
               disabled={busy || !plan || !pricingReady}
             >
-              {t('v2TariffPlan.openTariffPlan', 'Open Tariff Plan')}
+              {t('v2Vesinvest.syncToForecast', 'Sync to Forecast')}
             </button>
-            <button
-              type="button"
-              className={reportActionClass}
-              onClick={onOpenReports}
-              disabled={busy}
-            >
-              {t('v2Reports.openReports', 'Open Reports')}
-            </button>
+            {canCreateReport ? (
+              <button
+                type="button"
+                className={reportActionClass}
+                onClick={onOpenReports}
+                disabled={busy}
+              >
+                {t('v2Reports.openReports', 'Open Reports')}
+              </button>
+            ) : reportReadinessHint ? (
+              <span className="v2-muted v2-action-hint">{reportReadinessHint}</span>
+            ) : null}
           </>
         ) : null}
       </div>
@@ -404,7 +412,7 @@ export function VesinvestPlanStatusStrip({
         </p>
       </article>
       <article>
-        <h3>{t('v2Vesinvest.baselineState', 'Baseline & evidence')}</h3>
+        <h3>{t('v2Vesinvest.baselineState', 'Baseline')}</h3>
         <p>
           <span
             className={`v2-badge ${toneClass(
@@ -418,10 +426,15 @@ export function VesinvestPlanStatusStrip({
         </p>
         <small>
           {baselineVerified
-            ? t(
-                'v2Vesinvest.baselineVerifiedHint',
-                'Pricing can now be synced from the plan.',
-              )
+            ? assetEvidenceReady
+              ? t(
+                  'v2Vesinvest.baselineVerifiedHint',
+                  'Pricing can now be synced from the plan.',
+                )
+              : t(
+                  'v2Vesinvest.baselineVerifiedEvidencePendingHint',
+                  'Baseline is accepted; asset evidence is still needed before reports are available.',
+                )
             : t(
                 'v2Vesinvest.baselineIncompleteHint',
                 'VEETI, PDF, or manual corrections are still needed before pricing is final.',

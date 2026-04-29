@@ -137,6 +137,8 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
       utilityBindingMissing={controller.utilityBindingMissing}
       showDownstreamActions={controller.showDownstreamActions}
       pricingReady={controller.pricingReady}
+      canCreateReport={controller.canCreateReport}
+      reportReadinessHint={controller.reportReadinessHint}
       persist={controller.persist}
       onOpenReports={onGoToReports}
     />

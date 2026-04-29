@@ -75,13 +75,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           : undefined;
 
       const message =
-        status === 429
+        status === 401 || status === 403
+          ? t(
+              'auth.invalidCredentials',
+              'Email or password is incorrect.',
+            )
+        : status === 429
           ? t(
               'auth.tooManyAttempts',
               'Too many login attempts. Please wait and try again.',
             )
-          : err instanceof Error
-          ? err.message
           : t('auth.loginFailed', 'Login failed');
       setError(message);
     } finally {

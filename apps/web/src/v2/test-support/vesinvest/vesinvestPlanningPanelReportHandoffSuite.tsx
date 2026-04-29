@@ -85,6 +85,16 @@ const linkedOrg = {
   veetiId: 1535,
 };
 
+const completedAssetEvidence = {
+  assetEvidenceState: { notes: 'Asset inventory reviewed and current.' },
+  conditionStudyState: { notes: 'Condition study coverage reviewed.' },
+  maintenanceEvidenceState: { notes: 'Maintenance logs reviewed.' },
+  municipalPlanContext: { notes: 'Municipal planning drivers captured.' },
+  financialRiskState: { notes: 'Financial and delivery risks reviewed.' },
+  publicationState: { notes: 'Publication boundaries confirmed.' },
+  communicationState: { notes: 'Board and customer communication reviewed.' },
+};
+
 const makePlan = (overrides: Record<string, unknown> = {}) => ({
   id: 'plan-1',
   name: 'Water Utility Vesinvest',
@@ -320,6 +330,7 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
     ]);
     getVesinvestPlanV2.mockResolvedValue(
       makePlan({
+        ...completedAssetEvidence,
         selectedScenarioId: 'scenario-1',
         feeRecommendationStatus: 'verified',
       }),
@@ -360,6 +371,7 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
     ]);
     getVesinvestPlanV2.mockResolvedValue(
       makePlan({
+        ...completedAssetEvidence,
         selectedScenarioId: 'scenario-1',
         feeRecommendationStatus: 'verified',
       }),
@@ -419,6 +431,7 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
     ]);
     getVesinvestPlanV2.mockResolvedValue(
       makePlan({
+        ...completedAssetEvidence,
         selectedScenarioId: 'scenario-1',
         feeRecommendationStatus: 'verified',
       }),
@@ -466,6 +479,7 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
     ]);
     getVesinvestPlanV2.mockResolvedValue(
       makePlan({
+        ...completedAssetEvidence,
         selectedScenarioId: 'scenario-1',
         feeRecommendationStatus: 'verified',
       }),
@@ -489,7 +503,7 @@ export function registerVesinvestPlanningPanelReportHandoffSuite() {
     expect(screen.getByText('2023')).toBeTruthy();
 
     const newRevisionButton = await screen.findByRole('button', { name: 'New revision' });
-    const openFeePathButton = await screen.findByRole('button', { name: 'Open Tariff Plan' });
+    const openFeePathButton = await screen.findByRole('button', { name: 'Sync to Forecast' });
     expect(newRevisionButton.closest('.v2-vesinvest-maintenance-actions')).toBeTruthy();
     expect(openFeePathButton.closest('.v2-vesinvest-workflow-actions')).toBeTruthy();
   });

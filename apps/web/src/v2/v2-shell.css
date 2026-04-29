@@ -1066,4 +1066,26 @@
   .v2-workflow-step-danger strong {
     color: var(--v2-danger);
   }
+
+  .v2-header-statuses {
+    gap: 6px;
+  }
+
+  .v2-header-statuses > .v2-badge {
+    border-color: rgba(183, 192, 203, 0.48);
+    background: rgba(255, 255, 255, 0.38);
+    box-shadow: none;
+    font-size: 0.68rem;
+    padding: 3px 7px;
+  }
+
+  .v2-header-statuses > .v2-badge:first-child {
+    border-color: transparent;
+    background: transparent;
+    padding-inline: 0;
+  }
+
+  .v2-header-statuses .v2-org-chip > span {
+    font-size: 0.66rem;
+  }
 }

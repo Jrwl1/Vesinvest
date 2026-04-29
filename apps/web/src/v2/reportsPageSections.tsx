@@ -74,6 +74,7 @@ type ReportsPreviewColumnProps = {
   selectedReport: V2ReportDetail | null;
   selectedReportExportHint: string | null;
   selectedReportGeneratedAt: string;
+  selectedReportTariffPlanLabel: string | null;
   selectedReportPrimaryFeeSignal: ReportFeeSignal | null;
   selectedReportCashFloorSignal: ReportFeeSignal | null;
   selectedReportScenarioName: string;
@@ -117,6 +118,7 @@ export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
   selectedReport,
   selectedReportExportHint,
   selectedReportGeneratedAt,
+  selectedReportTariffPlanLabel,
   selectedReportCashFloorSignal,
   selectedReportPrimaryFeeSignal,
   selectedReportScenarioName,
@@ -194,6 +196,12 @@ export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
                 <span>{t('v2Reports.generatedAtLabel', 'Generated')}</span>
                 <strong>{selectedReportGeneratedAt}</strong>
               </article>
+              {selectedReportTariffPlanLabel ? (
+                <article>
+                  <span>{t('v2Reports.tariffPlanSourceLabel', 'Tariff plan source')}</span>
+                  <strong>{selectedReportTariffPlanLabel}</strong>
+                </article>
+              ) : null}
               <article>
                 <span>{t('projection.scenario', 'Scenario')}</span>
                 <strong>{selectedReportScenarioName}</strong>

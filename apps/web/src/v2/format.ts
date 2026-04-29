@@ -64,5 +64,11 @@ export function formatDateTime(
   if (value == null) return '-';
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString(getActiveLocale());
+  return date.toLocaleString(getActiveLocale(), {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }

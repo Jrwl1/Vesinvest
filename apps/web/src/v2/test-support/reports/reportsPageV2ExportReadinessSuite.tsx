@@ -355,7 +355,9 @@ export function registerReportsPageV2ExportReadinessSuite() {
     });
 
     expect(
-      await screen.findByText('Tallennettu raportti on valmis vietäväksi.'),
+      await screen.findByText(
+        'Tallennettu raportti on valmis vietäväksi hyväksytystä maksusuunnitelmasta.',
+      ),
     ).toBeTruthy();
 
     await waitFor(() => {
@@ -375,7 +377,9 @@ export function registerReportsPageV2ExportReadinessSuite() {
         screen.getByText('Luo tämä raporttipaketti ennen PDF:n lataamista.'),
       ).toBeTruthy();
       expect(
-        screen.queryByText('Tallennettu raportti on valmis vietäväksi.'),
+        screen.queryByText(
+          'Tallennettu raportti on valmis vietäväksi hyväksytystä maksusuunnitelmasta.',
+        ),
       ).toBeNull();
     });
   });
@@ -623,7 +627,9 @@ export function registerReportsPageV2ExportReadinessSuite() {
     });
 
     expect(
-      await screen.findByText('Tallennettu raportti on valmis vietäväksi.'),
+      await screen.findByText(
+        'Tallennettu raportti on valmis vietäväksi hyväksytystä maksusuunnitelmasta.',
+      ),
     ).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Lataa PDF' }));
@@ -634,7 +640,9 @@ export function registerReportsPageV2ExportReadinessSuite() {
         screen.getByRole('button', { name: 'Ladataan PDF...' }).hasAttribute('disabled'),
       ).toBe(true);
       expect(
-        screen.queryByText('Tallennettu raportti on valmis vietäväksi.'),
+        screen.queryByText(
+          'Tallennettu raportti on valmis vietäväksi hyväksytystä maksusuunnitelmasta.',
+        ),
       ).toBeNull();
     });
   });

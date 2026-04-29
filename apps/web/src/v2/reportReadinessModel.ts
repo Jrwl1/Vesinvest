@@ -109,10 +109,12 @@ export const ASSUMPTION_LABEL_KEYS: Record<string, string> = {
 export const formatScenarioUpdatedAt = (value: string): string => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleDateString(getActiveDateLocale(), {
+  return parsed.toLocaleString(getActiveDateLocale(), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 };
 

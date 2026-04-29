@@ -643,6 +643,21 @@ export function useReportsPageViewModel({
   const selectedReportGeneratedAt = selectedReport
     ? formatDateTime(selectedReport.snapshot.generatedAt ?? selectedReport.createdAt)
     : '-';
+  const selectedReportTariffPlanLabel = React.useMemo(() => {
+    const tariffPlan = selectedReport?.snapshot.tariffPlan ?? null;
+    if (!tariffPlan) return null;
+    if (tariffPlan.status === 'accepted') {
+      return tariffPlan.acceptedAt
+        ? t('v2Reports.acceptedTariffPlanAt', 'Accepted {{date}}', {
+            date: formatDateTime(tariffPlan.acceptedAt),
+          })
+        : t('v2TariffPlan.statusAccepted', 'Accepted');
+    }
+    if (tariffPlan.status === 'stale') {
+      return t('v2TariffPlan.statusStale', 'Stale');
+    }
+    return t('v2TariffPlan.statusDraft', 'Draft');
+  }, [selectedReport, t]);
   const selectedReportExportHint = React.useMemo(() => {
     if (downloadingPdf) return null;
     if (!selectedReportHasPdf) {
@@ -666,7 +681,7 @@ export function useReportsPageViewModel({
     }
     return t(
       'v2Reports.exportReady',
-      'Saved report is available for export.',
+      'Saved report is available for export from the accepted tariff plan.',
     );
   }, [
     currentWorkflowBlockHint,
@@ -735,6 +750,7 @@ export function useReportsPageViewModel({
       selectedReport,
       selectedReportExportHint,
       selectedReportGeneratedAt,
+      selectedReportTariffPlanLabel,
       selectedReportCashFloorSignal,
       selectedReportPrimaryFeeSignal,
       selectedReportScenarioName,

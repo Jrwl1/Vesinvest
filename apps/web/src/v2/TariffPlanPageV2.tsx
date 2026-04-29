@@ -18,7 +18,7 @@ import {
   buildDefaultPackageReportTitle,
   normalizeReportLocale,
 } from './displayNames';
-import { formatDateTime, formatEur, formatNumber, formatPercent, formatPrice, formatVolume } from './format';
+import { formatDateTime, formatEur, formatPercent, formatPrice, formatVolume, getActiveLocale } from './format';
 
 type Props = {
   onGoToAssetManagement: () => void;
@@ -50,17 +50,28 @@ const FEE_SHARE_FIELDS: Record<
   wastewaterUsageFee: 'wastewaterUsageSharePct',
 };
 
-const numberValue = (value: number | null | undefined) =>
-  value == null || Number.isNaN(value) ? '' : String(value);
+const numberValue = (
+  value: number | null | undefined,
+  maxDigits = 2,
+  minDigits = 0,
+) =>
+  value == null || Number.isNaN(value)
+    ? ''
+    : value.toLocaleString(getActiveLocale(), {
+        minimumFractionDigits: minDigits,
+        maximumFractionDigits: maxDigits,
+      });
 
 const parseInputNumber = (value: string): number | null => {
-  const normalized = value.trim().replace(',', '.');
+  const normalized = value.trim().replace(/[\s\u00a0]/g, '').replace(',', '.');
   if (!normalized) {
     return null;
   }
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
 };
+
+const unitLabel = (label: string, unit?: string) => (unit ? `${label} (${unit})` : label);
 
 const formatTariffUnit = (key: V2TariffFeeKey, value: number | null) => {
   if (value == null || !Number.isFinite(value)) {
@@ -562,13 +573,24 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       ]
     : [];
   const priceSignal = tariffPlan?.recommendation.priceSignal ?? null;
+  const tariffFreshnessLabel =
+    tariffPlan?.status === 'accepted'
+      ? t('v2TariffPlan.acceptedAt', 'Accepted')
+      : t('v2TariffPlan.updatedAt', 'Updated');
+  const tariffFreshnessValue = tariffPlan
+    ? formatDateTime(
+        tariffPlan.status === 'accepted'
+          ? tariffPlan.acceptedAt ?? tariffPlan.updatedAt
+          : tariffPlan.updatedAt,
+      )
+    : '-';
   const tariffSummaryPanel = tariffPlan ? (
     <aside className="v2-tariff-summary-panel">
       <div className="v2-section-header">
         <div>
           <h3>{t('v2TariffPlan.recommendationSummary', 'Recommendation summary')}</h3>
           <p className="v2-muted">
-            {t('v2TariffPlan.updatedAt', 'Updated')}: {formatDateTime(tariffPlan.updatedAt)}
+            {tariffFreshnessLabel}: {tariffFreshnessValue}
           </p>
         </div>
         <span className="v2-badge v2-status-positive">
@@ -722,25 +744,40 @@ export const TariffPlanPageV2: React.FC<Props> = ({
           <div className="v2-tariff-input-column">
             <div className="v2-vesinvest-evidence-grid">
               <label className="v2-field">
-            <span>{t('v2TariffPlan.connectionFeeAverage', 'Connection fee average')}</span>
+            <span>
+              {unitLabel(t('v2TariffPlan.connectionFeeAverage', 'Connection fee average'), 'EUR')}
+            </span>
             <input
               className="v2-input"
+              aria-label={t('v2TariffPlan.connectionFeeAverage', 'Connection fee average')}
+              inputMode="decimal"
               value={numberValue(baselineInput.connectionFeeAverage)}
               onChange={(event) => updateBaselineNumber('connectionFeeAverage', event.target.value)}
             />
           </label>
           <label className="v2-field">
-            <span>{t('v2TariffPlan.connectionFeeRevenue', 'Connection fee revenue')}</span>
+            <span>
+              {unitLabel(t('v2TariffPlan.connectionFeeRevenue', 'Connection fee revenue'), 'EUR')}
+            </span>
             <input
               className="v2-input"
+              aria-label={t('v2TariffPlan.connectionFeeRevenue', 'Connection fee revenue')}
+              inputMode="decimal"
               value={numberValue(baselineInput.connectionFeeRevenue)}
               onChange={(event) => updateBaselineNumber('connectionFeeRevenue', event.target.value)}
             />
           </label>
           <label className="v2-field">
-            <span>{t('v2TariffPlan.connectionFeeNewConnections', 'New connections')}</span>
+            <span>
+              {unitLabel(
+                t('v2TariffPlan.connectionFeeNewConnections', 'New connections'),
+                t('v2TariffPlan.perYearUnit', 'per year'),
+              )}
+            </span>
             <input
               className="v2-input"
+              aria-label={t('v2TariffPlan.connectionFeeNewConnections', 'New connections')}
+              inputMode="numeric"
               value={numberValue(baselineInput.connectionFeeNewConnections)}
               onChange={(event) =>
                 updateBaselineNumber('connectionFeeNewConnections', event.target.value)
@@ -756,9 +793,13 @@ export const TariffPlanPageV2: React.FC<Props> = ({
             />
           </label>
           <label className="v2-field">
-            <span>{t('v2TariffPlan.baseFeeRevenue', 'Base-fee revenue')}</span>
+            <span>
+              {unitLabel(t('v2TariffPlan.baseFeeRevenue', 'Base-fee revenue'), 'EUR')}
+            </span>
             <input
               className="v2-input"
+              aria-label={t('v2TariffPlan.baseFeeRevenue', 'Base-fee revenue')}
+              inputMode="decimal"
               value={numberValue(baselineInput.baseFeeRevenue)}
               onChange={(event) => updateBaselineNumber('baseFeeRevenue', event.target.value)}
             />
@@ -767,38 +808,52 @@ export const TariffPlanPageV2: React.FC<Props> = ({
             <span>{t('v2TariffPlan.connectionCount', 'Connection count')}</span>
             <input
               className="v2-input"
+              aria-label={t('v2TariffPlan.connectionCount', 'Connection count')}
+              inputMode="numeric"
               value={numberValue(baselineInput.connectionCount)}
               onChange={(event) => updateBaselineNumber('connectionCount', event.target.value)}
             />
           </label>
           <label className="v2-field">
-            <span>{t('v2TariffPlan.waterPrice', 'Water price')}</span>
+            <span>{unitLabel(t('v2TariffPlan.waterPrice', 'Water price'), 'EUR/m³')}</span>
             <input
               className="v2-input"
-              value={numberValue(baselineInput.waterPrice)}
+              aria-label={t('v2TariffPlan.waterPrice', 'Water price')}
+              inputMode="decimal"
+              value={numberValue(baselineInput.waterPrice, 2, 2)}
               onChange={(event) => updateBaselineNumber('waterPrice', event.target.value)}
             />
           </label>
           <label className="v2-field">
-            <span>{t('v2TariffPlan.wastewaterPrice', 'Wastewater price')}</span>
+            <span>
+              {unitLabel(t('v2TariffPlan.wastewaterPrice', 'Wastewater price'), 'EUR/m³')}
+            </span>
             <input
               className="v2-input"
-              value={numberValue(baselineInput.wastewaterPrice)}
+              aria-label={t('v2TariffPlan.wastewaterPrice', 'Wastewater price')}
+              inputMode="decimal"
+              value={numberValue(baselineInput.wastewaterPrice, 2, 2)}
               onChange={(event) => updateBaselineNumber('wastewaterPrice', event.target.value)}
             />
           </label>
           <label className="v2-field">
-            <span>{t('v2TariffPlan.soldWaterVolume', 'Sold water volume')}</span>
+            <span>{unitLabel(t('v2TariffPlan.soldWaterVolume', 'Sold water volume'), 'm³')}</span>
             <input
               className="v2-input"
+              aria-label={t('v2TariffPlan.soldWaterVolume', 'Sold water volume')}
+              inputMode="numeric"
               value={numberValue(baselineInput.soldWaterVolume)}
               onChange={(event) => updateBaselineNumber('soldWaterVolume', event.target.value)}
             />
           </label>
           <label className="v2-field">
-            <span>{t('v2TariffPlan.soldWastewaterVolume', 'Sold wastewater volume')}</span>
+            <span>
+              {unitLabel(t('v2TariffPlan.soldWastewaterVolume', 'Sold wastewater volume'), 'm³')}
+            </span>
             <input
               className="v2-input"
+              aria-label={t('v2TariffPlan.soldWastewaterVolume', 'Sold wastewater volume')}
+              inputMode="numeric"
               value={numberValue(baselineInput.soldWastewaterVolume)}
               onChange={(event) => updateBaselineNumber('soldWastewaterVolume', event.target.value)}
             />
@@ -987,7 +1042,7 @@ export const TariffPlanPageV2: React.FC<Props> = ({
             <div>
               <h3>{t('v2TariffPlan.recommendation', 'Recommendation')}</h3>
               <p className="v2-muted">
-                {t('v2TariffPlan.updatedAt', 'Updated')}: {formatDateTime(tariffPlan.updatedAt)}
+                {tariffFreshnessLabel}: {tariffFreshnessValue}
               </p>
             </div>
             <span className="v2-badge">

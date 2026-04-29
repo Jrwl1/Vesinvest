@@ -14,14 +14,20 @@ describe('V2 date formatting', () => {
   it('formats forecast and report dates with the active Swedish locale', () => {
     document.documentElement.lang = 'sv';
 
-    expect(formatForecastScenarioUpdatedAt(date)).toBe('29 apr. 2026');
-    expect(formatReportScenarioUpdatedAt(date)).toBe('29 apr. 2026');
+    expect(formatForecastScenarioUpdatedAt(date)).toMatch(
+      /^29 apr\. 2026 \d{2}:\d{2}$/,
+    );
+    expect(formatReportScenarioUpdatedAt(date)).toMatch(
+      /^29 apr\. 2026 \d{2}:\d{2}$/,
+    );
   });
 
   it('falls back to the saved app language when the document language is unavailable', () => {
     document.documentElement.lang = '';
     localStorage.setItem('va_language', 'en');
 
-    expect(formatReportScenarioUpdatedAt(date)).toBe('Apr 29, 2026');
+    expect(formatReportScenarioUpdatedAt(date)).toMatch(
+      /^Apr 29, 2026,? \d{2}:\d{2}/,
+    );
   });
 });

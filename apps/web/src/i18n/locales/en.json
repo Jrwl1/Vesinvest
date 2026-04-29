@@ -1130,6 +1130,7 @@
     "tariffScopeLabel": "Tariff scope",
     "tariffScopeUsageOnly": "Usage fee rows only (TaksaKayttomaksu)",
     "datasetCountLabel": "Datasets",
+    "evidenceCountLabel": "Evidence",
     "datasetCountsLabel": "Imported rows",
     "datasetFinancials": "Baseline economics",
     "datasetPrices": "Unit prices",

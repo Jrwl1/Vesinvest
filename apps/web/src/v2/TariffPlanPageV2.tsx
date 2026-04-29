@@ -873,32 +873,35 @@ export const TariffPlanPageV2: React.FC<Props> = ({
           </div>
         </div>
 
-        <label className="v2-field">
-          <span>{t('v2TariffPlan.notes', 'Notes')}</span>
-          <textarea
-            className="v2-input"
-            rows={2}
-            value={baselineInput.notes ?? ''}
-            onChange={(event) => updateBaselineText('notes', event.target.value)}
-          />
-        </label>
-
-        <label className="v2-field">
-          <span>{t('v2TariffPlan.financialRiskAssessment', 'Financial risk assessment')}</span>
-          <textarea
-            className="v2-input"
-            rows={3}
-            value={allocationPolicy.financialRiskAssessment ?? ''}
-            onChange={(event) =>
-              setAllocationPolicy((current) => ({
-                ...current,
-                financialRiskAssessment: event.target.value,
-              }))
-            }
-          />
-        </label>
           </div>
           {tariffSummaryPanel}
+        </div>
+
+        <div className="v2-tariff-policy-notes">
+          <label className="v2-field">
+            <span>{t('v2TariffPlan.notes', 'Notes')}</span>
+            <textarea
+              className="v2-input"
+              rows={2}
+              value={baselineInput.notes ?? ''}
+              onChange={(event) => updateBaselineText('notes', event.target.value)}
+            />
+          </label>
+
+          <label className="v2-field">
+            <span>{t('v2TariffPlan.financialRiskAssessment', 'Financial risk assessment')}</span>
+            <textarea
+              className="v2-input"
+              rows={2}
+              value={allocationPolicy.financialRiskAssessment ?? ''}
+              onChange={(event) =>
+                setAllocationPolicy((current) => ({
+                  ...current,
+                  financialRiskAssessment: event.target.value,
+                }))
+              }
+            />
+          </label>
         </div>
 
         <div className="v2-section-heading">
@@ -979,7 +982,7 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       </section>
 
       {tariffPlan ? (
-        <section className="v2-card v2-vesinvest-panel">
+        <section className="v2-card v2-vesinvest-panel v2-tariff-detail-panel">
           <div className="v2-section-header">
             <div>
               <h3>{t('v2TariffPlan.recommendation', 'Recommendation')}</h3>

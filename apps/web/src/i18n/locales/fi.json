@@ -1132,6 +1132,7 @@
     "tariffScopeLabel": "Taksan laajuus",
     "tariffScopeUsageOnly": "Vain käyttömaksut (TaksaKayttomaksu)",
     "datasetCountLabel": "Datasetit",
+    "evidenceCountLabel": "Aineisto",
     "datasetCountsLabel": "Tuodut rivit",
     "datasetFinancials": "Talouden lähtötiedot",
     "datasetPrices": "Yksikköhinnat",

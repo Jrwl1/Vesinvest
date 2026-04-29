@@ -115,6 +115,32 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.v2-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.v2-stat-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-row-radius);
+  background: var(--v2-surface-soft);
+  padding: 10px 12px;
+}
+
+.v2-stat-card span {
+  color: var(--v2-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.v2-stat-card strong {
+  font-size: 1rem;
+}
+
 .v2-grid-ennuste {
   grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
   gap: 18px;

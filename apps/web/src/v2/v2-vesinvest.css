@@ -5,6 +5,30 @@
   max-width: 100%;
 }
 
+.v2-vesinvest-panel > .v2-section-header {
+  align-items: end;
+  border-bottom: 1px solid var(--v2-border);
+  padding-bottom: 10px;
+}
+
+.v2-vesinvest-panel > .v2-section-header h2 {
+  margin-bottom: 0;
+  font-size: 1.25rem;
+  letter-spacing: 0;
+}
+
+.v2-vesinvest-panel > .v2-section-header .v2-overview-eyebrow {
+  margin-bottom: 4px;
+}
+
+.v2-vesinvest-panel > .v2-section-header .v2-actions-row {
+  align-items: end;
+}
+
+.v2-vesinvest-panel > .v2-section-header .v2-field {
+  min-width: 260px;
+}
+
 .v2-vesinvest-investment-picture {
   display: grid;
   grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.2fr) minmax(240px, 1fr);
@@ -19,7 +43,7 @@
 .v2-vesinvest-investment-facts > div,
 .v2-vesinvest-band-list > div {
   border: 1px solid rgba(183, 192, 203, 0.78);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--v2-surface-soft);
   padding: 10px;
   display: grid;
@@ -27,7 +51,8 @@
 }
 
 .v2-vesinvest-investment-primary strong {
-  font-size: 1.28rem;
+  font-size: 1.42rem;
+  line-height: 1.05;
 }
 
 .v2-vesinvest-investment-picture span {
@@ -51,6 +76,10 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.v2-vesinvest-band-list > div {
+  align-content: center;
 }
 
 .v2-vesinvest-identity-strip {
@@ -116,7 +145,14 @@
 }
 
 .v2-tariff-summary-table {
-  min-width: 560px;
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.v2-tariff-summary-table th,
+.v2-tariff-summary-table td {
+  font-size: 0.78rem;
 }
 
 .v2-tariff-summary-table-wrap {
@@ -300,6 +336,47 @@
 
   .v2-tariff-first-view {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1181px) {
+  .v2-tariff-first-view {
+    grid-template-columns: minmax(0, 1.12fr) minmax(390px, 0.88fr);
+    gap: 14px;
+  }
+
+  .v2-tariff-policy-notes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    border: 1px solid var(--v2-border);
+    border-radius: 8px;
+    background: var(--v2-surface-soft);
+    padding: 12px;
+  }
+
+  .v2-tariff-policy-notes textarea {
+    min-height: 68px;
+  }
+
+  .v2-tariff-detail-panel {
+    border-style: dashed;
+    background: rgba(255, 255, 255, 0.58);
+    box-shadow: none;
+  }
+
+  .v2-tariff-detail-panel .v2-section-header h3 {
+    font-size: 1rem;
+  }
+
+  .v2-tariff-detail-panel .v2-keyvalue-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .v2-vesinvest-table.v2-tariff-summary-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
   }
 }
 

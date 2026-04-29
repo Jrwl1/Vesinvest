@@ -1130,6 +1130,7 @@
     "tariffScopeLabel": "Taxans omfattning",
     "tariffScopeUsageOnly": "Endast brukstaxa (TaksaKayttomaksu)",
     "datasetCountLabel": "Dataset",
+    "evidenceCountLabel": "Underlag",
     "datasetCountsLabel": "Importerade rader",
     "datasetFinancials": "Ekonomiskt underlag",
     "datasetPrices": "Enhetspriser",

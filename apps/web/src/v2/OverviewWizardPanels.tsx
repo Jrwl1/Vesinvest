@@ -566,7 +566,7 @@ export const OverviewForecastHandoffStep: React.FC<
                   {compactSourceLabel}
                 </span>
                 <span>
-                  {t('v2Overview.datasetCountLabel', 'Datasets')}:{' '}
+                  {t('v2Overview.evidenceCountLabel', 'Evidence')}:{' '}
                   {renderDatasetCounts(row.datasetCounts)}
                 </span>
                 {corrected ? (

@@ -1713,3 +1713,150 @@
   border-color: rgba(43, 79, 136, 0.24) !important;
   box-shadow: 0 16px 30px rgba(43, 79, 136, 0.08) !important;
 }
+
+@media (min-width: 1181px) {
+  .v2-page.v2-forecast-theme .v2-forecast-strip {
+    padding: 10px 12px;
+    border-radius: 10px;
+    box-shadow: none !important;
+  }
+
+  .v2-forecast-strip-head {
+    grid-template-columns: minmax(180px, 0.42fr) minmax(520px, 1.58fr);
+    gap: 10px;
+  }
+
+  .v2-forecast-strip-head h2 {
+    font-size: 0.98rem;
+  }
+
+  .v2-forecast-strip-heading p {
+    font-size: 0.78rem;
+  }
+
+  .v2-forecast-strip-actions {
+    gap: 6px;
+  }
+
+  .v2-forecast-strip-primary-controls .v2-field {
+    min-width: 280px;
+  }
+
+  .v2-forecast-strip-tools > summary {
+    padding: 7px 9px;
+  }
+
+  .v2-scenario-editor-hero {
+    grid-template-columns: minmax(280px, 0.64fr) minmax(0, 1.36fr);
+    gap: 14px;
+    padding: 14px;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  .v2-forecast-toolbar-main {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .v2-forecast-toolbar-main .v2-field {
+    max-width: none;
+  }
+
+  .v2-forecast-toolbar-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .v2-forecast-toolbar-meta > .v2-overview-meta-block {
+    padding: 7px 8px;
+  }
+
+  .v2-forecast-toolbar-meta > .v2-overview-meta-block span {
+    font-size: 0.66rem;
+  }
+
+  .v2-forecast-toolbar-meta > .v2-overview-meta-block strong {
+    font-size: 0.88rem;
+  }
+
+  .v2-forecast-hero-command-row {
+    justify-content: flex-end;
+  }
+
+  .v2-forecast-answer-main p {
+    font-size: 2.45rem;
+  }
+
+  .v2-forecast-answer-supporting {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .v2-forecast-answer-supporting-card {
+    padding: 8px 9px;
+  }
+
+  .v2-forecast-answer-supporting-card h3 {
+    font-size: 0.66rem;
+  }
+
+  .v2-forecast-answer-supporting-card p {
+    font-size: 0.92rem;
+  }
+
+  .v2-page.v2-forecast-theme .v2-statement-cockpit {
+    grid-column: 1 / -1;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .v2-forecast-editor > .v2-statement-cockpit,
+  .v2-forecast-editor > .v2-forecast-workspace,
+  .v2-forecast-editor > .v2-revenue-workbench,
+  .v2-forecast-editor > .v2-opex-workbench,
+  .v2-forecast-editor > .v2-depreciation-workbench {
+    grid-column: 1 / -1;
+  }
+
+  .v2-statement-cockpit > .v2-forecast-workspace-head {
+    align-items: center;
+    padding-bottom: 2px;
+  }
+
+  .v2-statement-cockpit > .v2-forecast-workspace-head .v2-overview-eyebrow {
+    display: none;
+  }
+
+  .v2-statement-cockpit > .v2-forecast-workspace-head h3 {
+    font-size: 1rem;
+  }
+
+  .v2-statement-cockpit > .v2-forecast-workspace-head .v2-forecast-workspace-meta {
+    flex: 0 1 360px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .v2-statement-cockpit > .v2-forecast-workspace-head .v2-forecast-workspace-meta > div {
+    padding: 7px 8px;
+  }
+
+  .v2-page.v2-forecast-theme .v2-primary-chart-region {
+    padding: 12px;
+  }
+
+  .v2-primary-chart-region .v2-section-header {
+    align-items: center;
+  }
+
+  .v2-tariff-answer-card-inline {
+    padding-top: 10px;
+  }
+}
+
+@media (min-width: 1181px) and (max-width: 1400px) {
+  .v2-forecast-answer-supporting {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

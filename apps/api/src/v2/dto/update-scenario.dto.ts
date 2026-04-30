@@ -27,6 +27,8 @@ class YearlyInvestmentDto {
 
   @Type(() => Number)
   @IsNumber()
+  @Min(0)
+  @Max(1000000000)
   amount!: number;
 
   @IsOptional()

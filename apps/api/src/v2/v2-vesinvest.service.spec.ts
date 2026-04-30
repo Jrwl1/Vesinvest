@@ -1,6 +1,24 @@
 import { BadRequestException } from '@nestjs/common';
 import { V2VesinvestService } from './v2-vesinvest.service';
 
+const expectBadRequestCode = async (
+  promise: Promise<unknown>,
+  code: string,
+  messagePattern: RegExp,
+) => {
+  try {
+    await promise;
+    throw new Error(`Expected BadRequestException with code ${code}`);
+  } catch (err) {
+    expect(err).toBeInstanceOf(BadRequestException);
+    const response = (err as BadRequestException).getResponse();
+    expect(response).toMatchObject({
+      code,
+      message: expect.stringMatching(messagePattern),
+    });
+  }
+};
+
 const makePlanRecord = (overrides: Record<string, unknown> = {}) => {
   const now = new Date('2026-04-08T10:00:00.000Z');
   return {
@@ -202,9 +220,11 @@ describe('V2VesinvestService', () => {
       'water_production',
       'wastewater_treatment',
     ]);
-    expect(result.every((item: any) => item.defaultDepreciationClassKey === item.key)).toBe(
-      true,
-    );
+    expect(
+      result.every(
+        (item: any) => item.defaultDepreciationClassKey === item.key,
+      ),
+    ).toBe(true);
   });
 
   it('rejects non-admin group override updates', async () => {
@@ -283,10 +303,9 @@ describe('V2VesinvestService', () => {
       makePlanRecord({ projects: [] }),
     );
 
-    await expect(service.syncPlanToForecast('org-1', 'plan-1')).rejects.toThrow(
-      BadRequestException,
-    );
-    await expect(service.syncPlanToForecast('org-1', 'plan-1')).rejects.toThrow(
+    await expectBadRequestCode(
+      service.syncPlanToForecast('org-1', 'plan-1'),
+      'VESINVEST_PROJECT_REQUIRED',
       /Create at least one investment project/i,
     );
   });
@@ -320,7 +339,9 @@ describe('V2VesinvestService', () => {
           lastReviewedAt: new Date('2026-04-08T10:30:00.000Z'),
         }),
       );
-    forecastService.createForecastScenario.mockResolvedValue({ id: 'scenario-1' });
+    forecastService.createForecastScenario.mockResolvedValue({
+      id: 'scenario-1',
+    });
     forecastService.updateForecastScenario.mockResolvedValue(undefined);
     forecastService.computeForecastScenario.mockResolvedValue({
       id: 'scenario-1',
@@ -384,7 +405,9 @@ describe('V2VesinvestService', () => {
           selectedScenarioId: 'scenario-1',
         }),
       );
-    forecastService.createForecastScenario.mockResolvedValue({ id: 'scenario-1' });
+    forecastService.createForecastScenario.mockResolvedValue({
+      id: 'scenario-1',
+    });
     forecastService.updateForecastScenario.mockResolvedValue(undefined);
     forecastService.computeForecastScenario.mockResolvedValue({
       id: 'scenario-1',
@@ -446,7 +469,9 @@ describe('V2VesinvestService', () => {
           },
         }),
       );
-    forecastService.createForecastScenario.mockResolvedValue({ id: 'scenario-1' });
+    forecastService.createForecastScenario.mockResolvedValue({
+      id: 'scenario-1',
+    });
     forecastService.updateForecastScenario.mockResolvedValue(undefined);
     forecastService.computeForecastScenario.mockResolvedValue({
       id: 'scenario-1',
@@ -513,7 +538,9 @@ describe('V2VesinvestService', () => {
           },
         }),
       );
-    forecastService.createForecastScenario.mockResolvedValue({ id: 'scenario-1' });
+    forecastService.createForecastScenario.mockResolvedValue({
+      id: 'scenario-1',
+    });
     forecastService.updateForecastScenario.mockResolvedValue(undefined);
     forecastService.computeForecastScenario.mockResolvedValue({
       id: 'scenario-1',
@@ -586,8 +613,27 @@ describe('V2VesinvestService', () => {
     );
 
     await expect(
-      service.updatePlan('org-1', 'plan-1', { status: 'active' }),
+      service.updatePlan('org-1', 'plan-1', {
+        expectedUpdatedAt: '2026-04-08T10:00:00.000Z',
+        status: 'active',
+      }),
     ).rejects.toThrow(/re-verified against the current accepted baseline/i);
+  });
+
+  it('blocks saving a Vesinvest revision from a stale edit token', async () => {
+    const { service, prisma } = makeService();
+    prisma.vesinvestPlan.findFirst.mockResolvedValue(makePlanRecord());
+
+    await expect(
+      service.updatePlan('org-1', 'plan-1', {
+        expectedUpdatedAt: '2026-04-08T09:59:59.000Z',
+        name: 'Stale tab save',
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'VESINVEST_PLAN_STALE_EDIT',
+      }),
+    });
   });
 
   it('allows saving an already-active legacy revision without re-activation conflict', async () => {
@@ -604,7 +650,10 @@ describe('V2VesinvestService', () => {
     prisma.vesinvestPlan.update.mockResolvedValue(makePlanRecord());
 
     await expect(
-      service.updatePlan('org-1', 'plan-1', { name: 'Updated active revision' }),
+      service.updatePlan('org-1', 'plan-1', {
+        expectedUpdatedAt: '2026-04-08T10:00:00.000Z',
+        name: 'Updated active revision',
+      }),
     ).resolves.toBeTruthy();
     expect(prisma.vesinvestPlan.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -633,6 +682,7 @@ describe('V2VesinvestService', () => {
     );
 
     await service.updatePlan('org-1', 'plan-1', {
+      expectedUpdatedAt: '2026-04-08T10:00:00.000Z',
       assetEvidenceState: { inventoryStatus: 'partial' },
       municipalPlanContext: { growthAreaReviewed: true },
       maintenanceEvidenceState: { maintenanceLogCoverage: 'network' },
@@ -673,6 +723,7 @@ describe('V2VesinvestService', () => {
 
     await expect(
       service.updatePlan('org-1', 'plan-1', {
+        expectedUpdatedAt: '2026-04-08T10:00:00.000Z',
         name: 'Updated active revision',
         status: 'active',
       }),
@@ -776,7 +827,9 @@ describe('V2VesinvestService', () => {
           },
         }),
       );
-    forecastService.createForecastScenario.mockResolvedValue({ id: 'scenario-1' });
+    forecastService.createForecastScenario.mockResolvedValue({
+      id: 'scenario-1',
+    });
     forecastService.updateForecastScenario.mockResolvedValue(undefined);
     forecastService.computeForecastScenario.mockResolvedValue({
       id: 'scenario-1',
@@ -867,7 +920,9 @@ describe('V2VesinvestService', () => {
       classificationReviewRequired: true,
       pricingStatus: 'blocked',
     });
-    await expect(service.syncPlanToForecast('org-1', 'plan-1')).rejects.toThrow(
+    await expectBadRequestCode(
+      service.syncPlanToForecast('org-1', 'plan-1'),
+      'VESINVEST_CLASSIFICATION_REVIEW_REQUIRED',
       /Legacy class overrides require review/i,
     );
   });
@@ -911,7 +966,9 @@ describe('V2VesinvestService', () => {
       classificationReviewRequired: true,
       pricingStatus: 'blocked',
     });
-    await expect(service.syncPlanToForecast('org-1', 'plan-1')).rejects.toThrow(
+    await expectBadRequestCode(
+      service.syncPlanToForecast('org-1', 'plan-1'),
+      'VESINVEST_CLASSIFICATION_REVIEW_REQUIRED',
       /Legacy class overrides require review/i,
     );
   });

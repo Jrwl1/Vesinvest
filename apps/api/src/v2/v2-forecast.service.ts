@@ -276,6 +276,7 @@ export class V2ForecastService {
       horizonYears?: number;
       scenarioType?: ScenarioType;
       yearlyInvestments?: Array<{ year: number; amount: number }>;
+      allowVesinvestLinkedInvestmentUpdate?: boolean;
       scenarioAssumptions?: Partial<Record<ScenarioAssumptionKey, number>>;
       nearTermExpenseAssumptions?: Array<{
         year: number;

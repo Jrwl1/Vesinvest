@@ -77,7 +77,10 @@ describe('V2ForecastService helper behavior', () => {
       .spyOn(service as any, 'resolveLatestComparableBaselinePrice')
       .mockResolvedValue(null);
 
-    const result = await (service as any).mapScenarioPayload(ORG_ID, projection);
+    const result = await (service as any).mapScenarioPayload(
+      ORG_ID,
+      projection,
+    );
 
     expect(result.years[0]).toMatchObject({
       investmentDepreciation: 4000,
@@ -151,7 +154,10 @@ describe('V2ForecastService helper behavior', () => {
       .spyOn(service as any, 'resolveLatestComparableBaselinePrice')
       .mockResolvedValue(null);
 
-    const result = await (service as any).mapScenarioPayload(ORG_ID, projection);
+    const result = await (service as any).mapScenarioPayload(
+      ORG_ID,
+      projection,
+    );
 
     expect(result).toMatchObject({
       requiredPriceTodayCombinedAnnualResult: 1.68,
@@ -181,6 +187,183 @@ describe('V2ForecastService helper behavior', () => {
     });
 
     expect(result).toBe(11);
+  });
+
+  it('rejects negative or above-cap direct investment amounts', () => {
+    const { service } = buildForecastService();
+
+    expect(() =>
+      (service as any).normalizeUserInvestments([{ year: 2027, amount: -1 }]),
+    ).toThrow(/zero or greater/i);
+    expect(() =>
+      (service as any).normalizeUserInvestments([
+        { year: 2027, amount: 1_000_000_001 },
+      ]),
+    ).toThrow(/must not exceed/i);
+  });
+
+  it('blocks direct edits to Vesinvest-linked Forecast investment rows', async () => {
+    const prisma = {
+      olettamus: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      ennuste: {
+        updateMany: jest.fn(),
+      },
+    } as any;
+    const projection = {
+      id: SCENARIO_ID,
+      nimi: 'Linked scenario',
+      onOletus: false,
+      talousarvioId: 'budget-1',
+      aikajaksoVuosia: 20,
+      olettamusYlikirjoitukset: {},
+      userInvestments: [
+        {
+          rowId: 'allocation-1',
+          year: 2026,
+          amount: 100000,
+          waterAmount: 60000,
+          wastewaterAmount: 40000,
+          target: 'Linked plan row',
+          vesinvestPlanId: 'plan-1',
+          vesinvestProjectId: 'project-1',
+          allocationId: 'allocation-1',
+          projectCode: 'P-1',
+          groupKey: 'sanering_water_network',
+          accountKey: 'sanering_water_network',
+          reportGroupKey: 'network_rehabilitation',
+        },
+      ],
+      vuosiYlikirjoitukset: {},
+      scenarioDepreciationRules: [],
+      talousarvio: { vuosi: 2025 },
+      vuodet: [],
+      updatedAt: new Date('2026-04-24T08:30:00.000Z'),
+      createdAt: new Date('2026-04-24T08:00:00.000Z'),
+    };
+    const projectionsService = {
+      findById: jest.fn().mockResolvedValue(projection),
+      update: jest.fn(),
+      list: jest.fn(),
+      create: jest.fn(),
+      compute: jest.fn(),
+      delete: jest.fn(),
+    };
+    const service = new V2ForecastService(
+      prisma,
+      projectionsService as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { getImportStatus: jest.fn() } as any,
+    );
+    jest
+      .spyOn(service as any, 'ensureScenarioDepreciationStorage')
+      .mockResolvedValue({ rules: [] });
+
+    await expect(
+      service.updateForecastScenario(ORG_ID, SCENARIO_ID, {
+        yearlyInvestments: [
+          {
+            ...projection.userInvestments[0],
+            amount: 250000,
+          },
+        ],
+      } as any),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'VESINVEST_LINKED_INVESTMENT_READONLY',
+      }),
+    });
+    expect(projectionsService.update).not.toHaveBeenCalled();
+  });
+
+  it('keeps non-Vesinvest structured investment rows editable when they only carry display grouping', async () => {
+    const prisma = {
+      olettamus: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      ennuste: {
+        updateMany: jest.fn(),
+      },
+    } as any;
+    const projection = {
+      id: SCENARIO_ID,
+      nimi: 'Manual structured scenario',
+      onOletus: false,
+      talousarvioId: 'budget-1',
+      aikajaksoVuosia: 20,
+      olettamusYlikirjoitukset: {},
+      userInvestments: [
+        {
+          rowId: 'manual-1',
+          year: 2026,
+          amount: 100000,
+          target: 'Manual grouped row',
+          groupKey: 'sanering_water_network',
+          accountKey: 'sanering_water_network',
+          reportGroupKey: 'network_rehabilitation',
+        },
+      ],
+      vuosiYlikirjoitukset: {},
+      scenarioDepreciationRules: [],
+      talousarvio: { vuosi: 2025 },
+      vuodet: [],
+      updatedAt: new Date('2026-04-24T08:30:00.000Z'),
+      createdAt: new Date('2026-04-24T08:00:00.000Z'),
+    };
+    const projectionsService = {
+      findById: jest.fn().mockResolvedValue(projection),
+      update: jest.fn(),
+      list: jest.fn(),
+      create: jest.fn(),
+      compute: jest.fn(),
+      delete: jest.fn(),
+    };
+    const service = new V2ForecastService(
+      prisma,
+      projectionsService as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { getImportStatus: jest.fn() } as any,
+    );
+    jest
+      .spyOn(service as any, 'ensureScenarioDepreciationStorage')
+      .mockResolvedValue({ rules: [] });
+    jest
+      .spyOn(service as any, 'mapScenarioPayload')
+      .mockResolvedValue(projection);
+
+    await service.updateForecastScenario(ORG_ID, SCENARIO_ID, {
+      yearlyInvestments: [
+        {
+          ...projection.userInvestments[0],
+          amount: 125000,
+        },
+      ],
+    } as any);
+
+    expect(projectionsService.update).toHaveBeenCalledWith(
+      ORG_ID,
+      SCENARIO_ID,
+      expect.objectContaining({
+        userInvestments: expect.arrayContaining([
+          expect.objectContaining({
+            rowId: 'manual-1',
+            amount: 125000,
+            groupKey: 'sanering_water_network',
+          }),
+        ]),
+      }),
+    );
   });
 });
 

@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { V2ForecastService } from './v2-forecast.service';
@@ -12,7 +17,10 @@ import type {
   TariffReadinessChecklist,
   TariffRecommendation,
 } from './v2-tariff-plan.types';
-import { computeVesinvestScenarioFingerprint } from './vesinvest-contract';
+import {
+  computeVesinvestScenarioFingerprint,
+  findVesinvestScenarioInvestmentMismatches,
+} from './vesinvest-contract';
 
 type VesinvestTariffPlanRow = Awaited<
   ReturnType<PrismaService['vesinvestTariffPlan']['findFirst']>
@@ -72,6 +80,7 @@ export class V2TariffPlanService {
     );
     const existing = await this.findEditablePlan(orgId, plan.id, scenario.id);
     const current = await this.findLatestPlan(orgId, plan.id, scenario.id);
+    this.assertFreshTariffEditToken(current, body.expectedUpdatedAt);
     const baselineVolumeDefaults = await this.resolveBaselineVolumeDefaults(
       orgId,
       scenario.baselineYear,
@@ -182,18 +191,31 @@ export class V2TariffPlanService {
         })
       : await this.prisma.vesinvestTariffPlan.create({ data });
 
-    return this.toResponse(saved, plan, scenario, baselineInput, allocationPolicy);
+    return this.toResponse(
+      saved,
+      plan,
+      scenario,
+      baselineInput,
+      allocationPolicy,
+    );
   }
 
-  async acceptTariffPlan(orgId: string, vesinvestPlanId: string) {
+  async acceptTariffPlan(
+    orgId: string,
+    vesinvestPlanId: string,
+    body?: { expectedUpdatedAt?: string | null },
+  ) {
     const { plan, scenario } = await this.resolvePlanAndScenario(
       orgId,
       vesinvestPlanId,
     );
     const existing = await this.findLatestPlan(orgId, plan.id, scenario.id);
     if (!existing) {
-      throw new BadRequestException('Save the tariff plan before accepting it.');
+      throw new BadRequestException(
+        'Save the tariff plan before accepting it.',
+      );
     }
+    this.assertFreshTariffEditToken(existing, body?.expectedUpdatedAt);
     const baselineVolumeDefaults = await this.resolveBaselineVolumeDefaults(
       orgId,
       scenario.baselineYear,
@@ -288,6 +310,37 @@ export class V2TariffPlanService {
     );
   }
 
+  private assertFreshTariffEditToken(
+    current: VesinvestTariffPlanRow,
+    expectedUpdatedAt: string | null | undefined,
+  ) {
+    if (!current) {
+      return;
+    }
+    const expected = expectedUpdatedAt?.trim();
+    if (!expected) {
+      throw new BadRequestException({
+        code: 'TARIFF_PLAN_STALE_EDIT_TOKEN_REQUIRED',
+        message: 'Refresh the tariff plan before saving.',
+      });
+    }
+    const expectedTime = new Date(expected).getTime();
+    const currentTime = new Date(current.updatedAt).getTime();
+    if (!Number.isFinite(expectedTime)) {
+      throw new BadRequestException({
+        code: 'TARIFF_PLAN_STALE_EDIT_TOKEN_INVALID',
+        message: 'Refresh the tariff plan before saving.',
+      });
+    }
+    if (expectedTime !== currentTime) {
+      throw new ConflictException({
+        code: 'TARIFF_PLAN_STALE_EDIT',
+        message:
+          'This tariff plan has changed in another session. Refresh it before saving.',
+      });
+    }
+  }
+
   private async resolvePlanAndScenario(orgId: string, vesinvestPlanId: string) {
     const plan = await this.prisma.vesinvestPlan.findFirst({
       where: { id: vesinvestPlanId, orgId },
@@ -322,18 +375,19 @@ export class V2TariffPlanService {
     const computedFromUpdatedAtIso = scenario.computedFromUpdatedAt
       ? new Date(scenario.computedFromUpdatedAt).toISOString()
       : null;
-    if (!computedFromUpdatedAtIso || computedFromUpdatedAtIso !== scenarioUpdatedAtIso) {
+    if (
+      !computedFromUpdatedAtIso ||
+      computedFromUpdatedAtIso !== scenarioUpdatedAtIso
+    ) {
       throw new ConflictException({
         code: 'FORECAST_RECOMPUTE_REQUIRED',
-        message:
-          'Compute the linked forecast scenario before tariff planning.',
+        message: 'Compute the linked forecast scenario before tariff planning.',
       });
     }
     if (scenario.years.length === 0) {
       throw new ConflictException({
         code: 'FORECAST_RECOMPUTE_REQUIRED',
-        message:
-          'Compute the linked forecast scenario before tariff planning.',
+        message: 'Compute the linked forecast scenario before tariff planning.',
       });
     }
     if (!this.investmentSeriesMatchesYearlyInvestments(scenario)) {
@@ -341,6 +395,16 @@ export class V2TariffPlanService {
         code: 'FORECAST_RECOMPUTE_REQUIRED',
         message:
           'Recompute the linked forecast scenario before tariff planning.',
+      });
+    }
+    const vesinvestInvestmentMismatches =
+      findVesinvestScenarioInvestmentMismatches(plan, scenario);
+    if (vesinvestInvestmentMismatches.length > 0) {
+      throw new ConflictException({
+        code: 'VESINVEST_SCENARIO_INVESTMENTS_STALE',
+        message:
+          'Forecast investments no longer match the active Vesinvest plan. Sync Asset Management to Forecast before tariff planning.',
+        mismatches: vesinvestInvestmentMismatches.slice(0, 5),
       });
     }
     return { plan, scenario };
@@ -452,14 +516,13 @@ export class V2TariffPlanService {
     const savedScenarioFingerprint = this.toNullableText(
       recommendation.scenarioFingerprint,
     );
-    const liveScenarioFingerprint =
-      computeVesinvestScenarioFingerprint({
-        scenarioId: scenario.id,
-        updatedAt: scenario.updatedAt,
-        computedFromUpdatedAt: scenario.computedFromUpdatedAt,
-        yearlyInvestments: scenario.yearlyInvestments,
-        years: scenario.years,
-      });
+    const liveScenarioFingerprint = computeVesinvestScenarioFingerprint({
+      scenarioId: scenario.id,
+      updatedAt: scenario.updatedAt,
+      computedFromUpdatedAt: scenario.computedFromUpdatedAt,
+      yearlyInvestments: scenario.yearlyInvestments,
+      years: scenario.years,
+    });
 
     return (
       savedBaselineFingerprint === plan.baselineFingerprint &&
@@ -516,7 +579,9 @@ export class V2TariffPlanService {
       return null;
     }
     try {
-      const context = await this.importOverviewService.getPlanningContext(orgId);
+      const context = await this.importOverviewService.getPlanningContext(
+        orgId,
+      );
       const row = Array.isArray((context as any)?.baselineYears)
         ? (context as any).baselineYears.find(
             (item: any) => item?.year === baselineYear,
@@ -538,11 +603,16 @@ export class V2TariffPlanService {
     }
   }
 
-  private readAllocationPolicy(raw: unknown, plan: { projects: Array<{
-    waterAmount: Prisma.Decimal | number | null;
-    wastewaterAmount: Prisma.Decimal | number | null;
-    totalAmount: Prisma.Decimal | number | null;
-  }> }): TariffAllocationPolicy {
+  private readAllocationPolicy(
+    raw: unknown,
+    plan: {
+      projects: Array<{
+        waterAmount: Prisma.Decimal | number | null;
+        wastewaterAmount: Prisma.Decimal | number | null;
+        totalAmount: Prisma.Decimal | number | null;
+      }>;
+    },
+  ): TariffAllocationPolicy {
     const record = this.asRecord(raw);
     const defaults = this.buildDefaultAllocationPolicy(plan);
     return {
@@ -550,7 +620,8 @@ export class V2TariffPlanService {
         this.toNullableNumber(record.connectionFeeSharePct) ??
         defaults.connectionFeeSharePct,
       baseFeeSharePct:
-        this.toNullableNumber(record.baseFeeSharePct) ?? defaults.baseFeeSharePct,
+        this.toNullableNumber(record.baseFeeSharePct) ??
+        defaults.baseFeeSharePct,
       waterUsageSharePct:
         this.toNullableNumber(record.waterUsageSharePct) ??
         defaults.waterUsageSharePct,
@@ -573,18 +644,22 @@ export class V2TariffPlanService {
     };
   }
 
-  private buildDefaultAllocationPolicy(plan: { projects: Array<{
-    waterAmount: Prisma.Decimal | number | null;
-    wastewaterAmount: Prisma.Decimal | number | null;
-    totalAmount: Prisma.Decimal | number | null;
-  }> }): Required<Pick<
-    TariffAllocationPolicy,
-    | 'connectionFeeSharePct'
-    | 'baseFeeSharePct'
-    | 'waterUsageSharePct'
-    | 'wastewaterUsageSharePct'
-    | 'smoothingYears'
-  >> {
+  private buildDefaultAllocationPolicy(plan: {
+    projects: Array<{
+      waterAmount: Prisma.Decimal | number | null;
+      wastewaterAmount: Prisma.Decimal | number | null;
+      totalAmount: Prisma.Decimal | number | null;
+    }>;
+  }): Required<
+    Pick<
+      TariffAllocationPolicy,
+      | 'connectionFeeSharePct'
+      | 'baseFeeSharePct'
+      | 'waterUsageSharePct'
+      | 'wastewaterUsageSharePct'
+      | 'smoothingYears'
+    >
+  > {
     const waterTotal = plan.projects.reduce(
       (sum, project) => sum + this.toNumber(project.waterAmount),
       0,
@@ -667,11 +742,13 @@ export class V2TariffPlanService {
         this.toNumber(baselineInput.wastewaterPrice) *
           this.toNumber(baselineInput.soldWastewaterVolume),
     );
+    const connectionFeeAnnualRevenue =
+      this.resolveConnectionFeeAnnualRevenue(baselineInput);
     const fees = {
       connectionFee: this.buildFeeRecommendation(
         'connectionFee',
         baselineInput.connectionFeeAverage ?? null,
-        baselineInput.connectionFeeRevenue ?? null,
+        connectionFeeAnnualRevenue,
         baselineInput.connectionFeeNewConnections ?? null,
         shares.connectionFee,
         targetAdditionalAnnualRevenue,
@@ -741,24 +818,29 @@ export class V2TariffPlanService {
       revenueImpact: fees[key].revenueImpact,
       allocationSharePct: fees[key].allocationSharePct,
     }));
-    const annualChangePath = Array.from({ length: smoothingYears }, (_, index) => {
-      const yearIndex = index + 1;
-      const annualRevenue = FEE_KEYS.reduce<number | null>((sum, key) => {
-        const row = fees[key].yearlyPath[index];
-        if (sum == null || row?.annualRevenue == null) {
-          return null;
-        }
-        return sum + row.annualRevenue;
-      }, 0);
-      return {
-        yearIndex,
-        annualRevenue: annualRevenue == null ? null : this.round2(annualRevenue),
-        annualIncreasePct:
-          averageAnnualIncreasePct == null ? null : averageAnnualIncreasePct,
-      };
-    });
+    const annualChangePath = Array.from(
+      { length: smoothingYears },
+      (_, index) => {
+        const yearIndex = index + 1;
+        const annualRevenue = FEE_KEYS.reduce<number | null>((sum, key) => {
+          const row = fees[key].yearlyPath[index];
+          if (sum == null || row?.annualRevenue == null) {
+            return null;
+          }
+          return sum + row.annualRevenue;
+        }, 0);
+        return {
+          yearIndex,
+          annualRevenue:
+            annualRevenue == null ? null : this.round2(annualRevenue),
+          annualIncreasePct:
+            averageAnnualIncreasePct == null ? null : averageAnnualIncreasePct,
+        };
+      },
+    );
     const impactFlags = {
-      exceeds15PctAnnualIncrease: averageAnnualIncreasePct != null && averageAnnualIncreasePct > 15,
+      exceeds15PctAnnualIncrease:
+        averageAnnualIncreasePct != null && averageAnnualIncreasePct > 15,
       regionalVariationApplies:
         allocationPolicy.regionalVariationApplies === true ||
         this.hasEvidenceNotes(evidence.regionalDifferentiationState),
@@ -769,11 +851,15 @@ export class V2TariffPlanService {
       connectionFeeLiabilityRecorded: this.hasEvidenceNotes(
         evidence.connectionFeeLiabilityState,
       ),
-      ownerDistributionRecorded: this.hasEvidenceNotes(evidence.ownerDistributionState),
+      ownerDistributionRecorded: this.hasEvidenceNotes(
+        evidence.ownerDistributionState,
+      ),
     };
     const allocationRationale = [
       'Allocation uses the current service split and the edited four-lever policy.',
-      `Target pressure is ${this.round2(targetAdditionalAnnualRevenue)} annual revenue after smoothing.`,
+      `Target pressure is ${this.round2(
+        targetAdditionalAnnualRevenue,
+      )} annual revenue after smoothing.`,
       `Smoothing period is ${smoothingYears} year(s).`,
     ];
 
@@ -782,14 +868,13 @@ export class V2TariffPlanService {
       linkedScenarioId: scenario.id,
       vesinvestPlanId: plan.id,
       baselineFingerprint: plan.baselineFingerprint,
-      scenarioFingerprint:
-        computeVesinvestScenarioFingerprint({
-          scenarioId: scenario.id,
-          updatedAt: scenario.updatedAt,
-          computedFromUpdatedAt: scenario.computedFromUpdatedAt,
-          yearlyInvestments: scenario.yearlyInvestments,
-          years: scenario.years,
-        }),
+      scenarioFingerprint: computeVesinvestScenarioFingerprint({
+        scenarioId: scenario.id,
+        updatedAt: scenario.updatedAt,
+        computedFromUpdatedAt: scenario.computedFromUpdatedAt,
+        yearlyInvestments: scenario.yearlyInvestments,
+        years: scenario.years,
+      }),
       priceSignal,
       targetAdditionalAnnualRevenue,
       baselineAnnualRevenue,
@@ -811,7 +896,9 @@ export class V2TariffPlanService {
     requiredCombinedPrice: number,
   ): TariffRecommendation['priceSignal'] {
     const currentComparatorPrice =
-      scenario.baselinePriceTodayCombined ?? currentCombinedPrice;
+      currentCombinedPrice > 0
+        ? currentCombinedPrice
+        : scenario.baselinePriceTodayCombined ?? currentCombinedPrice;
     const requiredPriceToday =
       scenario.requiredPriceTodayCombinedAnnualResult ??
       scenario.requiredPriceTodayCombined ??
@@ -825,18 +912,18 @@ export class V2TariffPlanService {
           : this.round4(currentComparatorPrice),
       requiredPriceToday:
         requiredPriceToday == null ? null : this.round4(requiredPriceToday),
-      requiredIncreasePct:
-        scenario.requiredAnnualIncreasePctAnnualResult == null
-          ? this.calculateIncreasePct(requiredPriceToday, currentComparatorPrice)
-          : this.round2(scenario.requiredAnnualIncreasePctAnnualResult),
+      requiredIncreasePct: this.calculateIncreasePct(
+        requiredPriceToday,
+        currentComparatorPrice,
+      ),
       cumulativeCashFloorPrice:
         cumulativeCashFloorPrice == null
           ? null
           : this.round4(cumulativeCashFloorPrice),
-      cumulativeCashFloorIncreasePct:
-        scenario.requiredAnnualIncreasePctCumulativeCash == null
-          ? this.calculateIncreasePct(cumulativeCashFloorPrice, currentComparatorPrice)
-          : this.round2(scenario.requiredAnnualIncreasePctCumulativeCash),
+      cumulativeCashFloorIncreasePct: this.calculateIncreasePct(
+        cumulativeCashFloorPrice,
+        currentComparatorPrice,
+      ),
     };
   }
 
@@ -885,7 +972,8 @@ export class V2TariffPlanService {
           currentUnit == null || proposedUnit == null
             ? null
             : this.round4(
-                currentUnit + ((proposedUnit - currentUnit) * step) / smoothingYears,
+                currentUnit +
+                  ((proposedUnit - currentUnit) * step) / smoothingYears,
               );
         const annualRevenue =
           currentAnnualRevenue == null || proposedAnnualRevenue == null
@@ -898,6 +986,25 @@ export class V2TariffPlanService {
         return { yearIndex: step, unit, annualRevenue };
       }),
     };
+  }
+
+  private resolveConnectionFeeAnnualRevenue(
+    baselineInput: TariffBaselineInput,
+  ): number | null {
+    const explicitRevenue = this.toNullableNumber(
+      baselineInput.connectionFeeRevenue,
+    );
+    if (explicitRevenue != null) {
+      return explicitRevenue;
+    }
+    const average = this.toNullableNumber(baselineInput.connectionFeeAverage);
+    const newConnections = this.toNullableNumber(
+      baselineInput.connectionFeeNewConnections,
+    );
+    if (average == null || newConnections == null) {
+      return null;
+    }
+    return this.round2(average * newConnections);
   }
 
   private buildReadinessChecklist(
@@ -944,7 +1051,17 @@ export class V2TariffPlanService {
     );
     requirePositive(baselineInput.baseFeeRevenue, 'base-fee revenue', true);
     requirePositive(baselineInput.connectionCount, 'connection count');
+    const shares = this.normalizeShares(allocationPolicy);
+    const connectionFeeRevenue =
+      this.resolveConnectionFeeAnnualRevenue(baselineInput);
     if (
+      shares.connectionFee > 0 &&
+      (connectionFeeRevenue == null ||
+        this.toNumber(baselineInput.connectionFeeNewConnections) <= 0)
+    ) {
+      unresolvedManualAssumptions.push('connection-fee revenue and volume');
+    } else if (
+      shares.connectionFee <= 0 &&
       baselineInput.connectionFeeAverage == null &&
       baselineInput.connectionFeeRevenue == null &&
       !baselineInput.connectionFeeBasis
@@ -959,11 +1076,14 @@ export class V2TariffPlanService {
         ),
       );
     const trustedBaselinePresent = plan.baselineFingerprint != null;
-    const currentTariffBaselinePresent = unresolvedManualAssumptions.length === 0;
+    const currentTariffBaselinePresent =
+      unresolvedManualAssumptions.length === 0;
     const investmentFinancingNeedPresent =
       scenario.years.length > 0 &&
       (targetAdditionalAnnualRevenue > 0 ||
-        scenario.investmentSeries.some((item) => this.toNumber(item.amount) > 0));
+        scenario.investmentSeries.some(
+          (item) => this.toNumber(item.amount) > 0,
+        ));
     const riskAssessmentPresent =
       typeof allocationPolicy.financialRiskAssessment === 'string' &&
       allocationPolicy.financialRiskAssessment.trim().length >= 8;
@@ -1053,7 +1173,12 @@ export class V2TariffPlanService {
             scenario,
             baselineInput,
           )
-        : this.buildRecommendation(plan as any, scenario, baselineInput, allocationPolicy);
+        : this.buildRecommendation(
+            plan as any,
+            scenario,
+            baselineInput,
+            allocationPolicy,
+          );
     return {
       id: row?.id ?? null,
       vesinvestPlanId: plan.id,

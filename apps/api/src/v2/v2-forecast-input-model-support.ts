@@ -74,6 +74,16 @@ export class V2ForecastInputModelSupport {
       const year = Math.round(Number((item as { year?: unknown }).year));
       const amount = Number((item as { amount?: unknown }).amount);
       if (!Number.isFinite(year) || !Number.isFinite(amount)) continue;
+      if (amount < 0) {
+        throw new BadRequestException(
+          'Investment amount must be zero or greater.',
+        );
+      }
+      if (amount > 1_000_000_000) {
+        throw new BadRequestException(
+          'Investment amount must not exceed 1,000,000,000.',
+        );
+      }
 
       const rowIdRaw = this.scenarioMetaSupport.normalizeText(
         typeof (item as { rowId?: unknown }).rowId === 'string'

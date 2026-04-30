@@ -29,6 +29,7 @@ type ForecastUpdateBody = {
   horizonYears?: number;
   scenarioType?: ScenarioType;
   yearlyInvestments?: Array<{ year: number; amount: number }>;
+  allowVesinvestLinkedInvestmentUpdate?: boolean;
   scenarioAssumptions?: Partial<Record<ScenarioAssumptionKey, number>>;
   nearTermExpenseAssumptions?: Array<{
     year: number;
@@ -52,10 +53,10 @@ type ForecastScenarioContext = {
     ProjectionsService,
     'list' | 'findById' | 'create' | 'compute' | 'update' | 'delete'
   >;
-  resolveAcceptedPlanningBaselineBudgetIds: (orgId: string) => Promise<string[]>;
-  resolveLatestAcceptedVeetiBudgetId: (
+  resolveAcceptedPlanningBaselineBudgetIds: (
     orgId: string,
-  ) => Promise<string | null>;
+  ) => Promise<string[]>;
+  resolveLatestAcceptedVeetiBudgetId: (orgId: string) => Promise<string | null>;
   buildDefaultScenarioName: (value: Date | string) => string;
   resolveScenarioType: (raw: unknown, onOletus: boolean) => ScenarioType;
   resolveScenarioTypeForCreate: (params: {
@@ -124,13 +125,18 @@ export function createV2ForecastScenarioSupport(ctx: ForecastScenarioContext) {
     scenarioId: string,
   ): Promise<ScenarioPayload> => {
     if (typeof ctx.projectionsService.findById === 'function') {
-      const projection = await ctx.projectionsService.findById(orgId, scenarioId);
+      const projection = await ctx.projectionsService.findById(
+        orgId,
+        scenarioId,
+      );
       return ctx.mapScenarioPayload(orgId, projection);
     }
     if (ctx.getForecastScenario) {
       return ctx.getForecastScenario(orgId, scenarioId);
     }
-    throw new BadRequestException('Forecast scenario payload resolver is unavailable.');
+    throw new BadRequestException(
+      'Forecast scenario payload resolver is unavailable.',
+    );
   };
 
   return {
@@ -158,7 +164,8 @@ export function createV2ForecastScenarioSupport(ctx: ForecastScenarioContext) {
       const acceptedBaselineBudgetIds =
         await ctx.resolveAcceptedPlanningBaselineBudgetIds(orgId);
       const baselineBudgetId =
-        body.talousarvioId ?? (await ctx.resolveLatestAcceptedVeetiBudgetId(orgId));
+        body.talousarvioId ??
+        (await ctx.resolveLatestAcceptedVeetiBudgetId(orgId));
       if (!baselineBudgetId) {
         throw new BadRequestException(
           'No trusted baseline budget found. Complete Overview import and sync first.',
@@ -174,7 +181,8 @@ export function createV2ForecastScenarioSupport(ctx: ForecastScenarioContext) {
         );
       }
 
-      const name = body.name?.trim() || ctx.buildDefaultScenarioName(new Date());
+      const name =
+        body.name?.trim() || ctx.buildDefaultScenarioName(new Date());
       const payload: {
         talousarvioId: string;
         nimi: string;
@@ -207,7 +215,9 @@ export function createV2ForecastScenarioSupport(ctx: ForecastScenarioContext) {
           source?.olettamusYlikirjoitukset,
           Boolean(source?.onOletus),
         );
-        const normalized = ctx.normalizeUserInvestments(source?.userInvestments);
+        const normalized = ctx.normalizeUserInvestments(
+          source?.userInvestments,
+        );
         payload.userInvestments = normalized;
         const sourceAssumptionOverrides = ctx.normalizeAssumptionOverrides(
           source?.olettamusYlikirjoitukset,
@@ -215,7 +225,9 @@ export function createV2ForecastScenarioSupport(ctx: ForecastScenarioContext) {
         if (Object.keys(sourceAssumptionOverrides).length > 0) {
           payload.olettamusYlikirjoitukset = sourceAssumptionOverrides;
         }
-        const sourceBaseYear = Number.isFinite(Number(source?.talousarvio?.vuosi))
+        const sourceBaseYear = Number.isFinite(
+          Number(source?.talousarvio?.vuosi),
+        )
           ? Number(source.talousarvio.vuosi)
           : null;
         const sourceNearTerm = ctx.extractExplicitNearTermExpenseAssumptions(
@@ -330,11 +342,19 @@ export function createV2ForecastScenarioSupport(ctx: ForecastScenarioContext) {
       const normalizedInvestments = Array.isArray(body.yearlyInvestments)
         ? ctx.normalizeUserInvestments(body.yearlyInvestments)
         : ctx.normalizeUserInvestments(current.userInvestments);
+      if (
+        Array.isArray(body.yearlyInvestments) &&
+        body.allowVesinvestLinkedInvestmentUpdate !== true
+      ) {
+        assertVesinvestLinkedInvestmentsUnchanged(
+          ctx.normalizeUserInvestments(current.userInvestments),
+          normalizedInvestments,
+        );
+      }
       const currentInvestmentByRowId = new Map<string, YearlyInvestment>(
-        ctx.normalizeUserInvestments(current.userInvestments).map((row) => [
-          row.rowId ?? String(row.year),
-          row,
-        ]),
+        ctx
+          .normalizeUserInvestments(current.userInvestments)
+          .map((row) => [row.rowId ?? String(row.year), row]),
       );
       const scenarioRuleByKey = new Map<string, ScenarioStoredDepreciationRule>(
         scenarioDepreciationStorage.rules.map((rule) => [
@@ -407,4 +427,100 @@ export function createV2ForecastScenarioSupport(ctx: ForecastScenarioContext) {
       return ctx.projectionsService.delete(orgId, scenarioId);
     },
   };
+}
+
+function assertVesinvestLinkedInvestmentsUnchanged(
+  currentRows: YearlyInvestment[],
+  nextRows: YearlyInvestment[],
+) {
+  const currentLinkedRows = currentRows.filter(isVesinvestLinkedInvestment);
+  if (currentLinkedRows.length === 0) {
+    return;
+  }
+  const nextByKey = new Map(
+    nextRows
+      .filter(isVesinvestLinkedInvestment)
+      .map((row) => [vesinvestLinkedInvestmentKey(row), row]),
+  );
+  const currentByKey = new Map(
+    currentLinkedRows.map((row) => [vesinvestLinkedInvestmentKey(row), row]),
+  );
+  for (const row of currentLinkedRows) {
+    const next = nextByKey.get(vesinvestLinkedInvestmentKey(row));
+    if (!next || !sameVesinvestLinkedInvestment(row, next)) {
+      throw new BadRequestException({
+        code: 'VESINVEST_LINKED_INVESTMENT_READONLY',
+        message:
+          'Vesinvest-synced investment rows must be edited in Asset Management.',
+      });
+    }
+  }
+  for (const row of nextRows.filter(isVesinvestLinkedInvestment)) {
+    if (!currentByKey.has(vesinvestLinkedInvestmentKey(row))) {
+      throw new BadRequestException({
+        code: 'VESINVEST_LINKED_INVESTMENT_READONLY',
+        message:
+          'Vesinvest-synced investment rows must be edited in Asset Management.',
+      });
+    }
+  }
+}
+
+function isVesinvestLinkedInvestment(row: YearlyInvestment) {
+  return Boolean(
+    row.vesinvestPlanId || row.vesinvestProjectId || row.allocationId,
+  );
+}
+
+function vesinvestLinkedInvestmentKey(row: YearlyInvestment) {
+  return (
+    row.allocationId ||
+    row.rowId ||
+    `${row.vesinvestPlanId ?? ''}:${row.vesinvestProjectId ?? ''}:${row.year}:${
+      row.projectCode ?? ''
+    }`
+  );
+}
+
+function sameVesinvestLinkedInvestment(
+  left: YearlyInvestment,
+  right: YearlyInvestment,
+) {
+  return (
+    left.year === right.year &&
+    moneyEqual(left.amount, right.amount) &&
+    moneyEqual(left.waterAmount, right.waterAmount) &&
+    moneyEqual(left.wastewaterAmount, right.wastewaterAmount) &&
+    nullableText(left.target) === nullableText(right.target) &&
+    nullableText(left.category) === nullableText(right.category) &&
+    nullableText(left.depreciationClassKey) ===
+      nullableText(right.depreciationClassKey) &&
+    nullableText(left.investmentType) === nullableText(right.investmentType) &&
+    nullableText(left.confidence) === nullableText(right.confidence) &&
+    nullableText(left.note) === nullableText(right.note) &&
+    nullableText(left.vesinvestPlanId) ===
+      nullableText(right.vesinvestPlanId) &&
+    nullableText(left.vesinvestProjectId) ===
+      nullableText(right.vesinvestProjectId) &&
+    nullableText(left.allocationId) === nullableText(right.allocationId) &&
+    nullableText(left.projectCode) === nullableText(right.projectCode) &&
+    nullableText(left.groupKey) === nullableText(right.groupKey) &&
+    nullableText(left.accountKey) === nullableText(right.accountKey) &&
+    nullableText(left.reportGroupKey) === nullableText(right.reportGroupKey)
+  );
+}
+
+function nullableText(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0
+    ? value.trim()
+    : null;
+}
+
+function moneyEqual(left: unknown, right: unknown) {
+  return Math.abs(toMoney(left) - toMoney(right)) < 0.01;
+}
+
+function toMoney(value: unknown) {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? Math.round(parsed * 100) / 100 : 0;
 }

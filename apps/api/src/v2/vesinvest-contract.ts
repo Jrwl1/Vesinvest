@@ -58,88 +58,89 @@ export const DEFAULT_VESINVEST_REPORT_GROUP_DEFINITIONS: VesinvestReportGroupDef
     },
   ];
 
-export const DEFAULT_VESINVEST_GROUP_DEFINITIONS: VesinvestGroupDefinitionRecord[] = [
-  {
-    key: 'sanering_water_network',
-    label: 'Sanering / vattennätverk',
-    defaultAccountKey: 'sanering_water_network',
-    defaultDepreciationClassKey: 'sanering_water_network',
-    reportGroupKey: 'network_rehabilitation',
-    serviceSplit: 'water',
-  },
-  {
-    key: 'sanering_wastewater_network',
-    label: 'Sanering / avloppsnätverk',
-    defaultAccountKey: 'sanering_wastewater_network',
-    defaultDepreciationClassKey: 'sanering_wastewater_network',
-    reportGroupKey: 'network_rehabilitation',
-    serviceSplit: 'wastewater',
-  },
-  {
-    key: 'new_water_network',
-    label: 'Nyanläggning / vattennätverk',
-    defaultAccountKey: 'new_water_network',
-    defaultDepreciationClassKey: 'new_water_network',
-    reportGroupKey: 'new_network',
-    serviceSplit: 'water',
-  },
-  {
-    key: 'new_wastewater_network',
-    label: 'Nyanläggning / avloppsnätverk',
-    defaultAccountKey: 'new_wastewater_network',
-    defaultDepreciationClassKey: 'new_wastewater_network',
-    reportGroupKey: 'new_network',
-    serviceSplit: 'wastewater',
-  },
-  {
-    key: 'repair_water_network',
-    label: 'Reparation / vattennätverk',
-    defaultAccountKey: 'repair_water_network',
-    defaultDepreciationClassKey: 'repair_water_network',
-    reportGroupKey: 'network_rehabilitation',
-    serviceSplit: 'water',
-  },
-  {
-    key: 'repair_wastewater_network',
-    label: 'Reparation / avloppsnätverk',
-    defaultAccountKey: 'repair_wastewater_network',
-    defaultDepreciationClassKey: 'repair_wastewater_network',
-    reportGroupKey: 'network_rehabilitation',
-    serviceSplit: 'wastewater',
-  },
-  {
-    key: 'waterworks_equipment',
-    label: 'Vattenverksapparatur',
-    defaultAccountKey: 'waterworks_equipment',
-    defaultDepreciationClassKey: 'waterworks_equipment',
-    reportGroupKey: 'plant_equipment',
-    serviceSplit: 'water',
-  },
-  {
-    key: 'wastewater_equipment',
-    label: 'Avloppsapparatur',
-    defaultAccountKey: 'wastewater_equipment',
-    defaultDepreciationClassKey: 'wastewater_equipment',
-    reportGroupKey: 'plant_equipment',
-    serviceSplit: 'wastewater',
-  },
-  {
-    key: 'water_production',
-    label: 'Vattenproduktion',
-    defaultAccountKey: 'water_production',
-    defaultDepreciationClassKey: 'water_production',
-    reportGroupKey: 'production',
-    serviceSplit: 'water',
-  },
-  {
-    key: 'wastewater_treatment',
-    label: 'Avloppsrening',
-    defaultAccountKey: 'wastewater_treatment',
-    defaultDepreciationClassKey: 'wastewater_treatment',
-    reportGroupKey: 'treatment',
-    serviceSplit: 'wastewater',
-  },
-];
+export const DEFAULT_VESINVEST_GROUP_DEFINITIONS: VesinvestGroupDefinitionRecord[] =
+  [
+    {
+      key: 'sanering_water_network',
+      label: 'Sanering / vattennätverk',
+      defaultAccountKey: 'sanering_water_network',
+      defaultDepreciationClassKey: 'sanering_water_network',
+      reportGroupKey: 'network_rehabilitation',
+      serviceSplit: 'water',
+    },
+    {
+      key: 'sanering_wastewater_network',
+      label: 'Sanering / avloppsnätverk',
+      defaultAccountKey: 'sanering_wastewater_network',
+      defaultDepreciationClassKey: 'sanering_wastewater_network',
+      reportGroupKey: 'network_rehabilitation',
+      serviceSplit: 'wastewater',
+    },
+    {
+      key: 'new_water_network',
+      label: 'Nyanläggning / vattennätverk',
+      defaultAccountKey: 'new_water_network',
+      defaultDepreciationClassKey: 'new_water_network',
+      reportGroupKey: 'new_network',
+      serviceSplit: 'water',
+    },
+    {
+      key: 'new_wastewater_network',
+      label: 'Nyanläggning / avloppsnätverk',
+      defaultAccountKey: 'new_wastewater_network',
+      defaultDepreciationClassKey: 'new_wastewater_network',
+      reportGroupKey: 'new_network',
+      serviceSplit: 'wastewater',
+    },
+    {
+      key: 'repair_water_network',
+      label: 'Reparation / vattennätverk',
+      defaultAccountKey: 'repair_water_network',
+      defaultDepreciationClassKey: 'repair_water_network',
+      reportGroupKey: 'network_rehabilitation',
+      serviceSplit: 'water',
+    },
+    {
+      key: 'repair_wastewater_network',
+      label: 'Reparation / avloppsnätverk',
+      defaultAccountKey: 'repair_wastewater_network',
+      defaultDepreciationClassKey: 'repair_wastewater_network',
+      reportGroupKey: 'network_rehabilitation',
+      serviceSplit: 'wastewater',
+    },
+    {
+      key: 'waterworks_equipment',
+      label: 'Vattenverksapparatur',
+      defaultAccountKey: 'waterworks_equipment',
+      defaultDepreciationClassKey: 'waterworks_equipment',
+      reportGroupKey: 'plant_equipment',
+      serviceSplit: 'water',
+    },
+    {
+      key: 'wastewater_equipment',
+      label: 'Avloppsapparatur',
+      defaultAccountKey: 'wastewater_equipment',
+      defaultDepreciationClassKey: 'wastewater_equipment',
+      reportGroupKey: 'plant_equipment',
+      serviceSplit: 'wastewater',
+    },
+    {
+      key: 'water_production',
+      label: 'Vattenproduktion',
+      defaultAccountKey: 'water_production',
+      defaultDepreciationClassKey: 'water_production',
+      reportGroupKey: 'production',
+      serviceSplit: 'water',
+    },
+    {
+      key: 'wastewater_treatment',
+      label: 'Avloppsrening',
+      defaultAccountKey: 'wastewater_treatment',
+      defaultDepreciationClassKey: 'wastewater_treatment',
+      reportGroupKey: 'treatment',
+      serviceSplit: 'wastewater',
+    },
+  ];
 
 export const VESINVEST_LEGACY_DEPRECIATION_RULE_KEY_BY_GROUP_KEY: Record<
   string,
@@ -158,7 +159,9 @@ export const VESINVEST_LEGACY_DEPRECIATION_RULE_KEY_BY_GROUP_KEY: Record<
 };
 
 const DEFAULT_VESINVEST_GROUP_ORDER = new Map(
-  DEFAULT_VESINVEST_GROUP_DEFINITIONS.map((group, index) => [group.key, index] as const),
+  DEFAULT_VESINVEST_GROUP_DEFINITIONS.map(
+    (group, index) => [group.key, index] as const,
+  ),
 );
 
 function normalizeText(value: string | null | undefined): string | null {
@@ -195,7 +198,8 @@ export function normalizeVesinvestDepreciationClassKey(
   if (normalized === groupKey) {
     return groupKey;
   }
-  const legacyKey = VESINVEST_LEGACY_DEPRECIATION_RULE_KEY_BY_GROUP_KEY[groupKey];
+  const legacyKey =
+    VESINVEST_LEGACY_DEPRECIATION_RULE_KEY_BY_GROUP_KEY[groupKey];
   if (legacyKey && normalized === legacyKey) {
     return groupKey;
   }
@@ -214,7 +218,8 @@ export function expandLegacyDepreciationRuleKeyToVesinvestClasses(
   }
   return DEFAULT_VESINVEST_GROUP_DEFINITIONS.filter(
     (group) =>
-      VESINVEST_LEGACY_DEPRECIATION_RULE_KEY_BY_GROUP_KEY[group.key] === normalized,
+      VESINVEST_LEGACY_DEPRECIATION_RULE_KEY_BY_GROUP_KEY[group.key] ===
+      normalized,
   ).map((group) => group.key);
 }
 
@@ -251,10 +256,7 @@ export function isVesinvestClassificationReviewRequired(
     const accountKey = normalizeText(project.accountKey);
     if (accountKey) {
       current.accountKeys.add(accountKey);
-      if (
-        authoritativeAccountKey &&
-        accountKey !== authoritativeAccountKey
-      ) {
+      if (authoritativeAccountKey && accountKey !== authoritativeAccountKey) {
         current.hasAccountOverride = true;
       }
     }
@@ -306,6 +308,112 @@ export type VesinvestScenarioFingerprintInput = {
   years?: unknown;
 };
 
+type VesinvestScenarioConsistencyPlan = {
+  id: string;
+  projects: Array<{
+    allocations: Array<{
+      id?: string | null;
+      year: number;
+      totalAmount?: unknown;
+      waterAmount?: unknown;
+      wastewaterAmount?: unknown;
+    }>;
+  }>;
+};
+
+type VesinvestScenarioConsistencyRow = {
+  year: number;
+  amount?: unknown;
+  waterAmount?: unknown;
+  wastewaterAmount?: unknown;
+  vesinvestPlanId?: string | null;
+  allocationId?: string | null;
+};
+
+export function findVesinvestScenarioInvestmentMismatches(
+  plan: VesinvestScenarioConsistencyPlan,
+  scenario: { yearlyInvestments?: VesinvestScenarioConsistencyRow[] },
+): string[] {
+  const expectedByAllocationId = new Map<
+    string,
+    {
+      year: number;
+      amount: number;
+      waterAmount: number;
+      wastewaterAmount: number;
+    }
+  >();
+  for (const project of plan.projects ?? []) {
+    for (const allocation of project.allocations ?? []) {
+      if (!allocation.id) {
+        continue;
+      }
+      const expected = {
+        year: Number(allocation.year),
+        amount: normalizeMoneyNumber(allocation.totalAmount),
+        waterAmount: normalizeMoneyNumber(allocation.waterAmount),
+        wastewaterAmount: normalizeMoneyNumber(allocation.wastewaterAmount),
+      };
+      if (
+        expected.amount === 0 &&
+        expected.waterAmount === 0 &&
+        expected.wastewaterAmount === 0
+      ) {
+        continue;
+      }
+      expectedByAllocationId.set(allocation.id, expected);
+    }
+  }
+  if (expectedByAllocationId.size === 0) {
+    return [];
+  }
+
+  const rows = Array.isArray(scenario.yearlyInvestments)
+    ? scenario.yearlyInvestments
+    : [];
+  const mismatches: string[] = [];
+  const rowsByAllocationId = new Map<string, VesinvestScenarioConsistencyRow>();
+  for (const row of rows) {
+    const allocationId =
+      typeof row.allocationId === 'string' && row.allocationId.trim()
+        ? row.allocationId.trim()
+        : null;
+    if (allocationId && expectedByAllocationId.has(allocationId)) {
+      rowsByAllocationId.set(allocationId, row);
+      continue;
+    }
+    const nonLinkedAmount =
+      normalizeMoneyNumber(row.amount) +
+      normalizeMoneyNumber(row.waterAmount) +
+      normalizeMoneyNumber(row.wastewaterAmount);
+    if (nonLinkedAmount > 0) {
+      mismatches.push(`extra forecast investment ${row.year}`);
+    }
+  }
+
+  for (const [allocationId, expected] of expectedByAllocationId) {
+    const row = rowsByAllocationId.get(allocationId);
+    if (!row) {
+      mismatches.push(`missing allocation ${allocationId}`);
+      continue;
+    }
+    if (Number(row.year) !== expected.year) {
+      mismatches.push(`year mismatch ${allocationId}`);
+    }
+    if (!moneyEqual(row.amount, expected.amount)) {
+      mismatches.push(`amount mismatch ${allocationId}`);
+    }
+    if (!moneyEqual(row.waterAmount, expected.waterAmount)) {
+      mismatches.push(`water split mismatch ${allocationId}`);
+    }
+    if (!moneyEqual(row.wastewaterAmount, expected.wastewaterAmount)) {
+      mismatches.push(`wastewater split mismatch ${allocationId}`);
+    }
+  }
+
+  return mismatches;
+}
+
 export function computeVesinvestScenarioFingerprint(
   input: VesinvestScenarioFingerprintInput,
 ): string {
@@ -316,6 +424,20 @@ export function computeVesinvestScenarioFingerprint(
     yearlyInvestments: input.yearlyInvestments ?? [],
     years: input.years ?? null,
   });
+}
+
+function moneyEqual(left: unknown, right: unknown): boolean {
+  return (
+    Math.abs(normalizeMoneyNumber(left) - normalizeMoneyNumber(right)) < 0.01
+  );
+}
+
+function normalizeMoneyNumber(value: unknown): number {
+  const parsed = Number(value ?? 0);
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+  return Math.round(parsed * 100) / 100;
 }
 
 function normalizeDateValue(value: string | Date | null): string | null {

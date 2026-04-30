@@ -70,13 +70,19 @@ export class V2ImportOverviewService {
     );
 
     this.baselineModel = createV2ImportOverviewBaselineModel(
-      this as unknown as Parameters<typeof createV2ImportOverviewBaselineModel>[0],
+      this as unknown as Parameters<
+        typeof createV2ImportOverviewBaselineModel
+      >[0],
     );
     this.provenanceModel = createV2ImportOverviewProvenanceModel(
-      this as unknown as Parameters<typeof createV2ImportOverviewProvenanceModel>[0],
+      this as unknown as Parameters<
+        typeof createV2ImportOverviewProvenanceModel
+      >[0],
     );
     this.planningSupport = createV2ImportOverviewPlanningSupport(
-      this as unknown as Parameters<typeof createV2ImportOverviewPlanningSupport>[0],
+      this as unknown as Parameters<
+        typeof createV2ImportOverviewPlanningSupport
+      >[0],
     );
     this.workspaceSupport = createV2ImportWorkspaceSupport(
       this as unknown as Parameters<typeof createV2ImportWorkspaceSupport>[0],
@@ -166,13 +172,29 @@ export class V2ImportOverviewService {
 
   async clearImportAndScenarios(
     orgId: string,
+    userId: string,
     roles: string[],
+    challengeId?: string,
     confirmToken?: string,
   ) {
     return this.manualPatchSupport.clearImportAndScenarios(
       orgId,
+      userId,
       roles,
+      challengeId,
       confirmToken,
+    );
+  }
+
+  async createImportClearChallenge(
+    orgId: string,
+    userId: string,
+    roles: string[],
+  ) {
+    return this.manualPatchSupport.createImportClearChallenge(
+      orgId,
+      userId,
+      roles,
     );
   }
 
@@ -196,7 +218,12 @@ export class V2ImportOverviewService {
     roles: string[],
     body: OpsEventDto,
   ) {
-    return this.overviewReadModelSupport.trackOpsEvent(orgId, userId, roles, body);
+    return this.overviewReadModelSupport.trackOpsEvent(
+      orgId,
+      userId,
+      roles,
+      body,
+    );
   }
 
   async getOpsFunnel(orgId: string, roles: string[]) {
@@ -216,7 +243,10 @@ export class V2ImportOverviewService {
   }
 
   async refreshPeerSnapshot(orgId: string, requestedYear?: number) {
-    return this.overviewReadModelSupport.refreshPeerSnapshot(orgId, requestedYear);
+    return this.overviewReadModelSupport.refreshPeerSnapshot(
+      orgId,
+      requestedYear,
+    );
   }
 
   private resolveVeetiOrgLanguage(
@@ -310,15 +340,23 @@ export class V2ImportOverviewService {
     return this.planningSupport.getWorkspaceYears(orgId);
   }
 
-  private persistWorkspaceYears(orgId: string, years: number[]): Promise<number[]> {
+  private persistWorkspaceYears(
+    orgId: string,
+    years: number[],
+  ): Promise<number[]> {
     return this.planningSupport.persistWorkspaceYears(orgId, years);
   }
 
-  private removeWorkspaceYears(orgId: string, years: number[]): Promise<number[]> {
+  private removeWorkspaceYears(
+    orgId: string,
+    years: number[],
+  ): Promise<number[]> {
     return this.planningSupport.removeWorkspaceYears(orgId, years);
   }
 
-  private buildBaselineSourceSummary(...args: Parameters<typeof this.baselineModel.buildBaselineSourceSummary>) {
+  private buildBaselineSourceSummary(
+    ...args: Parameters<typeof this.baselineModel.buildBaselineSourceSummary>
+  ) {
     return this.baselineModel.buildBaselineSourceSummary(...args);
   }
 
@@ -326,7 +364,9 @@ export class V2ImportOverviewService {
     return this.baselineModel.buildKpi(...args);
   }
 
-  private buildPeerSnapshot(...args: Parameters<typeof this.baselineModel.buildPeerSnapshot>) {
+  private buildPeerSnapshot(
+    ...args: Parameters<typeof this.baselineModel.buildPeerSnapshot>
+  ) {
     return this.baselineModel.buildPeerSnapshot(...args);
   }
 
@@ -334,7 +374,9 @@ export class V2ImportOverviewService {
     return this.baselineModel.emptyCompleteness();
   }
 
-  private resolveMissingSyncRequirements(completeness: Record<string, boolean>) {
+  private resolveMissingSyncRequirements(
+    completeness: Record<string, boolean>,
+  ) {
     return this.baselineModel.resolveMissingSyncRequirements(completeness);
   }
 
@@ -345,7 +387,9 @@ export class V2ImportOverviewService {
   private resolveBaselineBlockReason(params: {
     completeness: Record<string, boolean>;
     baselineReady?: boolean;
-    baselineMissingRequirements?: Array<'financialBaseline' | 'prices' | 'volumes'>;
+    baselineMissingRequirements?: Array<
+      'financialBaseline' | 'prices' | 'volumes'
+    >;
   }) {
     return this.baselineModel.resolveBaselineBlockReason(params);
   }
@@ -357,7 +401,9 @@ export class V2ImportOverviewService {
   }
 
   private augmentCompletenessWithTariffRevenue(
-    ...args: Parameters<typeof this.baselineModel.augmentCompletenessWithTariffRevenue>
+    ...args: Parameters<
+      typeof this.baselineModel.augmentCompletenessWithTariffRevenue
+    >
   ) {
     return this.baselineModel.augmentCompletenessWithTariffRevenue(...args);
   }
@@ -375,13 +421,17 @@ export class V2ImportOverviewService {
   }
 
   private buildImportYearResultToZeroSignal(
-    ...args: Parameters<typeof this.provenanceModel.buildImportYearResultToZeroSignal>
+    ...args: Parameters<
+      typeof this.provenanceModel.buildImportYearResultToZeroSignal
+    >
   ) {
     return this.provenanceModel.buildImportYearResultToZeroSignal(...args);
   }
 
   private buildImportYearSubrowAvailability(
-    ...args: Parameters<typeof this.provenanceModel.buildImportYearSubrowAvailability>
+    ...args: Parameters<
+      typeof this.provenanceModel.buildImportYearSubrowAvailability
+    >
   ) {
     return this.provenanceModel.buildImportYearSubrowAvailability(...args);
   }
@@ -399,7 +449,9 @@ export class V2ImportOverviewService {
   }
 
   private assertStatementPreviewUpload(
-    ...args: Parameters<typeof this.provenanceModel.assertStatementPreviewUpload>
+    ...args: Parameters<
+      typeof this.provenanceModel.assertStatementPreviewUpload
+    >
   ) {
     return this.provenanceModel.assertStatementPreviewUpload(...args);
   }
@@ -420,7 +472,10 @@ export class V2ImportOverviewService {
     return this.scenarioModel.normalizeNonNegativeNullable(value);
   }
 
-  private summaryValuesDiffer(left: number | null, right: number | null): boolean {
+  private summaryValuesDiffer(
+    left: number | null,
+    right: number | null,
+  ): boolean {
     return this.scenarioModel.summaryValuesDiffer(left, right);
   }
 
@@ -428,8 +483,12 @@ export class V2ImportOverviewService {
     return this.scenarioModel.getTrendSeries(orgId);
   }
 
-  private resolveLatestAcceptedVeetiBudgetId(orgId: string): Promise<string | null> {
-    return this.planningWorkspaceSupport.resolveLatestAcceptedVeetiBudgetId(orgId);
+  private resolveLatestAcceptedVeetiBudgetId(
+    orgId: string,
+  ): Promise<string | null> {
+    return this.planningWorkspaceSupport.resolveLatestAcceptedVeetiBudgetId(
+      orgId,
+    );
   }
 
   private resolveAcceptedPlanningBaselineBudgetIds(
@@ -440,12 +499,16 @@ export class V2ImportOverviewService {
     );
   }
 
-  private resolveLatestDataIndex(...args: Parameters<V2ImportOverviewScenarioModel['resolveLatestDataIndex']>) {
+  private resolveLatestDataIndex(
+    ...args: Parameters<V2ImportOverviewScenarioModel['resolveLatestDataIndex']>
+  ) {
     return this.scenarioModel.resolveLatestDataIndex(...args);
   }
 
   private resolveLatestComparableYear(
-    ...args: Parameters<V2ImportOverviewScenarioModel['resolveLatestComparableYear']>
+    ...args: Parameters<
+      V2ImportOverviewScenarioModel['resolveLatestComparableYear']
+    >
   ) {
     return this.scenarioModel.resolveLatestComparableYear(...args);
   }

@@ -1,8 +1,11 @@
 import {
+  ArgumentsHost,
   BadRequestException,
   Body,
+  Catch,
   Controller,
   Delete,
+  ExceptionFilter,
   Get,
   Header,
   Param,
@@ -18,10 +21,11 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  UseFilters,
   ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { Request,Response } from 'express';
+import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { TenantGuard } from '../tenant/tenant.guard';
 import { CreatePlanningBaselineDto } from './dto/create-planning-baseline.dto';
@@ -44,13 +48,17 @@ import { OpsEventDto } from './dto/ops-event.dto';
 import { RefreshPeerDto } from './dto/refresh-peer.dto';
 import { UpdateScenarioClassAllocationsDto } from './dto/scenario-class-allocations.dto';
 import { UpdateScenarioDto } from './dto/update-scenario.dto';
-import { UpsertTariffPlanDto } from './dto/tariff-plan.dto';
+import {
+  AcceptTariffPlanDto,
+  UpsertTariffPlanDto,
+} from './dto/tariff-plan.dto';
 import { UpdateVesinvestGroupDto } from './dto/vesinvest-group.dto';
 import {
   CreateVesinvestPlanDto,
   SyncVesinvestPlanDto,
   UpdateVesinvestPlanDto,
 } from './dto/vesinvest-plan.dto';
+import { V2AdminGuard, V2EditorGuard } from './v2-role-access.guard';
 import { V2Service } from './v2.service';
 
 const WORKBOOK_PREVIEW_MAX_BYTES = 5 * 1024 * 1024;
@@ -73,6 +81,39 @@ function rejectMultipleFileUploads(
     return;
   }
   callback(null, true);
+}
+
+function getBadRequestMessage(exception: BadRequestException) {
+  const body = exception.getResponse();
+  const message =
+    typeof body === 'object' && body !== null && 'message' in body
+      ? (body as { message?: unknown }).message
+      : body;
+  return Array.isArray(message) ? String(message[0] ?? '') : String(message);
+}
+
+@Catch(BadRequestException)
+class V2UploadBadRequestExceptionFilter
+  implements ExceptionFilter<BadRequestException>
+{
+  catch(exception: BadRequestException, host: ArgumentsHost) {
+    const response = host.switchToHttp().getResponse<Response>();
+    const currentMessage = getBadRequestMessage(exception);
+    const mappedMessage =
+      currentMessage === 'Unexpected field'
+        ? 'Only a single file upload is supported.'
+        : currentMessage === 'File too large'
+          ? 'Uploaded file exceeds the configured byte limit.'
+          : null;
+
+    if (mappedMessage) {
+      const badRequest = new BadRequestException(mappedMessage);
+      response.status(badRequest.getStatus()).json(badRequest.getResponse());
+      return;
+    }
+
+    response.status(exception.getStatus()).json(exception.getResponse());
+  }
 }
 
 @UseGuards(JwtAuthGuard, TenantGuard)
@@ -99,6 +140,7 @@ export class V2Controller {
   }
 
   @Post('overview/peer-refresh')
+  @UseGuards(V2AdminGuard)
   async refreshPeer(
     @Req() req: Request,
     @Body(new ValidationPipe(v2ValidationPipeOptions)) body: RefreshPeerDto,
@@ -115,6 +157,7 @@ export class V2Controller {
   }
 
   @Post('import/connect')
+  @UseGuards(V2AdminGuard)
   async importConnect(
     @Req() req: Request,
     @Body(new ValidationPipe(v2ValidationPipeOptions)) body: ImportConnectDto,
@@ -123,6 +166,7 @@ export class V2Controller {
   }
 
   @Post('import/sync')
+  @UseGuards(V2AdminGuard)
   async importSync(
     @Req() req: Request,
     @Body(new ValidationPipe(v2ValidationPipeOptions)) body: ImportSyncDto,
@@ -131,6 +175,7 @@ export class V2Controller {
   }
 
   @Post('import/years/import')
+  @UseGuards(V2AdminGuard)
   async importYears(
     @Req() req: Request,
     @Body(new ValidationPipe(v2ValidationPipeOptions)) body: ImportYearsDto,
@@ -139,6 +184,7 @@ export class V2Controller {
   }
 
   @Post('import/planning-baseline')
+  @UseGuards(V2AdminGuard)
   async createPlanningBaseline(
     @Req() req: Request,
     @Body(new ValidationPipe(v2ValidationPipeOptions))
@@ -153,6 +199,7 @@ export class V2Controller {
   }
 
   @Delete('import/years/:year')
+  @UseGuards(V2AdminGuard)
   async importRemoveYear(
     @Req() req: Request,
     @Param('year', ParseIntPipe) year: number,
@@ -161,6 +208,7 @@ export class V2Controller {
   }
 
   @Post('import/years/bulk-delete')
+  @UseGuards(V2AdminGuard)
   async importBulkDeleteYears(
     @Req() req: Request,
     @Body(new ValidationPipe(v2ValidationPipeOptions)) body: ImportYearsBulkDto,
@@ -169,6 +217,7 @@ export class V2Controller {
   }
 
   @Post('import/years/exclude')
+  @UseGuards(V2AdminGuard)
   async importExcludeYears(
     @Req() req: Request,
     @Body(new ValidationPipe(v2ValidationPipeOptions)) body: ImportYearsBulkDto,
@@ -177,6 +226,7 @@ export class V2Controller {
   }
 
   @Post('import/years/restore')
+  @UseGuards(V2AdminGuard)
   async importRestoreYears(
     @Req() req: Request,
     @Body(new ValidationPipe(v2ValidationPipeOptions)) body: ImportYearsBulkDto,
@@ -193,6 +243,8 @@ export class V2Controller {
   }
 
   @Post('import/workbook-preview')
+  @UseGuards(V2AdminGuard)
+  @UseFilters(new V2UploadBadRequestExceptionFilter())
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {
@@ -221,6 +273,8 @@ export class V2Controller {
   }
 
   @Post('import/years/:year/statement-preview')
+  @UseGuards(V2AdminGuard)
+  @UseFilters(new V2UploadBadRequestExceptionFilter())
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {
@@ -252,6 +306,7 @@ export class V2Controller {
   }
 
   @Post('import/years/:year/reconcile')
+  @UseGuards(V2AdminGuard)
   async reconcileImportYear(
     @Req() req: Request,
     @Param('year', ParseIntPipe) year: number,
@@ -269,20 +324,35 @@ export class V2Controller {
   }
 
   @Post('import/clear')
+  @UseGuards(V2AdminGuard)
   async clearImportAndScenarios(
     @Req() req: Request,
     @Body(new ValidationPipe(v2ValidationPipeOptions)) body: ImportClearDto,
   ) {
-    const user = req.user as { roles?: string[] };
+    const user = req.user as { sub?: string; roles?: string[] };
     // Destructive org-level reset path used by the V2 account drawer.
     return this.service.clearImportAndScenarios(
       req.orgId!,
+      user?.sub ?? '',
       user?.roles ?? [],
+      body?.challengeId,
       body?.confirmToken,
     );
   }
 
+  @Post('import/clear/challenge')
+  @UseGuards(V2AdminGuard)
+  async createImportClearChallenge(@Req() req: Request) {
+    const user = req.user as { sub?: string; roles?: string[] };
+    return this.service.createImportClearChallenge(
+      req.orgId!,
+      user?.sub ?? '',
+      user?.roles ?? [],
+    );
+  }
+
   @Post('import/manual-year')
+  @UseGuards(V2AdminGuard)
   async completeImportYearManually(
     @Req() req: Request,
     @Body(new ValidationPipe(v2ValidationPipeOptions))
@@ -312,6 +382,7 @@ export class V2Controller {
   }
 
   @Get('ops/funnel')
+  @UseGuards(V2AdminGuard)
   async getOpsFunnel(@Req() req: Request) {
     const user = req.user as { roles?: string[] };
     return this.service.getOpsFunnel(req.orgId!, user?.roles ?? []);
@@ -323,6 +394,7 @@ export class V2Controller {
   }
 
   @Patch('vesinvest/groups/:key')
+  @UseGuards(V2AdminGuard)
   async updateVesinvestGroup(
     @Req() req: Request,
     @Param('key') key: string,
@@ -344,6 +416,7 @@ export class V2Controller {
   }
 
   @Post('vesinvest/plans')
+  @UseGuards(V2EditorGuard)
   async createVesinvestPlan(
     @Req() req: Request,
     @Body(new ValidationPipe(v2ValidationPipeOptions))
@@ -361,6 +434,7 @@ export class V2Controller {
   }
 
   @Patch('vesinvest/plans/:id')
+  @UseGuards(V2EditorGuard)
   async updateVesinvestPlan(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
@@ -371,6 +445,7 @@ export class V2Controller {
   }
 
   @Post('vesinvest/plans/:id/clone')
+  @UseGuards(V2EditorGuard)
   async cloneVesinvestPlan(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
@@ -379,10 +454,12 @@ export class V2Controller {
   }
 
   @Post('vesinvest/plans/:id/forecast-sync')
+  @UseGuards(V2EditorGuard)
   async syncVesinvestPlanToForecast(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
-    @Body(new ValidationPipe(v2ValidationPipeOptions)) body: SyncVesinvestPlanDto,
+    @Body(new ValidationPipe(v2ValidationPipeOptions))
+    body: SyncVesinvestPlanDto,
   ) {
     return this.service.syncVesinvestPlanToForecast(req.orgId!, id, body);
   }
@@ -396,6 +473,7 @@ export class V2Controller {
   }
 
   @Put('vesinvest/plans/:id/tariff-plan')
+  @UseGuards(V2EditorGuard)
   async upsertTariffPlan(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
@@ -406,11 +484,14 @@ export class V2Controller {
   }
 
   @Post('vesinvest/plans/:id/tariff-plan/accept')
+  @UseGuards(V2EditorGuard)
   async acceptTariffPlan(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body(new ValidationPipe(v2ValidationPipeOptions))
+    body: AcceptTariffPlanDto,
   ) {
-    return this.service.acceptTariffPlan(req.orgId!, id);
+    return this.service.acceptTariffPlan(req.orgId!, id, body);
   }
 
   @Get('forecast/scenarios')
@@ -425,6 +506,7 @@ export class V2Controller {
   }
 
   @Post('forecast/depreciation-rules')
+  @UseGuards(V2AdminGuard)
   async createDepreciationRule(
     @Req() req: Request,
     @Body(new ValidationPipe(v2ValidationPipeOptions))
@@ -435,6 +517,7 @@ export class V2Controller {
   }
 
   @Patch('forecast/depreciation-rules/:id')
+  @UseGuards(V2AdminGuard)
   async updateDepreciationRule(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
@@ -446,6 +529,7 @@ export class V2Controller {
   }
 
   @Delete('forecast/depreciation-rules/:id')
+  @UseGuards(V2AdminGuard)
   async deleteDepreciationRule(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
@@ -464,6 +548,7 @@ export class V2Controller {
   }
 
   @Post('forecast/scenarios/:id/depreciation-rules')
+  @UseGuards(V2AdminGuard)
   async createScenarioDepreciationRule(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
@@ -475,6 +560,7 @@ export class V2Controller {
   }
 
   @Patch('forecast/scenarios/:id/depreciation-rules/:ruleId')
+  @UseGuards(V2AdminGuard)
   async updateScenarioDepreciationRule(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
@@ -492,6 +578,7 @@ export class V2Controller {
   }
 
   @Delete('forecast/scenarios/:id/depreciation-rules/:ruleId')
+  @UseGuards(V2AdminGuard)
   async deleteScenarioDepreciationRule(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
@@ -502,6 +589,7 @@ export class V2Controller {
   }
 
   @Post('forecast/scenarios')
+  @UseGuards(V2EditorGuard)
   async createScenario(
     @Req() req: Request,
     @Body(new ValidationPipe(v2ValidationPipeOptions)) body: CreateScenarioDto,
@@ -527,6 +615,7 @@ export class V2Controller {
   }
 
   @Put('forecast/scenarios/:id/class-allocations')
+  @UseGuards(V2AdminGuard)
   async putScenarioClassAllocations(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
@@ -538,6 +627,7 @@ export class V2Controller {
   }
 
   @Patch('forecast/scenarios/:id')
+  @UseGuards(V2EditorGuard)
   async patchScenario(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
@@ -547,6 +637,7 @@ export class V2Controller {
   }
 
   @Delete('forecast/scenarios/:id')
+  @UseGuards(V2AdminGuard)
   async deleteScenario(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
@@ -555,6 +646,7 @@ export class V2Controller {
   }
 
   @Post('forecast/scenarios/:id/compute')
+  @UseGuards(V2EditorGuard)
   async computeScenario(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
@@ -572,6 +664,7 @@ export class V2Controller {
   }
 
   @Post('reports')
+  @UseGuards(V2EditorGuard)
   async createReport(
     @Req() req: Request,
     @Body(new ValidationPipe(v2ValidationPipeOptions)) body: CreateReportDto,

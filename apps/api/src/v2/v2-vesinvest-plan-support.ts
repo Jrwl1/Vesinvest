@@ -264,13 +264,29 @@ export class V2VesinvestPlanSupport {
     if (!Number.isFinite(totalAmount) || totalAmount < 0) {
       throw new BadRequestException('Allocation total amount is invalid.');
     }
+    const waterAmount = this.foundationSupport.toNullablePositiveNumber(
+      allocation.waterAmount,
+    );
+    const wastewaterAmount = this.foundationSupport.toNullablePositiveNumber(
+      allocation.wastewaterAmount,
+    );
+    const splitProvided =
+      allocation.waterAmount != null || allocation.wastewaterAmount != null;
+    if (splitProvided) {
+      const splitTotal = this.foundationSupport.round2(
+        (waterAmount ?? 0) + (wastewaterAmount ?? 0),
+      );
+      if (Math.abs(splitTotal - totalAmount) > 0.01) {
+        throw new BadRequestException(
+          'Allocation water and wastewater amounts must add up to the total amount.',
+        );
+      }
+    }
     return {
       year,
       totalAmount,
-      waterAmount: this.foundationSupport.toNullablePositiveNumber(allocation.waterAmount),
-      wastewaterAmount: this.foundationSupport.toNullablePositiveNumber(
-        allocation.wastewaterAmount,
-      ),
+      waterAmount,
+      wastewaterAmount,
     };
   }
 

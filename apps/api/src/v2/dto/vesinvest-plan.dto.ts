@@ -174,6 +174,10 @@ export class CreateVesinvestPlanDto {
 }
 
 export class UpdateVesinvestPlanDto extends CreateVesinvestPlanDto {
+  @IsString()
+  @MaxLength(40)
+  expectedUpdatedAt!: string;
+
   @IsOptional()
   @IsIn(['draft', 'active', 'archived'])
   status?: 'draft' | 'active' | 'archived';

@@ -100,63 +100,120 @@ const buildFacadeService = (deps: {
   } as any);
 };
 
-
 export function registerV2UploadValidationSuite() {
-describe('V2Service upload validation', () => {
-  const ORG_ID = 'org-1';
+  describe('V2Service upload validation', () => {
+    const ORG_ID = 'org-1';
 
-  it('rejects oversized statement preview uploads before parser work', async () => {
-    const veetiEffectiveDataService = {
-      getYearDataset: jest.fn(),
-    } as any;
-    const service = buildFacadeFromArgs(
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      veetiEffectiveDataService,
-      {} as any,
-      {} as any,
-      {} as any,
-    );
+    it('rejects oversized statement preview uploads before parser work', async () => {
+      const veetiEffectiveDataService = {
+        getYearDataset: jest.fn(),
+      } as any;
+      const service = buildFacadeFromArgs(
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        veetiEffectiveDataService,
+        {} as any,
+        {} as any,
+        {} as any,
+      );
 
-    await expect(
-      service.previewStatementImport(ORG_ID, 2024, {
-        fileName: 'bokslut-2024.pdf',
-        contentType: 'application/pdf',
-        sizeBytes: 10 * 1024 * 1024 + 1,
-        fileBuffer: Buffer.from('%PDF-1.7\nstub'),
-      }),
-    ).rejects.toThrow('Uploaded file exceeds the 10485760 byte limit.');
-    expect(veetiEffectiveDataService.getYearDataset).not.toHaveBeenCalled();
+      await expect(
+        service.previewStatementImport(ORG_ID, 2024, {
+          fileName: 'bokslut-2024.pdf',
+          contentType: 'application/pdf',
+          sizeBytes: 10 * 1024 * 1024 + 1,
+          fileBuffer: Buffer.from('%PDF-1.7\nstub'),
+        }),
+      ).rejects.toThrow('Uploaded file exceeds the 10485760 byte limit.');
+      expect(veetiEffectiveDataService.getYearDataset).not.toHaveBeenCalled();
+    });
+
+    it('rejects statement previews whose content is not actually a PDF', async () => {
+      const veetiEffectiveDataService = {
+        getYearDataset: jest.fn(),
+      } as any;
+      const service = buildFacadeFromArgs(
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        veetiEffectiveDataService,
+        {} as any,
+        {} as any,
+        {} as any,
+      );
+
+      await expect(
+        service.previewStatementImport(ORG_ID, 2024, {
+          fileName: 'bokslut-2024.pdf',
+          contentType: 'application/pdf',
+          sizeBytes: 14,
+          fileBuffer: Buffer.from('not-a-real-pdf'),
+        }),
+      ).rejects.toThrow('Statement preview only supports PDF uploads.');
+      expect(veetiEffectiveDataService.getYearDataset).not.toHaveBeenCalled();
+    });
+
+    it('maps malformed workbook parser failures to a generic upload error', async () => {
+      const service = buildFacadeFromArgs(
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+      );
+
+      await expect(
+        service.previewWorkbookImport(ORG_ID, {
+          fileName: 'kronoby-kva.xlsx',
+          contentType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          sizeBytes: 18,
+          fileBuffer: Buffer.from('PK\x03\x04not-a-workbook'),
+        }),
+      ).rejects.toThrow(
+        'Workbook preview failed. Upload a valid .xlsx/.xlsm KVA workbook.',
+      );
+    });
+
+    it('maps valid workbook parser-domain failures to a generic upload error', async () => {
+      const workbook = new Workbook();
+      const sheet = workbook.addWorksheet('Wrong sheet');
+      sheet.addRows([
+        ['Rad', 2024],
+        ['Omsättning', 610000],
+      ]);
+      const rawBuffer = await workbook.xlsx.writeBuffer();
+      const fileBuffer = Buffer.isBuffer(rawBuffer)
+        ? rawBuffer
+        : Buffer.from(rawBuffer);
+      const service = buildFacadeFromArgs(
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+      );
+
+      await expect(
+        service.previewWorkbookImport(ORG_ID, {
+          fileName: 'kronoby-kva.xlsx',
+          contentType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          sizeBytes: fileBuffer.length,
+          fileBuffer,
+        }),
+      ).rejects.toThrow(
+        'Workbook preview failed. Upload a valid .xlsx/.xlsm KVA workbook.',
+      );
+    });
   });
-
-  it('rejects statement previews whose content is not actually a PDF', async () => {
-    const veetiEffectiveDataService = {
-      getYearDataset: jest.fn(),
-    } as any;
-    const service = buildFacadeFromArgs(
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      veetiEffectiveDataService,
-      {} as any,
-      {} as any,
-      {} as any,
-    );
-
-    await expect(
-      service.previewStatementImport(ORG_ID, 2024, {
-        fileName: 'bokslut-2024.pdf',
-        contentType: 'application/pdf',
-        sizeBytes: 14,
-        fileBuffer: Buffer.from('not-a-real-pdf'),
-      }),
-    ).rejects.toThrow('Statement preview only supports PDF uploads.');
-    expect(veetiEffectiveDataService.getYearDataset).not.toHaveBeenCalled();
-  });
-});
 }
-
-

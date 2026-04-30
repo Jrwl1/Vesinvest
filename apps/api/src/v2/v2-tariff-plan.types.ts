@@ -32,6 +32,7 @@ export type TariffAllocationPolicy = {
 export type TariffEvidenceObject = Record<string, unknown>;
 
 export type TariffPlanBody = {
+  expectedUpdatedAt?: string | null;
   baselineInput?: TariffBaselineInput | null;
   allocationPolicy?: TariffAllocationPolicy | null;
   revenueEvidence?: TariffEvidenceObject | null;

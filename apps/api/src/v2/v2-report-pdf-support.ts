@@ -80,7 +80,7 @@ export function createPdfReportSupport({
         language === 'sv'
           ? 'Avlopp'
           : language === 'fi'
-          ? 'Jatevesi'
+          ? 'Jätevesi'
           : 'Wastewater',
       mixed: language === 'sv' ? 'Blandad' : language === 'fi' ? 'Sekoitettu' : 'Mixed',
     },
@@ -118,23 +118,23 @@ export function createPdfReportSupport({
         language === 'sv'
           ? 'Personalfaktor'
           : language === 'fi'
-          ? 'Henkilostokerroin'
+          ? 'Henkilöstökerroin'
           : 'Personnel factor',
       volumeChange:
         language === 'sv'
-          ? 'Volymforandring'
+          ? 'Volymförändring'
           : language === 'fi'
           ? 'Volyymin muutos'
           : 'Volume change',
       priceIncrease:
         language === 'sv'
-          ? 'Prishojning'
+          ? 'Prishöjning'
           : language === 'fi'
           ? 'Hinnankorotus'
           : 'Price increase',
       baseFeeChange:
         language === 'sv'
-          ? 'Grundavgiftsandring'
+          ? 'Grundavgiftsändring'
           : language === 'fi'
           ? 'Perusmaksun muutos'
           : 'Base fee change',
@@ -156,7 +156,7 @@ export function createPdfReportSupport({
         language === 'sv'
           ? 'Boksluts-PDF + Excel-korrigering'
           : language === 'fi'
-          ? 'Tilinpaatos-PDF + Excel-korjaus'
+          ? 'Tilinpäätös-PDF + Excel-korjaus'
           : 'Statement PDF + workbook repair',
       evidenceFile:
         language === 'sv'

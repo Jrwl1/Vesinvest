@@ -129,6 +129,11 @@ class TariffAllocationPolicyDto {
 
 export class UpsertTariffPlanDto {
   @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  expectedUpdatedAt?: string;
+
+  @IsOptional()
   @IsObject()
   @ValidateNested()
   @Type(() => TariffBaselineInputDto)
@@ -167,4 +172,10 @@ export class UpsertTariffPlanDto {
   @IsOptional()
   @IsObject()
   ownerDistributionState?: Record<string, unknown> | null;
+}
+
+export class AcceptTariffPlanDto {
+  @IsString()
+  @MaxLength(40)
+  expectedUpdatedAt!: string;
 }

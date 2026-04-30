@@ -46,6 +46,7 @@ export type CreatePlanBody = PlanEvidenceBody & {
 };
 
 export type UpdatePlanBody = PlanEvidenceBody & {
+  expectedUpdatedAt?: string | null;
   name?: string;
   utilityName?: string;
   businessId?: string | null;

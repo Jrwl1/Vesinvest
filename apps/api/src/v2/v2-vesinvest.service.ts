@@ -1,4 +1,9 @@
-import { BadRequestException,ForbiddenException,Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { V2ForecastService } from './v2-forecast.service';
@@ -43,7 +48,7 @@ export class V2VesinvestService {
     return this.planSupport;
   }
 
-async getPlanningContextSummary(orgId: string) {
+  async getPlanningContextSummary(orgId: string) {
     const [plans, currentBaseline, groupDefinitions] = await Promise.all([
       this.prisma.vesinvestPlan.findMany({
         where: {
@@ -89,8 +94,12 @@ async getPlanningContextSummary(orgId: string) {
       this.foundationSupport.getPersistedGroupDefinitionMap(orgId),
     ]);
 
-    const activePlanRecord = this.foundationSupport.resolveActivePlanRecord(plans);
-    const selectedPlanRecord = this.foundationSupport.resolveSelectedPlanRecord(plans, activePlanRecord);
+    const activePlanRecord =
+      this.foundationSupport.resolveActivePlanRecord(plans);
+    const selectedPlanRecord = this.foundationSupport.resolveSelectedPlanRecord(
+      plans,
+      activePlanRecord,
+    );
 
     return {
       vesinvest: {
@@ -129,7 +138,10 @@ async getPlanningContextSummary(orgId: string) {
         'Only admins can update Vesinvest group definitions.',
       );
     }
-    const current = await this.foundationSupport.resolveGroupDefinition(orgId, groupKey);
+    const current = await this.foundationSupport.resolveGroupDefinition(
+      orgId,
+      groupKey,
+    );
     const label =
       this.foundationSupport.normalizeText(body.label) ?? current.label;
     const defaultAccountKey =
@@ -225,7 +237,11 @@ async getPlanningContextSummary(orgId: string) {
       this.foundationSupport.getPersistedGroupDefinitionMap(orgId),
     ]);
     return plans.map((plan) =>
-      this.currentPlanSupport().mapPlanSummary(plan, currentBaseline, groupDefinitions),
+      this.currentPlanSupport().mapPlanSummary(
+        plan,
+        currentBaseline,
+        groupDefinitions,
+      ),
     );
   }
 
@@ -238,14 +254,18 @@ async getPlanningContextSummary(orgId: string) {
   }
 
   async createPlan(orgId: string, body: CreatePlanBody) {
-    const utilityIdentity = await this.currentPlanSupport().getRequiredBoundUtilityIdentity(orgId);
-    const payload = await this.currentPlanSupport().normalizePlanPayload(orgId, {
-      ...body,
-      utilityName: utilityIdentity.utilityName,
-      businessId: utilityIdentity.businessId,
-      veetiId: utilityIdentity.veetiId,
-      identitySource: utilityIdentity.identitySource,
-    });
+    const utilityIdentity =
+      await this.currentPlanSupport().getRequiredBoundUtilityIdentity(orgId);
+    const payload = await this.currentPlanSupport().normalizePlanPayload(
+      orgId,
+      {
+        ...body,
+        utilityName: utilityIdentity.utilityName,
+        businessId: utilityIdentity.businessId,
+        veetiId: utilityIdentity.veetiId,
+        identitySource: utilityIdentity.identitySource,
+      },
+    );
     const reviewDueAt = this.foundationSupport.addYears(new Date(), 3);
     const series = await this.prisma.vesinvestPlanSeries.create({
       data: {
@@ -302,7 +322,9 @@ async getPlanningContextSummary(orgId: string) {
             : payload.communicationState,
         reviewDueAt,
         projects: {
-          create: payload.projects.map((project) => this.currentPlanSupport().toProjectCreate(project)),
+          create: payload.projects.map((project) =>
+            this.currentPlanSupport().toProjectCreate(project),
+          ),
         },
       },
       include: {
@@ -337,12 +359,22 @@ async getPlanningContextSummary(orgId: string) {
         },
       },
     });
-    const currentBaseline = await this.currentPlanSupport().getCurrentBaselineSnapshot(orgId);
+    const currentBaseline =
+      await this.currentPlanSupport().getCurrentBaselineSnapshot(orgId);
     return this.currentPlanSupport().mapPlan(plan, currentBaseline);
   }
 
   async updatePlan(orgId: string, planId: string, body: UpdatePlanBody) {
-    const current = await this.currentPlanSupport().findPlanOrThrow(orgId, planId);
+    const current = await this.currentPlanSupport().findPlanOrThrow(
+      orgId,
+      planId,
+    );
+    this.assertFreshUpdateToken(
+      current.updatedAt,
+      body.expectedUpdatedAt,
+      'VESINVEST_PLAN_STALE_EDIT',
+      'This Vesinvest plan has changed in another session. Refresh it before saving.',
+    );
     this.foundationSupport.assertIdentityMutationNotRequested(body, current);
     const payload = await this.currentPlanSupport().normalizePlanPayload(
       orgId,
@@ -370,12 +402,20 @@ async getPlanningContextSummary(orgId: string) {
                 reportGroupKey: project.reportGroupKey,
                 subtype: project.subtype,
                 notes: project.notes,
-                waterAmount: this.foundationSupport.toNumber(project.waterAmount),
-                wastewaterAmount: this.foundationSupport.toNumber(project.wastewaterAmount),
+                waterAmount: this.foundationSupport.toNumber(
+                  project.waterAmount,
+                ),
+                wastewaterAmount: this.foundationSupport.toNumber(
+                  project.wastewaterAmount,
+                ),
                 allocations: project.allocations.map((allocation) => ({
                   year: allocation.year,
-                  totalAmount: this.foundationSupport.toNumber(allocation.totalAmount),
-                  waterAmount: this.foundationSupport.toNumberNullable(allocation.waterAmount),
+                  totalAmount: this.foundationSupport.toNumber(
+                    allocation.totalAmount,
+                  ),
+                  waterAmount: this.foundationSupport.toNumberNullable(
+                    allocation.waterAmount,
+                  ),
                   wastewaterAmount: this.foundationSupport.toNumberNullable(
                     allocation.wastewaterAmount,
                   ),
@@ -392,7 +432,8 @@ async getPlanningContextSummary(orgId: string) {
       },
       true,
     );
-    const currentBaseline = await this.currentPlanSupport().getCurrentBaselineSnapshot(orgId);
+    const currentBaseline =
+      await this.currentPlanSupport().getCurrentBaselineSnapshot(orgId);
     const nextStatus = body.status ?? current.status;
     if (current.status !== 'active' && nextStatus === 'active') {
       this.foundationSupport.assertPlanCanBecomeActive(
@@ -402,7 +443,8 @@ async getPlanningContextSummary(orgId: string) {
     }
 
     const investmentPlanChanged =
-      body.projects !== undefined || payload.horizonYears !== current.horizonYears;
+      body.projects !== undefined ||
+      payload.horizonYears !== current.horizonYears;
 
     const nextBaselineStatus =
       body.baselineStatus ??
@@ -440,13 +482,11 @@ async getPlanningContextSummary(orgId: string) {
           baselineStatus: nextBaselineStatus,
           feeRecommendationStatus: nextFeeRecommendationStatus,
           selectedScenarioId: current.selectedScenarioId,
-          feeRecommendation:
-            investmentPlanChanged
-              ? Prisma.DbNull
-              : undefined,
+          feeRecommendation: investmentPlanChanged ? Prisma.DbNull : undefined,
           baselineFingerprint: current.baselineFingerprint,
-          scenarioFingerprint:
-            investmentPlanChanged ? null : current.scenarioFingerprint,
+          scenarioFingerprint: investmentPlanChanged
+            ? null
+            : current.scenarioFingerprint,
           baselineSourceState:
             body.baselineSourceState !== undefined
               ? payload.baselineSourceState == null
@@ -503,14 +543,12 @@ async getPlanningContextSummary(orgId: string) {
             body.reviewDueAt !== undefined
               ? this.foundationSupport.normalizeDate(body.reviewDueAt)
               : current.reviewDueAt,
-          investmentPlanChangedSinceFeeRecommendation:
-            investmentPlanChanged
-              ? true
-              : current.investmentPlanChangedSinceFeeRecommendation,
-          baselineChangedSinceAcceptedRevision:
-            investmentPlanChanged
-              ? true
-              : current.baselineChangedSinceAcceptedRevision,
+          investmentPlanChangedSinceFeeRecommendation: investmentPlanChanged
+            ? true
+            : current.investmentPlanChangedSinceFeeRecommendation,
+          baselineChangedSinceAcceptedRevision: investmentPlanChanged
+            ? true
+            : current.baselineChangedSinceAcceptedRevision,
           projects:
             body.projects !== undefined
               ? {
@@ -539,13 +577,47 @@ async getPlanningContextSummary(orgId: string) {
     return this.getPlan(orgId, planId);
   }
 
+  private assertFreshUpdateToken(
+    currentUpdatedAt: Date | string,
+    expectedUpdatedAt: string | null | undefined,
+    conflictCode: string,
+    conflictMessage: string,
+  ) {
+    const expected = expectedUpdatedAt?.trim();
+    if (!expected) {
+      throw new BadRequestException({
+        code: `${conflictCode}_TOKEN_REQUIRED`,
+        message: 'Refresh this workspace before saving.',
+      });
+    }
+    const expectedTime = new Date(expected).getTime();
+    const currentTime = new Date(currentUpdatedAt).getTime();
+    if (!Number.isFinite(expectedTime)) {
+      throw new BadRequestException({
+        code: `${conflictCode}_TOKEN_INVALID`,
+        message: 'Refresh this workspace before saving.',
+      });
+    }
+    if (expectedTime !== currentTime) {
+      throw new ConflictException({
+        code: conflictCode,
+        message: conflictMessage,
+      });
+    }
+  }
+
   async clonePlan(orgId: string, sourcePlanId: string) {
-    const source = await this.currentPlanSupport().findPlanOrThrow(orgId, sourcePlanId);
-    const boundUtilityIdentity = await this.currentPlanSupport().getOptionalBoundUtilityIdentity(orgId);
-    const nextVersionNumber = await this.foundationSupport.resolveNextRevisionVersion(
+    const source = await this.currentPlanSupport().findPlanOrThrow(
       orgId,
-      source.seriesId,
+      sourcePlanId,
     );
+    const boundUtilityIdentity =
+      await this.currentPlanSupport().getOptionalBoundUtilityIdentity(orgId);
+    const nextVersionNumber =
+      await this.foundationSupport.resolveNextRevisionVersion(
+        orgId,
+        source.seriesId,
+      );
     const clone = await this.prisma.vesinvestPlan.create({
       data: {
         orgId,
@@ -584,34 +656,44 @@ async getPlanningContextSummary(orgId: string) {
                 project.groupKey,
               );
               return this.currentPlanSupport().toProjectCreate({
-              code: project.projectCode,
-              name: project.projectName,
-              investmentType: project.investmentType,
-              groupKey: project.groupKey,
-              depreciationClassKey:
-                normalizeVesinvestDepreciationClassKey(
-                  group.key,
-                  project.depreciationClassKey,
-                ) ?? group.key,
-              accountKey: project.accountKey ?? group.defaultAccountKey,
-              reportGroupKey: project.reportGroupKey ?? group.reportGroupKey,
-              subtype: project.subtype,
-              notes: project.notes,
-              waterAmount: this.foundationSupport.toNumberNullable(project.waterAmount),
-              wastewaterAmount: this.foundationSupport.toNumberNullable(project.wastewaterAmount),
-              totalAmount: project.allocations.reduce(
-                (sum, allocation) => sum + this.foundationSupport.toNumber(allocation.totalAmount),
-                0,
-              ),
-              allocations: project.allocations.map((allocation) => ({
-                year: allocation.year,
-                totalAmount: this.foundationSupport.toNumber(allocation.totalAmount),
-                waterAmount: this.foundationSupport.toNumberNullable(allocation.waterAmount),
-                wastewaterAmount: this.foundationSupport.toNumberNullable(
-                  allocation.wastewaterAmount,
+                code: project.projectCode,
+                name: project.projectName,
+                investmentType: project.investmentType,
+                groupKey: project.groupKey,
+                depreciationClassKey:
+                  normalizeVesinvestDepreciationClassKey(
+                    group.key,
+                    project.depreciationClassKey,
+                  ) ?? group.key,
+                accountKey: project.accountKey ?? group.defaultAccountKey,
+                reportGroupKey: project.reportGroupKey ?? group.reportGroupKey,
+                subtype: project.subtype,
+                notes: project.notes,
+                waterAmount: this.foundationSupport.toNumberNullable(
+                  project.waterAmount,
                 ),
-              })),
-            });
+                wastewaterAmount: this.foundationSupport.toNumberNullable(
+                  project.wastewaterAmount,
+                ),
+                totalAmount: project.allocations.reduce(
+                  (sum, allocation) =>
+                    sum +
+                    this.foundationSupport.toNumber(allocation.totalAmount),
+                  0,
+                ),
+                allocations: project.allocations.map((allocation) => ({
+                  year: allocation.year,
+                  totalAmount: this.foundationSupport.toNumber(
+                    allocation.totalAmount,
+                  ),
+                  waterAmount: this.foundationSupport.toNumberNullable(
+                    allocation.waterAmount,
+                  ),
+                  wastewaterAmount: this.foundationSupport.toNumberNullable(
+                    allocation.wastewaterAmount,
+                  ),
+                })),
+              });
             }),
           ),
         },
@@ -648,47 +730,62 @@ async getPlanningContextSummary(orgId: string) {
         },
       },
     });
-    const currentBaseline = await this.currentPlanSupport().getCurrentBaselineSnapshot(orgId);
+    const currentBaseline =
+      await this.currentPlanSupport().getCurrentBaselineSnapshot(orgId);
     return this.currentPlanSupport().mapPlan(clone, currentBaseline);
   }
 
-  async syncPlanToForecast(
-    orgId: string,
-    planId: string,
-    body?: SyncPlanBody,
-  ) {
+  async syncPlanToForecast(orgId: string, planId: string, body?: SyncPlanBody) {
     const plan = await this.currentPlanSupport().findPlanOrThrow(orgId, planId);
     if (!plan.projects.length) {
-      throw new BadRequestException(
-        'Create at least one investment project before opening pricing.',
-      );
+      throw new BadRequestException({
+        code: 'VESINVEST_PROJECT_REQUIRED',
+        message:
+          'Create at least one investment project before opening pricing.',
+      });
     }
-    const currentBaseline = await this.currentPlanSupport().getCurrentBaselineSnapshot(orgId);
+    const currentBaseline =
+      await this.currentPlanSupport().getCurrentBaselineSnapshot(orgId);
     if (this.foundationSupport.hasUtilityIdentityDrift(plan, currentBaseline)) {
-      throw new BadRequestException(
-        'Utility binding does not match this Vesinvest revision. Bind the org to the correct utility before opening pricing.',
-      );
+      throw new BadRequestException({
+        code: 'VESINVEST_UTILITY_MISMATCH',
+        message:
+          'Utility binding does not match this Vesinvest revision. Bind the org to the correct utility before opening pricing.',
+      });
     }
     if (!currentBaseline.hasTrustedBaseline) {
-      throw new BadRequestException(
-        'Baseline not verified. Complete baseline evidence before opening pricing.',
-      );
+      throw new BadRequestException({
+        code: 'VESINVEST_BASELINE_UNVERIFIED',
+        message:
+          'Baseline not verified. Complete baseline evidence before opening pricing.',
+      });
     }
-    const groupDefinitions = await this.foundationSupport.getPersistedGroupDefinitionMap(orgId);
-    if (this.foundationSupport.isClassificationReviewRequired(plan, groupDefinitions)) {
-      throw new BadRequestException(
-        'Legacy class overrides require review in this Vesinvest revision. Review and save the class-owned account and depreciation setup before opening pricing.',
-      );
+    const groupDefinitions =
+      await this.foundationSupport.getPersistedGroupDefinitionMap(orgId);
+    if (
+      this.foundationSupport.isClassificationReviewRequired(
+        plan,
+        groupDefinitions,
+      )
+    ) {
+      throw new BadRequestException({
+        code: 'VESINVEST_CLASSIFICATION_REVIEW_REQUIRED',
+        message:
+          'Legacy class overrides require review in this Vesinvest revision. Review and save the class-owned account and depreciation setup before opening pricing.',
+      });
     }
 
-    const yearlyInvestments = await this.currentPlanSupport().buildForecastYearlyInvestments(
-      plan,
-      groupDefinitions,
-    );
-    if (!yearlyInvestments.some((item) => item.amount > 0)) {
-      throw new BadRequestException(
-        'Add at least one investment allocation before opening pricing.',
+    const yearlyInvestments =
+      await this.currentPlanSupport().buildForecastYearlyInvestments(
+        plan,
+        groupDefinitions,
       );
+    if (!yearlyInvestments.some((item) => item.amount > 0)) {
+      throw new BadRequestException({
+        code: 'VESINVEST_ALLOCATION_REQUIRED',
+        message:
+          'Add at least one investment allocation before opening pricing.',
+      });
     }
     const compute = body?.compute !== false;
     let scenarioId = plan.selectedScenarioId ?? null;
@@ -703,17 +800,24 @@ async getPlanningContextSummary(orgId: string) {
     }
     const linkedScenarioId = scenarioId;
     if (!linkedScenarioId) {
-      throw new BadRequestException('Linked scenario could not be resolved.');
+      throw new BadRequestException({
+        code: 'VESINVEST_SCENARIO_LINK_REQUIRED',
+        message: 'Linked scenario could not be resolved.',
+      });
     }
 
     await this.forecastService.updateForecastScenario(orgId, linkedScenarioId, {
       name: `${plan.name} v${plan.versionNumber}`,
       horizonYears: plan.horizonYears,
       yearlyInvestments,
+      allowVesinvestLinkedInvestmentUpdate: true,
     });
 
     const scenario = compute
-      ? await this.forecastService.computeForecastScenario(orgId, linkedScenarioId)
+      ? await this.forecastService.computeForecastScenario(
+          orgId,
+          linkedScenarioId,
+        )
       : await this.forecastService.getForecastScenario(orgId, linkedScenarioId);
     const scenarioFingerprint = computeVesinvestScenarioFingerprint({
       scenarioId: scenario.id,
@@ -723,11 +827,12 @@ async getPlanningContextSummary(orgId: string) {
       years: scenario.years,
     });
 
-    const mergedBaselineSourceState = this.currentPlanSupport().buildMergedBaselineSourceState(
-      plan.baselineSourceState,
-      body?.baselineSourceState,
-      currentBaseline,
-    );
+    const mergedBaselineSourceState =
+      this.currentPlanSupport().buildMergedBaselineSourceState(
+        plan.baselineSourceState,
+        body?.baselineSourceState,
+        currentBaseline,
+      );
     const tariffPlanFingerprintChanged =
       plan.baselineFingerprint !== currentBaseline.fingerprint ||
       plan.scenarioFingerprint !== scenarioFingerprint;
@@ -751,12 +856,13 @@ async getPlanningContextSummary(orgId: string) {
           status: 'active',
           baselineStatus: 'verified',
           feeRecommendationStatus: compute ? 'verified' : 'provisional',
-          feeRecommendation: this.foundationSupport.buildFeeRecommendationSnapshot(
-            plan,
-            scenario,
-            currentBaseline,
-            scenarioFingerprint,
-          ),
+          feeRecommendation:
+            this.foundationSupport.buildFeeRecommendationSnapshot(
+              plan,
+              scenario,
+              currentBaseline,
+              scenarioFingerprint,
+            ),
           baselineSourceState: mergedBaselineSourceState,
           baselineFingerprint: currentBaseline.fingerprint,
           scenarioFingerprint,
@@ -784,4 +890,3 @@ async getPlanningContextSummary(orgId: string) {
     };
   }
 }
-

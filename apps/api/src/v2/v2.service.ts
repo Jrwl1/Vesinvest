@@ -15,11 +15,15 @@ export class V2Service {
     readonly tariffPlanService?: V2TariffPlanService,
   ) {}
 
-  searchOrganizations(...args: Parameters<V2ImportOverviewService['searchOrganizations']>) {
+  searchOrganizations(
+    ...args: Parameters<V2ImportOverviewService['searchOrganizations']>
+  ) {
     return this.importOverviewService.searchOrganizations(...args);
   }
 
-  connectOrganization(...args: Parameters<V2ImportOverviewService['connectOrganization']>) {
+  connectOrganization(
+    ...args: Parameters<V2ImportOverviewService['connectOrganization']>
+  ) {
     return this.importOverviewService.connectOrganization(...args);
   }
 
@@ -27,7 +31,9 @@ export class V2Service {
     return this.importOverviewService.importYears(...args);
   }
 
-  createPlanningBaseline(...args: Parameters<V2ImportOverviewService['createPlanningBaseline']>) {
+  createPlanningBaseline(
+    ...args: Parameters<V2ImportOverviewService['createPlanningBaseline']>
+  ) {
     return this.importOverviewService.createPlanningBaseline(...args);
   }
 
@@ -35,43 +41,69 @@ export class V2Service {
     return this.importOverviewService.syncImport(...args);
   }
 
-  removeImportedYear(...args: Parameters<V2ImportOverviewService['removeImportedYear']>) {
+  removeImportedYear(
+    ...args: Parameters<V2ImportOverviewService['removeImportedYear']>
+  ) {
     return this.importOverviewService.removeImportedYear(...args);
   }
 
-  removeImportedYears(...args: Parameters<V2ImportOverviewService['removeImportedYears']>) {
+  removeImportedYears(
+    ...args: Parameters<V2ImportOverviewService['removeImportedYears']>
+  ) {
     return this.importOverviewService.removeImportedYears(...args);
   }
 
-  excludeImportedYears(...args: Parameters<V2ImportOverviewService['excludeImportedYears']>) {
+  excludeImportedYears(
+    ...args: Parameters<V2ImportOverviewService['excludeImportedYears']>
+  ) {
     return this.importOverviewService.excludeImportedYears(...args);
   }
 
-  restoreImportedYears(...args: Parameters<V2ImportOverviewService['restoreImportedYears']>) {
+  restoreImportedYears(
+    ...args: Parameters<V2ImportOverviewService['restoreImportedYears']>
+  ) {
     return this.importOverviewService.restoreImportedYears(...args);
   }
 
-  getImportYearData(...args: Parameters<V2ImportOverviewService['getImportYearData']>) {
+  getImportYearData(
+    ...args: Parameters<V2ImportOverviewService['getImportYearData']>
+  ) {
     return this.importOverviewService.getImportYearData(...args);
   }
 
-  previewWorkbookImport(...args: Parameters<V2ImportOverviewService['previewWorkbookImport']>) {
+  previewWorkbookImport(
+    ...args: Parameters<V2ImportOverviewService['previewWorkbookImport']>
+  ) {
     return this.importOverviewService.previewWorkbookImport(...args);
   }
 
-  previewStatementImport(...args: Parameters<V2ImportOverviewService['previewStatementImport']>) {
+  previewStatementImport(
+    ...args: Parameters<V2ImportOverviewService['previewStatementImport']>
+  ) {
     return this.importOverviewService.previewStatementImport(...args);
   }
 
-  reconcileImportYear(...args: Parameters<V2ImportOverviewService['reconcileImportYear']>) {
+  reconcileImportYear(
+    ...args: Parameters<V2ImportOverviewService['reconcileImportYear']>
+  ) {
     return this.importOverviewService.reconcileImportYear(...args);
   }
 
-  clearImportAndScenarios(...args: Parameters<V2ImportOverviewService['clearImportAndScenarios']>) {
+  clearImportAndScenarios(
+    ...args: Parameters<V2ImportOverviewService['clearImportAndScenarios']>
+  ) {
     return this.importOverviewService.clearImportAndScenarios(...args);
   }
 
-  completeImportYearManually(...args: Parameters<V2ImportOverviewService['completeImportYearManually']>) {
+  createImportClearChallenge(
+    ...args: Parameters<V2ImportOverviewService['createImportClearChallenge']>
+  ) {
+    return this.importOverviewService.createImportClearChallenge(...args);
+  }
+
+  completeImportYearManually(
+    ...args: Parameters<V2ImportOverviewService['completeImportYearManually']>
+  ) {
     return this.importOverviewService.completeImportYearManually(...args);
   }
 
@@ -83,7 +115,9 @@ export class V2Service {
     return this.importOverviewService.getOpsFunnel(...args);
   }
 
-  getImportStatus(...args: Parameters<V2ImportOverviewService['getImportStatus']>) {
+  getImportStatus(
+    ...args: Parameters<V2ImportOverviewService['getImportStatus']>
+  ) {
     return this.importOverviewService.getImportStatus(...args);
   }
 
@@ -104,71 +138,105 @@ export class V2Service {
     };
   }
 
-  refreshPeerSnapshot(...args: Parameters<V2ImportOverviewService['refreshPeerSnapshot']>) {
+  refreshPeerSnapshot(
+    ...args: Parameters<V2ImportOverviewService['refreshPeerSnapshot']>
+  ) {
     return this.importOverviewService.refreshPeerSnapshot(...args);
   }
 
-  listForecastScenarios(...args: Parameters<V2ForecastService['listForecastScenarios']>) {
+  listForecastScenarios(
+    ...args: Parameters<V2ForecastService['listForecastScenarios']>
+  ) {
     return this.forecastService.listForecastScenarios(...args);
   }
 
-  listDepreciationRules(...args: Parameters<V2ForecastService['listDepreciationRules']>) {
+  listDepreciationRules(
+    ...args: Parameters<V2ForecastService['listDepreciationRules']>
+  ) {
     return this.forecastService.listDepreciationRules(...args);
   }
 
-  createDepreciationRule(...args: Parameters<V2ForecastService['createDepreciationRule']>) {
+  createDepreciationRule(
+    ...args: Parameters<V2ForecastService['createDepreciationRule']>
+  ) {
     return this.forecastService.createDepreciationRule(...args);
   }
 
-  updateDepreciationRule(...args: Parameters<V2ForecastService['updateDepreciationRule']>) {
+  updateDepreciationRule(
+    ...args: Parameters<V2ForecastService['updateDepreciationRule']>
+  ) {
     return this.forecastService.updateDepreciationRule(...args);
   }
 
-  deleteDepreciationRule(...args: Parameters<V2ForecastService['deleteDepreciationRule']>) {
+  deleteDepreciationRule(
+    ...args: Parameters<V2ForecastService['deleteDepreciationRule']>
+  ) {
     return this.forecastService.deleteDepreciationRule(...args);
   }
 
-  listScenarioDepreciationRules(...args: Parameters<V2ForecastService['listScenarioDepreciationRules']>) {
+  listScenarioDepreciationRules(
+    ...args: Parameters<V2ForecastService['listScenarioDepreciationRules']>
+  ) {
     return this.forecastService.listScenarioDepreciationRules(...args);
   }
 
-  createScenarioDepreciationRule(...args: Parameters<V2ForecastService['createScenarioDepreciationRule']>) {
+  createScenarioDepreciationRule(
+    ...args: Parameters<V2ForecastService['createScenarioDepreciationRule']>
+  ) {
     return this.forecastService.createScenarioDepreciationRule(...args);
   }
 
-  updateScenarioDepreciationRule(...args: Parameters<V2ForecastService['updateScenarioDepreciationRule']>) {
+  updateScenarioDepreciationRule(
+    ...args: Parameters<V2ForecastService['updateScenarioDepreciationRule']>
+  ) {
     return this.forecastService.updateScenarioDepreciationRule(...args);
   }
 
-  deleteScenarioDepreciationRule(...args: Parameters<V2ForecastService['deleteScenarioDepreciationRule']>) {
+  deleteScenarioDepreciationRule(
+    ...args: Parameters<V2ForecastService['deleteScenarioDepreciationRule']>
+  ) {
     return this.forecastService.deleteScenarioDepreciationRule(...args);
   }
 
-  getScenarioClassAllocations(...args: Parameters<V2ForecastService['getScenarioClassAllocations']>) {
+  getScenarioClassAllocations(
+    ...args: Parameters<V2ForecastService['getScenarioClassAllocations']>
+  ) {
     return this.forecastService.getScenarioClassAllocations(...args);
   }
 
-  updateScenarioClassAllocations(...args: Parameters<V2ForecastService['updateScenarioClassAllocations']>) {
+  updateScenarioClassAllocations(
+    ...args: Parameters<V2ForecastService['updateScenarioClassAllocations']>
+  ) {
     return this.forecastService.updateScenarioClassAllocations(...args);
   }
 
-  createForecastScenario(...args: Parameters<V2ForecastService['createForecastScenario']>) {
+  createForecastScenario(
+    ...args: Parameters<V2ForecastService['createForecastScenario']>
+  ) {
     return this.forecastService.createForecastScenario(...args);
   }
 
-  getForecastScenario(...args: Parameters<V2ForecastService['getForecastScenario']>) {
+  getForecastScenario(
+    ...args: Parameters<V2ForecastService['getForecastScenario']>
+  ) {
     return this.forecastService.getForecastScenario(...args);
   }
 
-  updateForecastScenario(...args: Parameters<V2ForecastService['updateForecastScenario']>) {
+  updateForecastScenario(
+    ...args: Parameters<V2ForecastService['updateForecastScenario']>
+  ) {
     return this.forecastService.updateForecastScenario(...args);
   }
 
-  deleteForecastScenario(...args: Parameters<V2ForecastService['deleteForecastScenario']>) {
+  deleteForecastScenario(
+    ...args: Parameters<V2ForecastService['deleteForecastScenario']>
+  ) {
     return this.forecastService.deleteForecastScenario(...args);
   }
 
-  computeForecastScenario(...args: Parameters<V2ForecastService['computeForecastScenario']>) {
+  computeForecastScenario(
+    ...args: Parameters<V2ForecastService['computeForecastScenario']>
+  ) {
     return this.forecastService.computeForecastScenario(...args);
   }
 
@@ -214,11 +282,15 @@ export class V2Service {
     return this.tariffPlanService!.getTariffPlan(...args);
   }
 
-  upsertTariffPlan(...args: Parameters<V2TariffPlanService['upsertTariffPlan']>) {
+  upsertTariffPlan(
+    ...args: Parameters<V2TariffPlanService['upsertTariffPlan']>
+  ) {
     return this.tariffPlanService!.upsertTariffPlan(...args);
   }
 
-  acceptTariffPlan(...args: Parameters<V2TariffPlanService['acceptTariffPlan']>) {
+  acceptTariffPlan(
+    ...args: Parameters<V2TariffPlanService['acceptTariffPlan']>
+  ) {
     return this.tariffPlanService!.acceptTariffPlan(...args);
   }
 

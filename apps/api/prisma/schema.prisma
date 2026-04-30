@@ -138,6 +138,7 @@ model Organization {
   vesinvestTariffPlans VesinvestTariffPlan[]
   invitations   Invitation[]
   legalAcceptances LegalAcceptance[]
+  v2ImportClearChallenges V2ImportClearChallenge[]
 }
 
 model OrganizationDepreciationRule {
@@ -328,6 +329,21 @@ model LegalAcceptance {
   @@unique([orgId, userId, termsVersion, dpaVersion])
   @@index([orgId, termsVersion, dpaVersion])
   @@map("legal_acceptance")
+}
+
+model V2ImportClearChallenge {
+  id               String       @id
+  orgId            String       @map("org_id")
+  org              Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId           String       @map("user_id")
+  confirmTokenHash String       @map("confirm_token_hash")
+  expiresAt        DateTime     @map("expires_at")
+  usedAt           DateTime?    @map("used_at")
+  createdAt        DateTime     @default(now()) @map("created_at")
+
+  @@index([orgId, userId, expiresAt])
+  @@index([expiresAt])
+  @@map("v2_import_clear_challenge")
 }
 
 // ============================================

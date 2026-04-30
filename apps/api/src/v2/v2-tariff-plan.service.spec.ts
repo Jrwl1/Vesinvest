@@ -88,7 +88,10 @@ const makePlan = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const matchesWhere = (row: Record<string, unknown>, where: Record<string, unknown>) =>
+const matchesWhere = (
+  row: Record<string, unknown>,
+  where: Record<string, unknown>,
+) =>
   Object.entries(where).every(([key, expected]) => {
     const actual = row[key];
     if (
@@ -128,14 +131,18 @@ const makeService = (
       })),
     },
     vesinvestTariffPlan: {
-      findFirst: jest.fn(async ({ where }: { where: Record<string, unknown> }) => {
-        return (
-          [...rows]
-            .filter((row) => matchesWhere(row, where))
-            .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())[0] ??
-          null
-        );
-      }),
+      findFirst: jest.fn(
+        async ({ where }: { where: Record<string, unknown> }) => {
+          return (
+            [...rows]
+              .filter((row) => matchesWhere(row, where))
+              .sort(
+                (left, right) =>
+                  right.updatedAt.getTime() - left.updatedAt.getTime(),
+              )[0] ?? null
+          );
+        },
+      ),
       create: jest.fn(async ({ data }: { data: Record<string, unknown> }) => {
         const createdAt = nextDate();
         const row = {
@@ -147,31 +154,50 @@ const makeService = (
         rows.push(row);
         return row;
       }),
-      update: jest.fn(async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
-        const row = rows.find((item) => item.id === where.id);
-        if (!row) {
-          throw new Error(`Missing tariff plan ${where.id}`);
-        }
-        Object.assign(row, data, { updatedAt: nextDate() });
-        return row;
-      }),
-      updateMany: jest.fn(async ({ where, data }: { where: Record<string, unknown>; data: Record<string, unknown> }) => {
-        let count = 0;
-        for (const row of rows) {
-          if (matchesWhere(row, where)) {
-            Object.assign(row, data, { updatedAt: nextDate() });
-            count += 1;
+      update: jest.fn(
+        async ({
+          where,
+          data,
+        }: {
+          where: { id: string };
+          data: Record<string, unknown>;
+        }) => {
+          const row = rows.find((item) => item.id === where.id);
+          if (!row) {
+            throw new Error(`Missing tariff plan ${where.id}`);
           }
-        }
-        return { count };
-      }),
+          Object.assign(row, data, { updatedAt: nextDate() });
+          return row;
+        },
+      ),
+      updateMany: jest.fn(
+        async ({
+          where,
+          data,
+        }: {
+          where: Record<string, unknown>;
+          data: Record<string, unknown>;
+        }) => {
+          let count = 0;
+          for (const row of rows) {
+            if (matchesWhere(row, where)) {
+              Object.assign(row, data, { updatedAt: nextDate() });
+              count += 1;
+            }
+          }
+          return { count };
+        },
+      ),
     },
   };
-  prisma.$transaction = jest.fn(async (callback: (tx: typeof prisma) => Promise<unknown>) =>
-    callback(prisma),
+  prisma.$transaction = jest.fn(
+    async (callback: (tx: typeof prisma) => Promise<unknown>) =>
+      callback(prisma),
   );
   const forecastService = {
-    getForecastScenario: jest.fn().mockResolvedValue(makeScenario(scenarioOverrides)),
+    getForecastScenario: jest
+      .fn()
+      .mockResolvedValue(makeScenario(scenarioOverrides)),
   };
   const importOverviewService = {
     getPlanningContext: jest.fn().mockResolvedValue({ baselineYears: [] }),
@@ -204,13 +230,21 @@ const readyAllocationPolicy = {
   smoothingYears: 4,
   regionalVariationApplies: true,
   stormwaterApplies: true,
-  financialRiskAssessment: 'Financing risk reviewed with a controlled staged increase.',
+  financialRiskAssessment:
+    'Financing risk reviewed with a controlled staged increase.',
 };
 
 const readyEvidence = {
-  revenueEvidence: { notes: 'Current and proposed fee revenue reviewed by fee type.' },
-  costEvidence: { notes: 'Materials, services, personnel, financing and other costs reviewed.' },
-  connectionFeeLiabilityState: { notes: 'Returnable connection-fee liability checked.' },
+  revenueEvidence: {
+    notes: 'Current and proposed fee revenue reviewed by fee type.',
+  },
+  costEvidence: {
+    notes:
+      'Materials, services, personnel, financing and other costs reviewed.',
+  },
+  connectionFeeLiabilityState: {
+    notes: 'Returnable connection-fee liability checked.',
+  },
 };
 
 describe('V2TariffPlanService', () => {
@@ -236,9 +270,9 @@ describe('V2TariffPlanService', () => {
     expect(result.recommendation.priceSignal).toMatchObject({
       currentComparatorPrice: 1.36,
       requiredPriceToday: 2.5,
-      requiredIncreasePct: 40,
+      requiredIncreasePct: 83.82,
       cumulativeCashFloorPrice: 2.4,
-      cumulativeCashFloorIncreasePct: 35,
+      cumulativeCashFloorIncreasePct: 76.47,
     });
     expect(result.recommendation.targetAdditionalAnnualRevenue).toBe(114000);
     expect(result.recommendation.fees.connectionFee).toMatchObject({
@@ -257,10 +291,9 @@ describe('V2TariffPlanService', () => {
       1.865,
       4,
     );
-    expect(result.recommendation.fees.wastewaterUsageFee.proposedUnit).toBeCloseTo(
-      2.3125,
-      4,
-    );
+    expect(
+      result.recommendation.fees.wastewaterUsageFee.proposedUnit,
+    ).toBeCloseTo(2.3125, 4);
     expect(result.readinessChecklist).toMatchObject({
       isReady: true,
       currentTariffBaselinePresent: true,
@@ -268,6 +301,151 @@ describe('V2TariffPlanService', () => {
       regionalVariationFlag: true,
       stormwaterFlag: true,
       unresolvedManualAssumptions: [],
+    });
+  });
+
+  it('uses the edited tariff baseline price as the price-signal comparator', async () => {
+    const { service } = makeService(
+      {},
+      {
+        baselinePriceTodayCombined: 1,
+        requiredPriceTodayCombinedAnnualResult: 2.5,
+        requiredAnnualIncreasePctAnnualResult: 150,
+        requiredPriceTodayCombinedCumulativeCash: 2.25,
+        requiredAnnualIncreasePctCumulativeCash: 125,
+      },
+    );
+
+    const result = await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+      baselineInput: {
+        ...readyBaselineInput,
+        waterPrice: 3,
+        wastewaterPrice: 3,
+      },
+      allocationPolicy: readyAllocationPolicy,
+      ...readyEvidence,
+    });
+
+    expect(result.recommendation.priceSignal).toMatchObject({
+      currentComparatorPrice: 3,
+      requiredPriceToday: 2.5,
+      requiredIncreasePct: -16.67,
+      cumulativeCashFloorPrice: 2.25,
+      cumulativeCashFloorIncreasePct: -25,
+    });
+  });
+
+  it('does not mark basis-only connection fees ready when the connection-fee share is nonzero', async () => {
+    const { service } = makeService();
+
+    const result = await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+      baselineInput: {
+        ...readyBaselineInput,
+        connectionFeeAverage: null,
+        connectionFeeRevenue: null,
+        connectionFeeNewConnections: null,
+        connectionFeeBasis: 'per_connection',
+      },
+      allocationPolicy: readyAllocationPolicy,
+      ...readyEvidence,
+    });
+
+    expect(result.readinessChecklist).toMatchObject({
+      isReady: false,
+      currentTariffBaselinePresent: false,
+      unresolvedManualAssumptions: ['connection-fee revenue and volume'],
+    });
+    await expect(
+      service.acceptTariffPlan(ORG_ID, PLAN_ID, {
+        expectedUpdatedAt: result.updatedAt,
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'TARIFF_PLAN_NOT_READY',
+      }),
+    });
+  });
+
+  it('allows average and new-connection counts to derive connection-fee revenue', async () => {
+    const { service } = makeService();
+
+    const result = await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+      baselineInput: {
+        ...readyBaselineInput,
+        connectionFeeRevenue: null,
+      },
+      allocationPolicy: readyAllocationPolicy,
+      ...readyEvidence,
+    });
+
+    expect(result.readinessChecklist.currentTariffBaselinePresent).toBe(true);
+    expect(result.recommendation.fees.connectionFee.currentAnnualRevenue).toBe(
+      50000,
+    );
+  });
+
+  it('blocks tariff draft saves from a stale edit token', async () => {
+    const { service, rows } = makeService();
+
+    const first = await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+      baselineInput: readyBaselineInput,
+      allocationPolicy: readyAllocationPolicy,
+      ...readyEvidence,
+    });
+    await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+      expectedUpdatedAt: first.updatedAt,
+      baselineInput: {
+        ...readyBaselineInput,
+        waterPrice: 1.4,
+      },
+      allocationPolicy: readyAllocationPolicy,
+      ...readyEvidence,
+    });
+
+    await expect(
+      service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+        expectedUpdatedAt: first.updatedAt,
+        baselineInput: {
+          ...readyBaselineInput,
+          waterPrice: 1.5,
+        },
+        allocationPolicy: readyAllocationPolicy,
+        ...readyEvidence,
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'TARIFF_PLAN_STALE_EDIT',
+      }),
+    });
+    expect(rows).toHaveLength(1);
+  });
+
+  it('blocks accepting a tariff draft from a stale edit token', async () => {
+    const { service } = makeService();
+
+    const first = await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+      baselineInput: readyBaselineInput,
+      allocationPolicy: readyAllocationPolicy,
+      ...readyEvidence,
+    });
+    await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+      expectedUpdatedAt: first.updatedAt,
+      baselineInput: {
+        ...readyBaselineInput,
+        waterPrice: 1.4,
+      },
+      allocationPolicy: readyAllocationPolicy,
+      ...readyEvidence,
+    });
+
+    await expect(
+      service.acceptTariffPlan(ORG_ID, PLAN_ID, {
+        expectedUpdatedAt: first.updatedAt,
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'TARIFF_PLAN_STALE_EDIT',
+      }),
     });
   });
 
@@ -283,6 +461,7 @@ describe('V2TariffPlanService', () => {
     expect(first.costEvidence).toBeNull();
 
     const result = await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+      expectedUpdatedAt: first.updatedAt,
       revenueEvidence: { waterUsageFee: { currentRevenue: 72000 } },
       costEvidence: { purchasedServices: 22000 },
       regionalDifferentiationState: { applies: true, reason: 'network areas' },
@@ -307,7 +486,7 @@ describe('V2TariffPlanService', () => {
   it('blocks acceptance when manual baseline or risk assessment is incomplete', async () => {
     const { service } = makeService();
 
-    await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+    const saved = await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
       baselineInput: {
         baseFeeRevenue: 40000,
         connectionCount: 800,
@@ -326,7 +505,9 @@ describe('V2TariffPlanService', () => {
     });
 
     try {
-      await service.acceptTariffPlan(ORG_ID, PLAN_ID);
+      await service.acceptTariffPlan(ORG_ID, PLAN_ID, {
+        expectedUpdatedAt: saved.updatedAt,
+      });
       throw new Error('Expected acceptTariffPlan to reject');
     } catch (err) {
       expect(err).toBeInstanceOf(ConflictException);
@@ -337,7 +518,7 @@ describe('V2TariffPlanService', () => {
           currentTariffBaselinePresent: false,
           riskAssessmentPresent: false,
           unresolvedManualAssumptions: [
-            'connection-fee assumption',
+            'connection-fee revenue and volume',
             'tariff revenue evidence',
             'cost evidence',
             'returnable connection-fee liability',
@@ -350,15 +531,18 @@ describe('V2TariffPlanService', () => {
   it('accepts a ready tariff plan and stales the prior accepted package for the scenario', async () => {
     const { service, prisma, rows } = makeService();
 
-    await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+    const firstDraft = await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
       baselineInput: readyBaselineInput,
       allocationPolicy: readyAllocationPolicy,
       ...readyEvidence,
     });
-    const firstAccepted = await service.acceptTariffPlan(ORG_ID, PLAN_ID);
+    const firstAccepted = await service.acceptTariffPlan(ORG_ID, PLAN_ID, {
+      expectedUpdatedAt: firstDraft.updatedAt,
+    });
     expect(firstAccepted.status).toBe('accepted');
 
-    await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+    const secondDraft = await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+      expectedUpdatedAt: firstAccepted.updatedAt,
       baselineInput: {
         ...readyBaselineInput,
         waterPrice: 1.3,
@@ -366,7 +550,9 @@ describe('V2TariffPlanService', () => {
       allocationPolicy: readyAllocationPolicy,
       ...readyEvidence,
     });
-    const secondAccepted = await service.acceptTariffPlan(ORG_ID, PLAN_ID);
+    const secondAccepted = await service.acceptTariffPlan(ORG_ID, PLAN_ID, {
+      expectedUpdatedAt: secondDraft.updatedAt,
+    });
 
     expect(secondAccepted.status).toBe('accepted');
     expect(prisma.vesinvestPlan.update).toHaveBeenLastCalledWith({
@@ -396,7 +582,9 @@ describe('V2TariffPlanService', () => {
 
   it('does not duplicate a combined forecast volume into both tariff services', async () => {
     const { service, importOverviewService } = makeService();
-    importOverviewService.getPlanningContext.mockResolvedValue({ baselineYears: [] });
+    importOverviewService.getPlanningContext.mockResolvedValue({
+      baselineYears: [],
+    });
 
     const result = await service.getTariffPlan(ORG_ID, PLAN_ID);
 
@@ -434,16 +622,19 @@ describe('V2TariffPlanService', () => {
   });
 
   it('uses explicit split forecast volumes when they are available', async () => {
-    const { service } = makeService({}, {
-      years: [
-        {
-          ...makeScenario().years[0],
-          soldVolume: 100000,
-          soldWaterVolume: 62000,
-          soldWastewaterVolume: 38000,
-        },
-      ],
-    });
+    const { service } = makeService(
+      {},
+      {
+        years: [
+          {
+            ...makeScenario().years[0],
+            soldVolume: 100000,
+            soldWaterVolume: 62000,
+            soldWastewaterVolume: 38000,
+          },
+        ],
+      },
+    );
 
     const result = await service.getTariffPlan(ORG_ID, PLAN_ID);
 
@@ -476,12 +667,14 @@ describe('V2TariffPlanService', () => {
   it('stales an accepted tariff package when live fingerprints no longer match', async () => {
     const { service, prisma, rows } = makeService();
 
-    await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
+    const saved = await service.upsertTariffPlan(ORG_ID, PLAN_ID, {
       baselineInput: readyBaselineInput,
       allocationPolicy: readyAllocationPolicy,
       ...readyEvidence,
     });
-    await service.acceptTariffPlan(ORG_ID, PLAN_ID);
+    await service.acceptTariffPlan(ORG_ID, PLAN_ID, {
+      expectedUpdatedAt: saved.updatedAt,
+    });
 
     prisma.vesinvestPlan.findFirst.mockResolvedValue(
       makePlan({ baselineFingerprint: 'new-baseline-fingerprint' }),
@@ -507,20 +700,104 @@ describe('V2TariffPlanService', () => {
     expect(result.recommendation.priceSignal).toMatchObject({
       currentComparatorPrice: 1.36,
       requiredPriceToday: 2.5,
-      requiredIncreasePct: 40,
+      requiredIncreasePct: 83.82,
       cumulativeCashFloorPrice: 2.4,
     });
   });
 
   it('blocks tariff planning when the linked forecast needs recompute', async () => {
-    const { service } = makeService({}, {
-      updatedAt: new Date('2026-04-24T09:00:00.000Z'),
-      computedFromUpdatedAt: new Date('2026-04-24T08:30:00.000Z'),
-    });
+    const { service } = makeService(
+      {},
+      {
+        updatedAt: new Date('2026-04-24T09:00:00.000Z'),
+        computedFromUpdatedAt: new Date('2026-04-24T08:30:00.000Z'),
+      },
+    );
 
     await expect(service.getTariffPlan(ORG_ID, PLAN_ID)).rejects.toMatchObject({
       response: expect.objectContaining({
         code: 'FORECAST_RECOMPUTE_REQUIRED',
+      }),
+    });
+  });
+
+  it('blocks tariff planning when linked Forecast investments diverge from Vesinvest allocations', async () => {
+    const { service } = makeService(
+      {
+        projects: [
+          {
+            waterAmount: 60000,
+            wastewaterAmount: 40000,
+            totalAmount: 100000,
+            allocations: [
+              {
+                id: 'allocation-1',
+                year: 2026,
+                totalAmount: 100000,
+                waterAmount: 60000,
+                wastewaterAmount: 40000,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        yearlyInvestments: [
+          {
+            year: 2026,
+            amount: 75000,
+            waterAmount: 60000,
+            wastewaterAmount: 15000,
+            vesinvestPlanId: PLAN_ID,
+            allocationId: 'allocation-1',
+          },
+        ],
+        investmentSeries: [{ year: 2026, amount: 75000 }],
+      },
+    );
+
+    await expect(service.getTariffPlan(ORG_ID, PLAN_ID)).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'VESINVEST_SCENARIO_INVESTMENTS_STALE',
+      }),
+    });
+  });
+
+  it('blocks tariff planning when the linked Forecast omits active Vesinvest allocations', async () => {
+    const { service } = makeService(
+      {
+        projects: [
+          {
+            waterAmount: 60000,
+            wastewaterAmount: 40000,
+            totalAmount: 100000,
+            allocations: [
+              {
+                id: 'allocation-1',
+                year: 2026,
+                totalAmount: 100000,
+                waterAmount: 60000,
+                wastewaterAmount: 40000,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        yearlyInvestments: [
+          {
+            year: 2026,
+            amount: 100000,
+            target: 'Manual row with no active Vesinvest allocation link',
+          },
+        ],
+        investmentSeries: [{ year: 2026, amount: 100000 }],
+      },
+    );
+
+    await expect(service.getTariffPlan(ORG_ID, PLAN_ID)).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'VESINVEST_SCENARIO_INVESTMENTS_STALE',
       }),
     });
   });
@@ -536,10 +813,13 @@ describe('V2TariffPlanService', () => {
   });
 
   it('blocks tariff planning when investment inputs differ from computed rows', async () => {
-    const { service } = makeService({}, {
-      investmentSeries: [{ year: 2026, amount: 100000 }],
-      yearlyInvestments: [{ year: 2026, amount: 125000 }],
-    });
+    const { service } = makeService(
+      {},
+      {
+        investmentSeries: [{ year: 2026, amount: 100000 }],
+        yearlyInvestments: [{ year: 2026, amount: 125000 }],
+      },
+    );
 
     await expect(service.getTariffPlan(ORG_ID, PLAN_ID)).rejects.toMatchObject({
       response: expect.objectContaining({

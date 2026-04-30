@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectionsService } from '../projections/projections.service';
@@ -14,6 +19,7 @@ import { V2PlanningWorkspaceSupport } from './v2-planning-workspace-support';
 import { buildV2ReportPdf } from './v2-report-pdf';
 import {
   computeVesinvestScenarioFingerprint,
+  findVesinvestScenarioInvestmentMismatches,
   isVesinvestClassificationReviewRequired,
 } from './vesinvest-contract';
 import { V2ReportBaselineSupport } from './v2-report-baseline-support';
@@ -80,7 +86,9 @@ export class V2ReportService {
       V2ReportBaselineSupport['getVesinvestGroupClassificationDefaults']
     >
   ) {
-    return this.baselineSupport.getVesinvestGroupClassificationDefaults(...args);
+    return this.baselineSupport.getVesinvestGroupClassificationDefaults(
+      ...args,
+    );
   }
 
   private investmentSeriesMatchesYearlyInvestments(
@@ -88,11 +96,15 @@ export class V2ReportService {
       V2ReportCreationSupport['investmentSeriesMatchesYearlyInvestments']
     >
   ) {
-    return this.creationSupport.investmentSeriesMatchesYearlyInvestments(...args);
+    return this.creationSupport.investmentSeriesMatchesYearlyInvestments(
+      ...args,
+    );
   }
 
   private hasLegacyBaselineSnapshotDrift(
-    ...args: Parameters<V2ReportBaselineSupport['hasLegacyBaselineSnapshotDrift']>
+    ...args: Parameters<
+      V2ReportBaselineSupport['hasLegacyBaselineSnapshotDrift']
+    >
   ) {
     return this.baselineSupport.hasLegacyBaselineSnapshotDrift(...args);
   }
@@ -144,7 +156,9 @@ export class V2ReportService {
   }
 
   private readSnapshotBaselineSourceSummaries(
-    ...args: Parameters<V2ReportBaselineSupport['readSnapshotBaselineSourceSummaries']>
+    ...args: Parameters<
+      V2ReportBaselineSupport['readSnapshotBaselineSourceSummaries']
+    >
   ) {
     return this.baselineSupport.readSnapshotBaselineSourceSummaries(...args);
   }
@@ -163,7 +177,7 @@ export class V2ReportService {
     return this.baselineSupport.toPdfText(...args);
   }
 
-async listReports(orgId: string, ennusteId?: string) {
+  async listReports(orgId: string, ennusteId?: string) {
     const rows = await this.prisma.ennusteReport.findMany({
       where: {
         orgId,
@@ -197,7 +211,9 @@ async listReports(orgId: string, ennusteId?: string) {
         pdfUrl: string;
       } => {
         const snapshot = (row.snapshotJson ?? {}) as Partial<SnapshotPayload>;
-        const reportVariant = this.normalizeReportVariant(snapshot.reportVariant);
+        const reportVariant = this.normalizeReportVariant(
+          snapshot.reportVariant,
+        );
         const baselineSourceSummaries =
           this.readSnapshotBaselineSourceSummaries(snapshot);
         const baselineSourceSummary =
@@ -213,7 +229,9 @@ async listReports(orgId: string, ennusteId?: string) {
           ennuste: row.ennuste,
           baselineYear: row.baselineYear,
           requiredPriceToday: this.toNumber(row.requiredPriceToday),
-          requiredAnnualIncreasePct: this.toNumber(row.requiredAnnualIncreasePct),
+          requiredAnnualIncreasePct: this.toNumber(
+            row.requiredAnnualIncreasePct,
+          ),
           totalInvestments: this.toNumber(row.totalInvestments),
           baselineSourceSummary,
           variant: reportVariant,
@@ -282,6 +300,7 @@ async listReports(orgId: string, ennusteId?: string) {
             totalAmount: true,
             allocations: {
               select: {
+                id: true,
                 year: true,
                 totalAmount: true,
                 waterAmount: true,
@@ -296,9 +315,10 @@ async listReports(orgId: string, ennusteId?: string) {
       throw new NotFoundException('Vesinvest plan not found.');
     }
     if (vesinvestPlan.status !== 'active') {
-      throw new ConflictException(
-        'Only the active Vesinvest revision can create a report.',
-      );
+      throw new ConflictException({
+        code: 'VESINVEST_INACTIVE_REVISION',
+        message: 'Only the active Vesinvest revision can create a report.',
+      });
     }
     const groupClassificationDefaults =
       await this.getVesinvestGroupClassificationDefaults(orgId);
@@ -319,19 +339,24 @@ async listReports(orgId: string, ennusteId?: string) {
       });
     }
     const scenarioId =
-      this.normalizeText(body.ennusteId?.trim()) ?? vesinvestPlan.selectedScenarioId;
+      this.normalizeText(body.ennusteId?.trim()) ??
+      vesinvestPlan.selectedScenarioId;
     if (!scenarioId) {
-      throw new ConflictException(
-        'Selected Vesinvest plan is not linked to a forecast scenario.',
-      );
+      throw new ConflictException({
+        code: 'VESINVEST_SCENARIO_REQUIRED',
+        message:
+          'Selected Vesinvest plan is not linked to a forecast scenario.',
+      });
     }
     if (
       vesinvestPlan.selectedScenarioId &&
       vesinvestPlan.selectedScenarioId !== scenarioId
     ) {
-      throw new ConflictException(
-        'Selected Vesinvest plan is linked to a different forecast scenario.',
-      );
+      throw new ConflictException({
+        code: 'VESINVEST_SCENARIO_MISMATCH',
+        message:
+          'Selected Vesinvest plan is linked to a different forecast scenario.',
+      });
     }
 
     const currentBaseline = await this.getCurrentBaselineSnapshot(orgId);
@@ -340,7 +365,8 @@ async listReports(orgId: string, ennusteId?: string) {
       !currentUtility ||
       (vesinvestPlan.veetiId ?? null) !== currentUtility.veetiId ||
       vesinvestPlan.utilityName !== currentUtility.utilityName ||
-      (vesinvestPlan.businessId ?? null) !== (currentUtility.businessId ?? null) ||
+      (vesinvestPlan.businessId ?? null) !==
+        (currentUtility.businessId ?? null) ||
       vesinvestPlan.identitySource !== currentUtility.identitySource
     ) {
       throw new ConflictException({
@@ -355,7 +381,10 @@ async listReports(orgId: string, ennusteId?: string) {
     const computedFromUpdatedAtIso = scenario.computedFromUpdatedAt
       ? new Date(scenario.computedFromUpdatedAt).toISOString()
       : null;
-    if (!computedFromUpdatedAtIso || computedFromUpdatedAtIso !== scenarioUpdatedAtIso) {
+    if (
+      !computedFromUpdatedAtIso ||
+      computedFromUpdatedAtIso !== scenarioUpdatedAtIso
+    ) {
       throw new ConflictException({
         code: 'FORECAST_RECOMPUTE_REQUIRED',
         message:
@@ -376,6 +405,16 @@ async listReports(orgId: string, ennusteId?: string) {
         code: 'FORECAST_RECOMPUTE_REQUIRED',
         message:
           'Scenario investment inputs changed after last compute. Recompute scenario before creating report.',
+      });
+    }
+    const vesinvestInvestmentMismatches =
+      findVesinvestScenarioInvestmentMismatches(vesinvestPlan, scenario);
+    if (vesinvestInvestmentMismatches.length > 0) {
+      throw new ConflictException({
+        code: 'VESINVEST_SCENARIO_INVESTMENTS_STALE',
+        message:
+          'Forecast investments no longer match the active Vesinvest plan. Sync Asset Management to Forecast before creating report.',
+        mismatches: vesinvestInvestmentMismatches.slice(0, 5),
       });
     }
     const liveScenarioFingerprint = computeVesinvestScenarioFingerprint({
@@ -402,7 +441,7 @@ async listReports(orgId: string, ennusteId?: string) {
       throw new ConflictException({
         code: 'VESINVEST_BASELINE_STALE',
         message:
-        'Legacy Vesinvest baseline snapshot does not match the current utility binding and accepted baseline. Re-verify baseline before creating report.',
+          'Legacy Vesinvest baseline snapshot does not match the current utility binding and accepted baseline. Re-verify baseline before creating report.',
       });
     }
     this.assertAssetEvidenceReady(vesinvestPlan);
@@ -423,8 +462,7 @@ async listReports(orgId: string, ennusteId?: string) {
     if (!latestTariffPlan) {
       throw new ConflictException({
         code: 'TARIFF_PLAN_REQUIRED',
-        message:
-          'Accept the tariff plan before creating a report snapshot.',
+        message: 'Accept the tariff plan before creating a report snapshot.',
       });
     }
     if (latestTariffPlan.status !== 'accepted') {
@@ -517,23 +555,40 @@ async listReports(orgId: string, ennusteId?: string) {
         baselineFingerprint: vesinvestPlan.baselineFingerprint,
         scenarioFingerprint: liveScenarioFingerprint,
         feeRecommendation:
-          (vesinvestPlan.feeRecommendation as Record<string, unknown> | null) ?? null,
+          (vesinvestPlan.feeRecommendation as Record<string, unknown> | null) ??
+          null,
         ...(includeInternalEvidence
           ? {
-              assetEvidenceState:
-                vesinvestPlan.assetEvidenceState as Record<string, unknown> | null,
+              assetEvidenceState: vesinvestPlan.assetEvidenceState as Record<
+                string,
+                unknown
+              > | null,
               municipalPlanContext:
-                vesinvestPlan.municipalPlanContext as Record<string, unknown> | null,
+                vesinvestPlan.municipalPlanContext as Record<
+                  string,
+                  unknown
+                > | null,
               maintenanceEvidenceState:
-                vesinvestPlan.maintenanceEvidenceState as Record<string, unknown> | null,
-              conditionStudyState:
-                vesinvestPlan.conditionStudyState as Record<string, unknown> | null,
-              financialRiskState:
-                vesinvestPlan.financialRiskState as Record<string, unknown> | null,
-              publicationState:
-                vesinvestPlan.publicationState as Record<string, unknown> | null,
-              communicationState:
-                vesinvestPlan.communicationState as Record<string, unknown> | null,
+                vesinvestPlan.maintenanceEvidenceState as Record<
+                  string,
+                  unknown
+                > | null,
+              conditionStudyState: vesinvestPlan.conditionStudyState as Record<
+                string,
+                unknown
+              > | null,
+              financialRiskState: vesinvestPlan.financialRiskState as Record<
+                string,
+                unknown
+              > | null,
+              publicationState: vesinvestPlan.publicationState as Record<
+                string,
+                unknown
+              > | null,
+              communicationState: vesinvestPlan.communicationState as Record<
+                string,
+                unknown
+              > | null,
             }
           : {}),
       },
@@ -548,19 +603,27 @@ async listReports(orgId: string, ennusteId?: string) {
         readinessChecklist: acceptedTariffPlan.readinessChecklist as any,
         ...(includeInternalEvidence
           ? {
-              revenueEvidence:
-                acceptedTariffPlan.revenueEvidence as Record<string, unknown> | null,
-              costEvidence:
-                acceptedTariffPlan.costEvidence as Record<string, unknown> | null,
+              revenueEvidence: acceptedTariffPlan.revenueEvidence as Record<
+                string,
+                unknown
+              > | null,
+              costEvidence: acceptedTariffPlan.costEvidence as Record<
+                string,
+                unknown
+              > | null,
               regionalDifferentiationState:
                 acceptedTariffPlan.regionalDifferentiationState as Record<
                   string,
                   unknown
                 > | null,
-              stormwaterState:
-                acceptedTariffPlan.stormwaterState as Record<string, unknown> | null,
-              specialUseState:
-                acceptedTariffPlan.specialUseState as Record<string, unknown> | null,
+              stormwaterState: acceptedTariffPlan.stormwaterState as Record<
+                string,
+                unknown
+              > | null,
+              specialUseState: acceptedTariffPlan.specialUseState as Record<
+                string,
+                unknown
+              > | null,
               connectionFeeLiabilityState:
                 acceptedTariffPlan.connectionFeeLiabilityState as Record<
                   string,
@@ -638,7 +701,6 @@ async listReports(orgId: string, ennusteId?: string) {
     };
   }
 
-
   async getReport(orgId: string, reportId: string) {
     const report = await this.prisma.ennusteReport.findFirst({
       where: { id: reportId, orgId },
@@ -658,8 +720,7 @@ async listReports(orgId: string, ennusteId?: string) {
 
     const snapshot = (report.snapshotJson ?? {}) as Partial<SnapshotPayload>;
     const reportVariant = this.normalizeReportVariant(snapshot.reportVariant);
-    const reportSections =
-      snapshot.reportSections ?? this.buildReportSections(reportVariant);
+    const reportSections = this.buildReportSections(reportVariant);
     const baselineSourceSummaries =
       this.readSnapshotBaselineSourceSummaries(snapshot);
     const baselineSourceSummary =
@@ -797,7 +858,11 @@ async listReports(orgId: string, ennusteId?: string) {
     const labels = this.getReportLocaleLabels(locale);
     const scenarioLabel =
       this.normalizeText(scenarioName)?.trim() ||
-      (locale === 'fi' ? 'Skenaario' : locale === 'sv' ? 'Scenario' : 'Scenario');
+      (locale === 'fi'
+        ? 'Skenaario'
+        : locale === 'sv'
+        ? 'Scenario'
+        : 'Scenario');
     const reportDate = this.formatIsoDate(value);
     const baseTitle = `${labels.defaultTitlePrefix} ${scenarioLabel}`;
     return scenarioLabel.endsWith(` ${reportDate}`)
@@ -922,8 +987,7 @@ async listReports(orgId: string, ennusteId?: string) {
     const reportVariant = this.normalizeReportVariant(
       snapshot?.reportVariant ?? report.variant,
     );
-    const reportSections =
-      snapshot?.reportSections ?? this.buildReportSections(reportVariant);
+    const reportSections = this.buildReportSections(reportVariant);
     return buildV2ReportPdf({
       report,
       snapshot,

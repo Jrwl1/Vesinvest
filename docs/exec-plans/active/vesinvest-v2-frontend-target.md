@@ -222,3 +222,13 @@ Implement the v3 Vesinvest V2 frontend target across the shell, Overview, Asset 
     - `pnpm check:harness`
     - `pnpm check:text-integrity`
     - `git diff --check` passed with CRLF normalization warnings only.
+- Fresh post-deploy live resweep after the new production deploy:
+  - Evidence folder: `output/playwright/live-prod-resweep-2026-04-30/`.
+  - Live route walk covered login plus Overview, Asset Management, Forecast, Tariff Plan, and Reports at 1360px, with additional 1280px checks on Overview, Asset Management, and Reports.
+  - No P0/P1/P2 findings. Route/bootstrap truth, report/export semantics, Forecast/Tariff/Reports price consistency, asset readiness language, localized connection-fee basis display, and raw key/demo-language scans held on live.
+  - P3 finding fixed in source: Overview accepted-year accounting labels crowded their compact cards at 1280px because uppercase letter-spaced labels exceeded the tile width. Compact Overview labels now use sentence case, normal letter spacing, and safe wrapping in the dense accepted-year preview.
+  - `fresh-live-resweep-summary.json` records zero console errors and zero leak hits for both live and local-after-fix route scans; local 1280px label metrics confirm no compact-label spill after the source fix.
+  - Focused gates passed:
+    - `pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.workspace-handoff.details.test.tsx src/v2/overviewWorkflow.test.ts src/i18n/locales/localeIntegrity.test.ts`
+    - `pnpm --filter ./apps/web typecheck`
+    - `git diff --check`

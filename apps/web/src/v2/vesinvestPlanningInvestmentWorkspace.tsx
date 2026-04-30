@@ -158,7 +158,13 @@ export function VesinvestPlanningInvestmentWorkspace({
               <tbody>
                 {lawInvestmentSummary.byAssetCategory.map((category) => (
                   <tr key={category.groupKey}>
-                    <td>{category.groupLabel}</td>
+                    <td>
+                      {resolveVesinvestGroupLabel(
+                        t,
+                        category.groupKey,
+                        category.groupLabel,
+                      )}
+                    </td>
                     <td>{category.projectCount}</td>
                     <td>{formatEur(category.totalAmount)}</td>
                   </tr>

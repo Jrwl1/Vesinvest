@@ -176,8 +176,8 @@ describe('yearReview helpers', () => {
         },
         {
           dataType: 'volume_vesi',
-          rawRows: [{ Maara: 10000 }],
-          effectiveRows: [{ Maara: 12000 }],
+          rawRows: [{ Maara: 10000 }, { Maara: 5000 }],
+          effectiveRows: [{ Maara: 12000 }, { Maara: 5000 }],
           source: 'manual',
           hasOverride: true,
           reconcileNeeded: true,
@@ -531,8 +531,8 @@ describe('yearReview helpers', () => {
         },
         {
           dataType: 'volume_vesi',
-          rawRows: [{ Maara: 10000 }],
-          effectiveRows: [{ Maara: 12000 }],
+          rawRows: [{ Maara: 10000 }, { Maara: 5000 }],
+          effectiveRows: [{ Maara: 12000 }, { Maara: 5000 }],
           source: 'manual',
           hasOverride: true,
           reconcileNeeded: true,
@@ -567,8 +567,8 @@ describe('yearReview helpers', () => {
     expect(buildVolumeComparisonRows(yearData)).toEqual([
       {
         key: 'soldWaterVolume',
-        veetiValue: 10000,
-        effectiveValue: 12000,
+        veetiValue: 15000,
+        effectiveValue: 17000,
         changed: true,
       },
       {

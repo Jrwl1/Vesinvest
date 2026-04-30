@@ -468,6 +468,51 @@ export function useOverviewPageController({
     },
     [importController, isAdmin, manualController],
   );
+  const openSetupInlineCardEditor: typeof manualController.openInlineCardEditor =
+    React.useCallback(
+      async (
+        year,
+        focusField = null,
+        context = 'step2',
+        missing = [],
+        mode = context === 'step3' ? 'review' : 'manualEdit',
+      ) => {
+        if (context === 'step2' && !confirmedImportedYears.includes(year)) {
+          const yearsToImport = importController.selectedYears.includes(year)
+            ? importController.selectedYears
+            : [year];
+          await importController.importYearsIntoWorkspace(yearsToImport);
+        }
+        await manualController.openInlineCardEditor(
+          year,
+          focusField,
+          context,
+          missing,
+          mode,
+        );
+      },
+      [confirmedImportedYears, importController, manualController],
+    );
+  const attemptOpenSetupInlineCardEditor: typeof manualController.attemptOpenInlineCardEditor =
+    React.useCallback(
+      async (
+        year,
+        focusField = null,
+        context = 'step2',
+        missing = [],
+        mode = context === 'step3' ? 'review' : 'manualEdit',
+      ) => {
+        if (
+          manualController.cardEditYear != null &&
+          manualController.cardEditYear !== year &&
+          !manualController.dismissInlineCardEditor()
+        ) {
+          return;
+        }
+        await openSetupInlineCardEditor(year, focusField, context, missing, mode);
+      },
+      [manualController, openSetupInlineCardEditor],
+    );
   const {
     datasetSourceLabel,
     financialComparisonLabel,
@@ -802,6 +847,8 @@ export function useOverviewPageController({
     handleInlineCardKeyDown,
     renderHighlightedSearchMatch,
     openManualPatchDialog,
+    openSetupInlineCardEditor,
+    attemptOpenSetupInlineCardEditor,
     resetManualPatchDialog,
     closeManualPatchDialog,
     handleAddCurrentYearEstimate,

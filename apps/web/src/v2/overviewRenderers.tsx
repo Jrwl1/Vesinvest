@@ -14,7 +14,6 @@ import {
   buildPriceForm,
   buildVolumeForm,
   getDatasetRowValue,
-  getEffectiveFirstRow,
   getEffectiveRows,
   parseManualNumber,
   type InlineCardField,
@@ -503,8 +502,8 @@ export function renderOverviewYearValuePreview({
   const wastewaterPriceRow = priceRows.find(
     (entry) => parseManualNumber(getDatasetRowValue(entry, 'Tyyppi_Id')) === 2,
   );
-  const waterVolumeRow = getEffectiveFirstRow(yearData, 'volume_vesi');
-  const wastewaterVolumeRow = getEffectiveFirstRow(yearData, 'volume_jatevesi');
+  const waterVolumeRows = getEffectiveRows(yearData, 'volume_vesi');
+  const wastewaterVolumeRows = getEffectiveRows(yearData, 'volume_jatevesi');
   const hasFinancials =
     accountingSummaryMap.size > 0 || availability?.financials === true;
   const trustSignal = buildImportYearTrustSignal(yearData);
@@ -613,21 +612,19 @@ export function renderOverviewYearValuePreview({
     },
     {
       label: t('v2Overview.previewWaterVolumeLabel', 'Sold water'),
-      missing: Object.keys(waterVolumeRow).length === 0,
-      zero: Object.keys(waterVolumeRow).length > 0 && volumes.soldWaterVolume === 0,
+      missing: waterVolumeRows.length === 0,
+      zero: waterVolumeRows.length > 0 && volumes.soldWaterVolume === 0,
       displayValue:
-        Object.keys(waterVolumeRow).length === 0
+        waterVolumeRows.length === 0
           ? t('v2Overview.previewVeetiMissingValue', 'VEETI did not provide this value')
           : formatVolume(volumes.soldWaterVolume),
     },
     {
       label: t('v2Overview.previewWastewaterVolumeLabel', 'Sold wastewater'),
-      missing: Object.keys(wastewaterVolumeRow).length === 0,
-      zero:
-        Object.keys(wastewaterVolumeRow).length > 0 &&
-        volumes.soldWastewaterVolume === 0,
+      missing: wastewaterVolumeRows.length === 0,
+      zero: wastewaterVolumeRows.length > 0 && volumes.soldWastewaterVolume === 0,
       displayValue:
-        Object.keys(wastewaterVolumeRow).length === 0
+        wastewaterVolumeRows.length === 0
           ? t('v2Overview.previewVeetiMissingValue', 'VEETI did not provide this value')
           : formatVolume(volumes.soldWastewaterVolume),
     },

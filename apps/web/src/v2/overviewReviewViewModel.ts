@@ -6,7 +6,9 @@ import {
   getEffectiveFirstRow,
   getDatasetRowValue,
   getRawFirstRow,
+  getRawRows,
   parseManualNumber,
+  sumDatasetRowValues,
 } from './overviewManualForms';
 import { getFinancialSourceFieldLabel } from './overviewLabels';
 import { buildFinancialComparisonRows, buildImportYearSummaryRows, buildPriceComparisonRows, buildVolumeComparisonRows } from './yearReview';
@@ -125,8 +127,8 @@ export function buildOverviewQdisImportComparisonRows(params: {
   const rawWastewaterPrice = rawPriceRows.find(
     (row) => parseManualNumber(getDatasetRowValue(row, 'Tyyppi_Id')) === 2,
   );
-  const rawWaterVolume = getRawFirstRow(currentYearData, 'volume_vesi');
-  const rawWastewaterVolume = getRawFirstRow(currentYearData, 'volume_jatevesi');
+  const rawWaterVolumeRows = getRawRows(currentYearData, 'volume_vesi');
+  const rawWastewaterVolumeRows = getRawRows(currentYearData, 'volume_jatevesi');
   return [
     {
       key: 'waterUnitPrice',
@@ -147,14 +149,14 @@ export function buildOverviewQdisImportComparisonRows(params: {
     {
       key: 'soldWaterVolume',
       label: labels.waterVolume,
-      veetiValue: parseManualNumber(getDatasetRowValue(rawWaterVolume, 'Maara')),
+      veetiValue: sumDatasetRowValues(rawWaterVolumeRows, 'Maara'),
       pdfValue: qdisImportPreview.fields.soldWaterVolume ?? null,
       currentValue: currentVolumes.soldWaterVolume,
     },
     {
       key: 'soldWastewaterVolume',
       label: labels.wastewaterVolume,
-      veetiValue: parseManualNumber(getDatasetRowValue(rawWastewaterVolume, 'Maara')),
+      veetiValue: sumDatasetRowValues(rawWastewaterVolumeRows, 'Maara'),
       pdfValue: qdisImportPreview.fields.soldWastewaterVolume ?? null,
       currentValue: currentVolumes.soldWastewaterVolume,
     },

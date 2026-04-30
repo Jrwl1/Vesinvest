@@ -338,7 +338,7 @@ export function AppShellV2AccountDrawer({
             onClick={closeDrawer}
             aria-label={t('common.close', 'Close')}
           >
-            x
+            ×
           </button>
         </div>
 

@@ -92,6 +92,65 @@ const connectionFeeBasisDisplayValue = (
   return trimmed;
 };
 
+const extractApiErrorCode = (err: unknown): string | null => {
+  if (typeof err !== 'object' || err === null) {
+    return null;
+  }
+  const directCode = (err as { code?: unknown }).code;
+  if (typeof directCode === 'string' && directCode.trim()) {
+    return directCode;
+  }
+  const details = (err as { details?: unknown }).details;
+  if (typeof details === 'object' && details !== null) {
+    const detailsCode = (details as { code?: unknown }).code;
+    if (typeof detailsCode === 'string' && detailsCode.trim()) {
+      return detailsCode;
+    }
+    const message = (details as { message?: unknown }).message;
+    if (typeof message === 'object' && message !== null) {
+      const nestedCode = (message as { code?: unknown }).code;
+      if (typeof nestedCode === 'string' && nestedCode.trim()) {
+        return nestedCode;
+      }
+    }
+  }
+  return null;
+};
+
+const mapKnownTariffError = (
+  t: TFunction,
+  err: unknown,
+  fallbackKey: string,
+  fallbackText: string,
+): string => {
+  const code = extractApiErrorCode(err);
+  if (code === 'FORECAST_RECOMPUTE_REQUIRED') {
+    return t(
+      'v2TariffPlan.forecastRecomputeRequired',
+      'Recompute the linked forecast before tariff planning.',
+    );
+  }
+  if (code === 'TARIFF_SCENARIO_REQUIRED') {
+    return t(
+      'v2TariffPlan.scenarioRequired',
+      'Sync the asset-management plan to forecast before tariff planning.',
+    );
+  }
+  if (code === 'VESINVEST_BASELINE_STALE') {
+    return t(
+      'v2Vesinvest.baselineChangedSincePricing',
+      'Accepted baseline changed after the saved tariff-plan result.',
+    );
+  }
+  if (code === 'VESINVEST_SCENARIO_STALE') {
+    return t(
+      'v2Forecast.staleComputeHint',
+      'Saved inputs changed after the last calculation. Recompute results before creating report.',
+    );
+  }
+  return t(fallbackKey, fallbackText);
+};
+
 const formatTariffUnit = (key: V2TariffFeeKey, value: number | null) => {
   if (value == null || !Number.isFinite(value)) {
     return '-';
@@ -354,9 +413,12 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       });
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : t('v2TariffPlan.loadFailed', 'Failed to load tariff plan.'),
+        mapKnownTariffError(
+          t,
+          err,
+          'v2TariffPlan.loadFailed',
+          'Failed to load tariff plan.',
+        ),
       );
     } finally {
       setLoading(false);
@@ -447,9 +509,12 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       setInfo(t('v2TariffPlan.saved', 'Tariff plan saved.'));
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : t('v2TariffPlan.saveFailed', 'Failed to save tariff plan.'),
+        mapKnownTariffError(
+          t,
+          err,
+          'v2TariffPlan.saveFailed',
+          'Failed to save tariff plan.',
+        ),
       );
     } finally {
       setBusy(false);
@@ -494,9 +559,12 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       setInfo(t('v2TariffPlan.accepted', 'Tariff plan accepted.'));
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : t('v2TariffPlan.acceptFailed', 'Tariff plan is not ready.'),
+        mapKnownTariffError(
+          t,
+          err,
+          'v2TariffPlan.acceptFailed',
+          'Tariff plan is not ready.',
+        ),
       );
     } finally {
       setBusy(false);
@@ -535,9 +603,12 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       onGoToReports();
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : t('v2Forecast.errorReportFailed', 'Failed to create report.'),
+        mapKnownTariffError(
+          t,
+          err,
+          'v2Forecast.errorReportFailed',
+          'Failed to create report.',
+        ),
       );
     } finally {
       setBusy(false);

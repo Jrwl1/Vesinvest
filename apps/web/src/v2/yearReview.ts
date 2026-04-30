@@ -183,6 +183,13 @@ function getDatasetRows(
   return yearData?.datasets.find((row) => row.dataType === dataType)?.[kind] ?? [];
 }
 
+function sumDatasetRows(
+  rows: Array<Record<string, unknown>>,
+  sourceKey: string,
+): number {
+  return rows.reduce((sum, row) => sum + parseNumber(row[sourceKey]), 0);
+}
+
 function resolveSourceLayer(
   key: ImportYearSourceLayer['key'],
   datasets: Array<V2ImportYearDataResponse['datasets'][number]>,
@@ -619,50 +626,52 @@ export function buildPriceComparisonRows(
 export function buildVolumeComparisonRows(
   yearData: V2ImportYearDataResponse | undefined,
 ): Array<ValueComparisonRow<VolumeComparisonFieldKey>> {
-  const rawWater = getDatasetFirstRow(yearData, 'volume_vesi', 'rawRows');
-  const rawWastewater = getDatasetFirstRow(
+  const rawWaterRows = getDatasetRows(yearData, 'volume_vesi', 'rawRows');
+  const rawWastewaterRows = getDatasetRows(
     yearData,
     'volume_jatevesi',
     'rawRows',
   );
-  const effectiveWater = getDatasetFirstRow(
+  const effectiveWaterRows = getDatasetRows(
     yearData,
     'volume_vesi',
     'effectiveRows',
   );
-  const effectiveWastewater = getDatasetFirstRow(
+  const effectiveWastewaterRows = getDatasetRows(
     yearData,
     'volume_jatevesi',
     'effectiveRows',
   );
 
   if (
-    Object.keys(rawWater).length === 0 &&
-    Object.keys(rawWastewater).length === 0 &&
-    Object.keys(effectiveWater).length === 0 &&
-    Object.keys(effectiveWastewater).length === 0
+    rawWaterRows.length === 0 &&
+    rawWastewaterRows.length === 0 &&
+    effectiveWaterRows.length === 0 &&
+    effectiveWastewaterRows.length === 0
   ) {
     return [];
   }
 
+  const rawWaterVolume = sumDatasetRows(rawWaterRows, 'Maara');
+  const effectiveWaterVolume = sumDatasetRows(effectiveWaterRows, 'Maara');
+  const rawWastewaterVolume = sumDatasetRows(rawWastewaterRows, 'Maara');
+  const effectiveWastewaterVolume = sumDatasetRows(
+    effectiveWastewaterRows,
+    'Maara',
+  );
+
   return [
     {
       key: 'soldWaterVolume',
-      veetiValue: parseNumber(getRowValue(rawWater, 'Maara')),
-      effectiveValue: parseNumber(getRowValue(effectiveWater, 'Maara')),
-      changed: numbersDiffer(
-        parseNumber(getRowValue(rawWater, 'Maara')),
-        parseNumber(getRowValue(effectiveWater, 'Maara')),
-      ),
+      veetiValue: rawWaterVolume,
+      effectiveValue: effectiveWaterVolume,
+      changed: numbersDiffer(rawWaterVolume, effectiveWaterVolume),
     },
     {
       key: 'soldWastewaterVolume',
-      veetiValue: parseNumber(getRowValue(rawWastewater, 'Maara')),
-      effectiveValue: parseNumber(getRowValue(effectiveWastewater, 'Maara')),
-      changed: numbersDiffer(
-        parseNumber(getRowValue(rawWastewater, 'Maara')),
-        parseNumber(getRowValue(effectiveWastewater, 'Maara')),
-      ),
+      veetiValue: rawWastewaterVolume,
+      effectiveValue: effectiveWastewaterVolume,
+      changed: numbersDiffer(rawWastewaterVolume, effectiveWastewaterVolume),
     },
   ];
 }

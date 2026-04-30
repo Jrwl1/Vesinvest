@@ -451,6 +451,56 @@ export function registerVesinvestPlanningPanelSmokeSuite() {
     expect(screen.getByText('2024')).toBeTruthy();
   });
 
+  it('normalizes law-summary class labels instead of showing stale raw labels', async () => {
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        lawInvestmentSummary: {
+          renovationAmount: 100,
+          newInvestmentAmount: 0,
+          repairAmount: 0,
+          timeBuckets: [
+            {
+              key: 'years_0_5',
+              startYear: 2026,
+              endYear: 2030,
+              waterAmount: 100,
+              wastewaterAmount: 0,
+              totalAmount: 100,
+            },
+          ],
+          byAssetCategory: [
+            {
+              groupKey: 'sanering_water_network',
+              groupLabel: 'Sanering / vattennatverk',
+              projectCount: 1,
+              totalAmount: 100,
+            },
+          ],
+          byInvestmentType: [
+            {
+              investmentType: 'sanering',
+              projectCount: 1,
+              totalAmount: 100,
+            },
+          ],
+        },
+      }),
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: true, baselineYears: [baselineYear] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    expect((await screen.findAllByText('Water network rehabilitation')).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Sanering / vattennatverk')).toBeNull();
+  });
+
   it('does not show validation placeholder project text as live customer copy', async () => {
     getVesinvestPlanV2.mockResolvedValue(
       makePlan({

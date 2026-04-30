@@ -685,6 +685,7 @@
     "revenueEvidenceHint": "Dokumentoi nykyinen ja ehdotettu tuotto liittymis-, perus-, vesi- ja jätevesimaksuille.",
     "saveFailed": "Maksusuunnitelman tallennus epäonnistui.",
     "saved": "Maksusuunnitelma tallennettiin.",
+    "forecastRecomputeRequired": "Laske linkitetty ennuste uudelleen ennen maksusuunnittelua.",
     "scenarioRequired": "Synkronoi omaisuudenhallintasuunnitelma ennusteeseen ennen maksusuunnittelua.",
     "smoothingStatus": "15 % tasaus",
     "smoothingOk": "15 % sisällä",

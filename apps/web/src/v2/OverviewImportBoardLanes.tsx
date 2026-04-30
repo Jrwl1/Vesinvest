@@ -8,7 +8,6 @@ import {
   buildVolumeForm,
   CARD_SUMMARY_FIELD_TO_INLINE_FIELD,
   getDatasetRowValue,
-  getEffectiveFirstRow,
   getEffectiveRows,
   IMPORT_BOARD_CANON_ROWS,
   parseManualNumber,
@@ -202,8 +201,8 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
             const wastewaterPriceRow = priceRows.find(
               (entry) => parseManualNumber(getDatasetRowValue(entry, 'Tyyppi_Id')) === 2,
             );
-            const waterVolumeRow = getEffectiveFirstRow(yearData, 'volume_vesi');
-            const wastewaterVolumeRow = getEffectiveFirstRow(
+            const waterVolumeRows = getEffectiveRows(yearData, 'volume_vesi');
+            const wastewaterVolumeRows = getEffectiveRows(
               yearData,
               'volume_jatevesi',
             );
@@ -238,13 +237,12 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                 focusField: 'soldWaterVolume' as InlineCardField,
                 missing:
                   !row.completeness.volume_vesi ||
-                  Object.keys(waterVolumeRow).length === 0,
+                  waterVolumeRows.length === 0,
                 zero:
-                  Object.keys(waterVolumeRow).length > 0 &&
-                  volumeForm.soldWaterVolume === 0,
+                  waterVolumeRows.length > 0 && volumeForm.soldWaterVolume === 0,
                 displayValue:
                   !row.completeness.volume_vesi ||
-                  Object.keys(waterVolumeRow).length === 0
+                  waterVolumeRows.length === 0
                     ? t('v2Overview.checkMissing', 'Missing')
                     : formatVolume(volumeForm.soldWaterVolume),
               },
@@ -256,13 +254,13 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                 focusField: 'soldWastewaterVolume' as InlineCardField,
                 missing:
                   !row.completeness.volume_jatevesi ||
-                  Object.keys(wastewaterVolumeRow).length === 0,
+                  wastewaterVolumeRows.length === 0,
                 zero:
-                  Object.keys(wastewaterVolumeRow).length > 0 &&
+                  wastewaterVolumeRows.length > 0 &&
                   volumeForm.soldWastewaterVolume === 0,
                 displayValue:
                   !row.completeness.volume_jatevesi ||
-                  Object.keys(wastewaterVolumeRow).length === 0
+                  wastewaterVolumeRows.length === 0
                     ? t('v2Overview.checkMissing', 'Missing')
                     : formatVolume(volumeForm.soldWastewaterVolume),
               },

@@ -683,6 +683,7 @@
     "revenueEvidenceHint": "Dokumentera nuvarande och föreslagen intäkt för anslutnings-, grund-, vatten- och avloppsavgifter.",
     "saveFailed": "Avgiftsplanen kunde inte sparas.",
     "saved": "Avgiftsplanen sparades.",
+    "forecastRecomputeRequired": "Beräkna den länkade prognosen på nytt före avgiftsplaneringen.",
     "scenarioRequired": "Synkronisera egendomsförvaltningsplanen till prognosen före avgiftsplaneringen.",
     "smoothingStatus": "15 % utjämning",
     "smoothingOk": "inom 15 %",

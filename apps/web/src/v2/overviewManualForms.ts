@@ -165,6 +165,23 @@ export function getEffectiveRows(
   );
 }
 
+export function getRawRows(
+  yearData: V2ImportYearDataResponse | undefined,
+  dataType: string,
+): Array<Record<string, unknown>> {
+  return yearData?.datasets.find((row) => row.dataType === dataType)?.rawRows ?? [];
+}
+
+export function sumDatasetRowValues(
+  rows: Array<Record<string, unknown>>,
+  key: string,
+): number {
+  return rows.reduce(
+    (sum, row) => sum + parseManualNumber(getDatasetRowValue(row, key)),
+    0,
+  );
+}
+
 export function buildFinancialForm(
   yearData: V2ImportYearDataResponse | undefined,
 ): ManualFinancialForm {
@@ -229,11 +246,11 @@ export function buildPriceForm(
 export function buildVolumeForm(
   yearData: V2ImportYearDataResponse | undefined,
 ): ManualVolumeForm {
-  const waterVolume = getEffectiveFirstRow(yearData, 'volume_vesi');
-  const wastewaterVolume = getEffectiveFirstRow(yearData, 'volume_jatevesi');
+  const waterVolumeRows = getEffectiveRows(yearData, 'volume_vesi');
+  const wastewaterVolumeRows = getEffectiveRows(yearData, 'volume_jatevesi');
   return {
-    soldWaterVolume: parseManualNumber(waterVolume.Maara),
-    soldWastewaterVolume: parseManualNumber(wastewaterVolume.Maara),
+    soldWaterVolume: sumDatasetRowValues(waterVolumeRows, 'Maara'),
+    soldWastewaterVolume: sumDatasetRowValues(wastewaterVolumeRows, 'Maara'),
   };
 }
 

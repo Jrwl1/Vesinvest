@@ -277,6 +277,62 @@ describe('TariffPlanPageV2', () => {
     cleanup();
   });
 
+  it('localizes forecast recompute load conflicts instead of leaking backend copy', async () => {
+    getTariffPlanV2.mockRejectedValue(
+      Object.assign(
+        new Error('Compute the linked forecast scenario before tariff planning.'),
+        { code: 'FORECAST_RECOMPUTE_REQUIRED' },
+      ),
+    );
+
+    render(
+      <TariffPlanPageV2
+        onGoToAssetManagement={() => undefined}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    expect(
+      await screen.findByText('Recompute the linked forecast before tariff planning.'),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText('Compute the linked forecast scenario before tariff planning.'),
+    ).toBeNull();
+  });
+
+  it('localizes tariff action conflicts instead of leaking backend copy', async () => {
+    saveTariffPlanV2.mockRejectedValue(
+      Object.assign(
+        new Error('Compute the linked forecast scenario before tariff planning.'),
+        { code: 'FORECAST_RECOMPUTE_REQUIRED' },
+      ),
+    );
+
+    render(
+      <TariffPlanPageV2
+        onGoToAssetManagement={() => undefined}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading...')).toBeNull();
+    });
+    fireEvent.change(screen.getByLabelText('Water price'), {
+      target: { value: '1.6' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(
+      await screen.findByText('Recompute the linked forecast before tariff planning.'),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText('Compute the linked forecast scenario before tariff planning.'),
+    ).toBeNull();
+  });
+
   it('applies the recommended even split and returns to custom mode after manual edits', async () => {
     render(
       <TariffPlanPageV2

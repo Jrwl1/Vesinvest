@@ -682,6 +682,7 @@
     "revenueEvidenceHint": "Document current and proposed revenue for connection, base, water, and wastewater fees.",
     "saveFailed": "Failed to save tariff plan.",
     "saved": "Tariff plan saved.",
+    "forecastRecomputeRequired": "Recompute the linked forecast before tariff planning.",
     "scenarioRequired": "Sync the asset-management plan to forecast before tariff planning.",
     "smoothingStatus": "15% smoothing status",
     "smoothingOk": "within 15%",

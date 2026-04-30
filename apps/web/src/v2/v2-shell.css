@@ -400,6 +400,16 @@
   box-shadow: var(--v2-shadow);
 }
 
+.v2-app-shell input,
+.v2-app-shell textarea,
+.v2-app-shell select {
+  font: inherit;
+}
+
+.v2-app-shell textarea {
+  line-height: 1.45;
+}
+
 .v2-account-drawer-layer {
   position: fixed;
   inset: 0;
@@ -421,6 +431,7 @@
   background: var(--v2-surface);
   box-shadow: var(--v2-shadow-strong);
   display: grid;
+  align-content: start;
   gap: 14px;
 }
 
@@ -445,7 +456,13 @@
 
 .v2-account-drawer-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+}
+
+.v2-account-drawer-actions .v2-btn {
+  width: auto;
+  min-height: 0;
 }
 
 .v2-account-drawer-close {

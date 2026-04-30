@@ -7,6 +7,8 @@ import {
   getEffectiveRows,
   getDatasetRowValue,
   getRawFirstRow,
+  getRawRows,
+  sumDatasetRowValues,
   type ManualFinancialForm,
   type ManualPriceForm,
   type ManualVolumeForm,
@@ -225,8 +227,8 @@ export function buildRawValueLookup(
   const rawWastewaterPrice = rawPriceRows.find(
     (row) => parseOptionalNumber(getDatasetRowValue(row, 'Tyyppi_Id')) === 2,
   );
-  const rawWaterVolume = getRawFirstRow(yearData, 'volume_vesi');
-  const rawWastewaterVolume = getRawFirstRow(yearData, 'volume_jatevesi');
+  const rawWaterVolumeRows = getRawRows(yearData, 'volume_vesi');
+  const rawWastewaterVolumeRows = getRawRows(yearData, 'volume_jatevesi');
 
   return {
     liikevaihto: parseOptionalNumber(rawFinancials.Liikevaihto),
@@ -242,8 +244,14 @@ export function buildRawValueLookup(
     wastewaterUnitPrice: parseOptionalNumber(
       getDatasetRowValue(rawWastewaterPrice, 'Kayttomaksu'),
     ),
-    soldWaterVolume: parseOptionalNumber(getDatasetRowValue(rawWaterVolume, 'Maara')),
-    soldWastewaterVolume: parseOptionalNumber(getDatasetRowValue(rawWastewaterVolume, 'Maara')),
+    soldWaterVolume:
+      rawWaterVolumeRows.length > 0
+        ? sumDatasetRowValues(rawWaterVolumeRows, 'Maara')
+        : null,
+    soldWastewaterVolume:
+      rawWastewaterVolumeRows.length > 0
+        ? sumDatasetRowValues(rawWastewaterVolumeRows, 'Maara')
+        : null,
   };
 }
 
@@ -258,8 +266,9 @@ export function buildEffectiveValueLookup(
   const effectiveWastewaterPrice = effectivePriceRows.find(
     (row) => parseOptionalNumber(getDatasetRowValue(row, 'Tyyppi_Id')) === 2,
   );
-  const effectiveWaterVolume = getEffectiveFirstRow(yearData, 'volume_vesi');
-  const effectiveWastewaterVolume = getEffectiveFirstRow(
+  const volumes = buildVolumeForm(yearData);
+  const effectiveWaterVolumeRows = getEffectiveRows(yearData, 'volume_vesi');
+  const effectiveWastewaterVolumeRows = getEffectiveRows(
     yearData,
     'volume_jatevesi',
   );
@@ -288,10 +297,12 @@ export function buildEffectiveValueLookup(
     wastewaterUnitPrice: parseOptionalNumber(
       getDatasetRowValue(effectiveWastewaterPrice, 'Kayttomaksu'),
     ),
-    soldWaterVolume: parseOptionalNumber(getDatasetRowValue(effectiveWaterVolume, 'Maara')),
-    soldWastewaterVolume: parseOptionalNumber(
-      getDatasetRowValue(effectiveWastewaterVolume, 'Maara'),
-    ),
+    soldWaterVolume:
+      effectiveWaterVolumeRows.length > 0 ? volumes.soldWaterVolume : null,
+    soldWastewaterVolume:
+      effectiveWastewaterVolumeRows.length > 0
+        ? volumes.soldWastewaterVolume
+        : null,
   };
 }
 

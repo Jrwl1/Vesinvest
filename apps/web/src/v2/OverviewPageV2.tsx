@@ -197,7 +197,8 @@ export const OverviewPageV2: React.FC<Props> = ({
     isInlineCardDirty,
     dismissInlineCardEditor,
     openInlineCardEditor,
-    attemptOpenInlineCardEditor,
+    openSetupInlineCardEditor,
+    attemptOpenSetupInlineCardEditor,
     resolveRepairFocusField,
     buildRepairActions,
     buildManualPatchPayload,
@@ -477,8 +478,8 @@ export const OverviewPageV2: React.FC<Props> = ({
           sourceLayerText={sourceLayerText}
           renderDatasetCounts={renderDatasetCounts}
           missingRequirementLabel={missingRequirementLabel}
-          attemptOpenInlineCardEditor={attemptOpenInlineCardEditor}
-          openInlineCardEditor={openInlineCardEditor}
+          attemptOpenInlineCardEditor={attemptOpenSetupInlineCardEditor}
+          openInlineCardEditor={openSetupInlineCardEditor}
           loadingYearData={loadingYearData}
           manualPatchError={manualPatchError}
           blockedYearCount={blockedYearCount}

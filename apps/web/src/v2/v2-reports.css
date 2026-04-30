@@ -925,3 +925,26 @@
   overflow: hidden;
   gap: 6px;
 }
+
+@media (max-width: 720px) {
+  .v2-reports-layout,
+  .v2-reports-layout.has-selected-report {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .v2-reports-preview-card,
+  .v2-reports-preview-card-primary,
+  .v2-reports-preview-head,
+  .v2-reports-preview-meta,
+  .v2-reports-preview-hero,
+  .v2-reports-provenance-summary,
+  .v2-reports-investment-summary {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .v2-reports-preview-card {
+    overflow-x: hidden;
+  }
+}

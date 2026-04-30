@@ -252,6 +252,7 @@
 }
 
 .v2-nav-btn {
+  position: relative;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -1256,5 +1257,56 @@
 
   .v2-header-context {
     flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 720px) {
+  .v2-app-header,
+  .v2-app-shell.v2-app-shell-forecast .v2-app-header,
+  .v2-app-shell.v2-app-shell-reports .v2-app-header {
+    padding: 10px 8px 6px;
+  }
+
+  .v2-app-header-inner,
+  .v2-app-shell.v2-app-shell-forecast .v2-app-header-inner,
+  .v2-app-shell.v2-app-shell-reports .v2-app-header-inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .v2-app-shell .v2-header-tools {
+    grid-column: 1;
+    justify-self: stretch;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .v2-app-shell .v2-header-tools .language-switcher {
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+
+  .v2-account-btn {
+    flex: 0 0 auto;
+    max-width: 72px;
+  }
+
+  .v2-main-nav,
+  .v2-app-shell.v2-app-shell-forecast .v2-main-nav,
+  .v2-app-shell.v2-app-shell-reports .v2-main-nav {
+    grid-column: 1;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .v2-header-meta {
+    width: calc(100% - 16px);
+    align-items: stretch;
+  }
+
+  .v2-header-context,
+  .v2-header-statuses {
+    width: 100%;
   }
 }

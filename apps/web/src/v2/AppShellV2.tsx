@@ -205,7 +205,7 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     shellBackStep === 1 || shellBackStep === 2
       ? t('v2Shell.backToIdentity', 'Back to utility identity')
       : shellBackStep === 3
-        ? t('v2Shell.backToInvestmentPlan', 'Back to investment plan')
+        ? t('v2Shell.backToInvestmentPlan', 'Back to year review')
         : shellBackStep === 5
           ? t('v2Shell.backToBaseline', 'Back to baseline')
         : null;

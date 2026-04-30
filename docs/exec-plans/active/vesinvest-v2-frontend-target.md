@@ -232,3 +232,17 @@ Implement the v3 Vesinvest V2 frontend target across the shell, Overview, Asset 
     - `pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.workspace-handoff.details.test.tsx src/v2/overviewWorkflow.test.ts src/i18n/locales/localeIntegrity.test.ts`
     - `pnpm --filter ./apps/web typecheck`
     - `git diff --check`
+- Full live E2E P3/polish audit with tenant wipe and Kronoby import:
+  - Evidence folder: `output/playwright/live-full-e2e-p3-audit-2026-04-30/`.
+  - Live flow wiped the tenant from `Konto`, imported Kronoby VEETI org `1535`, selected/imported 2025-2022, filled plausible economic rows, created a baseline, added a 2026-2030 water-network rehabilitation investment program, synced Forecast, filled/accepted Tariff Plan, created a report package, downloaded/rendered the PDF, and rechecked the five V2 tabs at 1280px and 1360px.
+  - P2 workflow-truth finding fixed: using `Komplettera manuellt` before importing selected years could open review with `0 år / Inga valda år` while the setup summary still showed four selected years. Setup-board inline completion now imports the selected years before opening the manual editor.
+  - P2 numeric-trust finding fixed: sold-water comparisons could read only the first imported `volume_vesi` row in review/QDIS paths, while other Forecast/Tariff surfaces used summed effective data. Overview manual forms, review rows, QDIS comparisons, and workspace handoff now aggregate all matching volume rows.
+  - P2 localization/raw-copy findings fixed: known Tariff Plan backend conflict codes no longer leak raw English messages, Asset Management law summary no longer shows raw class labels such as `Sanering / vattennatverk`, and generated PDFs no longer render smoothing status as raw `ok`.
+  - P3 polish fixes: V2 form controls inherit the application typeface, the account drawer aligns compactly, and the close action uses a proper close glyph instead of a literal `x`.
+  - Browser validation after source fixes used local dev only; `local-asset-after-fixes.json`, `local-tariff-after-fixes.json`, and `local-account-drawer-after-fixes.json` confirm no raw class/basis/backend-copy leaks and corrected typography/drawer metrics.
+  - Focused gates passed:
+    - `pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.connect-import.execution.board-actions.test.tsx src/v2/overviewManualForms.test.ts src/v2/overviewReviewViewModel.test.ts src/v2/yearReview.test.ts src/v2/TariffPlanPageV2.test.tsx src/v2/VesinvestPlanningPanel.test.tsx src/i18n/locales/localeIntegrity.test.ts`
+    - `pnpm --filter ./apps/api test -- src/v2/v2-report-pdf.spec.ts`
+    - `pnpm --filter ./apps/web typecheck`
+    - `pnpm --filter ./apps/api typecheck`
+    - `git diff --check` passed with CRLF normalization warnings only.

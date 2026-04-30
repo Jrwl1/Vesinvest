@@ -1183,6 +1183,48 @@
   min-width: 0;
 }
 
+@media (max-width: 1320px) {
+  .v2-app-header-inner,
+  .v2-app-shell.v2-app-shell-forecast .v2-app-header-inner,
+  .v2-app-shell.v2-app-shell-reports .v2-app-header-inner {
+    grid-template-columns: minmax(132px, 188px) minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .v2-brand-title {
+    font-size: 1.04rem;
+  }
+
+  .v2-main-nav,
+  .v2-app-shell.v2-app-shell-forecast .v2-main-nav,
+  .v2-app-shell.v2-app-shell-reports .v2-main-nav {
+    justify-content: flex-start;
+    gap: 2px;
+  }
+
+  .v2-nav-btn,
+  .v2-app-shell.v2-app-shell-forecast .v2-nav-btn,
+  .v2-app-shell.v2-app-shell-reports .v2-nav-btn {
+    padding: 6px 7px;
+    gap: 4px;
+    font-size: 0.74rem;
+  }
+
+  .v2-nav-btn:not(.active) .v2-nav-status-label {
+    display: none;
+  }
+
+  .v2-page-indicator span,
+  .v2-app-shell.v2-app-shell-forecast .v2-page-indicator span,
+  .v2-app-shell.v2-app-shell-reports .v2-page-indicator span {
+    display: none;
+  }
+
+  .v2-page-indicator {
+    max-width: 24ch;
+  }
+}
+
 @media (max-width: 1120px) {
   .v2-app-header-inner,
   .v2-app-shell.v2-app-shell-forecast .v2-app-header-inner,

@@ -179,3 +179,46 @@ Implement the v3 Vesinvest V2 frontend target across the shell, Overview, Asset 
   - `pnpm smoke:v2` passed.
   - `pnpm check:harness` passed.
   - `git diff --check` passed with CRLF normalization warnings only.
+- Fresh hostile desktop audit on live `vesipolku.jrwl.io` after branch `main` at `a41804d8`:
+  - Evidence folder: `output/playwright/fresh-vesinvest-v2-hostile-audit-2026-04-30/`.
+  - No P0/P1 findings. Desktop shell/header stayed clear at 1360px and 1280px; route/bootstrap truth, report creation/export semantics, allocation editor sizing, and Forecast/Tariff/Reports price consistency held.
+  - P2 finding fixed: live validation/demo language and one raw project subtype leaked into Asset Management, Tariff Plan, Reports preview/PDF surfaces. Source now exact-match sanitizes those placeholders and transient bad-encoding stale payloads in web display and PDF rendering.
+  - Live seed data was cleaned and all three current package variants were recreated. Fresh `fresh-live-pdf-leak-scan.json` shows latest regulator, board, and internal package PDFs have zero leak hits.
+  - Focused gates passed:
+    - `pnpm --filter ./apps/web test -- src/v2/validationDisplayText.test.ts src/v2/VesinvestPlanningPanel.test.tsx src/v2/TariffPlanPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts`
+    - `pnpm --filter ./apps/api test -- src/v2/v2-report-pdf.spec.ts`
+    - `pnpm --filter ./apps/web typecheck`
+    - `pnpm --filter ./apps/api typecheck`
+- Live resweep and local source validation follow-up:
+  - Live evidence folder: `output/playwright/live-hostile-resweep-2026-04-30/`.
+  - Local source evidence folder: `output/playwright/local-dev-resweep-2026-04-30/`.
+  - Live resweep confirmed the remaining deployed-user P2 is limited to older saved internal appendix rows created before cleanup; current/latest packages remain clean, and source fixes now cover the stale snapshot display/PDF paths after deployment.
+  - GPT-5.5 xhigh subagent reviews found and closed three implementation P2s:
+    - Forecast sync could copy raw validation project names/notes into yearly investments when a user synced without editing sanitized fields.
+    - Forecast annual/full-table rows still rendered raw stale notes.
+    - Asset Management evidence tab still rendered raw stale evidence notes.
+  - Final GPT-5.5 xhigh implementation re-audit found no remaining P0/P1/P2.
+  - Additional gates passed:
+    - `pnpm --filter ./apps/web test -- src/v2/forecastInvestmentRenderers.test.tsx src/v2/validationDisplayText.test.ts src/v2/ReportsPageV2.preview-detail.test.tsx src/v2/VesinvestPlanningPanel.test.tsx src/v2/TariffPlanPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts`
+    - `pnpm --filter ./apps/api test -- src/v2/v2-vesinvest.service.spec.ts src/v2/v2-report-pdf.spec.ts`
+    - `pnpm --filter ./apps/web typecheck`
+    - `pnpm --filter ./apps/api typecheck`
+    - `pnpm smoke:v2`
+    - `pnpm check:harness`
+    - `git diff --check` passed with CRLF normalization warnings only.
+- Desktop P3 polish closure sweep:
+  - Live sweep on `vesipolku.jrwl.io` at 1280px/1360px found remaining P3 density issues only: compressed shell/nav labels at 1280px, clipped Asset Management project register/detail fields, and a crowded Reports saved-package rail when a package is selected.
+  - Source fixes keep the desktop shell within the 1280px header, compact selected Reports rows without a horizontal rail scrollbar, make the project register fit the card with wider editable project fields, and keep project detail notes at full usable width.
+  - Follow-up GPT-5.5 xhigh implementation audit found two P3s; both were fixed:
+    - PDF internal evidence appendix now localizes asset evidence and tariff evidence with separate context so asset rows do not say `active tariff plan`.
+    - Project register columns now use card-relative widths and wrapping actions instead of a 1344px fixed-width table.
+  - Local Playwright evidence after source fixes is in `output/playwright/local-dev-p3-polish-2026-04-30/`; `p3-polish-browser-checks.json` confirms no Reports rail horizontal overflow at 1280px/1360px, no project-register horizontal overflow at 1280px, and 912px project-note inputs.
+  - Final P3 closure gates passed:
+    - `pnpm --filter ./apps/web test -- src/v2/AppShellV2.navigation-drawer.test.tsx src/v2/ReportsPageV2.preview-detail.test.tsx src/v2/VesinvestPlanningPanel.test.tsx src/v2/forecastInvestmentRenderers.test.tsx src/v2/validationDisplayText.test.ts src/i18n/locales/localeIntegrity.test.ts`
+    - `pnpm --filter ./apps/api test -- src/v2/v2-report-pdf.spec.ts src/v2/v2-vesinvest.service.spec.ts`
+    - `pnpm --filter ./apps/web typecheck`
+    - `pnpm --filter ./apps/api typecheck`
+    - `pnpm smoke:v2`
+    - `pnpm check:harness`
+    - `pnpm check:text-integrity`
+    - `git diff --check` passed with CRLF normalization warnings only.

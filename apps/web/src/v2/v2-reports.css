@@ -814,3 +814,114 @@
   gap: 10px;
   padding: 14px;
 }
+
+.v2-reports-layout.has-selected-report .v2-reports-list-card {
+  gap: 12px;
+  padding: 14px;
+}
+
+.v2-reports-layout.has-selected-report .v2-reports-list-head {
+  gap: 10px;
+}
+
+.v2-reports-layout.has-selected-report .v2-reports-section-copy {
+  gap: 4px;
+}
+
+.v2-reports-layout.has-selected-report .v2-reports-section-copy h2 {
+  font-size: 1rem;
+}
+
+.v2-reports-layout.has-selected-report .v2-reports-section-copy p {
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.v2-reports-layout.has-selected-report .v2-reports-list-summary {
+  gap: 6px;
+}
+
+.v2-reports-layout.has-selected-report .v2-reports-list-summary article {
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.v2-reports-layout.has-selected-report .v2-report-list {
+  max-height: calc(100vh - 340px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 2px;
+  gap: 6px;
+}
+
+.v2-reports-layout.has-selected-report .v2-report-row {
+  width: 100%;
+  min-width: 0;
+  gap: 7px;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 9px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.v2-reports-layout.has-selected-report .v2-report-row-top {
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.v2-reports-layout.has-selected-report .v2-report-row-main {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.v2-reports-layout.has-selected-report .v2-report-row-main strong {
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.84rem;
+}
+
+.v2-reports-layout.has-selected-report .v2-report-row-main span,
+.v2-reports-layout.has-selected-report .v2-report-row-meta {
+  font-size: 0.72rem;
+}
+
+.v2-reports-layout.has-selected-report .v2-report-row-main span,
+.v2-reports-layout.has-selected-report .v2-report-row-meta span {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-reports-layout.has-selected-report .v2-report-row .v2-badge-row {
+  display: none;
+}
+
+.v2-reports-layout.has-selected-report .v2-report-row .v2-badge {
+  padding: 2px 6px;
+  font-size: 0.66rem;
+}
+
+.v2-reports-layout.has-selected-report .v2-report-row .v2-result-selected {
+  display: none;
+}
+
+.v2-reports-layout.has-selected-report .v2-report-row-meta {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  gap: 6px;
+}

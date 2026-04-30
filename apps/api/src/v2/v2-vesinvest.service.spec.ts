@@ -364,6 +364,68 @@ describe('V2VesinvestService', () => {
     expect(result.scenarioId).toBe('scenario-1');
   });
 
+  it('merges accepted baseline metadata when sync sends no baseline source state', async () => {
+    const { service, prisma, forecastService } = makeService();
+    const support = (service as any).planningWorkspaceSupport;
+    support.resolveLatestAcceptedVeetiBudgetId.mockResolvedValue('budget-2024');
+    support.resolvePlanningBaselineYears.mockResolvedValue([2023, 2024]);
+    prisma.vesinvestPlan.findFirst
+      .mockResolvedValueOnce(makePlanRecord({ baselineSourceState: null }))
+      .mockResolvedValueOnce(
+        makePlanRecord({
+          status: 'active',
+          baselineStatus: 'verified',
+          feeRecommendationStatus: 'verified',
+          baselineSourceState: {
+            source: 'accepted_planning_baseline',
+            acceptedYears: [2023, 2024],
+            latestAcceptedBudgetId: 'budget-2024',
+          },
+          selectedScenarioId: 'scenario-1',
+        }),
+      );
+    forecastService.createForecastScenario.mockResolvedValue({ id: 'scenario-1' });
+    forecastService.updateForecastScenario.mockResolvedValue(undefined);
+    forecastService.computeForecastScenario.mockResolvedValue({
+      id: 'scenario-1',
+      baselinePriceTodayCombined: 2.8,
+      requiredPriceTodayCombinedAnnualResult: 3.2,
+      requiredAnnualIncreasePctAnnualResult: 4.1,
+      requiredPriceTodayCombinedCumulativeCash: 3.4,
+      requiredAnnualIncreasePctCumulativeCash: 4.7,
+      feeSufficiency: {
+        cumulativeCash: {
+          peakGap: 150000,
+        },
+      },
+      investmentSeries: [{ amount: 100 }],
+    });
+    prisma.vesinvestPlan.update.mockResolvedValue(makePlanRecord());
+
+    await service.syncPlanToForecast('org-1', 'plan-1', {
+      baselineSourceState: null,
+    });
+
+    expect(prisma.vesinvestPlan.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          baselineStatus: 'verified',
+          baselineChangedSinceAcceptedRevision: false,
+          baselineSourceState: expect.objectContaining({
+            source: 'accepted_planning_baseline',
+            veetiId: 1535,
+            utilityName: 'Water Utility',
+            businessId: '1234567-8',
+            acceptedYears: [2023, 2024],
+            latestAcceptedBudgetId: 'budget-2024',
+            baselineFingerprint: expect.any(String),
+            verifiedAt: expect.any(String),
+          }),
+        }),
+      }),
+    );
+  });
+
   it('maps an unambiguous Vesinvest year into forecast category and depreciation defaults', async () => {
     const { service, prisma, forecastService } = makeService();
     const support = (service as any).planningWorkspaceSupport;

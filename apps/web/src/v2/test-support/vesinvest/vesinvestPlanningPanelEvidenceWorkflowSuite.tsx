@@ -451,18 +451,12 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
     >;
     const updateProjects = updatePayload.projects as Array<Record<string, unknown>>;
     expect(updateProjects?.[0]?.id).toBeUndefined();
+    expect(updatePayload.baselineSourceState).toBeNull();
     expect(syncVesinvestPlanToForecastV2).toHaveBeenCalledWith(
       'plan-1',
       expect.objectContaining({
         compute: true,
-        baselineSourceState: expect.objectContaining({
-          acceptedYears: [2024],
-          baselineYears: [
-            expect.objectContaining({
-              year: 2024,
-            }),
-          ],
-        }),
+        baselineSourceState: null,
       }),
     );
     expect(updateVesinvestPlanV2.mock.invocationCallOrder[0]).toBeLessThan(
@@ -1326,15 +1320,22 @@ export function registerVesinvestPlanningPanelEvidenceWorkflowSuite() {
     );
 
     await screen.findByDisplayValue('Main rehabilitation');
-    fireEvent.change(screen.getByLabelText('P-001 2026 Water total'), {
+    const [editAllocations] = screen.getAllByRole('button', {
+      name: 'Edit yearly allocations',
+    });
+    fireEvent.click(editAllocations);
+    const allocationDialog = await screen.findByRole('dialog', {
+      name: 'Edit yearly allocations',
+    });
+    fireEvent.change(within(allocationDialog).getByLabelText('P-001 2026 Water total'), {
       target: { value: '125' },
     });
-    fireEvent.change(screen.getByLabelText('P-001 2026 Wastewater total'), {
+    fireEvent.change(within(allocationDialog).getByLabelText('P-001 2026 Wastewater total'), {
       target: { value: '75' },
     });
 
     expect(
-      (screen.getByLabelText('P-001 2026 Total') as HTMLInputElement).value,
+      (within(allocationDialog).getByLabelText('P-001 2026 Total') as HTMLInputElement).value,
     ).toBe('200');
   });
 

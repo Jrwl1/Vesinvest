@@ -294,6 +294,15 @@ export const buildBaselineSourceSnapshot = (
   if (baselineYears.length === 0 && !currentState) {
     return null;
   }
+  const hasSavedAcceptedBudgetLink =
+    typeof currentState?.latestAcceptedBudgetId === 'string' &&
+    currentState.latestAcceptedBudgetId.trim().length > 0;
+  if (
+    planningContext?.canCreateScenario === true &&
+    !hasSavedAcceptedBudgetLink
+  ) {
+    return null;
+  }
   return {
     ...(currentState ?? {}),
     source:

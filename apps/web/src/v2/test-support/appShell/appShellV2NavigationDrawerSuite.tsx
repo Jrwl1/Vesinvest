@@ -16,12 +16,14 @@ const {
   getImportStatusV2Mock,
   getPlanningContextV2Mock,
   listForecastScenariosV2Mock,
+  requestImportClearChallengeV2Mock,
 } = vi.hoisted(() => ({
   clearImportAndScenariosV2Mock: vi.fn(),
   getForecastScenarioV2Mock: vi.fn(),
   getImportStatusV2Mock: vi.fn(),
   getPlanningContextV2Mock: vi.fn(),
   listForecastScenariosV2Mock: vi.fn(),
+  requestImportClearChallengeV2Mock: vi.fn(),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -46,7 +48,9 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('../../../api', async () => {
-  const actual = await vi.importActual<typeof import('../../../api')>('../../../api');
+  const actual = await vi.importActual<typeof import('../../../api')>(
+    '../../../api',
+  );
   return {
     ...actual,
     clearImportAndScenariosV2: clearImportAndScenariosV2Mock,
@@ -54,6 +58,7 @@ vi.mock('../../../api', async () => {
     getImportStatusV2: getImportStatusV2Mock,
     getPlanningContextV2: getPlanningContextV2Mock,
     listForecastScenariosV2: listForecastScenariosV2Mock,
+    requestImportClearChallengeV2: requestImportClearChallengeV2Mock,
   };
 });
 
@@ -89,17 +94,19 @@ vi.mock('../../OverviewPageV2', () => ({
         baselineReady: boolean;
       };
     }) => void;
-    onSetupPlanStateChange?: (state: {
-      activePlanId: string | null;
-      linkedScenarioId: string | null;
-      classificationReviewRequired: boolean;
-      assetEvidenceReady?: boolean;
-      assetEvidenceMissingCount?: number;
-      pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
-      tariffPlanStatus?: 'draft' | 'accepted' | 'stale' | null;
-      baselineChangedSinceAcceptedRevision: boolean;
-      investmentPlanChangedSinceFeeRecommendation: boolean;
-    } | null) => void;
+    onSetupPlanStateChange?: (
+      state: {
+        activePlanId: string | null;
+        linkedScenarioId: string | null;
+        classificationReviewRequired: boolean;
+        assetEvidenceReady?: boolean;
+        assetEvidenceMissingCount?: number;
+        pricingStatus: 'blocked' | 'provisional' | 'verified' | null;
+        tariffPlanStatus?: 'draft' | 'accepted' | 'stale' | null;
+        baselineChangedSinceAcceptedRevision: boolean;
+        investmentPlanChangedSinceFeeRecommendation: boolean;
+      } | null,
+    ) => void;
     onSetupOrgNameChange?: (name: string | null) => void;
   }) => {
     const handledBackSignal = React.useRef(0);
@@ -139,189 +146,192 @@ vi.mock('../../OverviewPageV2', () => ({
 
     return (
       <div>
-      <button type="button" onClick={() => props.onGoToForecast()}>
-        overview-content
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          props.onSetupWizardStateChange?.({
-            totalSteps: 6,
-            currentStep: 2,
-            recommendedStep: 2,
-            activeStep: 2,
-            selectedProblemYear: null,
-            transitions: {
-              reviewContinue: 5,
-              selectProblemYear: 4,
-            },
-            wizardComplete: false,
-            forecastUnlocked: false,
-            reportsUnlocked: false,
-            summary: {
-              importedYearCount: 0,
-              readyYearCount: 0,
-              blockedYearCount: 0,
-              excludedYearCount: 0,
-              baselineReady: false,
-            },
-          })
-        }
-      >
-        lock-setup
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          props.onSetupWizardStateChange?.({
-            totalSteps: 6,
-            currentStep: 4,
-            recommendedStep: 4,
-            activeStep: 4,
-            selectedProblemYear: 2023,
-            transitions: {
-              reviewContinue: 4,
-              selectProblemYear: 4,
-            },
-            wizardComplete: false,
-            forecastUnlocked: false,
-            reportsUnlocked: false,
-            summary: {
-              importedYearCount: 2,
-              readyYearCount: 1,
-              blockedYearCount: 1,
-              excludedYearCount: 0,
-              baselineReady: false,
-            },
-          })
-        }
-      >
-        focus-problem-year
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          props.onSetupWizardStateChange?.({
-            totalSteps: 6,
-            currentStep: 3,
-            recommendedStep: 4,
-            activeStep: 3,
-            selectedProblemYear: null,
-            transitions: {
-              reviewContinue: 4,
-              selectProblemYear: 4,
-            },
-            wizardComplete: false,
-            forecastUnlocked: false,
-            reportsUnlocked: false,
-            summary: {
-              importedYearCount: 2,
-              readyYearCount: 1,
-              blockedYearCount: 1,
-              excludedYearCount: 0,
-              baselineReady: false,
-            },
-          })
-        }
-      >
-        review-blocked-year
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          props.onSetupWizardStateChange?.({
-            totalSteps: 6,
-            currentStep: 5,
-            recommendedStep: 5,
-            activeStep: 5,
-            selectedProblemYear: null,
-            transitions: {
-              reviewContinue: 5,
-              selectProblemYear: 4,
-            },
-            wizardComplete: false,
-            forecastUnlocked: false,
-            reportsUnlocked: false,
-            summary: {
-              importedYearCount: 1,
-              readyYearCount: 1,
-              blockedYearCount: 0,
-              excludedYearCount: 1,
-              baselineReady: false,
-            },
-          })
-        }
-      >
-        review-ready
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          props.onSetupWizardStateChange?.({
-            totalSteps: 6,
-            currentStep: 6,
-            recommendedStep: 6,
-            activeStep: 6,
-            selectedProblemYear: null,
-            transitions: {
-              reviewContinue: 5,
-              selectProblemYear: 4,
-            },
-            wizardComplete: true,
-            forecastUnlocked: true,
-            reportsUnlocked: true,
-            summary: {
-              importedYearCount: 2,
-              readyYearCount: 2,
-              blockedYearCount: 0,
-              excludedYearCount: 0,
-              baselineReady: true,
-            },
-          })
-        }
-      >
-        unlock-setup
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          props.onSetupWizardStateChange?.({
-            totalSteps: 6,
-            currentStep: 6,
-            recommendedStep: 6,
-            activeStep: 6,
-            selectedProblemYear: null,
-            transitions: {
-              reviewContinue: 5,
-              selectProblemYear: 4,
-            },
-            wizardComplete: false,
-            forecastUnlocked: true,
-            reportsUnlocked: false,
-            summary: {
-              importedYearCount: 2,
-              readyYearCount: 2,
-              blockedYearCount: 0,
-              excludedYearCount: 0,
-              baselineReady: true,
-            },
-          })
-        }
-      >
-        unlock-forecast-only
-      </button>
-      <button type="button" onClick={() => props.onGoToForecast()}>
-        open-forecast-handoff
-      </button>
-      <button type="button" onClick={() => props.onGoToForecast('scenario-1')}>
-        open-linked-forecast
-      </button>
-      <button
-        type="button"
-        onClick={() => props.onSetupOrgNameChange?.('Wizard Utility')}
-      >
-        set-org-name
-      </button>
+        <button type="button" onClick={() => props.onGoToForecast()}>
+          overview-content
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            props.onSetupWizardStateChange?.({
+              totalSteps: 6,
+              currentStep: 2,
+              recommendedStep: 2,
+              activeStep: 2,
+              selectedProblemYear: null,
+              transitions: {
+                reviewContinue: 5,
+                selectProblemYear: 4,
+              },
+              wizardComplete: false,
+              forecastUnlocked: false,
+              reportsUnlocked: false,
+              summary: {
+                importedYearCount: 0,
+                readyYearCount: 0,
+                blockedYearCount: 0,
+                excludedYearCount: 0,
+                baselineReady: false,
+              },
+            })
+          }
+        >
+          lock-setup
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            props.onSetupWizardStateChange?.({
+              totalSteps: 6,
+              currentStep: 4,
+              recommendedStep: 4,
+              activeStep: 4,
+              selectedProblemYear: 2023,
+              transitions: {
+                reviewContinue: 4,
+                selectProblemYear: 4,
+              },
+              wizardComplete: false,
+              forecastUnlocked: false,
+              reportsUnlocked: false,
+              summary: {
+                importedYearCount: 2,
+                readyYearCount: 1,
+                blockedYearCount: 1,
+                excludedYearCount: 0,
+                baselineReady: false,
+              },
+            })
+          }
+        >
+          focus-problem-year
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            props.onSetupWizardStateChange?.({
+              totalSteps: 6,
+              currentStep: 3,
+              recommendedStep: 4,
+              activeStep: 3,
+              selectedProblemYear: null,
+              transitions: {
+                reviewContinue: 4,
+                selectProblemYear: 4,
+              },
+              wizardComplete: false,
+              forecastUnlocked: false,
+              reportsUnlocked: false,
+              summary: {
+                importedYearCount: 2,
+                readyYearCount: 1,
+                blockedYearCount: 1,
+                excludedYearCount: 0,
+                baselineReady: false,
+              },
+            })
+          }
+        >
+          review-blocked-year
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            props.onSetupWizardStateChange?.({
+              totalSteps: 6,
+              currentStep: 5,
+              recommendedStep: 5,
+              activeStep: 5,
+              selectedProblemYear: null,
+              transitions: {
+                reviewContinue: 5,
+                selectProblemYear: 4,
+              },
+              wizardComplete: false,
+              forecastUnlocked: false,
+              reportsUnlocked: false,
+              summary: {
+                importedYearCount: 1,
+                readyYearCount: 1,
+                blockedYearCount: 0,
+                excludedYearCount: 1,
+                baselineReady: false,
+              },
+            })
+          }
+        >
+          review-ready
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            props.onSetupWizardStateChange?.({
+              totalSteps: 6,
+              currentStep: 6,
+              recommendedStep: 6,
+              activeStep: 6,
+              selectedProblemYear: null,
+              transitions: {
+                reviewContinue: 5,
+                selectProblemYear: 4,
+              },
+              wizardComplete: true,
+              forecastUnlocked: true,
+              reportsUnlocked: true,
+              summary: {
+                importedYearCount: 2,
+                readyYearCount: 2,
+                blockedYearCount: 0,
+                excludedYearCount: 0,
+                baselineReady: true,
+              },
+            })
+          }
+        >
+          unlock-setup
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            props.onSetupWizardStateChange?.({
+              totalSteps: 6,
+              currentStep: 6,
+              recommendedStep: 6,
+              activeStep: 6,
+              selectedProblemYear: null,
+              transitions: {
+                reviewContinue: 5,
+                selectProblemYear: 4,
+              },
+              wizardComplete: false,
+              forecastUnlocked: true,
+              reportsUnlocked: false,
+              summary: {
+                importedYearCount: 2,
+                readyYearCount: 2,
+                blockedYearCount: 0,
+                excludedYearCount: 0,
+                baselineReady: true,
+              },
+            })
+          }
+        >
+          unlock-forecast-only
+        </button>
+        <button type="button" onClick={() => props.onGoToForecast()}>
+          open-forecast-handoff
+        </button>
+        <button
+          type="button"
+          onClick={() => props.onGoToForecast('scenario-1')}
+        >
+          open-linked-forecast
+        </button>
+        <button
+          type="button"
+          onClick={() => props.onSetupOrgNameChange?.('Wizard Utility')}
+        >
+          set-org-name
+        </button>
         <button
           type="button"
           onClick={() =>
@@ -356,7 +366,11 @@ vi.mock('../../OverviewPageV2', () => ({
 }));
 
 vi.mock('../../AssetManagementPageV2', () => ({
-  AssetManagementPageV2: ({ onGoToTariffPlan }: { onGoToTariffPlan?: (scenarioId?: string | null) => void }) => (
+  AssetManagementPageV2: ({
+    onGoToTariffPlan,
+  }: {
+    onGoToTariffPlan?: (scenarioId?: string | null) => void;
+  }) => (
     <div>
       <div>asset-management-content</div>
       <button type="button" onClick={() => onGoToTariffPlan?.('scenario-1')}>
@@ -385,21 +399,24 @@ vi.mock('../../EnnustePageV2', () => ({
   }) => (
     <div>
       <div>ennuste-content:{initialScenarioId ?? '-'}</div>
-      <button type="button" onClick={() => onScenarioSelectionChange?.('stress-1')}>
+      <button
+        type="button"
+        onClick={() => onScenarioSelectionChange?.('stress-1')}
+      >
         select-stress
       </button>
       <button
         type="button"
         onClick={() =>
-          onComputedVersionChange?.(initialScenarioId ?? 'scenario-1', '2026-03-25T12:00:00.000Z')
+          onComputedVersionChange?.(
+            initialScenarioId ?? 'scenario-1',
+            '2026-03-25T12:00:00.000Z',
+          )
         }
       >
         compute-scenario
       </button>
-      <button
-        type="button"
-        onClick={() => onGoToOverviewFeePath?.('plan-1')}
-      >
+      <button type="button" onClick={() => onGoToOverviewFeePath?.('plan-1')}>
         stale-report-hit
       </button>
       <button type="button" onClick={() => onReportCreated('report-123')}>
@@ -466,820 +483,877 @@ vi.mock('../../ReportsPageV2', () => ({
   ),
 }));
 
-
-
 export function registerAppShellV2NavigationDrawerSuite() {
   describe('AppShellV2 navigation and drawer', () => {
-  const buildActivePlan = (overrides?: Record<string, unknown>) => ({
-    id: 'plan-1',
-    name: 'Vesinvest plan',
-    utilityName: 'Wizard Utility',
-    businessId: '1234567-8',
-    veetiId: null,
-    identitySource: 'manual',
-    horizonYears: 20,
-    versionNumber: 1,
-    status: 'draft',
-    baselineStatus: 'draft',
-    pricingStatus: 'blocked',
-    tariffPlanStatus: null,
-    selectedScenarioId: null,
-    projectCount: 1,
-    totalInvestmentAmount: 100000,
-    lastReviewedAt: null,
-    reviewDueAt: null,
-    classificationReviewRequired: false,
-    assetEvidenceReady: true,
-    assetEvidenceMissingCount: 0,
-    baselineChangedSinceAcceptedRevision: false,
-    investmentPlanChangedSinceFeeRecommendation: false,
-    updatedAt: '2026-03-25T12:00:00.000Z',
-    createdAt: '2026-03-25T12:00:00.000Z',
-    ...overrides,
-  });
+    const buildActivePlan = (overrides?: Record<string, unknown>) => ({
+      id: 'plan-1',
+      name: 'Vesinvest plan',
+      utilityName: 'Wizard Utility',
+      businessId: '1234567-8',
+      veetiId: null,
+      identitySource: 'manual',
+      horizonYears: 20,
+      versionNumber: 1,
+      status: 'draft',
+      baselineStatus: 'draft',
+      pricingStatus: 'blocked',
+      tariffPlanStatus: null,
+      selectedScenarioId: null,
+      projectCount: 1,
+      totalInvestmentAmount: 100000,
+      lastReviewedAt: null,
+      reviewDueAt: null,
+      classificationReviewRequired: false,
+      assetEvidenceReady: true,
+      assetEvidenceMissingCount: 0,
+      baselineChangedSinceAcceptedRevision: false,
+      investmentPlanChangedSinceFeeRecommendation: false,
+      updatedAt: '2026-03-25T12:00:00.000Z',
+      createdAt: '2026-03-25T12:00:00.000Z',
+      ...overrides,
+    });
 
-  const buildPlanningContext = (options?: {
-    canCreateScenario?: boolean;
-    baselineYears?: any[];
-    activePlan?: Record<string, unknown> | null;
-    selectedPlan?: Record<string, unknown> | null;
-  }) => ({
-    canCreateScenario: options?.canCreateScenario ?? false,
-    vesinvest: {
-      hasPlan:
-        options?.activePlan != null || options?.selectedPlan != null,
-      planCount:
-        options?.activePlan != null || options?.selectedPlan != null ? 1 : 0,
-      activePlan:
-        options?.activePlan != null ? buildActivePlan(options.activePlan) : null,
-      selectedPlan:
-        options?.selectedPlan != null
-          ? buildActivePlan(options.selectedPlan)
-          : null,
-    },
-    baselineYears: options?.baselineYears ?? [],
-    operations: {
-      latestYear: options?.baselineYears?.[0]?.year ?? null,
-      energySeries: [],
-      networkRehabSeries: [],
-      networkAssetsCount: 0,
-      toimintakertomusCount: 0,
-      toimintakertomusLatestYear: null,
-      vedenottolupaCount: 0,
-      activeVedenottolupaCount: 0,
-    },
-  });
-
-  const buildReadyScenario = (overrides?: Record<string, unknown>) => ({
-    id: 'scenario-1',
-    updatedAt: '2026-03-25T12:00:00.000Z',
-    computedFromUpdatedAt: '2026-03-25T12:00:00.000Z',
-    years: [{ vuosi: 2024 }],
-    yearlyInvestments: [],
-    ...overrides,
-  });
-
-  const primeVerifiedBaselineImportStatus = () => {
-    getImportStatusV2Mock.mockResolvedValue({
-      connected: true,
-      link: {
-        connected: true,
-        orgId: 'org-1',
-        veetiId: 1,
-        nimi: 'Wizard Utility',
-        ytunnus: '1234567-8',
-        uiLanguage: 'fi',
+    const buildPlanningContext = (options?: {
+      canCreateScenario?: boolean;
+      baselineYears?: any[];
+      activePlan?: Record<string, unknown> | null;
+      selectedPlan?: Record<string, unknown> | null;
+    }) => ({
+      canCreateScenario: options?.canCreateScenario ?? false,
+      vesinvest: {
+        hasPlan: options?.activePlan != null || options?.selectedPlan != null,
+        planCount:
+          options?.activePlan != null || options?.selectedPlan != null ? 1 : 0,
+        activePlan:
+          options?.activePlan != null
+            ? buildActivePlan(options.activePlan)
+            : null,
+        selectedPlan:
+          options?.selectedPlan != null
+            ? buildActivePlan(options.selectedPlan)
+            : null,
       },
-      years: [],
-      availableYears: [],
-      workspaceYears: [2024],
-      excludedYears: [],
-      planningBaselineYears: [2024],
-    });
-  };
-
-  const unlockSetupThroughOverview = async () => {
-    await waitFor(() => {
-      expect(getImportStatusV2Mock).toHaveBeenCalled();
-      expect(getPlanningContextV2Mock).toHaveBeenCalled();
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
-    fireEvent.click(screen.getByRole('button', { name: 'set-plan-verified' }));
-    await waitFor(() => {
-      expect(
-        (screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement)
-          .disabled,
-      ).toBe(false);
-      expect(
-        (screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement)
-          .disabled,
-      ).toBe(false);
-    });
-  };
-
-  beforeEach(() => {
-    window.history.replaceState({}, '', '/');
-    window.localStorage.clear();
-    window.sessionStorage.clear();
-    clearImportAndScenariosV2Mock.mockReset();
-    getForecastScenarioV2Mock.mockReset();
-    clearImportAndScenariosV2Mock.mockResolvedValue({
-      deletedScenarios: 1,
-      deletedVeetiBudgets: 1,
-      deletedVeetiSnapshots: 1,
-      deletedVeetiOverrides: 1,
-      deletedVeetiYearPolicies: 1,
-      deletedVesinvestPlanSeries: 1,
-      deletedVeetiLinks: 1,
-      status: { connected: false, link: null, years: [] },
-    });
-    getImportStatusV2Mock.mockResolvedValue({
-      connected: true,
-      link: {
-        connected: true,
-        orgId: 'org-1',
-        veetiId: 1,
-        nimi: 'Wizard Utility',
-        ytunnus: '1234567-8',
-        uiLanguage: 'fi',
+      baselineYears: options?.baselineYears ?? [],
+      operations: {
+        latestYear: options?.baselineYears?.[0]?.year ?? null,
+        energySeries: [],
+        networkRehabSeries: [],
+        networkAssetsCount: 0,
+        toimintakertomusCount: 0,
+        toimintakertomusLatestYear: null,
+        vedenottolupaCount: 0,
+        activeVedenottolupaCount: 0,
       },
-      years: [
-        {
-          vuosi: 2023,
-          dataTypes: ['tilinpaatos'],
-          completeness: {
-            tilinpaatos: true,
-            taksa: false,
-            volume_vesi: false,
-            volume_jatevesi: false,
-          },
-        },
-      ],
-      availableYears: [
-        {
-          vuosi: 2023,
-          dataTypes: ['tilinpaatos'],
-          completeness: {
-            tilinpaatos: true,
-            taksa: false,
-            volume_vesi: false,
-            volume_jatevesi: false,
-          },
-        },
-      ],
-      workspaceYears: [2023],
-      excludedYears: [],
-      planningBaselineYears: [],
     });
-    getPlanningContextV2Mock.mockResolvedValue(buildPlanningContext());
-    getForecastScenarioV2Mock.mockResolvedValue(buildReadyScenario());
-    listForecastScenariosV2Mock.mockResolvedValue([]);
-  });
 
-  afterEach(() => {
-    cleanup();
-  });
+    const buildReadyScenario = (overrides?: Record<string, unknown>) => ({
+      id: 'scenario-1',
+      updatedAt: '2026-03-25T12:00:00.000Z',
+      computedFromUpdatedAt: '2026-03-25T12:00:00.000Z',
+      years: [{ vuosi: 2024 }],
+      yearlyInvestments: [],
+      ...overrides,
+    });
 
-  it('unlocks forecast and reports only when a saved Vesinvest plan has verified baseline, pricing, and a linked scenario', async () => {
-    getPlanningContextV2Mock.mockResolvedValueOnce(
-      buildPlanningContext({
-        canCreateScenario: true,
-        activePlan: {
-          baselineStatus: 'verified',
-          pricingStatus: 'verified',
-          tariffPlanStatus: 'accepted',
-          selectedScenarioId: 'scenario-1',
-          status: 'active',
+    const primeVerifiedBaselineImportStatus = () => {
+      getImportStatusV2Mock.mockResolvedValue({
+        connected: true,
+        link: {
+          connected: true,
+          orgId: 'org-1',
+          veetiId: 1,
+          nimi: 'Wizard Utility',
+          ytunnus: '1234567-8',
+          uiLanguage: 'fi',
         },
-        baselineYears: [
+        years: [],
+        availableYears: [],
+        workspaceYears: [2024],
+        excludedYears: [],
+        planningBaselineYears: [2024],
+      });
+    };
+
+    const unlockSetupThroughOverview = async () => {
+      await waitFor(() => {
+        expect(getImportStatusV2Mock).toHaveBeenCalled();
+        expect(getPlanningContextV2Mock).toHaveBeenCalled();
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+      fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: 'set-plan-verified' }),
+      );
+      await waitFor(() => {
+        expect(
+          (
+            screen.getByRole('button', {
+              name: 'Forecast',
+            }) as HTMLButtonElement
+          ).disabled,
+        ).toBe(false);
+        expect(
+          (screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement)
+            .disabled,
+        ).toBe(false);
+      });
+    };
+
+    beforeEach(() => {
+      window.history.replaceState({}, '', '/');
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+      clearImportAndScenariosV2Mock.mockReset();
+      requestImportClearChallengeV2Mock.mockReset();
+      getForecastScenarioV2Mock.mockReset();
+      requestImportClearChallengeV2Mock.mockResolvedValue({
+        challengeId: 'challenge-1',
+        confirmToken: 'C9032CDE',
+        expiresAt: '2026-04-30T21:00:00.000Z',
+      });
+      clearImportAndScenariosV2Mock.mockResolvedValue({
+        deletedScenarios: 1,
+        deletedVeetiBudgets: 1,
+        deletedVeetiSnapshots: 1,
+        deletedVeetiOverrides: 1,
+        deletedVeetiYearPolicies: 1,
+        deletedVesinvestPlanSeries: 1,
+        deletedVeetiLinks: 1,
+        status: { connected: false, link: null, years: [] },
+      });
+      getImportStatusV2Mock.mockResolvedValue({
+        connected: true,
+        link: {
+          connected: true,
+          orgId: 'org-1',
+          veetiId: 1,
+          nimi: 'Wizard Utility',
+          ytunnus: '1234567-8',
+          uiLanguage: 'fi',
+        },
+        years: [
           {
-            year: 2023,
-            quality: 'complete',
-            sourceStatus: 'VEETI',
-            sourceBreakdown: { veetiDataTypes: [], manualDataTypes: [] },
-            financials: { dataType: 'tilinpaatos', source: 'veeti' },
-            prices: { dataType: 'taksa', source: 'veeti' },
-            volumes: { dataType: 'volume_vesi', source: 'veeti' },
-            investmentAmount: 0,
-            soldWaterVolume: 0,
-            soldWastewaterVolume: 0,
-            combinedSoldVolume: 0,
-            processElectricity: 0,
-            pumpedWaterVolume: 0,
-            waterBoughtVolume: 0,
-            waterSoldVolume: 0,
-            netWaterTradeVolume: 0,
+            vuosi: 2023,
+            dataTypes: ['tilinpaatos'],
+            completeness: {
+              tilinpaatos: true,
+              taksa: false,
+              volume_vesi: false,
+              volume_jatevesi: false,
+            },
           },
         ],
-      }),
-    );
-
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'org-1',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
-
-    const forecastTab = screen.getByRole('button', { name: 'Forecast' });
-    const reportsTab = screen.getByRole('button', { name: 'Reports' });
-
-    await waitFor(() => {
-      expect(forecastTab.getAttribute('aria-disabled')).toBeNull();
-      expect(reportsTab.getAttribute('aria-disabled')).toBeNull();
+        availableYears: [
+          {
+            vuosi: 2023,
+            dataTypes: ['tilinpaatos'],
+            completeness: {
+              tilinpaatos: true,
+              taksa: false,
+              volume_vesi: false,
+              volume_jatevesi: false,
+            },
+          },
+        ],
+        workspaceYears: [2023],
+        excludedYears: [],
+        planningBaselineYears: [],
+      });
+      getPlanningContextV2Mock.mockResolvedValue(buildPlanningContext());
+      getForecastScenarioV2Mock.mockResolvedValue(buildReadyScenario());
+      listForecastScenariosV2Mock.mockResolvedValue([]);
     });
 
-    fireEvent.click(forecastTab);
-
-    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
-  });
-
-  it('updates the URL when switching tabs', async () => {
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'org-1',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
-
-    await unlockSetupThroughOverview();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Reports' }));
-    await waitFor(() => {
-      expect(window.location.pathname).toBe('/reports');
+    afterEach(() => {
+      cleanup();
     });
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Overview' })[0]!);
-    await waitFor(() => {
-      expect(window.location.pathname).toBe('/');
-    });
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'Forecast' })[0]!);
-    await waitFor(() => {
-      expect(window.location.pathname).toBe('/forecast');
-    });
-  });
-
-  it('keeps only the active workspace surface mounted while tab emphasis follows the active tab', async () => {
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'org-1',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
-
-    const overviewTab = screen.getAllByRole('button', { name: 'Overview' })[0]!;
-    const forecastTab = screen.getAllByRole('button', { name: 'Forecast' })[0]!;
-    const reportsTab = screen.getAllByRole('button', { name: 'Reports' })[0]!;
-
-    expect(overviewTab.className).toContain('active');
-    expect(overviewTab.getAttribute('aria-current')).toBe('page');
-    expect(forecastTab.className).not.toContain('active');
-    expect(reportsTab.className).not.toContain('active');
-    expect(screen.getByText('overview-content')).toBeTruthy();
-    expect(screen.queryByText('ennuste-content:-')).toBeNull();
-    expect(screen.queryByText('reports-content:-')).toBeNull();
-
-    await unlockSetupThroughOverview();
-    const unlockedReportsTab = screen.getAllByRole('button', { name: 'Reports' })[0]!;
-    fireEvent.click(unlockedReportsTab);
-
-    expect(await screen.findByText('reports-content:-')).toBeTruthy();
-    expect(screen.queryByText('overview-content')).toBeNull();
-    expect(screen.queryByText('ennuste-content:-')).toBeNull();
-    expect(overviewTab.className).not.toContain('active');
-    expect(overviewTab.getAttribute('aria-current')).toBeNull();
-    expect(unlockedReportsTab.className).toContain('active');
-    expect(unlockedReportsTab.getAttribute('aria-current')).toBe('page');
-
-    const unlockedForecastTab = screen.getAllByRole('button', { name: 'Forecast' })[0]!;
-    fireEvent.click(unlockedForecastTab);
-
-    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
-    expect(screen.queryByText('overview-content')).toBeNull();
-    expect(screen.queryByText('reports-content:-')).toBeNull();
-    expect(unlockedForecastTab.className).toContain('active');
-    expect(unlockedForecastTab.getAttribute('aria-current')).toBe('page');
-    expect(unlockedReportsTab.className).not.toContain('active');
-    expect(unlockedReportsTab.getAttribute('aria-current')).toBeNull();
-  });
-
-  it('moves from the overview CTA to forecast and keeps the workspace indicator in sync', async () => {
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'org-1',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
-
-    expect(
-      screen.getByRole('button', { name: 'Overview' }),
-    ).toBeTruthy();
-    expect(screen.getByText('overview-content')).toBeTruthy();
-
-    await unlockSetupThroughOverview();
-    fireEvent.click(screen.getByRole('button', { name: 'overview-content' }));
-
-    await waitFor(() => {
-      expect(window.location.pathname).toBe('/forecast');
-    });
-
-    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
-    expect(screen.getAllByText('Forecast').length).toBeGreaterThan(0);
-  });
-
-  it('restores report-focused forecast context when returning from reports', async () => {
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'org-1',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
-
-    await unlockSetupThroughOverview();
-    fireEvent.click(screen.getByRole('button', { name: 'Forecast' }));
-    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: 'select-stress' }));
-
-    await waitFor(() => {
-      expect(window.sessionStorage.getItem('v2_forecast_runtime_state')).toContain(
-        '"selectedScenarioId":"stress-1"',
+    it('unlocks forecast and reports only when a saved Vesinvest plan has verified baseline, pricing, and a linked scenario', async () => {
+      getPlanningContextV2Mock.mockResolvedValueOnce(
+        buildPlanningContext({
+          canCreateScenario: true,
+          activePlan: {
+            baselineStatus: 'verified',
+            pricingStatus: 'verified',
+            tariffPlanStatus: 'accepted',
+            selectedScenarioId: 'scenario-1',
+            status: 'active',
+          },
+          baselineYears: [
+            {
+              year: 2023,
+              quality: 'complete',
+              sourceStatus: 'VEETI',
+              sourceBreakdown: { veetiDataTypes: [], manualDataTypes: [] },
+              financials: { dataType: 'tilinpaatos', source: 'veeti' },
+              prices: { dataType: 'taksa', source: 'veeti' },
+              volumes: { dataType: 'volume_vesi', source: 'veeti' },
+              investmentAmount: 0,
+              soldWaterVolume: 0,
+              soldWastewaterVolume: 0,
+              combinedSoldVolume: 0,
+              processElectricity: 0,
+              pumpedWaterVolume: 0,
+              waterBoughtVolume: 0,
+              waterSoldVolume: 0,
+              netWaterTradeVolume: 0,
+            },
+          ],
+        }),
       );
+
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'org-1',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
+
+      const forecastTab = screen.getByRole('button', { name: 'Forecast' });
+      const reportsTab = screen.getByRole('button', { name: 'Reports' });
+
+      await waitFor(() => {
+        expect(forecastTab.getAttribute('aria-disabled')).toBeNull();
+        expect(reportsTab.getAttribute('aria-disabled')).toBeNull();
+      });
+
+      fireEvent.click(forecastTab);
+
+      expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'create-report' }));
-    expect(await screen.findByText('reports-content:report-123')).toBeTruthy();
+    it('updates the URL when switching tabs', async () => {
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'org-1',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
 
-    fireEvent.click(screen.getByRole('button', { name: 'focus-stress-report' }));
-    fireEvent.click(screen.getByRole('button', { name: 'report-to-forecast' }));
+      await unlockSetupThroughOverview();
 
-    await waitFor(() => {
-      expect(window.location.pathname).toBe('/forecast');
+      fireEvent.click(screen.getByRole('button', { name: 'Reports' }));
+      await waitFor(() => {
+        expect(window.location.pathname).toBe('/reports');
+      });
+
+      fireEvent.click(screen.getAllByRole('button', { name: 'Overview' })[0]!);
+      await waitFor(() => {
+        expect(window.location.pathname).toBe('/');
+      });
+
+      fireEvent.click(screen.getAllByRole('button', { name: 'Forecast' })[0]!);
+      await waitFor(() => {
+        expect(window.location.pathname).toBe('/forecast');
+      });
     });
 
-    expect(await screen.findByText('ennuste-content:stress-1')).toBeTruthy();
-  });
+    it('keeps only the active workspace surface mounted while tab emphasis follows the active tab', async () => {
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'org-1',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
 
-  it('rehydrates forecast runtime state from session storage on remount', async () => {
-    window.sessionStorage.setItem(
-      'v2_forecast_runtime_state',
-      JSON.stringify({
-        selectedScenarioId: 'stress-1',
-      }),
-    );
+      const overviewTab = screen.getAllByRole('button', {
+        name: 'Overview',
+      })[0]!;
+      const forecastTab = screen.getAllByRole('button', {
+        name: 'Forecast',
+      })[0]!;
+      const reportsTab = screen.getAllByRole('button', { name: 'Reports' })[0]!;
 
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'org-1',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
+      expect(overviewTab.className).toContain('active');
+      expect(overviewTab.getAttribute('aria-current')).toBe('page');
+      expect(forecastTab.className).not.toContain('active');
+      expect(reportsTab.className).not.toContain('active');
+      expect(screen.getByText('overview-content')).toBeTruthy();
+      expect(screen.queryByText('ennuste-content:-')).toBeNull();
+      expect(screen.queryByText('reports-content:-')).toBeNull();
 
-    await unlockSetupThroughOverview();
-    fireEvent.click(screen.getByRole('button', { name: 'Forecast' }));
+      await unlockSetupThroughOverview();
+      const unlockedReportsTab = screen.getAllByRole('button', {
+        name: 'Reports',
+      })[0]!;
+      fireEvent.click(unlockedReportsTab);
 
-    expect(await screen.findByText('ennuste-content:stress-1')).toBeTruthy();
-  });
+      expect(await screen.findByText('reports-content:-')).toBeTruthy();
+      expect(screen.queryByText('overview-content')).toBeNull();
+      expect(screen.queryByText('ennuste-content:-')).toBeNull();
+      expect(overviewTab.className).not.toContain('active');
+      expect(overviewTab.getAttribute('aria-current')).toBeNull();
+      expect(unlockedReportsTab.className).toContain('active');
+      expect(unlockedReportsTab.getAttribute('aria-current')).toBe('page');
 
-  it('opens and closes the account drawer with the new shell affordances', async () => {
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'org-1',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
+      const unlockedForecastTab = screen.getAllByRole('button', {
+        name: 'Forecast',
+      })[0]!;
+      fireEvent.click(unlockedForecastTab);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
+      expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
+      expect(screen.queryByText('overview-content')).toBeNull();
+      expect(screen.queryByText('reports-content:-')).toBeNull();
+      expect(unlockedForecastTab.className).toContain('active');
+      expect(unlockedForecastTab.getAttribute('aria-current')).toBe('page');
+      expect(unlockedReportsTab.className).not.toContain('active');
+      expect(unlockedReportsTab.getAttribute('aria-current')).toBeNull();
+    });
 
-    expect(
-      screen.getByRole('dialog', { name: 'Account and access' }),
-    ).toBeTruthy();
+    it('moves from the overview CTA to forecast and keeps the workspace indicator in sync', async () => {
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'org-1',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
 
-    fireEvent.keyDown(window, { key: 'Escape' });
+      expect(screen.getByRole('button', { name: 'Overview' })).toBeTruthy();
+      expect(screen.getByText('overview-content')).toBeTruthy();
 
-    await waitFor(() => {
+      await unlockSetupThroughOverview();
+      fireEvent.click(screen.getByRole('button', { name: 'overview-content' }));
+
+      await waitFor(() => {
+        expect(window.location.pathname).toBe('/forecast');
+      });
+
+      expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
+      expect(screen.getAllByText('Forecast').length).toBeGreaterThan(0);
+    });
+
+    it('restores report-focused forecast context when returning from reports', async () => {
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'org-1',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
+
+      await unlockSetupThroughOverview();
+      fireEvent.click(screen.getByRole('button', { name: 'Forecast' }));
+      expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
+
+      fireEvent.click(screen.getByRole('button', { name: 'select-stress' }));
+
+      await waitFor(() => {
+        expect(
+          window.sessionStorage.getItem('v2_forecast_runtime_state'),
+        ).toContain('"selectedScenarioId":"stress-1"');
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'create-report' }));
       expect(
-        screen.queryByRole('dialog', { name: 'Account and access' }),
-      ).toBeNull();
+        await screen.findByText('reports-content:report-123'),
+      ).toBeTruthy();
+
+      fireEvent.click(
+        screen.getByRole('button', { name: 'focus-stress-report' }),
+      );
+      fireEvent.click(
+        screen.getByRole('button', { name: 'report-to-forecast' }),
+      );
+
+      await waitFor(() => {
+        expect(window.location.pathname).toBe('/forecast');
+      });
+
+      expect(await screen.findByText('ennuste-content:stress-1')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
-    expect(
-      screen.getByRole('dialog', { name: 'Account and access' }),
-    ).toBeTruthy();
+    it('rehydrates forecast runtime state from session storage on remount', async () => {
+      window.sessionStorage.setItem(
+        'v2_forecast_runtime_state',
+        JSON.stringify({
+          selectedScenarioId: 'stress-1',
+        }),
+      );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'org-1',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
 
-    await waitFor(() => {
+      await unlockSetupThroughOverview();
+      fireEvent.click(screen.getByRole('button', { name: 'Forecast' }));
+
+      expect(await screen.findByText('ennuste-content:stress-1')).toBeTruthy();
+    });
+
+    it('opens and closes the account drawer with the new shell affordances', async () => {
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'org-1',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Account' }));
+
       expect(
-        screen.queryByRole('dialog', { name: 'Account and access' }),
-      ).toBeNull();
-    });
-  });
+        screen.getByRole('dialog', { name: 'Account and access' }),
+      ).toBeTruthy();
 
-  it('requires a matching visible confirmation code before clear database is enabled', async () => {
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
+      fireEvent.keyDown(window, { key: 'Escape' });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
+      await waitFor(() => {
+        expect(
+          screen.queryByRole('dialog', { name: 'Account and access' }),
+        ).toBeNull();
+      });
 
-    const clearButton = screen.getByRole('button', { name: 'Clear database' });
-    const confirmationInput = screen.getByRole('textbox', {
-      name: 'Confirmation code',
+      fireEvent.click(screen.getByRole('button', { name: 'Account' }));
+      expect(
+        screen.getByRole('dialog', { name: 'Account and access' }),
+      ).toBeTruthy();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+      await waitFor(() => {
+        expect(
+          screen.queryByRole('dialog', { name: 'Account and access' }),
+        ).toBeNull();
+      });
     });
 
-    expect((clearButton as HTMLButtonElement).disabled).toBe(true);
+    it('requires a matching visible confirmation code before clear database is enabled', async () => {
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
 
-    fireEvent.change(confirmationInput, { target: { value: 'wrong' } });
-    expect((clearButton as HTMLButtonElement).disabled).toBe(true);
+      fireEvent.click(screen.getByRole('button', { name: 'Account' }));
 
-    fireEvent.change(confirmationInput, { target: { value: 'c9032cde' } });
-    expect((clearButton as HTMLButtonElement).disabled).toBe(false);
+      await waitFor(() => {
+        expect(requestImportClearChallengeV2Mock).toHaveBeenCalledTimes(1);
+      });
 
-    fireEvent.click(clearButton);
+      const clearButton = screen.getByRole('button', {
+        name: 'Clear database',
+      });
+      const confirmationInput = screen.getByRole('textbox', {
+        name: 'Confirmation code',
+      });
 
-    await waitFor(() => {
-      expect(clearImportAndScenariosV2Mock).toHaveBeenCalledTimes(1);
-    });
-    expect(clearImportAndScenariosV2Mock).toHaveBeenCalledWith('c9032cde');
-  });
+      expect((clearButton as HTMLButtonElement).disabled).toBe(true);
 
-  it('returns clear/reset to locked overview truth and drops stale forecast context', async () => {
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
+      fireEvent.change(confirmationInput, { target: { value: 'wrong' } });
+      expect((clearButton as HTMLButtonElement).disabled).toBe(true);
 
-    await unlockSetupThroughOverview();
-    fireEvent.click(
-      screen.getByRole('button', { name: 'open-forecast-handoff' }),
-    );
+      fireEvent.change(confirmationInput, { target: { value: 'c9032cde' } });
+      expect((clearButton as HTMLButtonElement).disabled).toBe(false);
 
-    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
+      fireEvent.click(clearButton);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
-    fireEvent.change(screen.getByRole('textbox', { name: 'Confirmation code' }), {
-      target: { value: 'c9032cde' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Clear database' }));
-
-    await waitFor(() => {
-      expect(clearImportAndScenariosV2Mock).toHaveBeenCalledWith('c9032cde');
-    });
-    await waitFor(() => {
-      expect(window.location.pathname).toBe('/');
+      await waitFor(() => {
+        expect(clearImportAndScenariosV2Mock).toHaveBeenCalledTimes(1);
+      });
+      expect(clearImportAndScenariosV2Mock).toHaveBeenCalledWith({
+        challengeId: 'challenge-1',
+        confirmToken: 'c9032cde',
+      });
     });
 
-    expect(await screen.findByText('overview-content')).toBeTruthy();
-    expect(screen.getByText('Create Vesinvest plan')).toBeTruthy();
-    expect(screen.getByText('No utility selected')).toBeTruthy();
-    expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
-    expect(screen.getByText('Step 1 / 5')).toBeTruthy();
-    expect(screen.queryByText('ennuste-content:starter-1')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Forecast' }).getAttribute('aria-disabled')).toBe(
-      'true',
-    );
-    expect(screen.getByRole('button', { name: 'Reports' }).getAttribute('aria-disabled')).toBe(
-      'true',
-    );
-    expect(
-      window.sessionStorage.getItem('v2_forecast_runtime_state'),
-    ).toContain('"selectedScenarioId":null');
-  });
+    it('returns clear/reset to locked overview truth and drops stale forecast context', async () => {
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
 
-  it('renders the org chip as company only and keeps locked tabs marked locked', async () => {
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
+      await unlockSetupThroughOverview();
+      fireEvent.click(
+        screen.getByRole('button', { name: 'open-forecast-handoff' }),
+      );
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
+      expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
 
-    expect(screen.getByText('Wizard Utility')).toBeTruthy();
-    expect(screen.queryByText('C9032CDE')).toBeNull();
-    expect(screen.getByTitle('Wizard Utility / C9032CDE')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Forecast' }).getAttribute('aria-disabled')).toBe(
-      'true',
-    );
-    expect(screen.getByRole('button', { name: 'Reports' }).getAttribute('aria-disabled')).toBe(
-      'true',
-    );
-    expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
-  });
+      fireEvent.click(screen.getByRole('button', { name: 'Account' }));
+      await waitFor(() => {
+        expect(requestImportClearChallengeV2Mock).toHaveBeenCalled();
+      });
+      fireEvent.change(
+        screen.getByRole('textbox', { name: 'Confirmation code' }),
+        {
+          target: { value: 'c9032cde' },
+        },
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Clear database' }));
 
-  it('keeps the full long workspace label available on the org chip', async () => {
-    window.history.replaceState({}, '', '/forecast');
-    getImportStatusV2Mock.mockResolvedValueOnce({
-      connected: true,
-      link: {
+      await waitFor(() => {
+        expect(clearImportAndScenariosV2Mock).toHaveBeenCalledWith({
+          challengeId: 'challenge-1',
+          confirmToken: 'c9032cde',
+        });
+      });
+      await waitFor(() => {
+        expect(window.location.pathname).toBe('/');
+      });
+
+      expect(await screen.findByText('overview-content')).toBeTruthy();
+      expect(screen.getByText('Create Vesinvest plan')).toBeTruthy();
+      expect(screen.getByText('No utility selected')).toBeTruthy();
+      expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
+      expect(screen.getByText('Step 1 / 5')).toBeTruthy();
+      expect(screen.queryByText('ennuste-content:starter-1')).toBeNull();
+      expect(
+        screen
+          .getByRole('button', { name: 'Forecast' })
+          .getAttribute('aria-disabled'),
+      ).toBe('true');
+      expect(
+        screen
+          .getByRole('button', { name: 'Reports' })
+          .getAttribute('aria-disabled'),
+      ).toBe('true');
+      expect(
+        window.sessionStorage.getItem('v2_forecast_runtime_state'),
+      ).toContain('"selectedScenarioId":null');
+    });
+
+    it('renders the org chip as company only and keeps locked tabs marked locked', async () => {
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+      fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
+
+      expect(screen.getByText('Wizard Utility')).toBeTruthy();
+      expect(screen.queryByText('C9032CDE')).toBeNull();
+      expect(screen.getByTitle('Wizard Utility / C9032CDE')).toBeTruthy();
+      expect(
+        screen
+          .getByRole('button', { name: 'Forecast' })
+          .getAttribute('aria-disabled'),
+      ).toBe('true');
+      expect(
+        screen
+          .getByRole('button', { name: 'Reports' })
+          .getAttribute('aria-disabled'),
+      ).toBe('true');
+      expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
+    });
+
+    it('keeps the full long workspace label available on the org chip', async () => {
+      window.history.replaceState({}, '', '/forecast');
+      getImportStatusV2Mock.mockResolvedValueOnce({
         connected: true,
-        orgId: 'org-1',
-        veetiId: 1,
-        nimi: 'Kronoby vatten och avlopp',
-        ytunnus: '1234567-8',
-        uiLanguage: 'fi',
-      },
-      years: [
-        {
-          vuosi: 2023,
-          dataTypes: ['tilinpaatos'],
-          completeness: {
-            tilinpaatos: true,
-            taksa: false,
-            volume_vesi: false,
-            volume_jatevesi: false,
-          },
+        link: {
+          connected: true,
+          orgId: 'org-1',
+          veetiId: 1,
+          nimi: 'Kronoby vatten och avlopp',
+          ytunnus: '1234567-8',
+          uiLanguage: 'fi',
         },
-      ],
-      availableYears: [
-        {
-          vuosi: 2023,
-          dataTypes: ['tilinpaatos'],
-          completeness: {
-            tilinpaatos: true,
-            taksa: false,
-            volume_vesi: false,
-            volume_jatevesi: false,
+        years: [
+          {
+            vuosi: 2023,
+            dataTypes: ['tilinpaatos'],
+            completeness: {
+              tilinpaatos: true,
+              taksa: false,
+              volume_vesi: false,
+              volume_jatevesi: false,
+            },
           },
-        },
-      ],
-      workspaceYears: [2023],
-      excludedYears: [],
+        ],
+        availableYears: [
+          {
+            vuosi: 2023,
+            dataTypes: ['tilinpaatos'],
+            completeness: {
+              tilinpaatos: true,
+              taksa: false,
+              volume_vesi: false,
+              volume_jatevesi: false,
+            },
+          },
+        ],
+        workspaceYears: [2023],
+        excludedYears: [],
+      });
+
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
+
+      expect(
+        await screen.findByTitle('Kronoby vatten och avlopp / C9032CDE'),
+      ).toBeTruthy();
     });
 
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
+    it('shows the setup step indicator when wizard state is reported from Overview', async () => {
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
 
-    expect(
-      await screen.findByTitle('Kronoby vatten och avlopp / C9032CDE'),
-    ).toBeTruthy();
-  });
+      fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
 
-  it('shows the setup step indicator when wizard state is reported from Overview', async () => {
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
-
-    expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
-    expect(screen.getByText('Step 2 / 5')).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: 'Back to utility identity' }),
-    ).toBeTruthy();
-  });
-
-  it('keeps the shell back-step control keyboard-focusable while setup is in step 2', async () => {
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
-
-    const backButton = await screen.findByRole('button', {
-      name: 'Back to utility identity',
+      expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
+      expect(screen.getByText('Step 2 / 5')).toBeTruthy();
+      expect(
+        screen.getByRole('button', { name: 'Back to utility identity' }),
+      ).toBeTruthy();
     });
-    backButton.focus();
-    expect(document.activeElement).toBe(backButton);
 
-    fireEvent.click(backButton);
+    it('keeps the shell back-step control keyboard-focusable while setup is in step 2', async () => {
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
 
-    expect(await screen.findByText('setup-back-signal:1')).toBeTruthy();
-  });
+      fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
 
-  it('clears the shell org identity when back-navigation returns setup to step 1', async () => {
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
+      const backButton = await screen.findByRole('button', {
+        name: 'Back to utility identity',
+      });
+      backButton.focus();
+      expect(document.activeElement).toBe(backButton);
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
-    expect(screen.getByTitle('Wizard Utility / C9032CDE')).toBeTruthy();
+      fireEvent.click(backButton);
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Back to utility identity' }),
-    );
+      expect(await screen.findByText('setup-back-signal:1')).toBeTruthy();
+    });
 
-    expect(await screen.findByText('setup-back-signal:1')).toBeTruthy();
-    expect(screen.queryByTitle('Wizard Utility / C9032CDE')).toBeNull();
-    expect(screen.getByTitle('No utility selected')).toBeTruthy();
-    expect(screen.getByText('Step 1 / 5')).toBeTruthy();
-  });
+    it('clears the shell org identity when back-navigation returns setup to step 1', async () => {
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
 
-  it('returns stale report flow to Tariff Plan and stores a saved fee-path conflict', async () => {
-    primeVerifiedBaselineImportStatus();
-    getPlanningContextV2Mock.mockResolvedValue(
-      buildPlanningContext({
-        canCreateScenario: true,
-        baselineYears: [{ year: 2024 }],
-        activePlan: {
-          id: 'plan-1',
-          utilityName: 'Wizard Utility',
-          businessId: '1234567-8',
-          pricingStatus: 'verified',
-          tariffPlanStatus: 'accepted',
-          selectedScenarioId: 'scenario-1',
-          status: 'active',
-        },
-      }),
-    );
+      fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+      fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
+      expect(screen.getByTitle('Wizard Utility / C9032CDE')).toBeTruthy();
 
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Back to utility identity' }),
+      );
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
-    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
-    expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
+      expect(await screen.findByText('setup-back-signal:1')).toBeTruthy();
+      expect(screen.queryByTitle('Wizard Utility / C9032CDE')).toBeNull();
+      expect(screen.getByTitle('No utility selected')).toBeTruthy();
+      expect(screen.getByText('Step 1 / 5')).toBeTruthy();
+    });
 
-    fireEvent.click(screen.getByRole('button', { name: 'stale-report-hit' }));
+    it('returns stale report flow to Tariff Plan and stores a saved fee-path conflict', async () => {
+      primeVerifiedBaselineImportStatus();
+      getPlanningContextV2Mock.mockResolvedValue(
+        buildPlanningContext({
+          canCreateScenario: true,
+          baselineYears: [{ year: 2024 }],
+          activePlan: {
+            id: 'plan-1',
+            utilityName: 'Wizard Utility',
+            businessId: '1234567-8',
+            pricingStatus: 'verified',
+            tariffPlanStatus: 'accepted',
+            selectedScenarioId: 'scenario-1',
+            status: 'active',
+          },
+        }),
+      );
 
-    expect(await screen.findByText('tariff-plan-content')).toBeTruthy();
-    expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
-    expect(screen.queryByText('Report-ready scenario')).toBeNull();
-    expect(
-      window.sessionStorage.getItem('v2_forecast_runtime_state'),
-    ).toContain('"selectedScenarioId":"scenario-1"');
-  });
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
 
-  it('clears the shell stale-report demotion once the same saved fee path is opened cleanly again', async () => {
-    primeVerifiedBaselineImportStatus();
-    getPlanningContextV2Mock.mockResolvedValue(
-      buildPlanningContext({
-        canCreateScenario: true,
-        baselineYears: [{ year: 2024 }],
-        activePlan: {
-          id: 'plan-1',
-          utilityName: 'Wizard Utility',
-          businessId: '1234567-8',
-          pricingStatus: 'verified',
-          tariffPlanStatus: 'accepted',
-          selectedScenarioId: 'scenario-1',
-          status: 'active',
-        },
-      }),
-    );
+      fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+      fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: 'open-linked-forecast' }),
+      );
+      expect(
+        await screen.findByText('ennuste-content:scenario-1'),
+      ).toBeTruthy();
 
-    render(
-      <AppShellV2
-        tokenInfo={{
-          sub: 'u1',
-          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
-          roles: ['ADMIN'],
-          iat: 1,
-          exp: 9999999999,
-        }}
-        isDemoMode={false}
-        onLogout={() => undefined}
-      />,
-    );
+      fireEvent.click(screen.getByRole('button', { name: 'stale-report-hit' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
-    fireEvent.click(screen.getByRole('button', { name: 'open-linked-forecast' }));
-    expect(await screen.findByText('ennuste-content:scenario-1')).toBeTruthy();
+      expect(await screen.findByText('tariff-plan-content')).toBeTruthy();
+      expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
+      expect(screen.queryByText('Report-ready scenario')).toBeNull();
+      expect(
+        window.sessionStorage.getItem('v2_forecast_runtime_state'),
+      ).toContain('"selectedScenarioId":"scenario-1"');
+    });
 
-    fireEvent.click(screen.getByRole('button', { name: 'stale-report-hit' }));
-    expect(await screen.findByText('tariff-plan-content')).toBeTruthy();
-    expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
+    it('clears the shell stale-report demotion once the same saved fee path is opened cleanly again', async () => {
+      primeVerifiedBaselineImportStatus();
+      getPlanningContextV2Mock.mockResolvedValue(
+        buildPlanningContext({
+          canCreateScenario: true,
+          baselineYears: [{ year: 2024 }],
+          activePlan: {
+            id: 'plan-1',
+            utilityName: 'Wizard Utility',
+            businessId: '1234567-8',
+            pricingStatus: 'verified',
+            tariffPlanStatus: 'accepted',
+            selectedScenarioId: 'scenario-1',
+            status: 'active',
+          },
+        }),
+      );
 
-    fireEvent.click(screen.getByRole('button', { name: 'accept-tariff-plan' }));
+      render(
+        <AppShellV2
+          tokenInfo={{
+            sub: 'u1',
+            org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+            roles: ['ADMIN'],
+            iat: 1,
+            exp: 9999999999,
+          }}
+          isDemoMode={false}
+          onLogout={() => undefined}
+        />,
+      );
 
-    expect(await screen.findByText('Report-ready scenario')).toBeTruthy();
-  });
+      fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+      fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: 'open-linked-forecast' }),
+      );
+      expect(
+        await screen.findByText('ennuste-content:scenario-1'),
+      ).toBeTruthy();
 
+      fireEvent.click(screen.getByRole('button', { name: 'stale-report-hit' }));
+      expect(await screen.findByText('tariff-plan-content')).toBeTruthy();
+      expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
+
+      fireEvent.click(
+        screen.getByRole('button', { name: 'accept-tariff-plan' }),
+      );
+
+      expect(await screen.findByText('Report-ready scenario')).toBeTruthy();
+    });
   });
 }

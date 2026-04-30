@@ -10,10 +10,7 @@ import {
   parseApiErrorResponse,
   type GetRequestOptions,
 } from '../core';
-import type {
-  VeetiConnectResult,
-  VeetiOrganizationSearchHit,
-} from '../veeti';
+import type { VeetiConnectResult, VeetiOrganizationSearchHit } from '../veeti';
 import type {
   V2ImportStatus,
   V2ImportYearDataResponse,
@@ -66,7 +63,9 @@ export async function searchImportOrganizationsV2(
   const normalizedQuery = q.trim();
   const safeLimit = Math.min(Math.max(Math.round(limit) || 25, 1), 25);
   return api<VeetiOrganizationSearchHit[]>(
-    `/v2/import/search?q=${encodeURIComponent(normalizedQuery)}&limit=${safeLimit}`,
+    `/v2/import/search?q=${encodeURIComponent(
+      normalizedQuery,
+    )}&limit=${safeLimit}`,
   );
 }
 
@@ -243,7 +242,22 @@ export async function restoreImportYearsV2(years: number[]): Promise<{
   });
 }
 
-export async function clearImportAndScenariosV2(confirmToken: string): Promise<{
+export type V2ImportClearChallenge = {
+  challengeId: string;
+  confirmToken: string;
+  expiresAt: string;
+};
+
+export async function requestImportClearChallengeV2(): Promise<V2ImportClearChallenge> {
+  return api<V2ImportClearChallenge>('/v2/import/clear/challenge', {
+    method: 'POST',
+  });
+}
+
+export async function clearImportAndScenariosV2(payload: {
+  challengeId: string;
+  confirmToken: string;
+}): Promise<{
   deletedScenarios: number;
   deletedVeetiBudgets: number;
   deletedVeetiSnapshots: number;
@@ -265,7 +279,7 @@ export async function clearImportAndScenariosV2(confirmToken: string): Promise<{
     status: V2ImportStatus;
   }>('/v2/import/clear', {
     method: 'POST',
-    body: JSON.stringify({ confirmToken }),
+    body: JSON.stringify(payload),
   });
   invalidateCachedGets(
     'GET /v2/context',
@@ -300,11 +314,14 @@ export async function previewStatementImportV2(
   formData.append('statementType', 'result_statement');
   formData.append('file', file);
 
-  const res = await fetch(`${API_BASE}/v2/import/years/${year}/statement-preview`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: formData,
-  });
+  const res = await fetch(
+    `${API_BASE}/v2/import/years/${year}/statement-preview`,
+    {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    },
+  );
 
   if (res.status === 401) {
     const message = 'Session expired. Please log in again.';

@@ -11,12 +11,14 @@ import type { OverviewPageController } from './useOverviewPageController';
 type Params = {
   controller: OverviewPageController;
   overview: NonNullable<OverviewPageController['overview']>;
+  isAdmin: boolean;
   t: TFunction;
 };
 
 export function buildOverviewPageViewModel({
   controller,
   overview,
+  isAdmin,
   t,
 }: Params) {
   const importStatus = overview.importStatus;
@@ -155,15 +157,21 @@ export function buildOverviewPageViewModel({
       ? t('v2Overview.wizardBaselineReadyDetail', {
           included:
             controller.latestPlanningBaselineSummary.includedYears.length > 0
-              ? controller.latestPlanningBaselineSummary.includedYears.join(', ')
+              ? controller.latestPlanningBaselineSummary.includedYears.join(
+                  ', ',
+                )
               : t('v2Overview.noYearsSelected', 'None selected'),
           excluded:
             controller.latestPlanningBaselineSummary.excludedYears.length > 0
-              ? controller.latestPlanningBaselineSummary.excludedYears.join(', ')
+              ? controller.latestPlanningBaselineSummary.excludedYears.join(
+                  ', ',
+                )
               : t('v2Overview.noYearsSelected', 'None selected'),
           corrected:
             controller.latestPlanningBaselineSummary.correctedYears.length > 0
-              ? controller.latestPlanningBaselineSummary.correctedYears.join(', ')
+              ? controller.latestPlanningBaselineSummary.correctedYears.join(
+                  ', ',
+                )
               : t('v2Overview.noYearsSelected', 'None selected'),
         })
       : t('v2Overview.wizardBaselineReadyHint')
@@ -172,7 +180,9 @@ export function buildOverviewPageViewModel({
     {
       label: t('v2Overview.wizardSummaryCompany'),
       value:
-        activeVesinvestPlan?.utilityName ?? importStatus.link?.nimi ?? selectedOrgName,
+        activeVesinvestPlan?.utilityName ??
+        importStatus.link?.nimi ??
+        selectedOrgName,
       detail:
         activeVesinvestPlan?.businessId ??
         importStatus.link?.ytunnus ??
@@ -213,56 +223,57 @@ export function buildOverviewPageViewModel({
             'v2Vesinvest.workflowVerifyEvidenceBody',
             'Use VEETI, PDF, workbook, or manual corrections to verify the accepted baseline that pricing will rely on.',
           ),
-    badge:
-      hasBlockedReviewRows
-        ? t('v2Overview.blockedYearsTitle')
-        : hasPendingReviewRows
-          ? t('v2Overview.wizardQuestionReviewYears')
-          : t('v2Vesinvest.evidenceTitle', 'Accepted baseline years'),
+    badge: hasBlockedReviewRows
+      ? t('v2Overview.blockedYearsTitle')
+      : hasPendingReviewRows
+      ? t('v2Overview.wizardQuestionReviewYears')
+      : t('v2Vesinvest.evidenceTitle', 'Accepted baseline years'),
   };
-  const wizardStepContent: Record<number, { title: string; body: string; badge: string }> =
-    {
-      1: {
-        title: t('v2Vesinvest.workflowIdentifyUtility', 'Identify the utility'),
-        body: t(
-          'v2Vesinvest.workflowIdentifyUtilityBody',
-          'Search and link the utility. Then build the baseline from historical years before pricing opens.',
-        ),
-        badge: t('v2Vesinvest.workflowPlanFirst', 'VEETI-first'),
-      },
-      2: {
-        title: t(
-          'v2Overview.wizardQuestionImportYears',
-          'Choose historical years for the baseline',
-        ),
-        body: t(
-          'v2Overview.wizardBodyImportYears',
-          'Start with four consecutive historical years. Keep the current year as an optional estimate.',
-        ),
-        badge: t('v2Overview.wizardFocusImportYears', 'Baseline years'),
-      },
-      3: {
-        title: step3WizardHero.title,
-        body: step3WizardHero.body,
-        badge: step3WizardHero.badge,
-      },
-      4: {
-        title: t('v2Vesinvest.workflowOpenFeePath', 'Open Tariff Plan'),
-        body: t(
-          'v2Vesinvest.workflowOpenFeePathBody',
-          'When the baseline is verified, sync the plan to forecast to review price pressure, financing gaps, and the saved recommendation.',
-        ),
-        badge: t('v2Vesinvest.feePathEyebrow', 'Tariff plan'),
-      },
-      5: {
-        title: t('v2Vesinvest.workflowCreateReport', 'Create report'),
-        body: t(
-          'v2Vesinvest.workflowCreateReportBody',
-          'Create the report after the tariff plan is accepted and the linked scenario is up to date.',
-        ),
-        badge: t('v2Shell.tabs.reports', 'Reports'),
-      },
-    };
+  const wizardStepContent: Record<
+    number,
+    { title: string; body: string; badge: string }
+  > = {
+    1: {
+      title: t('v2Vesinvest.workflowIdentifyUtility', 'Identify the utility'),
+      body: t(
+        'v2Vesinvest.workflowIdentifyUtilityBody',
+        'Search and link the utility. Then build the baseline from historical years before pricing opens.',
+      ),
+      badge: t('v2Vesinvest.workflowPlanFirst', 'VEETI-first'),
+    },
+    2: {
+      title: t(
+        'v2Overview.wizardQuestionImportYears',
+        'Choose historical years for the baseline',
+      ),
+      body: t(
+        'v2Overview.wizardBodyImportYears',
+        'Start with four consecutive historical years. Keep the current year as an optional estimate.',
+      ),
+      badge: t('v2Overview.wizardFocusImportYears', 'Baseline years'),
+    },
+    3: {
+      title: step3WizardHero.title,
+      body: step3WizardHero.body,
+      badge: step3WizardHero.badge,
+    },
+    4: {
+      title: t('v2Vesinvest.workflowOpenFeePath', 'Open Tariff Plan'),
+      body: t(
+        'v2Vesinvest.workflowOpenFeePathBody',
+        'When the baseline is verified, sync the plan to forecast to review price pressure, financing gaps, and the saved recommendation.',
+      ),
+      badge: t('v2Vesinvest.feePathEyebrow', 'Tariff plan'),
+    },
+    5: {
+      title: t('v2Vesinvest.workflowCreateReport', 'Create report'),
+      body: t(
+        'v2Vesinvest.workflowCreateReportBody',
+        'Create the report after the tariff plan is accepted and the linked scenario is up to date.',
+      ),
+      badge: t('v2Shell.tabs.reports', 'Reports'),
+    },
+  };
   const shouldRespectBackNavigation =
     controller.reviewContinueStep != null &&
     controller.wizardDisplayStep < wizardProgressStep;
@@ -272,12 +283,15 @@ export function buildOverviewPageViewModel({
     controller.wizardDisplayStep === 4
       ? 4
       : activeVesinvestPlan &&
-          wizardProgressStep > controller.wizardDisplayStep &&
-          !shouldRespectBackNavigation
-        ? wizardProgressStep
-        : controller.wizardDisplayStep;
-  const overviewVisualStep = getPresentedOverviewWorkflowStep(mountedWorkflowStep);
-  const supportWorkflowStep = isManageYearsMaintenanceMode ? 3 : overviewVisualStep;
+        wizardProgressStep > controller.wizardDisplayStep &&
+        !shouldRespectBackNavigation
+      ? wizardProgressStep
+      : controller.wizardDisplayStep;
+  const overviewVisualStep =
+    getPresentedOverviewWorkflowStep(mountedWorkflowStep);
+  const supportWorkflowStep = isManageYearsMaintenanceMode
+    ? 3
+    : overviewVisualStep;
   const wizardHero = wizardStepContent[overviewVisualStep];
   const isStep2SupportChrome = supportWorkflowStep === 2;
   const compactSupportingChrome =
@@ -334,20 +348,39 @@ export function buildOverviewPageViewModel({
     if (isManageYearsMaintenanceMode) {
       return {
         title: t('v2Overview.wizardQuestionReviewYears'),
-        body: `${t('v2Overview.wizardSummaryImportedYears')}: ${activeImportedReviewYearsLabel}`,
+        body: `${t(
+          'v2Overview.wizardSummaryImportedYears',
+        )}: ${activeImportedReviewYearsLabel}`,
       };
     }
 
     if (overviewVisualStep === 2) {
+      if (!isAdmin) {
+        return {
+          title: t('v2Overview.adminOnlyActionTitle', 'Admin access required'),
+          body: hasPostImportYearTruth
+            ? `${t(
+                'v2Overview.wizardSummaryImportedYears',
+              )}: ${activeImportedReviewYearsLabel}`
+            : t(
+                'v2Overview.adminOnlyImportHint',
+                'Admin access is required to import, remove, or repair baseline years.',
+              ),
+        };
+      }
       return {
         title: hasPostImportYearTruth
           ? t('v2Overview.wizardQuestionReviewYears')
           : t('v2Overview.importYearsButton'),
         body: hasPostImportYearTruth
-          ? `${t('v2Overview.wizardSummaryImportedYears')}: ${activeImportedReviewYearsLabel}`
+          ? `${t(
+              'v2Overview.wizardSummaryImportedYears',
+            )}: ${activeImportedReviewYearsLabel}`
           : selectedBaselineYears.length > 0
-            ? `${t('v2Overview.selectedYearsLabel')}: ${selectedBaselineYears.join(', ')}`
-            : t('v2Overview.noYearsSelected'),
+          ? `${t(
+              'v2Overview.selectedYearsLabel',
+            )}: ${selectedBaselineYears.join(', ')}`
+          : t('v2Overview.noYearsSelected'),
       };
     }
 
@@ -379,6 +412,15 @@ export function buildOverviewPageViewModel({
     }
 
     if (overviewVisualStep === 4) {
+      if (!isAdmin) {
+        return {
+          title: t('v2Overview.adminOnlyActionTitle', 'Admin access required'),
+          body: t(
+            'v2Overview.adminOnlyBaselineHint',
+            'Admin access is required to create or change the planning baseline.',
+          ),
+        };
+      }
       return {
         title: t('v2Overview.createPlanningBaseline'),
         body: planningBaselineSummaryDetail,
@@ -409,12 +451,6 @@ export function buildOverviewPageViewModel({
     mountedWorkflowStep === 3 &&
     controller.confirmedImportedYears.length === 0 &&
     !controller.baselineReady;
-  const shouldCompactPlanningPanel =
-    !showSimplifiedPostChoiceSetup &&
-    (mountedWorkflowStep === 3 || mountedWorkflowStep === 4);
-  const shouldShowVesinvestPanel =
-    mountedWorkflowStep >= 3 &&
-    (importStatus.connected === true || activeVesinvestPlan != null);
   const useSupportRail =
     overviewVisualStep !== PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS;
   const useReviewDominantLayout =
@@ -427,19 +463,11 @@ export function buildOverviewPageViewModel({
     : wizardHero.title;
   const showSupportNextActionBlock =
     !useReviewDominantLayout && overviewVisualStep !== 4;
-  const demotePlanningPanelInSetup =
-    shouldShowVesinvestPanel &&
-    overviewVisualStep >= 2 &&
-    overviewVisualStep <= PRESENTED_OVERVIEW_WORKFLOW_TOTAL_STEPS;
-  const collapsePlanningPanelInSetup = demotePlanningPanelInSetup;
 
   return {
-    activeVesinvestPlan,
-    collapsePlanningPanelInSetup,
     compactSupportingChrome,
     connectButtonClass,
     correctedYearsLabel,
-    demotePlanningPanelInSetup,
     handoffExcludedYearsSorted,
     hasBaselineBudget,
     importStatus,
@@ -456,8 +484,6 @@ export function buildOverviewPageViewModel({
     selectedOrgBusinessId,
     selectedOrgMunicipality,
     selectedOrgName,
-    shouldCompactPlanningPanel,
-    shouldShowVesinvestPanel,
     showSimplifiedPostChoiceSetup,
     showSupportNextActionBlock,
     summaryMetaBlocks,

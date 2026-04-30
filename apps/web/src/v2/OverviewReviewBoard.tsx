@@ -574,6 +574,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
       missingRequirementLabel={visibleMissingRequirementLabel}
       openInlineCardEditor={openInlineCardEditor}
       saveYear={saveReviewWorkspaceYear}
+      isAdmin={isAdmin}
       busy={
         manualPatchBusy || documentImportBusy || workbookImportBusy
       }

@@ -1,8 +1,12 @@
 import type { TFunction } from 'i18next';
 import React from 'react';
 
-import type { V2VesinvestGroupDefinition,V2VesinvestPlan,V2VesinvestPlanSummary } from '../api';
-import { formatDateTime,formatEur } from './format';
+import type {
+  V2VesinvestGroupDefinition,
+  V2VesinvestPlan,
+  V2VesinvestPlanSummary,
+} from '../api';
+import { formatDateTime, formatEur } from './format';
 import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 import {
   buildHorizonYears,
@@ -10,6 +14,7 @@ import {
   type VesinvestDraft,
   type VesinvestWorkspaceView,
 } from './vesinvestPlanningModel';
+import { useDialogFocusTrap } from './useDialogFocusTrap';
 
 type ProjectComposerState = {
   open: boolean;
@@ -51,7 +56,9 @@ export function VesinvestPanelHeader({
   return (
     <div className="v2-section-header">
       <div>
-        <p className="v2-overview-eyebrow">{t('v2Vesinvest.eyebrow', 'Vesinvest')}</p>
+        <p className="v2-overview-eyebrow">
+          {t('v2Vesinvest.eyebrow', 'Vesinvest')}
+        </p>
         <h2>{t('v2Vesinvest.title', 'Vesinvest VEETI-first workspace')}</h2>
       </div>
       {!useSimplifiedSetup ? (
@@ -69,7 +76,10 @@ export function VesinvestPanelHeader({
                 data-has-unsaved-changes={hasUnsavedChanges ? 'true' : 'false'}
               >
                 {plans.map((item) => (
-                  <option key={item.id} value={item.id}>{`${item.utilityName} / v${item.versionNumber}`}</option>
+                  <option
+                    key={item.id}
+                    value={item.id}
+                  >{`${item.utilityName} / v${item.versionNumber}`}</option>
                 ))}
               </select>
             </label>
@@ -99,10 +109,21 @@ export function VesinvestProjectComposerDialog({
   groups: V2VesinvestGroupDefinition[];
   projectComposer: ProjectComposerState;
   projectComposerGroupKey: string;
-  setProjectComposer: React.Dispatch<React.SetStateAction<ProjectComposerState>>;
+  setProjectComposer: React.Dispatch<
+    React.SetStateAction<ProjectComposerState>
+  >;
   closeProjectComposer: () => void;
   handleCreateProjectDraft: () => void;
 }) {
+  const dialogRef = React.useRef<HTMLDivElement | null>(null);
+  const codeInputRef = React.useRef<HTMLInputElement | null>(null);
+  useDialogFocusTrap({
+    enabled: projectComposer.open,
+    dialogRef,
+    initialFocusRef: codeInputRef,
+    onClose: closeProjectComposer,
+  });
+
   if (!projectComposer.open) {
     return null;
   }
@@ -110,10 +131,12 @@ export function VesinvestProjectComposerDialog({
   return (
     <div className="v2-modal-backdrop" onClick={closeProjectComposer}>
       <div
+        ref={dialogRef}
         className="v2-modal-card"
         role="dialog"
         aria-modal="true"
         aria-labelledby="vesinvest-project-composer-title"
+        tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="v2-section-header">
@@ -130,6 +153,7 @@ export function VesinvestProjectComposerDialog({
           <label className="v2-field">
             <span>{t('v2Vesinvest.projectCode', 'Code')}</span>
             <input
+              ref={codeInputRef}
               id="vesinvest-project-composer-code"
               name="vesinvest-project-composer-code"
               className="v2-input"
@@ -293,7 +317,9 @@ export function VesinvestPlanningActionRow({
                 {t('v2Reports.openReports', 'Open Reports')}
               </button>
             ) : reportReadinessHint ? (
-              <span className="v2-muted v2-action-hint">{reportReadinessHint}</span>
+              <span className="v2-muted v2-action-hint">
+                {reportReadinessHint}
+              </span>
             ) : null}
           </>
         ) : null}
@@ -321,7 +347,9 @@ export function VesinvestWorkspaceTabs({
 }: {
   t: TFunction;
   activeWorkspaceView: VesinvestWorkspaceView;
-  setActiveWorkspaceView: React.Dispatch<React.SetStateAction<VesinvestWorkspaceView>>;
+  setActiveWorkspaceView: React.Dispatch<
+    React.SetStateAction<VesinvestWorkspaceView>
+  >;
 }) {
   return (
     <section className="v2-vesinvest-section">
@@ -332,7 +360,9 @@ export function VesinvestWorkspaceTabs({
       >
         <button
           type="button"
-          className={`v2-btn ${activeWorkspaceView === 'evidence' ? 'v2-btn-primary' : ''}`}
+          className={`v2-btn ${
+            activeWorkspaceView === 'evidence' ? 'v2-btn-primary' : ''
+          }`}
           aria-pressed={activeWorkspaceView === 'evidence'}
           onClick={() => setActiveWorkspaceView('evidence')}
         >
@@ -340,7 +370,9 @@ export function VesinvestWorkspaceTabs({
         </button>
         <button
           type="button"
-          className={`v2-btn ${activeWorkspaceView === 'investment' ? 'v2-btn-primary' : ''}`}
+          className={`v2-btn ${
+            activeWorkspaceView === 'investment' ? 'v2-btn-primary' : ''
+          }`}
           aria-pressed={activeWorkspaceView === 'investment'}
           onClick={() => setActiveWorkspaceView('investment')}
         >
@@ -348,7 +380,9 @@ export function VesinvestWorkspaceTabs({
         </button>
         <button
           type="button"
-          className={`v2-btn ${activeWorkspaceView === 'depreciation' ? 'v2-btn-primary' : ''}`}
+          className={`v2-btn ${
+            activeWorkspaceView === 'depreciation' ? 'v2-btn-primary' : ''
+          }`}
           aria-pressed={activeWorkspaceView === 'depreciation'}
           onClick={() => setActiveWorkspaceView('depreciation')}
         >
@@ -385,7 +419,9 @@ export function VesinvestPlanStatusStrip({
   assetEvidenceMissingLabels: string[];
 }) {
   const pricingTone =
-    pricingStatus === 'verified' || pricingStatus === 'provisional' || pricingStatus === 'blocked'
+    pricingStatus === 'verified' ||
+    pricingStatus === 'provisional' ||
+    pricingStatus === 'blocked'
       ? pricingStatus
       : 'blocked';
 
@@ -400,14 +436,18 @@ export function VesinvestPlanStatusStrip({
         <p>
           <span
             className={`v2-badge ${toneClass(
-              draft.projects.length > 0 && assetEvidenceReady ? 'verified' : draft.projects.length > 0 ? 'incomplete' : 'draft',
+              draft.projects.length > 0 && assetEvidenceReady
+                ? 'verified'
+                : draft.projects.length > 0
+                ? 'incomplete'
+                : 'draft',
             )}`}
           >
             {draft.projects.length > 0 && assetEvidenceReady
               ? t('v2Vesinvest.planReady', 'Plan ready')
               : draft.projects.length > 0
-                ? t('v2Vesinvest.planNeedsEvidence', 'Plan needs evidence')
-                : t('v2Vesinvest.planDraftMissing', 'No plan rows yet')}
+              ? t('v2Vesinvest.planNeedsEvidence', 'Plan needs evidence')
+              : t('v2Vesinvest.planDraftMissing', 'No plan rows yet')}
           </span>
         </p>
       </article>
@@ -449,36 +489,36 @@ export function VesinvestPlanStatusStrip({
               {pricingStatus === 'verified'
                 ? t('v2Vesinvest.pricingVerified', 'Verified')
                 : pricingStatus === 'provisional'
-                  ? t('v2Vesinvest.pricingProvisional', 'Provisional')
-                  : t('v2Vesinvest.pricingBlocked', 'Blocked')}
+                ? t('v2Vesinvest.pricingProvisional', 'Provisional')
+                : t('v2Vesinvest.pricingBlocked', 'Blocked')}
             </span>
           </p>
           <small>
             {hasSavedPricingOutput
               ? revisionStatusMessage
               : pricingReady
-                ? t(
-                    'v2Vesinvest.pricingReadyHint',
-                    'Sync the plan to open tariff planning.',
-                  )
-                : baselineVerified && !assetEvidenceReady
-                  ? t(
-                      'v2Vesinvest.assetEvidenceMissingHint',
-                      '{{count}} asset evidence area(s) still need input before tariff planning is ready.',
-                      { count: assetEvidenceMissingCount },
-                    )
-                    + (assetEvidenceMissingLabels.length > 0
-                      ? ` ${assetEvidenceMissingLabels.join(', ')}.`
-                      : '')
-                : baselineVerified
-                  ? t(
-                      'v2Vesinvest.pricingPlanMissingHint',
-                      'Add investment rows and yearly allocations before tariff-plan and financing output can be opened.',
-                    )
-                  : t(
-                      'v2Vesinvest.pricingBlockedHint',
-                      'Tariff-plan and financing output stay blocked until the baseline is verified.',
-                    )}
+              ? t(
+                  'v2Vesinvest.pricingReadyHint',
+                  'Sync the plan to open tariff planning.',
+                )
+              : baselineVerified && !assetEvidenceReady
+              ? t(
+                  'v2Vesinvest.assetEvidenceMissingHint',
+                  '{{count}} asset evidence area(s) still need input before tariff planning is ready.',
+                  { count: assetEvidenceMissingCount },
+                ) +
+                (assetEvidenceMissingLabels.length > 0
+                  ? ` ${assetEvidenceMissingLabels.join(', ')}.`
+                  : '')
+              : baselineVerified
+              ? t(
+                  'v2Vesinvest.pricingPlanMissingHint',
+                  'Add investment rows and yearly allocations before tariff-plan and financing output can be opened.',
+                )
+              : t(
+                  'v2Vesinvest.pricingBlockedHint',
+                  'Tariff-plan and financing output stay blocked until the baseline is verified.',
+                )}
           </small>
         </article>
       ) : null}
@@ -500,7 +540,10 @@ export function VesinvestRevisionSummary({
   draft: VesinvestDraft;
   totalInvestments: number;
   reviewDueAt: string | null | undefined;
-  setDraftField: <K extends keyof VesinvestDraft>(field: K, value: VesinvestDraft[K]) => void;
+  setDraftField: <K extends keyof VesinvestDraft>(
+    field: K,
+    value: VesinvestDraft[K],
+  ) => void;
   setDraft: React.Dispatch<React.SetStateAction<VesinvestDraft>>;
 }) {
   return (
@@ -518,7 +561,9 @@ export function VesinvestRevisionSummary({
         </div>
         <div>
           <span>{t('v2Vesinvest.reviewDue', 'Next review due')}</span>
-          <strong>{formatDateTime(reviewDueAt ?? draft.reviewDueAt ?? null)}</strong>
+          <strong>
+            {formatDateTime(reviewDueAt ?? draft.reviewDueAt ?? null)}
+          </strong>
         </div>
       </div>
 
@@ -544,8 +589,12 @@ export function VesinvestRevisionSummary({
             max={50}
             value={draft.horizonYears ?? 20}
             onChange={(event) => {
-              const nextHorizon = Math.min(50, Math.max(20, Number(event.target.value || 20)));
-              const firstYear = draft.horizonYearsRange[0] ?? new Date().getFullYear();
+              const nextHorizon = Math.min(
+                50,
+                Math.max(20, Number(event.target.value || 20)),
+              );
+              const firstYear =
+                draft.horizonYearsRange[0] ?? new Date().getFullYear();
               const years = buildHorizonYears(firstYear, nextHorizon);
               setDraft((current) => ({
                 ...current,
@@ -555,7 +604,9 @@ export function VesinvestRevisionSummary({
                   ...project,
                   allocations: years.map(
                     (year) =>
-                      project.allocations.find((item) => item.year === year) ?? {
+                      project.allocations.find(
+                        (item) => item.year === year,
+                      ) ?? {
                         year,
                         totalAmount: 0,
                         waterAmount: 0,
@@ -586,7 +637,10 @@ export function VesinvestDerivedTotalsStrip({
   forecastSyncLabel?: string | null;
 }) {
   const horizonRows = yearTotals.filter((item) => item.totalAmount > 0);
-  const horizonTotal = horizonRows.reduce((sum, item) => sum + item.totalAmount, 0);
+  const horizonTotal = horizonRows.reduce(
+    (sum, item) => sum + item.totalAmount,
+    0,
+  );
   const waterTotal = draft.projects.reduce(
     (sum, project) => sum + (project.waterAmount ?? 0),
     0,
@@ -615,7 +669,9 @@ export function VesinvestDerivedTotalsStrip({
       </div>
       <div className="v2-vesinvest-investment-facts">
         <div>
-          <span>{t('v2Vesinvest.peakAnnualInvestment', 'Peak annual investment')}</span>
+          <span>
+            {t('v2Vesinvest.peakAnnualInvestment', 'Peak annual investment')}
+          </span>
           <strong>
             {peakYear
               ? `${peakYear.year}: ${formatEur(peakYear.totalAmount)}`
@@ -625,10 +681,11 @@ export function VesinvestDerivedTotalsStrip({
         <div>
           <span>{t('v2Vesinvest.allocationSummary', 'Service split')}</span>
           <strong>
-            {`${t('v2Vesinvest.waterShort', 'Water')}: ${formatEur(waterTotal)} / ${t(
-              'v2Vesinvest.wastewaterShort',
-              'Wastewater',
-            )}: ${formatEur(wastewaterTotal)}`}
+            {`${t('v2Vesinvest.waterShort', 'Water')}: ${formatEur(
+              waterTotal,
+            )} / ${t('v2Vesinvest.wastewaterShort', 'Wastewater')}: ${formatEur(
+              wastewaterTotal,
+            )}`}
           </strong>
         </div>
         <div>
@@ -637,10 +694,16 @@ export function VesinvestDerivedTotalsStrip({
         </div>
         <div>
           <span>{t('v2Vesinvest.forecastSyncStatus', 'Forecast sync')}</span>
-          <strong>{forecastSyncLabel ?? t('v2Vesinvest.forecastSyncUnknown', 'Forecast sync pending')}</strong>
+          <strong>
+            {forecastSyncLabel ??
+              t('v2Vesinvest.forecastSyncUnknown', 'Forecast sync pending')}
+          </strong>
         </div>
       </div>
-      <div className="v2-vesinvest-band-list" aria-label={t('v2Vesinvest.fiveYearBands', 'Five-year bands')}>
+      <div
+        className="v2-vesinvest-band-list"
+        aria-label={t('v2Vesinvest.fiveYearBands', 'Five-year bands')}
+      >
         {fiveYearBands.slice(0, 4).map((band) => (
           <div key={`${band.startYear}-${band.endYear}`}>
             <span>{`${band.startYear}-${band.endYear}`}</span>

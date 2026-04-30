@@ -10,6 +10,7 @@ import {
   type TabId,
   type TabStatus,
 } from './appShellV2Routing';
+import { useDialogFocusTrap } from './useDialogFocusTrap';
 
 export function AppShellV2Header({
   t,
@@ -61,12 +62,19 @@ export function AppShellV2Header({
       <div className="v2-app-header-inner">
         <div className="v2-brand-block">
           <div className="v2-brand">
-            <span className="v2-brand-title">{t('app.title', 'Vesinvest')}</span>
-            <span className="v2-brand-subtitle">{t('v2Shell.subtitle', 'Financial planning')}</span>
+            <span className="v2-brand-title">
+              {t('app.title', 'Vesinvest')}
+            </span>
+            <span className="v2-brand-subtitle">
+              {t('v2Shell.subtitle', 'Financial planning')}
+            </span>
           </div>
         </div>
 
-        <nav className="v2-main-nav" aria-label={t('v2Shell.mainNavigation', 'Main navigation')}>
+        <nav
+          className="v2-main-nav"
+          aria-label={t('v2Shell.mainNavigation', 'Main navigation')}
+        >
           {TABS.map((tab) => {
             const locked = isTabLocked(tab);
             const status = tabStatuses[tab];
@@ -79,7 +87,9 @@ export function AppShellV2Header({
               <button
                 key={tab}
                 type="button"
-                className={`v2-nav-btn ${activeTab === tab ? 'active' : ''} v2-nav-status-${status.tone}`}
+                className={`v2-nav-btn ${
+                  activeTab === tab ? 'active' : ''
+                } v2-nav-status-${status.tone}`}
                 onClick={() => handleTabChange(tab)}
                 onMouseEnter={() => preloadTab(tab)}
                 aria-current={activeTab === tab ? 'page' : undefined}
@@ -88,10 +98,7 @@ export function AppShellV2Header({
                 aria-describedby={statusDescriptionId}
                 title={buttonTitle}
               >
-                <span
-                  className="v2-nav-status-dot"
-                  aria-hidden="true"
-                />
+                <span className="v2-nav-status-dot" aria-hidden="true" />
                 <span className="v2-nav-label">{tabLabels[tab]}</span>
                 <span className="v2-nav-status-label" aria-hidden="true">
                   {status.label}
@@ -120,7 +127,11 @@ export function AppShellV2Header({
       <div className="v2-header-meta">
         <div className="v2-header-context">
           {shellBackLabel ? (
-            <button type="button" className="v2-shell-back-btn" onClick={onBack}>
+            <button
+              type="button"
+              className="v2-shell-back-btn"
+              onClick={onBack}
+            >
               {shellBackLabel}
             </button>
           ) : null}
@@ -138,7 +149,9 @@ export function AppShellV2Header({
                 <button
                   key={tab}
                   type="button"
-                  className={`v2-workflow-step ${activeTab === tab ? 'active' : ''} v2-workflow-step-${status.tone}`}
+                  className={`v2-workflow-step ${
+                    activeTab === tab ? 'active' : ''
+                  } v2-workflow-step-${status.tone}`}
                   onClick={() => handleTabChange(tab)}
                   onMouseEnter={() => preloadTab(tab)}
                   aria-current={activeTab === tab ? 'step' : undefined}
@@ -156,7 +169,9 @@ export function AppShellV2Header({
           </div>
         </div>
         <div className="v2-header-statuses">
-          <span className={`v2-badge ${connectionChipToneClass}`}>{connectionChipLabel}</span>
+          <span className={`v2-badge ${connectionChipToneClass}`}>
+            {connectionChipLabel}
+          </span>
           <span className="v2-badge v2-status-provenance v2-org-chip">
             <span>{t('v2Shell.workspaceLabel', 'Workspace')}</span>
             <strong className="v2-org-chip-value" title={orgChipLabel}>
@@ -190,14 +205,20 @@ export function AppShellV2LanguageNotice({
               'v2Shell.orgLanguageSwitched',
               'Organization language is {{language}}. The workspace switched automatically.',
               {
-                language: t(`language.${orgLanguageNotice.language}`, orgLanguageNotice.language),
+                language: t(
+                  `language.${orgLanguageNotice.language}`,
+                  orgLanguageNotice.language,
+                ),
               },
             )
           : t(
               'v2Shell.orgLanguageKept',
               'Organization language is {{language}}. Keeping your chosen interface language.',
               {
-                language: t(`language.${orgLanguageNotice.language}`, orgLanguageNotice.language),
+                language: t(
+                  `language.${orgLanguageNotice.language}`,
+                  orgLanguageNotice.language,
+                ),
               },
             )}
       </p>
@@ -207,7 +228,9 @@ export function AppShellV2LanguageNotice({
             type="button"
             className="v2-btn v2-btn-small"
             onClick={() => {
-              void applyManualLanguagePreference(orgLanguageNotice.previousLanguage);
+              void applyManualLanguagePreference(
+                orgLanguageNotice.previousLanguage,
+              );
               clearOrgLanguageNotice();
             }}
           >
@@ -219,7 +242,11 @@ export function AppShellV2LanguageNotice({
             })}
           </button>
         ) : null}
-        <button type="button" className="v2-btn v2-btn-small" onClick={clearOrgLanguageNotice}>
+        <button
+          type="button"
+          className="v2-btn v2-btn-small"
+          onClick={clearOrgLanguageNotice}
+        >
           {t('common.close', 'Close')}
         </button>
       </div>
@@ -251,7 +278,11 @@ export function AppShellV2BlockedTabNotice({
   }
 
   return (
-    <div className="v2-language-notice v2-shell-tab-notice" role="status" aria-live="polite">
+    <div
+      className="v2-language-notice v2-shell-tab-notice"
+      role="status"
+      aria-live="polite"
+    >
       <p>
         <strong>{tabLabels[blockedTabNotice]}</strong>
         {': '}
@@ -267,7 +298,11 @@ export function AppShellV2BlockedTabNotice({
             {lockedTabActionLabel(blockedTabNotice)}
           </button>
         ) : null}
-        <button type="button" className="v2-btn v2-btn-small" onClick={clearBlockedTabNotice}>
+        <button
+          type="button"
+          className="v2-btn v2-btn-small"
+          onClick={clearBlockedTabNotice}
+        >
           {t('common.close', 'Close')}
         </button>
       </div>
@@ -289,6 +324,7 @@ export function AppShellV2AccountDrawer({
   setClearConfirmValue,
   clearConfirmMatches,
   clearConfirmToken,
+  clearChallengeLoading,
   handleClearImportAndScenarios,
   isDemoMode,
   onLogout,
@@ -306,10 +342,20 @@ export function AppShellV2AccountDrawer({
   setClearConfirmValue: React.Dispatch<React.SetStateAction<string>>;
   clearConfirmMatches: boolean;
   clearConfirmToken: string;
+  clearChallengeLoading: boolean;
   handleClearImportAndScenarios: () => Promise<void>;
   isDemoMode: boolean;
   onLogout: () => void;
 }) {
+  const drawerRef = React.useRef<HTMLElement | null>(null);
+  const closeButtonRef = React.useRef<HTMLButtonElement | null>(null);
+  useDialogFocusTrap({
+    enabled: drawerOpen,
+    dialogRef: drawerRef,
+    initialFocusRef: closeButtonRef,
+    onClose: closeDrawer,
+  });
+
   if (!drawerOpen) {
     return null;
   }
@@ -318,22 +364,30 @@ export function AppShellV2AccountDrawer({
     <div className="v2-account-drawer-layer" onClick={closeDrawer}>
       <aside
         id="v2-account-drawer"
+        ref={drawerRef}
         className="v2-account-drawer"
         role="dialog"
         aria-modal="true"
         aria-label={t('v2Shell.accountTitle', 'Account and access')}
+        tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="v2-account-drawer-head">
           <div>
-            <span className="v2-overview-eyebrow">{t('v2Shell.accountButton', 'Account')}</span>
+            <span className="v2-overview-eyebrow">
+              {t('v2Shell.accountButton', 'Account')}
+            </span>
             <h3>{t('v2Shell.accountTitle', 'Account and access')}</h3>
             <p className="v2-muted">
-              {t('v2Shell.drawerHint', 'Workspace access and organization controls.')}
+              {t(
+                'v2Shell.drawerHint',
+                'Workspace access and organization controls.',
+              )}
             </p>
           </div>
           <button
             type="button"
+            ref={closeButtonRef}
             className="v2-account-drawer-close"
             onClick={closeDrawer}
             aria-label={t('common.close', 'Close')}
@@ -350,7 +404,8 @@ export function AppShellV2AccountDrawer({
             <strong>{t('v2Shell.roleLabel', 'Role')}:</strong> {roleText}
           </p>
           <p>
-            <strong>{t('v2Shell.activeWorkspace', 'Active workspace')}:</strong> {activeTabLabel}
+            <strong>{t('v2Shell.activeWorkspace', 'Active workspace')}:</strong>{' '}
+            {activeTabLabel}
           </p>
         </div>
 
@@ -370,14 +425,23 @@ export function AppShellV2AccountDrawer({
                 )}
               </p>
               <p className="v2-muted">
-                {t(
-                  'v2Shell.clearDataTypeHint',
-                  'For safety, type {{token}} before the database clear action becomes available.',
-                  { token: clearConfirmToken },
-                )}
+                {clearChallengeLoading
+                  ? t(
+                      'v2Shell.clearDataCodeLoading',
+                      'Preparing a one-time confirmation code...',
+                    )
+                  : t(
+                      'v2Shell.clearDataTypeHint',
+                      'For safety, type {{token}} before the database clear action becomes available.',
+                      {
+                        token: clearConfirmToken || '-',
+                      },
+                    )}
               </p>
               <label className="v2-field v2-danger-field">
-                <span>{t('v2Shell.clearDataCodeLabel', 'Confirmation code')}</span>
+                <span>
+                  {t('v2Shell.clearDataCodeLabel', 'Confirmation code')}
+                </span>
                 <input
                   type="text"
                   className="v2-input"
@@ -390,20 +454,31 @@ export function AppShellV2AccountDrawer({
                 />
               </label>
               <p id="v2-clear-data-help" className="v2-muted">
-                {clearConfirmMatches
+                {clearChallengeLoading
+                  ? t(
+                      'v2Shell.clearDataCodeLoading',
+                      'Preparing a one-time confirmation code...',
+                    )
+                  : clearConfirmMatches
                   ? t(
                       'v2Shell.clearDataTypeMatched',
                       'Confirmation code matches. Database clear is enabled.',
                     )
-                  : t('v2Shell.clearDataTypePrompt', 'Type {{token}} to confirm database clear.', {
-                      token: clearConfirmToken,
-                    })}
+                  : t(
+                      'v2Shell.clearDataTypePrompt',
+                      'Type {{token}} to confirm database clear.',
+                      {
+                        token: clearConfirmToken || '-',
+                      },
+                    )}
               </p>
               <button
                 type="button"
                 className="v2-btn v2-btn-danger"
                 onClick={() => void handleClearImportAndScenarios()}
-                disabled={clearBusy || !clearConfirmMatches}
+                disabled={
+                  clearBusy || clearChallengeLoading || !clearConfirmMatches
+                }
               >
                 {clearBusy
                   ? t('v2Shell.clearDataBusy', 'Clearing...')
@@ -411,7 +486,9 @@ export function AppShellV2AccountDrawer({
               </button>
             </>
           ) : null}
-          {clearError ? <div className="v2-alert v2-alert-error">{clearError}</div> : null}
+          {clearError ? (
+            <div className="v2-alert v2-alert-error">{clearError}</div>
+          ) : null}
         </div>
 
         {!isDemoMode ? (

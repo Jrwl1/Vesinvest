@@ -67,6 +67,7 @@ type Props = {
     };
     syncAfterSave?: boolean;
   }) => Promise<{ yearData: V2ImportYearDataResponse }>;
+  isAdmin: boolean;
   busy?: boolean;
 };
 export const OverviewYearWorkspace: React.FC<Props> = ({
@@ -83,6 +84,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
   missingRequirementLabel,
   openInlineCardEditor,
   saveYear,
+  isAdmin,
   busy = false,
 }) => {
   const [drafts, setDrafts] = React.useState<Record<number, WorkspaceDraft>>({});
@@ -267,6 +269,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
   );
   const showYearDecisionActions = React.useMemo(
     () =>
+      isAdmin &&
       pinnedRows.some((row) => {
         const draft = drafts[row.year];
         const saveStateEntry = saveState[row.year];
@@ -276,7 +279,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
           (draft != null && (draft.dirty || hasExplicitMissingEntry(row.year, draft)))
         );
       }),
-    [drafts, hasExplicitMissingEntry, pinnedRows, saveState],
+    [drafts, hasExplicitMissingEntry, isAdmin, pinnedRows, saveState],
   );
   if (reviewStatusRows.length === 0) {
     return null;
@@ -381,7 +384,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                 {saveState[row.year]?.error ? (
                   <p className="v2-year-reason">{saveState[row.year]?.error}</p>
                 ) : null}
-                {!isDecisionYearOpen ? (
+                {!isDecisionYearOpen && isAdmin ? (
                   <>
                     <div className="v2-overview-year-workspace-year-actions v2-overview-year-workspace-year-actions-primary">
                       {prefersFixPrimary ? (
@@ -539,6 +542,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                               );
                             }}
                             disabled={yearBusy}
+                            readOnly={!isAdmin}
                           />
                         </label>
                         <span
@@ -664,6 +668,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                       }));
                     }}
                     disabled={yearBusy}
+                    hidden={!isAdmin}
                     aria-label={`${showResultOverride && hasStoredOverride
                       ? t(
                           'v2Overview.manualFinancialYearResultResetToDerived',
@@ -694,7 +699,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                   </button>
                 </div>
 
-                {showResultOverride ? (
+                {showResultOverride && isAdmin ? (
                   <label className="v2-overview-year-workspace-input">
                     <input
                       className="v2-input"
@@ -729,6 +734,7 @@ export const OverviewYearWorkspace: React.FC<Props> = ({
                         );
                       }}
                       disabled={yearBusy}
+                      readOnly={!isAdmin}
                     />
                   </label>
                 ) : null}

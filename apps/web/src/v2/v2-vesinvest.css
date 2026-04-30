@@ -471,7 +471,7 @@
   flex-wrap: nowrap;
 }
 
-.v2-vesinvest-allocation-editor {
+.v2-modal-card.v2-vesinvest-allocation-editor {
   width: min(920px, calc(100vw - 48px));
   max-height: min(760px, calc(100vh - 48px));
   overflow: hidden;
@@ -575,6 +575,84 @@
 @media (max-width: 760px) {
   .v2-vesinvest-project-card .v2-inline-form {
     grid-template-columns: 1fr;
+  }
+
+  .v2-modal-card.v2-vesinvest-allocation-editor {
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+    overflow: auto;
+  }
+
+  .v2-vesinvest-allocation-editor .v2-section-header {
+    display: grid;
+    align-items: start;
+    grid-template-columns: 1fr;
+  }
+
+  .v2-vesinvest-allocation-totals {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-vesinvest-allocation-editor-wrap {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .v2-vesinvest-allocation-editor-table {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .v2-vesinvest-allocation-editor-table thead {
+    display: none;
+  }
+
+  .v2-vesinvest-allocation-editor-table tbody,
+  .v2-vesinvest-allocation-editor-table tr,
+  .v2-vesinvest-allocation-editor-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .v2-vesinvest-allocation-editor-table tr {
+    border-top: 1px solid var(--v2-border);
+    padding: 10px 0;
+  }
+
+  .v2-vesinvest-allocation-editor-table tr:first-child {
+    border-top: 0;
+  }
+
+  .v2-vesinvest-allocation-editor-table td {
+    border: 0;
+    padding: 5px 0;
+  }
+
+  .v2-vesinvest-allocation-editor-table td:first-child {
+    position: static;
+    background: transparent;
+    font-weight: 800;
+  }
+
+  .v2-vesinvest-allocation-editor-table td:not(:first-child) {
+    display: grid;
+    grid-template-columns: minmax(84px, 0.45fr) minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+  }
+
+  .v2-vesinvest-allocation-editor-table td:not(:first-child)::before {
+    content: attr(data-label);
+    color: var(--v2-muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .v2-vesinvest-allocation-input {
+    width: 100%;
+    min-width: 0;
   }
 }
 

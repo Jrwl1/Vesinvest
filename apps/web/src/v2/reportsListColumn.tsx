@@ -3,7 +3,10 @@ import type { TFunction } from 'i18next';
 
 import type { V2ReportListItem } from '../api';
 import { formatDateTime } from './format';
-import { getReportCompactDisplayTitle, getScenarioDisplayName } from './displayNames';
+import {
+  getReportListItemDisplayTitle,
+  getScenarioDisplayName,
+} from './displayNames';
 import { formatScenarioUpdatedAt } from './reportReadinessModel';
 
 type ScenarioOption = {
@@ -75,7 +78,9 @@ export const ReportsListColumn: React.FC<ReportsListColumnProps> = ({
     >
       <div className="v2-section-header v2-reports-list-head">
         <div className="v2-reports-section-copy">
-          <p className="v2-overview-eyebrow">{t('v2Reports.title', 'Reports')}</p>
+          <p className="v2-overview-eyebrow">
+            {t('v2Reports.title', 'Reports')}
+          </p>
           <h2>{t('v2Reports.title', 'Reports')}</h2>
           <p className="v2-muted">{reportsHeaderHint}</p>
         </div>
@@ -106,7 +111,11 @@ export const ReportsListColumn: React.FC<ReportsListColumnProps> = ({
             {t('v2Reports.refreshList', 'Refresh list')}
           </button>
           {savedFeePathReportConflictActive && savedFeePathPlanId ? (
-            <button type="button" className="v2-btn" onClick={handleSavedFeePathAction}>
+            <button
+              type="button"
+              className="v2-btn"
+              onClick={handleSavedFeePathAction}
+            >
               {t('v2Shell.tabs.tariffPlan', 'Tariff Plan')}
             </button>
           ) : null}
@@ -120,19 +129,22 @@ export const ReportsListColumn: React.FC<ReportsListColumnProps> = ({
         </article>
         <article>
           <span>{t('projection.scenario', 'Scenario')}</span>
-            <strong>
-              {scenarioFilter
-                ? scenarioOptions.find((option) => option.id === scenarioFilter)?.name ??
-                  scenarioFilter
-                : t('v2Reports.allScenarios', 'All')}
-            </strong>
-          </article>
+          <strong>
+            {scenarioFilter
+              ? scenarioOptions.find((option) => option.id === scenarioFilter)
+                  ?.name ?? scenarioFilter
+              : t('v2Reports.allScenarios', 'All')}
+          </strong>
+        </article>
       </div>
 
       {loadingList ? (
         <div className="v2-loading-state v2-report-loading-card">
           <p className="v2-muted">
-            {t('v2Reports.loadingListHint', 'Refreshing saved reports and filters.')}
+            {t(
+              'v2Reports.loadingListHint',
+              'Refreshing saved reports and filters.',
+            )}
           </p>
           <span className="v2-skeleton-line" />
           <span className="v2-skeleton-line" />
@@ -148,7 +160,9 @@ export const ReportsListColumn: React.FC<ReportsListColumnProps> = ({
               <div className="v2-section-header">
                 <h3>{t('v2Forecast.reportReadinessTitle', 'Report status')}</h3>
                 <div className="v2-badge-row">
-                  <span className={`v2-badge ${emptyStateReportReadinessToneClass}`}>
+                  <span
+                    className={`v2-badge ${emptyStateReportReadinessToneClass}`}
+                  >
                     {emptyStateReportReadinessLabel}
                   </span>
                   <span className={`v2-badge ${emptyStateForecastToneClass}`}>
@@ -162,16 +176,27 @@ export const ReportsListColumn: React.FC<ReportsListColumnProps> = ({
                   <strong>{emptyStateScenario.name}</strong>
                 </div>
                 <div className="v2-keyvalue-row">
-                  <span>{t('v2Forecast.computeStateLabel', 'Forecast state')}</span>
+                  <span>
+                    {t('v2Forecast.computeStateLabel', 'Forecast state')}
+                  </span>
                   <strong>{emptyStateForecastLabel}</strong>
                 </div>
                 <div className="v2-keyvalue-row">
-                  <span>{t('v2Forecast.reportComputeSource', 'Computed from version')}</span>
+                  <span>
+                    {t(
+                      'v2Forecast.reportComputeSource',
+                      'Computed from version',
+                    )}
+                  </span>
                   <strong>{emptyStateComputedVersionLabel}</strong>
                 </div>
                 <div className="v2-keyvalue-row">
-                  <span>{t('v2Forecast.reportScenarioUpdated', 'Scenario updated')}</span>
-                  <strong>{formatScenarioUpdatedAt(emptyStateScenario.updatedAt)}</strong>
+                  <span>
+                    {t('v2Forecast.reportScenarioUpdated', 'Scenario updated')}
+                  </span>
+                  <strong>
+                    {formatScenarioUpdatedAt(emptyStateScenario.updatedAt)}
+                  </strong>
                 </div>
               </div>
             </div>
@@ -186,18 +211,22 @@ export const ReportsListColumn: React.FC<ReportsListColumnProps> = ({
       {reports.length > 0 ? (
         <div className="v2-report-table v2-report-list">
           {reports.map((row) => {
-            const rowTitle = getReportCompactDisplayTitle({
+            const rowTitle = getReportListItemDisplayTitle({
               variant: row.variant,
-              scenarioName: row.ennuste.nimi ?? row.ennuste.id,
               createdAt: row.createdAt,
               t,
             });
-            const rowScenarioLabel = getScenarioDisplayName(row.ennuste.nimi ?? row.ennuste.id, t);
+            const rowScenarioLabel = getScenarioDisplayName(
+              row.ennuste.nimi ?? row.ennuste.id,
+              t,
+            );
             return (
               <button
                 key={row.id}
                 type="button"
-                className={`v2-report-row ${selectedReportId === row.id ? 'active' : ''}`}
+                className={`v2-report-row ${
+                  selectedReportId === row.id ? 'active' : ''
+                }`}
                 onClick={() => setSelectedReportId(row.id)}
                 aria-pressed={selectedReportId === row.id}
               >
@@ -222,7 +251,8 @@ export const ReportsListColumn: React.FC<ReportsListColumnProps> = ({
                     {t('projection.scenario', 'Scenario')}: {rowScenarioLabel}
                   </span>
                   <span>
-                    {t('projection.v2.baselineYearLabel', 'Baseline year')}: {row.baselineYear}
+                    {t('projection.v2.baselineYearLabel', 'Baseline year')}:{' '}
+                    {row.baselineYear}
                   </span>
                 </div>
               </button>

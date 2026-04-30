@@ -4,6 +4,7 @@ import {
   buildDefaultReportTitle,
   buildDefaultScenarioName,
   getReportDisplayTitle,
+  getReportListItemDisplayTitle,
   getScenarioDisplayName,
 } from './displayNames';
 
@@ -16,9 +17,9 @@ const t = (key: string, defaultValue?: string) => {
 
 describe('displayNames', () => {
   it('builds ISO-dated default scenario names', () => {
-    expect(buildDefaultScenarioName(t as never, '2026-03-19T10:30:00.000Z')).toBe(
-      'Scenario 2026-03-19',
-    );
+    expect(
+      buildDefaultScenarioName(t as never, '2026-03-19T10:30:00.000Z'),
+    ).toBe('Scenario 2026-03-19');
   });
 
   it('localizes legacy default scenario names into the current display format', () => {
@@ -64,5 +65,15 @@ describe('displayNames', () => {
         t: svT as never,
       }),
     ).toBe('Prognosrapport Scenario 2026-03-19 - Intern bilaga');
+  });
+
+  it('keeps report list item titles independent from long scenario names', () => {
+    expect(
+      getReportListItemDisplayTitle({
+        variant: 'regulator_package',
+        createdAt: '2026-04-30T12:00:00.000Z',
+        t: t as never,
+      }),
+    ).toBe('Regulator package - 2026-04-30');
   });
 });

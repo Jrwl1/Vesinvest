@@ -8,9 +8,7 @@ function isVesinvestLinkedForecastRow(row: InvestmentSurfaceRow): boolean {
   return (
     (row.vesinvestPlanId ?? '').trim().length > 0 ||
     (row.vesinvestProjectId ?? '').trim().length > 0 ||
-    (row.allocationId ?? '').trim().length > 0 ||
-    (row.projectCode ?? '').trim().length > 0 ||
-    (row.groupKey ?? '').trim().length > 0
+    (row.allocationId ?? '').trim().length > 0
   );
 }
 
@@ -46,7 +44,9 @@ type Props = {
   investmentImpactSummary: InvestmentImpactSummary;
   hasInvestmentDepreciationErrors: boolean;
   invalidInvestmentDepreciationYears: number[];
-  renderInvestmentProgramRows: (rows: InvestmentSurfaceRow[]) => React.ReactNode;
+  renderInvestmentProgramRows: (
+    rows: InvestmentSurfaceRow[],
+  ) => React.ReactNode;
   nearTermInvestmentRows: InvestmentSurfaceRow[];
   investmentProgramGroupOptions: string[];
   longRangeInvestmentGroups: LongRangeInvestmentGroup[];
@@ -138,7 +138,9 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
       </div>
       <div className="v2-section-header">
         <div>
-          <h4>{t('v2Forecast.investmentImpactTitle', 'Investment plan effect')}</h4>
+          <h4>
+            {t('v2Forecast.investmentImpactTitle', 'Investment plan effect')}
+          </h4>
         </div>
         <span className={`v2-badge ${forecastStateToneClass}`}>
           {forecastStateLabel}
@@ -150,7 +152,9 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
           <p>{formatEur(investmentImpactSummary.totalInvestments)}</p>
         </article>
         <article>
-          <h3>{t('v2Forecast.totalDepreciationTitle', 'Total depreciation')}</h3>
+          <h3>
+            {t('v2Forecast.totalDepreciationTitle', 'Total depreciation')}
+          </h3>
           <p>{formatEur(investmentImpactSummary.totalDepreciation)}</p>
         </article>
         <article>
@@ -163,7 +167,9 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
           <p>{formatPrice(investmentImpactSummary.requiredPriceToday)}</p>
         </article>
         <article>
-          <h3>{t('v2Forecast.depreciationImpactPeakGap', 'Peak cumulative gap')}</h3>
+          <h3>
+            {t('v2Forecast.depreciationImpactPeakGap', 'Peak cumulative gap')}
+          </h3>
           <p>{formatEur(investmentImpactSummary.peakGap)}</p>
         </article>
       </div>
@@ -232,12 +238,21 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
               ? t('v2Vesinvest.projectClass', 'Class')
               : t('v2Forecast.investmentProgramGroupLabel', 'Group')}
           </span>
-          <span>{t('v2Forecast.depreciationCategory', 'Depreciation rule')}</span>
-          <span>{t('v2Forecast.investmentProgramWaterAmount', 'Water EUR')}</span>
           <span>
-            {t('v2Forecast.investmentProgramWastewaterAmount', 'Wastewater EUR')}
+            {t('v2Forecast.depreciationCategory', 'Depreciation rule')}
           </span>
-          <span>{t('v2Forecast.investmentProgramTotalAmount', 'Total EUR')}</span>
+          <span>
+            {t('v2Forecast.investmentProgramWaterAmount', 'Water EUR')}
+          </span>
+          <span>
+            {t(
+              'v2Forecast.investmentProgramWastewaterAmount',
+              'Wastewater EUR',
+            )}
+          </span>
+          <span>
+            {t('v2Forecast.investmentProgramTotalAmount', 'Total EUR')}
+          </span>
           <span>{t('v2Forecast.investmentProgramNoteLabel', 'Note')}</span>
         </div>
         {renderInvestmentProgramRows(nearTermInvestmentRows)}
@@ -280,11 +295,17 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
               </summary>
               <p className="v2-muted">
                 {group.peakYears.length > 0
-                  ? `${t('v2Forecast.investmentPeakYears', 'Peak years')}: ${group.peakYears.join(', ')}`
+                  ? `${t(
+                      'v2Forecast.investmentPeakYears',
+                      'Peak years',
+                    )}: ${group.peakYears.join(', ')}`
                   : t('v2Forecast.investmentPeakYearsEmpty', 'None')}
               </p>
               <div className="v2-investment-table">
-                <div className="v2-investment-row v2-investment-row-head" aria-hidden="true">
+                <div
+                  className="v2-investment-row v2-investment-row-head"
+                  aria-hidden="true"
+                >
                   <span>{t('common.year', 'Year')}</span>
                   <span>
                     {t(
@@ -292,15 +313,21 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
                       'Yearly investments (EUR)',
                     )}
                   </span>
-                  <span>{t('v2Forecast.investmentCategoryPlaceholder', 'Group')}</span>
-                  <span>{t('v2Forecast.investmentTypePlaceholder', 'Type')}</span>
+                  <span>
+                    {t('v2Forecast.investmentCategoryPlaceholder', 'Group')}
+                  </span>
+                  <span>
+                    {t('v2Forecast.investmentTypePlaceholder', 'Type')}
+                  </span>
                   <span>
                     {t(
                       'v2Forecast.investmentConfidencePlaceholder',
                       'Confidence',
                     )}
                   </span>
-                  <span>{t('v2Forecast.investmentNotePlaceholder', 'Note')}</span>
+                  <span>
+                    {t('v2Forecast.investmentNotePlaceholder', 'Note')}
+                  </span>
                 </div>
                 {renderInvestmentEditorRows(group.rows)}
               </div>
@@ -314,12 +341,17 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
           {t('v2Forecast.investmentAnnualTable', 'Full annual table')}
         </summary>
         <div className="v2-investment-table">
-          <div className="v2-investment-row v2-investment-row-head" aria-hidden="true">
+          <div
+            className="v2-investment-row v2-investment-row-head"
+            aria-hidden="true"
+          >
             <span>{t('common.year', 'Year')}</span>
             <span>
               {t('v2Forecast.yearlyInvestmentsEur', 'Yearly investments (EUR)')}
             </span>
-            <span>{t('v2Forecast.investmentCategoryPlaceholder', 'Group')}</span>
+            <span>
+              {t('v2Forecast.investmentCategoryPlaceholder', 'Group')}
+            </span>
             <span>{t('v2Forecast.investmentTypePlaceholder', 'Type')}</span>
             <span>
               {t('v2Forecast.investmentConfidencePlaceholder', 'Confidence')}

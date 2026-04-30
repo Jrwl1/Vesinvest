@@ -334,6 +334,7 @@ export function registerOverviewWorkspaceReviewSelectionSuite() {
         missingRequirementLabel={() => 'Prices'}
         openInlineCardEditor={() => undefined}
         saveYear={vi.fn().mockResolvedValue({ yearData: buildWorkspaceYearData(2023, 'VEETI') })}
+        isAdmin={true}
       />,
     );
 
@@ -398,6 +399,107 @@ export function registerOverviewWorkspaceReviewSelectionSuite() {
         name: `${localeText('v2Overview.workbookImportAction')} 2024`,
       }),
     ).toBeTruthy();
+  });
+
+  it('keeps the review workspace read-only for non-admin users', async () => {
+    const buildWorkspaceYearData = (year: number) => ({
+      year,
+      veetiId: 1,
+      sourceStatus: 'VEETI',
+      completeness: {
+        tilinpaatos: true,
+        taksa: false,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: false,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 90000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 14000,
+              Henkilostokulut: 20000,
+              Poistot: 6000,
+              LiiketoiminnanMuutKulut: 15000,
+              TilikaudenYliJaama: 23000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 90000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 14000,
+              Henkilostokulut: 20000,
+              Poistot: 6000,
+              LiiketoiminnanMuutKulut: 15000,
+              TilikaudenYliJaama: 23000,
+            },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    });
+    const openInlineCardEditor = vi.fn();
+    const saveYear = vi.fn();
+
+    render(
+      <OverviewYearWorkspace
+        t={translate as any}
+        reviewStatusRows={[
+          {
+            year: 2023,
+            sourceStatus: 'VEETI',
+            missingRequirements: ['prices'],
+            setupStatus: 'needs_attention',
+          },
+        ]}
+        activeYear={2023}
+        workspaceYears={[2023]}
+        onTogglePinnedYear={() => undefined}
+        yearDataCache={{ 2023: buildWorkspaceYearData(2023) as any }}
+        sourceStatusClassName={() => 'v2-status-positive'}
+        sourceStatusLabel={(status) => status ?? 'VEETI'}
+        missingRequirementLabel={() => 'Prices'}
+        openInlineCardEditor={openInlineCardEditor}
+        saveYear={saveYear}
+        isAdmin={false}
+      />,
+    );
+
+    expect(
+      screen.queryByRole('button', {
+        name: `${localeText('v2Overview.fixYearValues')} 2023`,
+      }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', {
+        name: `${localeText('v2Overview.documentImportAction')} 2023`,
+      }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', {
+        name: `${localeText('v2Overview.workbookImportAction')} 2023`,
+      }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', {
+        name: `${localeText('v2Overview.manualPatchSave')} 2023`,
+      }),
+    ).toBeNull();
+
+    const inputs = [...document.querySelectorAll('input[type="number"]')] as HTMLInputElement[];
+    expect(inputs.length).toBeGreaterThan(0);
+    expect(inputs.every((input) => input.readOnly)).toBe(true);
+    fireEvent.change(inputs[0]!, { target: { value: '123' } });
+    expect(openInlineCardEditor).not.toHaveBeenCalled();
+    expect(saveYear).not.toHaveBeenCalled();
   });
 
   it('defaults the review workspace to the first unresolved year', async () => {

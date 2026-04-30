@@ -228,6 +228,12 @@ export function registerOverviewPageV2SmokeSuite() {
         peers: [],
       },
     } as any);
+    getOverviewV2.mockResolvedValue(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        planningBaselineYears: [2024],
+      }),
+    );
     getPlanningContextV2.mockResolvedValueOnce(
       buildPlanningContextResponse({
         canCreateScenario: false,
@@ -270,14 +276,8 @@ export function registerOverviewPageV2SmokeSuite() {
       }),
     );
 
-    const baselinePlanningDisclosure = document.querySelector(
-      '.v2-overview-planning-shell-toggle',
-    ) as HTMLDetailsElement | null;
-    expect(baselinePlanningDisclosure).toBeTruthy();
-    fireEvent.click(
-      baselinePlanningDisclosure!.querySelector('summary') as HTMLElement,
-    );
-    expect(baselinePlanningDisclosure?.open).toBe(true);
+    expect(screen.queryByTestId('vesinvest-panel')).toBeNull();
+    expect(document.querySelector('.v2-overview-planning-shell-toggle')).toBeNull();
 
     fireEvent.click(
       await screen.findByRole('button', { name: 'Luo suunnittelupohja' }),
@@ -291,17 +291,18 @@ export function registerOverviewPageV2SmokeSuite() {
         years: '2024',
       })),
     ).toBeTruthy();
-    const handoffPlanningDisclosure = document.querySelector(
-      '.v2-overview-planning-shell-toggle',
-    ) as HTMLDetailsElement | null;
     expect(
-      handoffPlanningDisclosure == null || handoffPlanningDisclosure.open === false,
-    ).toBe(true);
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.openAssetManagement'),
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByTestId('vesinvest-panel')).toBeNull();
+    expect(
+      document.querySelector('.v2-overview-planning-shell-toggle'),
+    ).toBeNull();
     expect(
       screen.queryByText(localeText('v2Overview.wizardSummaryBaselineReady')),
     ).toBeNull();
   });
   });
 }
-
-

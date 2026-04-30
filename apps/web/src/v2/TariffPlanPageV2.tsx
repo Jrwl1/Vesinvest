@@ -19,7 +19,15 @@ import {
   buildDefaultPackageReportTitle,
   normalizeReportLocale,
 } from './displayNames';
-import { formatDateTime, formatEur, formatPercent, formatPrice, formatVolume, getActiveLocale } from './format';
+import { getApiErrorCode, mapReportBlockerError } from './apiErrorDisplay';
+import {
+  formatDateTime,
+  formatEur,
+  formatPercent,
+  formatPrice,
+  formatVolume,
+  getActiveLocale,
+} from './format';
 import {
   displayValidationTariffEvidenceNote,
   displayValidationTariffRiskNote,
@@ -68,7 +76,10 @@ const numberValue = (
       });
 
 const parseInputNumber = (value: string): number | null => {
-  const normalized = value.trim().replace(/[\s\u00a0]/g, '').replace(',', '.');
+  const normalized = value
+    .trim()
+    .replace(/[\s\u00a0]/g, '')
+    .replace(',', '.');
   if (!normalized) {
     return null;
   }
@@ -76,7 +87,8 @@ const parseInputNumber = (value: string): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const unitLabel = (label: string, unit?: string) => (unit ? `${label} (${unit})` : label);
+const unitLabel = (label: string, unit?: string) =>
+  unit ? `${label} (${unit})` : label;
 
 const connectionFeeBasisDisplayValue = (
   t: TFunction,
@@ -92,38 +104,13 @@ const connectionFeeBasisDisplayValue = (
   return trimmed;
 };
 
-const extractApiErrorCode = (err: unknown): string | null => {
-  if (typeof err !== 'object' || err === null) {
-    return null;
-  }
-  const directCode = (err as { code?: unknown }).code;
-  if (typeof directCode === 'string' && directCode.trim()) {
-    return directCode;
-  }
-  const details = (err as { details?: unknown }).details;
-  if (typeof details === 'object' && details !== null) {
-    const detailsCode = (details as { code?: unknown }).code;
-    if (typeof detailsCode === 'string' && detailsCode.trim()) {
-      return detailsCode;
-    }
-    const message = (details as { message?: unknown }).message;
-    if (typeof message === 'object' && message !== null) {
-      const nestedCode = (message as { code?: unknown }).code;
-      if (typeof nestedCode === 'string' && nestedCode.trim()) {
-        return nestedCode;
-      }
-    }
-  }
-  return null;
-};
-
 const mapKnownTariffError = (
   t: TFunction,
   err: unknown,
   fallbackKey: string,
   fallbackText: string,
 ): string => {
-  const code = extractApiErrorCode(err);
+  const code = getApiErrorCode(err);
   if (code === 'FORECAST_RECOMPUTE_REQUIRED') {
     return t(
       'v2TariffPlan.forecastRecomputeRequired',
@@ -148,7 +135,7 @@ const mapKnownTariffError = (
       'Saved inputs changed after the last calculation. Recompute results before creating report.',
     );
   }
-  return t(fallbackKey, fallbackText);
+  return mapReportBlockerError(t, err, fallbackKey, fallbackText);
 };
 
 const formatTariffUnit = (key: V2TariffFeeKey, value: number | null) => {
@@ -160,50 +147,53 @@ const formatTariffUnit = (key: V2TariffFeeKey, value: number | null) => {
     : formatEur(value, 2);
 };
 
-const UNRESOLVED_LABEL_KEYS: Record<string, { key: string; fallback: string }> = {
-  'current water price': {
-    key: 'v2TariffPlan.unresolvedCurrentWaterPrice',
-    fallback: 'current water price',
-  },
-  'current wastewater price': {
-    key: 'v2TariffPlan.unresolvedCurrentWastewaterPrice',
-    fallback: 'current wastewater price',
-  },
-  'sold water volume': {
-    key: 'v2TariffPlan.unresolvedSoldWaterVolume',
-    fallback: 'sold water volume',
-  },
-  'sold wastewater volume': {
-    key: 'v2TariffPlan.unresolvedSoldWastewaterVolume',
-    fallback: 'sold wastewater volume',
-  },
-  'base-fee revenue': {
-    key: 'v2TariffPlan.unresolvedBaseFeeRevenue',
-    fallback: 'base-fee revenue',
-  },
-  'connection count': {
-    key: 'v2TariffPlan.unresolvedConnectionCount',
-    fallback: 'connection count',
-  },
-  'connection-fee assumption': {
-    key: 'v2TariffPlan.unresolvedConnectionFeeAssumption',
-    fallback: 'connection-fee assumption',
-  },
-  'tariff revenue evidence': {
-    key: 'v2TariffPlan.unresolvedTariffRevenueEvidence',
-    fallback: 'tariff revenue evidence',
-  },
-  'cost evidence': {
-    key: 'v2TariffPlan.unresolvedCostEvidence',
-    fallback: 'cost evidence',
-  },
-  'returnable connection-fee liability': {
-    key: 'v2TariffPlan.unresolvedConnectionFeeLiability',
-    fallback: 'returnable connection-fee liability',
-  },
-};
+const UNRESOLVED_LABEL_KEYS: Record<string, { key: string; fallback: string }> =
+  {
+    'current water price': {
+      key: 'v2TariffPlan.unresolvedCurrentWaterPrice',
+      fallback: 'current water price',
+    },
+    'current wastewater price': {
+      key: 'v2TariffPlan.unresolvedCurrentWastewaterPrice',
+      fallback: 'current wastewater price',
+    },
+    'sold water volume': {
+      key: 'v2TariffPlan.unresolvedSoldWaterVolume',
+      fallback: 'sold water volume',
+    },
+    'sold wastewater volume': {
+      key: 'v2TariffPlan.unresolvedSoldWastewaterVolume',
+      fallback: 'sold wastewater volume',
+    },
+    'base-fee revenue': {
+      key: 'v2TariffPlan.unresolvedBaseFeeRevenue',
+      fallback: 'base-fee revenue',
+    },
+    'connection count': {
+      key: 'v2TariffPlan.unresolvedConnectionCount',
+      fallback: 'connection count',
+    },
+    'connection-fee assumption': {
+      key: 'v2TariffPlan.unresolvedConnectionFeeAssumption',
+      fallback: 'connection-fee assumption',
+    },
+    'tariff revenue evidence': {
+      key: 'v2TariffPlan.unresolvedTariffRevenueEvidence',
+      fallback: 'tariff revenue evidence',
+    },
+    'cost evidence': {
+      key: 'v2TariffPlan.unresolvedCostEvidence',
+      fallback: 'cost evidence',
+    },
+    'returnable connection-fee liability': {
+      key: 'v2TariffPlan.unresolvedConnectionFeeLiability',
+      fallback: 'returnable connection-fee liability',
+    },
+  };
 
-const getTariffStatusKey = (status: V2TariffPlan['status'] | null | undefined) => {
+const getTariffStatusKey = (
+  status: V2TariffPlan['status'] | null | undefined,
+) => {
   if (status === 'accepted') {
     return 'statusAccepted';
   }
@@ -234,49 +224,56 @@ const TARIFF_EVIDENCE_FIELDS: Array<{
     labelKey: 'v2TariffPlan.revenueEvidence',
     fallbackLabel: 'Revenue evidence by fee type',
     hintKey: 'v2TariffPlan.revenueEvidenceHint',
-    fallbackHint: 'Document current and proposed revenue for connection, base, water, and wastewater fees.',
+    fallbackHint:
+      'Document current and proposed revenue for connection, base, water, and wastewater fees.',
   },
   {
     key: 'costEvidence',
     labelKey: 'v2TariffPlan.costEvidence',
     fallbackLabel: 'Cost evidence',
     hintKey: 'v2TariffPlan.costEvidenceHint',
-    fallbackHint: 'Summarize materials, purchased services, personnel, finance costs, and other costs.',
+    fallbackHint:
+      'Summarize materials, purchased services, personnel, finance costs, and other costs.',
   },
   {
     key: 'regionalDifferentiationState',
     labelKey: 'v2TariffPlan.regionalDifferentiationEvidence',
     fallbackLabel: 'Regional differentiation',
     hintKey: 'v2TariffPlan.regionalDifferentiationEvidenceHint',
-    fallbackHint: 'Record whether regional price differentiation may be required and why.',
+    fallbackHint:
+      'Record whether regional price differentiation may be required and why.',
   },
   {
     key: 'stormwaterState',
     labelKey: 'v2TariffPlan.stormwaterEvidence',
     fallbackLabel: 'Stormwater boundary',
     hintKey: 'v2TariffPlan.stormwaterEvidenceHint',
-    fallbackHint: 'Flag stormwater relevance without modelling a stormwater tariff package.',
+    fallbackHint:
+      'Flag stormwater relevance without modelling a stormwater tariff package.',
   },
   {
     key: 'specialUseState',
     labelKey: 'v2TariffPlan.specialUseEvidence',
     fallbackLabel: 'Special water or wastewater use',
     hintKey: 'v2TariffPlan.specialUseEvidenceHint',
-    fallbackHint: 'Document exceptional water use, wastewater load, or industrial assumptions.',
+    fallbackHint:
+      'Document exceptional water use, wastewater load, or industrial assumptions.',
   },
   {
     key: 'connectionFeeLiabilityState',
     labelKey: 'v2TariffPlan.connectionFeeLiabilityEvidence',
     fallbackLabel: 'Returnable connection-fee liability',
     hintKey: 'v2TariffPlan.connectionFeeLiabilityEvidenceHint',
-    fallbackHint: 'Record whether returnable connection fees create balance-sheet or pricing constraints.',
+    fallbackHint:
+      'Record whether returnable connection fees create balance-sheet or pricing constraints.',
   },
   {
     key: 'ownerDistributionState',
     labelKey: 'v2TariffPlan.ownerDistributionEvidence',
     fallbackLabel: 'Owner distribution assumptions',
     hintKey: 'v2TariffPlan.ownerDistributionEvidenceHint',
-    fallbackHint: 'Capture owner return, tuloutus, or municipal distribution assumptions.',
+    fallbackHint:
+      'Capture owner return, tuloutus, or municipal distribution assumptions.',
   },
 ];
 
@@ -297,11 +294,13 @@ export const TariffPlanPageV2: React.FC<Props> = ({
   const [planningContext, setPlanningContext] =
     React.useState<V2PlanningContextResponse | null>(null);
   const [tariffPlan, setTariffPlan] = React.useState<V2TariffPlan | null>(null);
-  const [baselineInput, setBaselineInput] = React.useState<V2TariffBaselineInput>({});
+  const [baselineInput, setBaselineInput] =
+    React.useState<V2TariffBaselineInput>({});
   const [allocationPolicy, setAllocationPolicy] =
     React.useState<V2TariffAllocationPolicy>({});
-  const [allocationMode, setAllocationMode] =
-    React.useState<'recommended' | 'custom'>('custom');
+  const [allocationMode, setAllocationMode] = React.useState<
+    'recommended' | 'custom'
+  >('custom');
   const [tariffEvidence, setTariffEvidence] = React.useState<
     Record<TariffEvidenceKey, V2TariffEvidenceObject | null>
   >({
@@ -321,7 +320,10 @@ export const TariffPlanPageV2: React.FC<Props> = ({
     connectionFee: t('v2TariffPlan.feeConnection', 'Connection fee'),
     baseFee: t('v2TariffPlan.feeBase', 'Base fee'),
     waterUsageFee: t('v2TariffPlan.feeWaterUsage', 'Water usage price'),
-    wastewaterUsageFee: t('v2TariffPlan.feeWastewaterUsage', 'Wastewater usage price'),
+    wastewaterUsageFee: t(
+      'v2TariffPlan.feeWastewaterUsage',
+      'Wastewater usage price',
+    ),
   };
 
   const workflowPlan =
@@ -335,8 +337,10 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       return false;
     }
     return (
-      JSON.stringify(baselineInput) !== JSON.stringify(tariffPlan.baselineInput) ||
-      JSON.stringify(allocationPolicy) !== JSON.stringify(tariffPlan.allocationPolicy) ||
+      JSON.stringify(baselineInput) !==
+        JSON.stringify(tariffPlan.baselineInput) ||
+      JSON.stringify(allocationPolicy) !==
+        JSON.stringify(tariffPlan.allocationPolicy) ||
       JSON.stringify(tariffEvidence) !==
         JSON.stringify({
           revenueEvidence: tariffPlan.revenueEvidence,
@@ -376,7 +380,9 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       const context = await getPlanningContextV2();
       setPlanningContext(context);
       const plan =
-        context.vesinvest?.activePlan ?? context.vesinvest?.selectedPlan ?? null;
+        context.vesinvest?.activePlan ??
+        context.vesinvest?.selectedPlan ??
+        null;
       if (!plan?.id || !plan.selectedScenarioId) {
         setTariffPlan(null);
         setBaselineInput({});
@@ -429,21 +435,26 @@ export const TariffPlanPageV2: React.FC<Props> = ({
     void loadTariffWorkspace();
   }, [loadTariffWorkspace]);
 
-  const updateBaselineNumber = (field: keyof V2TariffBaselineInput, value: string) => {
+  const updateBaselineNumber = (
+    field: keyof V2TariffBaselineInput,
+    value: string,
+  ) => {
     setBaselineInput((current) => ({
       ...current,
       [field]: parseInputNumber(value),
     }));
   };
-  const updatePolicyNumber = (field: keyof V2TariffAllocationPolicy, value: string) => {
+  const updatePolicyNumber = (
+    field: keyof V2TariffAllocationPolicy,
+    value: string,
+  ) => {
     setAllocationMode('custom');
     setAllocationPolicy((current) => ({
       ...current,
       [field]: parseInputNumber(value),
     }));
   };
-  const allocationUsesEvenSplit =
-    usesEvenSplitRecommendation(allocationPolicy);
+  const allocationUsesEvenSplit = usesEvenSplitRecommendation(allocationPolicy);
   const applyEvenSplitRecommendation = () => {
     setAllocationMode('recommended');
     setAllocationPolicy((current) => ({
@@ -454,7 +465,10 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       wastewaterUsageSharePct: 25,
     }));
   };
-  const updateBaselineText = (field: keyof V2TariffBaselineInput, value: string) => {
+  const updateBaselineText = (
+    field: keyof V2TariffBaselineInput,
+    value: string,
+  ) => {
     setBaselineInput((current) => ({
       ...current,
       [field]: value.trim().length > 0 ? value : null,
@@ -485,6 +499,7 @@ export const TariffPlanPageV2: React.FC<Props> = ({
     setInfo(null);
     try {
       const saved = await saveTariffPlanV2(activePlanId, {
+        expectedUpdatedAt: tariffPlan?.updatedAt ?? null,
         baselineInput,
         allocationPolicy,
         ...tariffEvidence,
@@ -530,6 +545,7 @@ export const TariffPlanPageV2: React.FC<Props> = ({
     setInfo(null);
     try {
       const saved = await saveTariffPlanV2(activePlanId, {
+        expectedUpdatedAt: tariffPlan?.updatedAt ?? null,
         baselineInput,
         allocationPolicy,
         ...tariffEvidence,
@@ -537,7 +553,9 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       setTariffPlan(saved);
       setBaselineInput(saved.baselineInput);
       setAllocationPolicy(saved.allocationPolicy);
-      const accepted = await acceptTariffPlanV2(activePlanId);
+      const accepted = await acceptTariffPlanV2(activePlanId, {
+        expectedUpdatedAt: saved.updatedAt,
+      });
       setTariffPlan(accepted);
       setBaselineInput(accepted.baselineInput);
       setAllocationPolicy(accepted.allocationPolicy);
@@ -569,7 +587,14 @@ export const TariffPlanPageV2: React.FC<Props> = ({
     } finally {
       setBusy(false);
     }
-  }, [activePlanId, allocationPolicy, baselineInput, onTariffPlanAccepted, tariffEvidence, t]);
+  }, [
+    activePlanId,
+    allocationPolicy,
+    baselineInput,
+    onTariffPlanAccepted,
+    tariffEvidence,
+    t,
+  ]);
 
   const createReport = React.useCallback(async () => {
     if (!activePlanId || !activeScenarioId) {
@@ -634,11 +659,17 @@ export const TariffPlanPageV2: React.FC<Props> = ({
           ready: tariffPlan.readinessChecklist.trustedBaselinePresent,
         },
         {
-          label: t('v2TariffPlan.readinessTariffBaseline', 'Current tariff baseline'),
+          label: t(
+            'v2TariffPlan.readinessTariffBaseline',
+            'Current tariff baseline',
+          ),
           ready: tariffPlan.readinessChecklist.currentTariffBaselinePresent,
         },
         {
-          label: t('v2TariffPlan.readinessInvestmentNeed', 'Investment and financing need'),
+          label: t(
+            'v2TariffPlan.readinessInvestmentNeed',
+            'Investment and financing need',
+          ),
           ready: tariffPlan.readinessChecklist.investmentFinancingNeedPresent,
         },
         {
@@ -646,8 +677,12 @@ export const TariffPlanPageV2: React.FC<Props> = ({
           ready: tariffPlan.readinessChecklist.riskAssessmentPresent,
         },
         {
-          label: t('v2TariffPlan.readinessRevenueEvidence', 'Tariff revenue evidence'),
-          ready: tariffPlan.readinessChecklist.tariffRevenueEvidencePresent === true,
+          label: t(
+            'v2TariffPlan.readinessRevenueEvidence',
+            'Tariff revenue evidence',
+          ),
+          ready:
+            tariffPlan.readinessChecklist.tariffRevenueEvidencePresent === true,
         },
         {
           label: t('v2TariffPlan.readinessCostEvidence', 'Cost evidence'),
@@ -658,7 +693,9 @@ export const TariffPlanPageV2: React.FC<Props> = ({
             'v2TariffPlan.readinessConnectionLiability',
             'Connection-fee liability',
           ),
-          ready: tariffPlan.readinessChecklist.connectionFeeLiabilityPresent === true,
+          ready:
+            tariffPlan.readinessChecklist.connectionFeeLiabilityPresent ===
+            true,
         },
       ]
     : [];
@@ -682,7 +719,9 @@ export const TariffPlanPageV2: React.FC<Props> = ({
     <aside className="v2-tariff-summary-panel">
       <div className="v2-section-header">
         <div>
-          <h3>{t('v2TariffPlan.recommendationSummary', 'Recommendation summary')}</h3>
+          <h3>
+            {t('v2TariffPlan.recommendationSummary', 'Recommendation summary')}
+          </h3>
           <p className="v2-muted">
             {tariffFreshnessLabel}: {tariffFreshnessValue}
           </p>
@@ -692,24 +731,42 @@ export const TariffPlanPageV2: React.FC<Props> = ({
         </span>
       </div>
       <div className="v2-tariff-price-signal">
-        <span>{t('v2TariffPlan.requiredPriceToday', 'Required price today')}</span>
+        <span>
+          {t('v2TariffPlan.requiredPriceToday', 'Required price today')}
+        </span>
         <strong>{formatPrice(priceSignal?.requiredPriceToday)}</strong>
       </div>
       <div className="v2-tariff-price-context">
         <div>
-          <span>{t('v2TariffPlan.currentComparatorPrice', 'Current comparator price')}</span>
+          <span>
+            {t(
+              'v2TariffPlan.currentComparatorPrice',
+              'Current comparator price',
+            )}
+          </span>
           <strong>{formatPrice(priceSignal?.currentComparatorPrice)}</strong>
         </div>
         <div>
-          <span>{t('v2TariffPlan.requiredIncreaseVsComparator', 'Required increase vs comparator')}</span>
+          <span>
+            {t(
+              'v2TariffPlan.requiredIncreaseVsComparator',
+              'Required increase vs comparator',
+            )}
+          </span>
           <strong>{formatPercent(priceSignal?.requiredIncreasePct)}</strong>
         </div>
         <div>
-          <span>{t('v2TariffPlan.averageAnnualRollout', 'Average annual rollout')}</span>
-          <strong>{formatPercent(tariffPlan.recommendation.averageAnnualIncreasePct)}</strong>
+          <span>
+            {t('v2TariffPlan.averageAnnualRollout', 'Average annual rollout')}
+          </span>
+          <strong>
+            {formatPercent(tariffPlan.recommendation.averageAnnualIncreasePct)}
+          </strong>
         </div>
         <div>
-          <span>{t('v2TariffPlan.cumulativeCashFloor', 'Cumulative cash floor')}</span>
+          <span>
+            {t('v2TariffPlan.cumulativeCashFloor', 'Cumulative cash floor')}
+          </span>
           <strong>{formatPrice(priceSignal?.cumulativeCashFloorPrice)}</strong>
         </div>
       </div>
@@ -723,20 +780,37 @@ export const TariffPlanPageV2: React.FC<Props> = ({
       ) : null}
       <div className="v2-keyvalue-list">
         <div className="v2-keyvalue-row">
-          <span>{t('v2TariffPlan.targetRevenue', 'Target additional annual revenue')}</span>
-          <strong>{formatEur(tariffPlan.recommendation.targetAdditionalAnnualRevenue)}</strong>
+          <span>
+            {t(
+              'v2TariffPlan.targetRevenue',
+              'Target additional annual revenue',
+            )}
+          </span>
+          <strong>
+            {formatEur(tariffPlan.recommendation.targetAdditionalAnnualRevenue)}
+          </strong>
         </div>
         <div className="v2-keyvalue-row">
-          <span>{t('v2TariffPlan.proposedRevenue', 'Proposed annual revenue')}</span>
-          <strong>{formatEur(tariffPlan.recommendation.proposedAnnualRevenue)}</strong>
+          <span>
+            {t('v2TariffPlan.proposedRevenue', 'Proposed annual revenue')}
+          </span>
+          <strong>
+            {formatEur(tariffPlan.recommendation.proposedAnnualRevenue)}
+          </strong>
         </div>
         <div className="v2-keyvalue-row">
           <span>{t('v2TariffPlan.smoothingYears', 'Smoothing years')}</span>
           <strong>{tariffPlan.recommendation.smoothingYears}</strong>
         </div>
         <div className="v2-keyvalue-row">
-          <span>{t('v2TariffPlan.smoothingStatus', '15% smoothing status')}</span>
-          <strong>{formatSmoothingStatus(tariffPlan.readinessChecklist.smoothingStatus)}</strong>
+          <span>
+            {t('v2TariffPlan.smoothingStatus', '15% smoothing status')}
+          </span>
+          <strong>
+            {formatSmoothingStatus(
+              tariffPlan.readinessChecklist.smoothingStatus,
+            )}
+          </strong>
         </div>
       </div>
       <div className="v2-vesinvest-table-wrap v2-tariff-summary-table-wrap">
@@ -768,7 +842,11 @@ export const TariffPlanPageV2: React.FC<Props> = ({
         {readinessRows.slice(0, 5).map((row) => (
           <div key={row.label}>
             <span>{row.label}</span>
-            <strong>{row.ready ? t('v2Overview.wizardSummaryYes', 'Yes') : t('v2Overview.wizardSummaryNo', 'No')}</strong>
+            <strong>
+              {row.ready
+                ? t('v2Overview.wizardSummaryYes', 'Yes')
+                : t('v2Overview.wizardSummaryNo', 'No')}
+            </strong>
           </div>
         ))}
       </div>
@@ -783,7 +861,9 @@ export const TariffPlanPageV2: React.FC<Props> = ({
     : getTariffStatusKey(tariffPlan?.status);
 
   if (loading) {
-    return <div className="v2-loading">{t('common.loading', 'Loading...')}</div>;
+    return (
+      <div className="v2-loading">{t('common.loading', 'Loading...')}</div>
+    );
   }
 
   if (!activePlanId || !activeScenarioId) {
@@ -802,11 +882,19 @@ export const TariffPlanPageV2: React.FC<Props> = ({
             </div>
           </div>
           <div className="v2-actions-row">
-            <button type="button" className="v2-btn v2-btn-primary" onClick={onGoToAssetManagement}>
+            <button
+              type="button"
+              className="v2-btn v2-btn-primary"
+              onClick={onGoToAssetManagement}
+            >
               {t('v2Shell.tabs.assetManagement', 'Asset Management')}
             </button>
             {activeScenarioId ? (
-              <button type="button" className="v2-btn" onClick={() => onGoToForecast(activeScenarioId)}>
+              <button
+                type="button"
+                className="v2-btn"
+                onClick={() => onGoToForecast(activeScenarioId)}
+              >
                 {t('v2Shell.tabs.forecast', 'Forecast')}
               </button>
             ) : null}
@@ -826,7 +914,8 @@ export const TariffPlanPageV2: React.FC<Props> = ({
           <div>
             <h2>{t('v2Shell.tabs.tariffPlan', 'Tariff Plan')}</h2>
             <p className="v2-muted">
-              {workflowPlan?.name ?? t('v2Vesinvest.title', 'Vesinvest workspace')}
+              {workflowPlan?.name ??
+                t('v2Vesinvest.title', 'Vesinvest workspace')}
             </p>
           </div>
           <span
@@ -846,190 +935,314 @@ export const TariffPlanPageV2: React.FC<Props> = ({
           <div className="v2-tariff-input-column">
             <div className="v2-vesinvest-evidence-grid">
               <label className="v2-field">
-            <span>
-              {unitLabel(t('v2TariffPlan.connectionFeeAverage', 'Connection fee average'), 'EUR')}
-            </span>
-            <input
-              className="v2-input"
-              aria-label={t('v2TariffPlan.connectionFeeAverage', 'Connection fee average')}
-              inputMode="decimal"
-              value={numberValue(baselineInput.connectionFeeAverage)}
-              onChange={(event) => updateBaselineNumber('connectionFeeAverage', event.target.value)}
-            />
-          </label>
-          <label className="v2-field">
-            <span>
-              {unitLabel(t('v2TariffPlan.connectionFeeRevenue', 'Connection fee revenue'), 'EUR')}
-            </span>
-            <input
-              className="v2-input"
-              aria-label={t('v2TariffPlan.connectionFeeRevenue', 'Connection fee revenue')}
-              inputMode="decimal"
-              value={numberValue(baselineInput.connectionFeeRevenue)}
-              onChange={(event) => updateBaselineNumber('connectionFeeRevenue', event.target.value)}
-            />
-          </label>
-          <label className="v2-field">
-            <span>
-              {unitLabel(
-                t('v2TariffPlan.connectionFeeNewConnections', 'New connections'),
-                t('v2TariffPlan.perYearUnit', 'per year'),
-              )}
-            </span>
-            <input
-              className="v2-input"
-              aria-label={t('v2TariffPlan.connectionFeeNewConnections', 'New connections')}
-              inputMode="numeric"
-              value={numberValue(baselineInput.connectionFeeNewConnections)}
-              onChange={(event) =>
-                updateBaselineNumber('connectionFeeNewConnections', event.target.value)
-              }
-            />
-          </label>
-          <label className="v2-field">
-            <span>{t('v2TariffPlan.connectionFeeBasis', 'Connection fee basis')}</span>
-            <input
-              className="v2-input"
-              value={connectionFeeBasisDisplayValue(t, baselineInput.connectionFeeBasis)}
-              onChange={(event) => updateBaselineText('connectionFeeBasis', event.target.value)}
-            />
-          </label>
-          <label className="v2-field">
-            <span>
-              {unitLabel(t('v2TariffPlan.baseFeeRevenue', 'Base-fee revenue'), 'EUR')}
-            </span>
-            <input
-              className="v2-input"
-              aria-label={t('v2TariffPlan.baseFeeRevenue', 'Base-fee revenue')}
-              inputMode="decimal"
-              value={numberValue(baselineInput.baseFeeRevenue)}
-              onChange={(event) => updateBaselineNumber('baseFeeRevenue', event.target.value)}
-            />
-          </label>
-          <label className="v2-field">
-            <span>{t('v2TariffPlan.connectionCount', 'Connection count')}</span>
-            <input
-              className="v2-input"
-              aria-label={t('v2TariffPlan.connectionCount', 'Connection count')}
-              inputMode="numeric"
-              value={numberValue(baselineInput.connectionCount)}
-              onChange={(event) => updateBaselineNumber('connectionCount', event.target.value)}
-            />
-          </label>
-          <label className="v2-field">
-            <span>{unitLabel(t('v2TariffPlan.waterPrice', 'Water price'), 'EUR/m³')}</span>
-            <input
-              className="v2-input"
-              aria-label={t('v2TariffPlan.waterPrice', 'Water price')}
-              inputMode="decimal"
-              value={numberValue(baselineInput.waterPrice, 2, 2)}
-              onChange={(event) => updateBaselineNumber('waterPrice', event.target.value)}
-            />
-          </label>
-          <label className="v2-field">
-            <span>
-              {unitLabel(t('v2TariffPlan.wastewaterPrice', 'Wastewater price'), 'EUR/m³')}
-            </span>
-            <input
-              className="v2-input"
-              aria-label={t('v2TariffPlan.wastewaterPrice', 'Wastewater price')}
-              inputMode="decimal"
-              value={numberValue(baselineInput.wastewaterPrice, 2, 2)}
-              onChange={(event) => updateBaselineNumber('wastewaterPrice', event.target.value)}
-            />
-          </label>
-          <label className="v2-field">
-            <span>{unitLabel(t('v2TariffPlan.soldWaterVolume', 'Sold water volume'), 'm³')}</span>
-            <input
-              className="v2-input"
-              aria-label={t('v2TariffPlan.soldWaterVolume', 'Sold water volume')}
-              inputMode="numeric"
-              value={numberValue(baselineInput.soldWaterVolume)}
-              onChange={(event) => updateBaselineNumber('soldWaterVolume', event.target.value)}
-            />
-          </label>
-          <label className="v2-field">
-            <span>
-              {unitLabel(t('v2TariffPlan.soldWastewaterVolume', 'Sold wastewater volume'), 'm³')}
-            </span>
-            <input
-              className="v2-input"
-              aria-label={t('v2TariffPlan.soldWastewaterVolume', 'Sold wastewater volume')}
-              inputMode="numeric"
-              value={numberValue(baselineInput.soldWastewaterVolume)}
-              onChange={(event) => updateBaselineNumber('soldWastewaterVolume', event.target.value)}
-            />
-          </label>
-        </div>
-
-        <div className="v2-tariff-allocation-panel">
-          <div className="v2-section-header">
-            <div>
-              <h3>{t('v2TariffPlan.allocationPolicyTitle', 'Allocation policy')}</h3>
-              <p>
-                {t(
-                  'v2TariffPlan.allocationPolicyBody',
-                  'Start from an even split, then adjust each fee lever if policy requires it.',
-                )}
-              </p>
-            </div>
-            <div className="v2-actions-row">
-              <div
-                className="v2-tariff-allocation-mode"
-                role="group"
-                aria-label={t('v2TariffPlan.allocationMode', 'Allocation mode')}
-              >
-                <button
-                  type="button"
-                  className={allocationMode === 'recommended' ? 'active' : ''}
-                  aria-pressed={allocationMode === 'recommended'}
-                  onClick={() => setAllocationMode('recommended')}
-                >
-                  {t('v2TariffPlan.recommendedEvenSplit', 'Recommended even split')}
-                </button>
-                <button
-                  type="button"
-                  className={allocationMode === 'custom' ? 'active' : ''}
-                  aria-pressed={allocationMode === 'custom'}
-                  onClick={() => setAllocationMode('custom')}
-                >
-                  {t('v2TariffPlan.customAllocation', 'Custom allocation')}
-                </button>
-              </div>
-              <button
-                type="button"
-                className="v2-btn"
-                onClick={applyEvenSplitRecommendation}
-                disabled={allocationUsesEvenSplit}
-              >
-                {t('v2TariffPlan.applyRecommendation', 'Apply recommendation')}
-              </button>
-            </div>
-          </div>
-          <div className="v2-vesinvest-evidence-grid">
-            {FEE_KEYS.map((key) => (
-              <label key={key} className="v2-field">
-                <span>{feeLabels[key]} %</span>
+                <span>
+                  {unitLabel(
+                    t(
+                      'v2TariffPlan.connectionFeeAverage',
+                      'Connection fee average',
+                    ),
+                    'EUR',
+                  )}
+                </span>
                 <input
                   className="v2-input"
-                  value={numberValue(allocationPolicy[FEE_SHARE_FIELDS[key]] as number | null)}
+                  aria-label={t(
+                    'v2TariffPlan.connectionFeeAverage',
+                    'Connection fee average',
+                  )}
+                  inputMode="decimal"
+                  value={numberValue(baselineInput.connectionFeeAverage)}
                   onChange={(event) =>
-                    updatePolicyNumber(FEE_SHARE_FIELDS[key], event.target.value)
+                    updateBaselineNumber(
+                      'connectionFeeAverage',
+                      event.target.value,
+                    )
                   }
                 />
               </label>
-            ))}
-            <label className="v2-field">
-              <span>{t('v2TariffPlan.smoothingYears', 'Smoothing years')}</span>
-              <input
-                className="v2-input"
-                value={numberValue(allocationPolicy.smoothingYears)}
-                onChange={(event) => updatePolicyNumber('smoothingYears', event.target.value)}
-              />
-            </label>
-          </div>
-        </div>
+              <label className="v2-field">
+                <span>
+                  {unitLabel(
+                    t(
+                      'v2TariffPlan.connectionFeeRevenue',
+                      'Connection fee revenue',
+                    ),
+                    'EUR',
+                  )}
+                </span>
+                <input
+                  className="v2-input"
+                  aria-label={t(
+                    'v2TariffPlan.connectionFeeRevenue',
+                    'Connection fee revenue',
+                  )}
+                  inputMode="decimal"
+                  value={numberValue(baselineInput.connectionFeeRevenue)}
+                  onChange={(event) =>
+                    updateBaselineNumber(
+                      'connectionFeeRevenue',
+                      event.target.value,
+                    )
+                  }
+                />
+              </label>
+              <label className="v2-field">
+                <span>
+                  {unitLabel(
+                    t(
+                      'v2TariffPlan.connectionFeeNewConnections',
+                      'New connections',
+                    ),
+                    t('v2TariffPlan.perYearUnit', 'per year'),
+                  )}
+                </span>
+                <input
+                  className="v2-input"
+                  aria-label={t(
+                    'v2TariffPlan.connectionFeeNewConnections',
+                    'New connections',
+                  )}
+                  inputMode="numeric"
+                  value={numberValue(baselineInput.connectionFeeNewConnections)}
+                  onChange={(event) =>
+                    updateBaselineNumber(
+                      'connectionFeeNewConnections',
+                      event.target.value,
+                    )
+                  }
+                />
+              </label>
+              <label className="v2-field">
+                <span>
+                  {t('v2TariffPlan.connectionFeeBasis', 'Connection fee basis')}
+                </span>
+                <input
+                  className="v2-input"
+                  value={connectionFeeBasisDisplayValue(
+                    t,
+                    baselineInput.connectionFeeBasis,
+                  )}
+                  onChange={(event) =>
+                    updateBaselineText('connectionFeeBasis', event.target.value)
+                  }
+                />
+              </label>
+              <label className="v2-field">
+                <span>
+                  {unitLabel(
+                    t('v2TariffPlan.baseFeeRevenue', 'Base-fee revenue'),
+                    'EUR',
+                  )}
+                </span>
+                <input
+                  className="v2-input"
+                  aria-label={t(
+                    'v2TariffPlan.baseFeeRevenue',
+                    'Base-fee revenue',
+                  )}
+                  inputMode="decimal"
+                  value={numberValue(baselineInput.baseFeeRevenue)}
+                  onChange={(event) =>
+                    updateBaselineNumber('baseFeeRevenue', event.target.value)
+                  }
+                />
+              </label>
+              <label className="v2-field">
+                <span>
+                  {t('v2TariffPlan.connectionCount', 'Connection count')}
+                </span>
+                <input
+                  className="v2-input"
+                  aria-label={t(
+                    'v2TariffPlan.connectionCount',
+                    'Connection count',
+                  )}
+                  inputMode="numeric"
+                  value={numberValue(baselineInput.connectionCount)}
+                  onChange={(event) =>
+                    updateBaselineNumber('connectionCount', event.target.value)
+                  }
+                />
+              </label>
+              <label className="v2-field">
+                <span>
+                  {unitLabel(
+                    t('v2TariffPlan.waterPrice', 'Water price'),
+                    'EUR/m³',
+                  )}
+                </span>
+                <input
+                  className="v2-input"
+                  aria-label={t('v2TariffPlan.waterPrice', 'Water price')}
+                  inputMode="decimal"
+                  value={numberValue(baselineInput.waterPrice, 2, 2)}
+                  onChange={(event) =>
+                    updateBaselineNumber('waterPrice', event.target.value)
+                  }
+                />
+              </label>
+              <label className="v2-field">
+                <span>
+                  {unitLabel(
+                    t('v2TariffPlan.wastewaterPrice', 'Wastewater price'),
+                    'EUR/m³',
+                  )}
+                </span>
+                <input
+                  className="v2-input"
+                  aria-label={t(
+                    'v2TariffPlan.wastewaterPrice',
+                    'Wastewater price',
+                  )}
+                  inputMode="decimal"
+                  value={numberValue(baselineInput.wastewaterPrice, 2, 2)}
+                  onChange={(event) =>
+                    updateBaselineNumber('wastewaterPrice', event.target.value)
+                  }
+                />
+              </label>
+              <label className="v2-field">
+                <span>
+                  {unitLabel(
+                    t('v2TariffPlan.soldWaterVolume', 'Sold water volume'),
+                    'm³',
+                  )}
+                </span>
+                <input
+                  className="v2-input"
+                  aria-label={t(
+                    'v2TariffPlan.soldWaterVolume',
+                    'Sold water volume',
+                  )}
+                  inputMode="numeric"
+                  value={numberValue(baselineInput.soldWaterVolume)}
+                  onChange={(event) =>
+                    updateBaselineNumber('soldWaterVolume', event.target.value)
+                  }
+                />
+              </label>
+              <label className="v2-field">
+                <span>
+                  {unitLabel(
+                    t(
+                      'v2TariffPlan.soldWastewaterVolume',
+                      'Sold wastewater volume',
+                    ),
+                    'm³',
+                  )}
+                </span>
+                <input
+                  className="v2-input"
+                  aria-label={t(
+                    'v2TariffPlan.soldWastewaterVolume',
+                    'Sold wastewater volume',
+                  )}
+                  inputMode="numeric"
+                  value={numberValue(baselineInput.soldWastewaterVolume)}
+                  onChange={(event) =>
+                    updateBaselineNumber(
+                      'soldWastewaterVolume',
+                      event.target.value,
+                    )
+                  }
+                />
+              </label>
+            </div>
 
+            <div className="v2-tariff-allocation-panel">
+              <div className="v2-section-header">
+                <div>
+                  <h3>
+                    {t(
+                      'v2TariffPlan.allocationPolicyTitle',
+                      'Allocation policy',
+                    )}
+                  </h3>
+                  <p>
+                    {t(
+                      'v2TariffPlan.allocationPolicyBody',
+                      'Start from an even split, then adjust each fee lever if policy requires it.',
+                    )}
+                  </p>
+                </div>
+                <div className="v2-actions-row">
+                  <div
+                    className="v2-tariff-allocation-mode"
+                    role="group"
+                    aria-label={t(
+                      'v2TariffPlan.allocationMode',
+                      'Allocation mode',
+                    )}
+                  >
+                    <button
+                      type="button"
+                      className={
+                        allocationMode === 'recommended' ? 'active' : ''
+                      }
+                      aria-pressed={allocationMode === 'recommended'}
+                      onClick={() => setAllocationMode('recommended')}
+                    >
+                      {t(
+                        'v2TariffPlan.recommendedEvenSplit',
+                        'Recommended even split',
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className={allocationMode === 'custom' ? 'active' : ''}
+                      aria-pressed={allocationMode === 'custom'}
+                      onClick={() => setAllocationMode('custom')}
+                    >
+                      {t('v2TariffPlan.customAllocation', 'Custom allocation')}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="v2-btn"
+                    onClick={applyEvenSplitRecommendation}
+                    disabled={allocationUsesEvenSplit}
+                  >
+                    {t(
+                      'v2TariffPlan.applyRecommendation',
+                      'Apply recommendation',
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div className="v2-vesinvest-evidence-grid">
+                {FEE_KEYS.map((key) => (
+                  <label key={key} className="v2-field">
+                    <span>{feeLabels[key]} %</span>
+                    <input
+                      className="v2-input"
+                      value={numberValue(
+                        allocationPolicy[FEE_SHARE_FIELDS[key]] as
+                          | number
+                          | null,
+                      )}
+                      onChange={(event) =>
+                        updatePolicyNumber(
+                          FEE_SHARE_FIELDS[key],
+                          event.target.value,
+                        )
+                      }
+                    />
+                  </label>
+                ))}
+                <label className="v2-field">
+                  <span>
+                    {t('v2TariffPlan.smoothingYears', 'Smoothing years')}
+                  </span>
+                  <input
+                    className="v2-input"
+                    value={numberValue(allocationPolicy.smoothingYears)}
+                    onChange={(event) =>
+                      updatePolicyNumber('smoothingYears', event.target.value)
+                    }
+                  />
+                </label>
+              </div>
+            </div>
           </div>
           {tariffSummaryPanel}
         </div>
@@ -1041,12 +1254,19 @@ export const TariffPlanPageV2: React.FC<Props> = ({
               className="v2-input"
               rows={2}
               value={baselineInput.notes ?? ''}
-              onChange={(event) => updateBaselineText('notes', event.target.value)}
+              onChange={(event) =>
+                updateBaselineText('notes', event.target.value)
+              }
             />
           </label>
 
           <label className="v2-field">
-            <span>{t('v2TariffPlan.financialRiskAssessment', 'Financial risk assessment')}</span>
+            <span>
+              {t(
+                'v2TariffPlan.financialRiskAssessment',
+                'Financial risk assessment',
+              )}
+            </span>
             <textarea
               className="v2-input"
               rows={2}
@@ -1068,7 +1288,9 @@ export const TariffPlanPageV2: React.FC<Props> = ({
           <span className="v2-eyebrow">
             {t('v2TariffPlan.evidenceEyebrow', 'Tariff evidence')}
           </span>
-          <h3>{t('v2TariffPlan.evidenceTitle', 'Assumptions and legal flags')}</h3>
+          <h3>
+            {t('v2TariffPlan.evidenceTitle', 'Assumptions and legal flags')}
+          </h3>
         </div>
         <div className="v2-grid v2-grid-2">
           {TARIFF_EVIDENCE_FIELDS.map((field) => (
@@ -1081,7 +1303,9 @@ export const TariffPlanPageV2: React.FC<Props> = ({
                   t,
                   readEvidenceNotes(tariffEvidence[field.key]),
                 )}
-                onChange={(event) => updateEvidenceNotes(field.key, event.target.value)}
+                onChange={(event) =>
+                  updateEvidenceNotes(field.key, event.target.value)
+                }
                 placeholder={t(field.hintKey, field.fallbackHint)}
               />
             </label>
@@ -1100,7 +1324,12 @@ export const TariffPlanPageV2: React.FC<Props> = ({
                 }))
               }
             />
-            <span>{t('v2TariffPlan.regionalVariationFlag', 'Regional variation flag')}</span>
+            <span>
+              {t(
+                'v2TariffPlan.regionalVariationFlag',
+                'Regional variation flag',
+              )}
+            </span>
           </label>
           <label className="v2-checkbox-row">
             <input
@@ -1124,7 +1353,9 @@ export const TariffPlanPageV2: React.FC<Props> = ({
             onClick={() => void saveTariffPlan()}
             disabled={busy || (tariffPlan != null && !hasUnsavedTariffEdits)}
           >
-            {busy ? t('common.loading', 'Loading...') : t('common.save', 'Save')}
+            {busy
+              ? t('common.loading', 'Loading...')
+              : t('common.save', 'Save')}
           </button>
           <button
             type="button"
@@ -1141,11 +1372,25 @@ export const TariffPlanPageV2: React.FC<Props> = ({
               : t('v2TariffPlan.accept', 'Accept tariff plan')}
           </button>
           {canOpenAcceptedReports ? (
-            <button type="button" className="v2-btn" onClick={onGoToReports} disabled={busy}>
+            <button
+              type="button"
+              className="v2-btn"
+              onClick={onGoToReports}
+              disabled={busy}
+            >
               {t('v2Reports.openReports', 'Open Reports')}
             </button>
           ) : (
-            <button type="button" className="v2-btn" onClick={() => void createReport()} disabled={busy || tariffPlan?.status !== 'accepted' || hasUnsavedTariffEdits}>
+            <button
+              type="button"
+              className="v2-btn"
+              onClick={() => void createReport()}
+              disabled={
+                busy ||
+                tariffPlan?.status !== 'accepted' ||
+                hasUnsavedTariffEdits
+              }
+            >
               {t('v2Reports.createReport', 'Create report')}
             </button>
           )}
@@ -1175,29 +1420,56 @@ export const TariffPlanPageV2: React.FC<Props> = ({
           </div>
           <div className="v2-keyvalue-list">
             <div className="v2-keyvalue-row">
-              <span>{t('v2TariffPlan.requiredPriceToday', 'Required price today')}</span>
+              <span>
+                {t('v2TariffPlan.requiredPriceToday', 'Required price today')}
+              </span>
               <span>{formatPrice(priceSignal?.requiredPriceToday)}</span>
             </div>
             <div className="v2-keyvalue-row">
-              <span>{t('v2TariffPlan.currentComparatorPrice', 'Current comparator price')}</span>
+              <span>
+                {t(
+                  'v2TariffPlan.currentComparatorPrice',
+                  'Current comparator price',
+                )}
+              </span>
               <span>{formatPrice(priceSignal?.currentComparatorPrice)}</span>
             </div>
             <div className="v2-keyvalue-row">
-              <span>{t('v2TariffPlan.requiredIncreaseVsComparator', 'Required increase vs comparator')}</span>
+              <span>
+                {t(
+                  'v2TariffPlan.requiredIncreaseVsComparator',
+                  'Required increase vs comparator',
+                )}
+              </span>
               <span>{formatPercent(priceSignal?.requiredIncreasePct)}</span>
             </div>
             <div className="v2-keyvalue-row">
-              <span>{t('v2TariffPlan.targetRevenue', 'Target additional annual revenue')}</span>
-              <span>{formatEur(tariffPlan.recommendation.targetAdditionalAnnualRevenue)}</span>
+              <span>
+                {t(
+                  'v2TariffPlan.targetRevenue',
+                  'Target additional annual revenue',
+                )}
+              </span>
+              <span>
+                {formatEur(
+                  tariffPlan.recommendation.targetAdditionalAnnualRevenue,
+                )}
+              </span>
             </div>
             <div className="v2-keyvalue-row">
-              <span>{t('v2TariffPlan.proposedRevenue', 'Proposed annual revenue')}</span>
-              <span>{formatEur(tariffPlan.recommendation.proposedAnnualRevenue)}</span>
+              <span>
+                {t('v2TariffPlan.proposedRevenue', 'Proposed annual revenue')}
+              </span>
+              <span>
+                {formatEur(tariffPlan.recommendation.proposedAnnualRevenue)}
+              </span>
             </div>
           </div>
           <div className="v2-keyvalue-list">
             <div className="v2-keyvalue-row">
-              <span>{t('v2TariffPlan.allocationRationale', 'Allocation rationale')}</span>
+              <span>
+                {t('v2TariffPlan.allocationRationale', 'Allocation rationale')}
+              </span>
               <span>
                 {t(
                   'v2TariffPlan.allocationRationaleServiceSplit',
@@ -1206,8 +1478,17 @@ export const TariffPlanPageV2: React.FC<Props> = ({
               </span>
             </div>
             <div className="v2-keyvalue-row">
-              <span>{t('v2TariffPlan.targetRevenue', 'Target additional annual revenue')}</span>
-              <span>{formatEur(tariffPlan.recommendation.targetAdditionalAnnualRevenue)}</span>
+              <span>
+                {t(
+                  'v2TariffPlan.targetRevenue',
+                  'Target additional annual revenue',
+                )}
+              </span>
+              <span>
+                {formatEur(
+                  tariffPlan.recommendation.targetAdditionalAnnualRevenue,
+                )}
+              </span>
             </div>
             <div className="v2-keyvalue-row">
               <span>{t('v2TariffPlan.smoothingYears', 'Smoothing years')}</span>
@@ -1247,15 +1528,26 @@ export const TariffPlanPageV2: React.FC<Props> = ({
                 <thead>
                   <tr>
                     <th>{t('v2TariffPlan.yearIndex', 'Year')}</th>
-                    <th>{t('v2TariffPlan.proposedRevenue', 'Proposed annual revenue')}</th>
-                    <th>{t('v2TariffPlan.annualIncrease', 'Annual increase')}</th>
+                    <th>
+                      {t(
+                        'v2TariffPlan.proposedRevenue',
+                        'Proposed annual revenue',
+                      )}
+                    </th>
+                    <th>
+                      {t('v2TariffPlan.annualIncrease', 'Annual increase')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {tariffPlan.recommendation.annualChangePath.map((row) => (
                     <tr key={row.yearIndex}>
                       <td>{row.yearIndex}</td>
-                      <td>{formatEur(row.annualRevenue ?? 0)}</td>
+                      <td>
+                        {row.annualRevenue == null
+                          ? '-'
+                          : formatEur(row.annualRevenue)}
+                      </td>
                       <td>{formatPercent(row.annualIncreasePct)}</td>
                     </tr>
                   ))}
@@ -1267,22 +1559,39 @@ export const TariffPlanPageV2: React.FC<Props> = ({
             {readinessRows.map((row) => (
               <article key={row.label} className="v2-vesinvest-evidence-card">
                 <h4>{row.label}</h4>
-                <span className={`v2-badge ${row.ready ? 'v2-status-positive' : 'v2-status-warning'}`}>
-                  {row.ready ? t('v2Overview.wizardSummaryYes', 'Yes') : t('v2Overview.wizardSummaryNo', 'No')}
+                <span
+                  className={`v2-badge ${
+                    row.ready ? 'v2-status-positive' : 'v2-status-warning'
+                  }`}
+                >
+                  {row.ready
+                    ? t('v2Overview.wizardSummaryYes', 'Yes')
+                    : t('v2Overview.wizardSummaryNo', 'No')}
                 </span>
               </article>
             ))}
           </div>
-          {tariffPlan.readinessChecklist.unresolvedManualAssumptions.length > 0 ? (
+          {tariffPlan.readinessChecklist.unresolvedManualAssumptions.length >
+          0 ? (
             <p className="v2-muted">
-              {t('v2TariffPlan.unresolved', 'Unresolved')}: {tariffPlan.readinessChecklist.unresolvedManualAssumptions.map(formatUnresolvedAssumption).join(', ')}
+              {t('v2TariffPlan.unresolved', 'Unresolved')}:{' '}
+              {tariffPlan.readinessChecklist.unresolvedManualAssumptions
+                .map(formatUnresolvedAssumption)
+                .join(', ')}
             </p>
           ) : null}
           <p className="v2-muted">
-            {t('v2TariffPlan.smoothingStatus', '15% smoothing status')}: {formatSmoothingStatus(tariffPlan.readinessChecklist.smoothingStatus)}
+            {t('v2TariffPlan.smoothingStatus', '15% smoothing status')}:{' '}
+            {formatSmoothingStatus(
+              tariffPlan.readinessChecklist.smoothingStatus,
+            )}
           </p>
           <p className="v2-muted">
-            {t('v2TariffPlan.volumeSummary', 'Volumes')}: {formatVolume((baselineInput.soldWaterVolume ?? 0) + (baselineInput.soldWastewaterVolume ?? 0))}
+            {t('v2TariffPlan.volumeSummary', 'Volumes')}:{' '}
+            {formatVolume(
+              (baselineInput.soldWaterVolume ?? 0) +
+                (baselineInput.soldWastewaterVolume ?? 0),
+            )}
           </p>
         </section>
       ) : null}

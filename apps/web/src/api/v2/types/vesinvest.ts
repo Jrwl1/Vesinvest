@@ -248,6 +248,7 @@ export type V2VesinvestPlanCreateInput = {
 };
 
 export type V2VesinvestPlanInput = V2VesinvestPlanCreateInput & {
+  expectedUpdatedAt?: string | null;
   status?: 'draft' | 'active' | 'archived';
   baselineStatus?: 'draft' | 'incomplete' | 'verified';
   feeRecommendationStatus?: 'blocked' | 'provisional' | 'verified';
@@ -387,6 +388,7 @@ export type V2TariffPlan = {
 };
 
 export type V2TariffPlanInput = {
+  expectedUpdatedAt?: string | null;
   baselineInput?: V2TariffBaselineInput | null;
   allocationPolicy?: V2TariffAllocationPolicy | null;
   revenueEvidence?: V2TariffEvidenceObject | null;
@@ -396,4 +398,8 @@ export type V2TariffPlanInput = {
   specialUseState?: V2TariffEvidenceObject | null;
   connectionFeeLiabilityState?: V2TariffEvidenceObject | null;
   ownerDistributionState?: V2TariffEvidenceObject | null;
+};
+
+export type V2TariffPlanAcceptInput = {
+  expectedUpdatedAt?: string | null;
 };

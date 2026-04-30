@@ -5,14 +5,8 @@ import type {
   V2ReportDetail,
   V2ReportListItem,
 } from '../api';
-import {
-  getReportCompactDisplayTitle,
-  getScenarioDisplayName,
-} from './displayNames';
-import {
-  formatDateTime,
-  formatNumber,
-} from './format';
+import { getReportDisplayTitle, getScenarioDisplayName } from './displayNames';
+import { formatDateTime, formatNumber } from './format';
 import {
   ASSUMPTION_LABEL_KEYS,
   deriveForecastFreshnessState,
@@ -64,6 +58,26 @@ type Params = {
   setScenarioFilter: React.Dispatch<React.SetStateAction<string>>;
   setSelectedReportId: React.Dispatch<React.SetStateAction<string | null>>;
 };
+
+function formatInvestmentCoverageLabel(years: number[]): string {
+  if (years.length === 0) {
+    return '-';
+  }
+  if (years.length === 1) {
+    return String(years[0]);
+  }
+  const isContiguous = years.every(
+    (year, index) => index === 0 || year === years[index - 1] + 1,
+  );
+  if (isContiguous) {
+    return `${years[0]}-${years[years.length - 1]} (${years.length})`;
+  }
+  const visibleYears = years.slice(0, 4).join(', ');
+  const remaining = years.length - 4;
+  return remaining > 0
+    ? `${visibleYears}, +${remaining} (${years.length})`
+    : `${visibleYears} (${years.length})`;
+}
 
 export function useReportsPageViewModel({
   t,
@@ -138,7 +152,7 @@ export function useReportsPageViewModel({
 
   const savedFeePathReportReadinessReason = React.useMemo(() => {
     if (!savedFeePathPlanId) {
-      return savedFeePathPlanRequired ? 'missingActivePlan' as const : null;
+      return savedFeePathPlanRequired ? ('missingActivePlan' as const) : null;
     }
     if (!savedFeePathScenarioId) {
       return 'missingScenario' as const;
@@ -316,10 +330,7 @@ export function useReportsPageViewModel({
 
   const emptyStateCtaLabel = React.useMemo(() => {
     if (emptyStateCanCreateReport) {
-      return t(
-        'v2Reports.createFirstPackage',
-        'Create report package',
-      );
+      return t('v2Reports.createFirstPackage', 'Create report package');
     }
     switch (emptyStateReportReadinessReason) {
       case 'missingActivePlan':
@@ -416,8 +427,8 @@ export function useReportsPageViewModel({
         variant === 'regulator_package'
           ? 'v2Reports.variantRegulator'
           : variant === 'board_package'
-            ? 'v2Reports.variantBoard'
-            : 'v2Reports.variantInternal',
+          ? 'v2Reports.variantBoard'
+          : 'v2Reports.variantInternal',
       ),
     [t],
   );
@@ -461,8 +472,8 @@ export function useReportsPageViewModel({
   const selectedListReportTitle = React.useMemo(
     () =>
       selectedListReport
-        ? getReportCompactDisplayTitle({
-            variant: selectedListReport.variant,
+        ? getReportDisplayTitle({
+            title: selectedListReport.title,
             scenarioName:
               selectedListReport.ennuste.nimi ?? selectedListReport.ennuste.id,
             createdAt: selectedListReport.createdAt,
@@ -474,8 +485,8 @@ export function useReportsPageViewModel({
   const selectedPreviewTitle = React.useMemo(
     () =>
       selectedReport
-        ? getReportCompactDisplayTitle({
-            variant: selectedReport.variant,
+        ? getReportDisplayTitle({
+            title: selectedReport.title,
             scenarioName:
               selectedReport.ennuste.nimi ?? selectedReport.ennuste.id,
             createdAt: selectedReport.createdAt,
@@ -499,8 +510,10 @@ export function useReportsPageViewModel({
   const selectedScenarioBranchLabel = React.useMemo(() => {
     const value = selectedReport?.snapshot.scenario.scenarioType;
     if (value === 'base') return t('v2Forecast.baseScenario', 'Base');
-    if (value === 'committed') return t('v2Forecast.committedScenario', 'Committed');
-    if (value === 'hypothesis') return t('v2Forecast.hypothesisScenario', 'Hypothesis');
+    if (value === 'committed')
+      return t('v2Forecast.committedScenario', 'Committed');
+    if (value === 'hypothesis')
+      return t('v2Forecast.hypothesisScenario', 'Hypothesis');
     if (value === 'stress') return t('v2Forecast.stressScenario', 'Stress');
     return '-';
   }, [selectedReport, t]);
@@ -525,10 +538,7 @@ export function useReportsPageViewModel({
   const selectedReportPrimaryFeeSignal = React.useMemo(() => {
     const scenario = selectedReport?.snapshot.scenario ?? null;
     return {
-      priceLabel: t(
-        'v2Forecast.requiredPriceToday',
-        'Required price today',
-      ),
+      priceLabel: t('v2Forecast.requiredPriceToday', 'Required price today'),
       price:
         scenario?.requiredPriceTodayCombinedAnnualResult ??
         selectedReport?.requiredPriceToday ??
@@ -548,10 +558,7 @@ export function useReportsPageViewModel({
   const selectedReportCashFloorSignal = React.useMemo(() => {
     const scenario = selectedReport?.snapshot.scenario ?? null;
     return {
-      priceLabel: t(
-        'v2Reports.cashSufficiencyFloor',
-        'Cumulative cash floor',
-      ),
+      priceLabel: t('v2Reports.cashSufficiencyFloor', 'Cumulative cash floor'),
       price:
         scenario?.requiredPriceTodayCombinedCumulativeCash ??
         selectedReport?.requiredPriceToday ??
@@ -569,7 +576,9 @@ export function useReportsPageViewModel({
   const selectedPrimaryBaselineSourceSummary = React.useMemo(
     () =>
       selectedReport?.snapshot.baselineSourceSummary ??
-      selectedBaselineSourceSummaries[selectedBaselineSourceSummaries.length - 1] ??
+      selectedBaselineSourceSummaries[
+        selectedBaselineSourceSummaries.length - 1
+      ] ??
       null,
     [selectedBaselineSourceSummaries, selectedReport],
   );
@@ -579,23 +588,20 @@ export function useReportsPageViewModel({
   const selectedInvestmentSummary = React.useMemo(() => {
     const yearlyTotals = selectedVesinvestAppendix?.yearlyTotals ?? [];
     if (yearlyTotals.length === 0) {
-      return { coverageLabel: '-', peakYear: null as number | null, peakAmount: 0 };
+      return {
+        coverageLabel: '-',
+        peakYear: null as number | null,
+        peakAmount: 0,
+      };
     }
-    const distinctYears = [...new Set(yearlyTotals.map((item) => item.year))].sort(
-      (left, right) => left - right,
-    );
+    const distinctYears = [
+      ...new Set(yearlyTotals.map((item) => item.year)),
+    ].sort((left, right) => left - right);
     const peak = yearlyTotals.reduce((current, item) =>
       item.totalAmount > current.totalAmount ? item : current,
     );
-    const firstYear = distinctYears[0] ?? null;
-    const lastYear = distinctYears[distinctYears.length - 1] ?? null;
     return {
-      coverageLabel:
-        firstYear != null && lastYear != null
-          ? firstYear === lastYear
-            ? `${firstYear} (${distinctYears.length})`
-            : `${firstYear}-${lastYear} (${distinctYears.length})`
-          : '-',
+      coverageLabel: formatInvestmentCoverageLabel(distinctYears),
       peakYear: peak.year,
       peakAmount: peak.totalAmount,
     };
@@ -619,7 +625,9 @@ export function useReportsPageViewModel({
       peakInvestmentAmount: peakYearlyInvestment?.totalAmount ?? null,
       nearTermExpenseYears:
         nearTermExpenseRows.length > 0
-          ? `${nearTermExpenseRows[0]?.year}-${nearTermExpenseRows[nearTermExpenseRows.length - 1]?.year}`
+          ? `${nearTermExpenseRows[0]?.year}-${
+              nearTermExpenseRows[nearTermExpenseRows.length - 1]?.year
+            }`
           : null,
     };
   }, [selectedReport, selectedVesinvestAppendix]);
@@ -646,9 +654,9 @@ export function useReportsPageViewModel({
     selectedReport != null ? selectedReport.variant === previewVariant : true;
   const selectedReportHasPdf = Boolean(selectedReport?.pdfUrl);
   const currentWorkflowBlockHint =
-    savedFeePathReportReadinessReason == null
-      ? null
-      : emptyStateReportReadinessHint;
+    savedFeePathPlanId && savedFeePathReportReadinessReason != null
+      ? emptyStateReportReadinessHint
+      : null;
   const canCreatePreviewPackage =
     selectedReport != null &&
     selectedReport.variant !== previewVariant &&
@@ -663,7 +671,9 @@ export function useReportsPageViewModel({
   const selectedReportScenarioName =
     selectedReport?.ennuste.nimi ?? selectedReport?.ennuste.id ?? '-';
   const selectedReportGeneratedAt = selectedReport
-    ? formatDateTime(selectedReport.snapshot.generatedAt ?? selectedReport.createdAt)
+    ? formatDateTime(
+        selectedReport.snapshot.generatedAt ?? selectedReport.createdAt,
+      )
     : '-';
   const selectedReportTariffPlanLabel = React.useMemo(() => {
     const tariffPlan = selectedReport?.snapshot.tariffPlan ?? null;
@@ -689,16 +699,16 @@ export function useReportsPageViewModel({
       );
     }
     if (!downloadMatchesPreview) {
-      if (currentWorkflowBlockHint) {
-        return t(
-          'v2Reports.exportSavedCurrentBlocked',
-          'Saved package can be exported. New packages are blocked until the current workflow is ready: {{reason}}',
-          { reason: currentWorkflowBlockHint },
-        );
-      }
       return t(
         'v2Reports.downloadUsesSavedVariant',
         'Create this package variant before downloading its PDF.',
+      );
+    }
+    if (currentWorkflowBlockHint) {
+      return t(
+        'v2Reports.exportSavedCurrentBlocked',
+        'Saved package can be exported. New packages are blocked until the current workflow is ready: {{reason}}',
+        { reason: currentWorkflowBlockHint },
       );
     }
     return t(
@@ -715,21 +725,27 @@ export function useReportsPageViewModel({
   const emptyStatePrimaryFeeSignal = React.useMemo(() => {
     const scenario = emptyStateScenario;
     return {
-      price: scenario?.requiredPriceTodayCombinedAnnualResult ??
+      price:
+        scenario?.requiredPriceTodayCombinedAnnualResult ??
         scenario?.requiredPriceTodayCombined ??
         scenario?.requiredPriceTodayCombinedCumulativeCash ??
         null,
-      increase: scenario?.requiredAnnualIncreasePctAnnualResult ??
+      increase:
+        scenario?.requiredAnnualIncreasePctAnnualResult ??
         scenario?.requiredAnnualIncreasePct ??
         scenario?.requiredAnnualIncreasePctCumulativeCash ??
         null,
     };
   }, [emptyStateScenario]);
   const emptyStateBaselineYearsLabel = React.useMemo(
-    () => (emptyStateBaselineYears.length > 0 ? emptyStateBaselineYears.join(', ') : '-'),
+    () =>
+      emptyStateBaselineYears.length > 0
+        ? emptyStateBaselineYears.join(', ')
+        : '-',
     [emptyStateBaselineYears],
   );
-  const hasSelectedReportLayout = selectedReportId != null || reports.length === 0;
+  const hasSelectedReportLayout =
+    selectedReportId != null || reports.length === 0;
 
   return {
     hasSelectedReportLayout,
@@ -770,7 +786,10 @@ export function useReportsPageViewModel({
       datasetPublicationNote,
       downloadingPdf,
       emptyStateActionBusy: creatingPreviewPackage,
-      emptyStateActionBusyLabel: t('v2Reports.creatingPackage', 'Creating package...'),
+      emptyStateActionBusyLabel: t(
+        'v2Reports.creatingPackage',
+        'Creating package...',
+      ),
       emptyStateBaselineYearsLabel,
       emptyStateCanCreateReport,
       emptyStateComputedVersionLabel,

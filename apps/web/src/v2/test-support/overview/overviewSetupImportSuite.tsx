@@ -169,7 +169,7 @@ export function registerOverviewPageV2SetupImportSuite() {
     expect(screen.queryByText(localeText('v2Overview.wizardBodyReviewYears'))).toBeNull();
   });
 
-  it('keeps baseline creation ahead of the support rail and Vesinvest workspace', async () => {
+  it('keeps baseline creation ahead of the support rail without embedding the planning workspace', async () => {
     seedReviewedYears([2024]);
     listForecastScenariosV2.mockResolvedValue([]);
     listReportsV2.mockResolvedValue([]);
@@ -207,19 +207,15 @@ export function registerOverviewPageV2SetupImportSuite() {
     const baselineCard = screen
       .getByRole('heading', { name: localeText('v2Overview.wizardQuestionBaseline') })
       .closest('.v2-card');
-    const planningPanel = screen.getByTestId('vesinvest-panel');
 
     expect(activeSurface).toBeTruthy();
     expect(supportRail).toBeTruthy();
     expect(baselineCard).toBeTruthy();
-    expect(planningPanel).toBeTruthy();
+    expect(screen.queryByTestId('vesinvest-panel')).toBeNull();
+    expect(document.querySelector('.v2-overview-planning-shell-toggle')).toBeNull();
     expect(screen.queryByText(localeText('v2Overview.wizardCurrentFocus'))).toBeNull();
     expect(
       activeSurface!.compareDocumentPosition(supportRail!) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(
-      baselineCard!.compareDocumentPosition(planningPanel!) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
@@ -246,6 +242,7 @@ export function registerOverviewPageV2SetupImportSuite() {
         connecting={false}
         importingYears={false}
         syncing={false}
+        isAdmin={true}
         searchResults={[selectedOrg]}
         selectedOrg={selectedOrg}
         onSelectOrg={onSelectOrg}
@@ -295,6 +292,7 @@ export function registerOverviewPageV2SetupImportSuite() {
         connecting={false}
         importingYears={false}
         syncing={false}
+        isAdmin={true}
         searchResults={[]}
         selectedOrg={null}
         onSelectOrg={() => undefined}
@@ -327,24 +325,26 @@ export function registerOverviewPageV2SetupImportSuite() {
       />,
     );
 
-    await screen.findByTestId('vesinvest-panel');
-    expect(
-      (
-        document.querySelector(
-          '[data-import-kind="document"]',
-        ) as HTMLInputElement | null
-      )?.name,
-    ).toBe('documentUpload');
-    expect(
-      (
-        document.querySelector(
-          '[data-import-kind="workbook"]',
-        ) as HTMLInputElement | null
-      )?.name,
-    ).toBe('workbookUpload');
+    await waitFor(() => {
+      expect(
+        (
+          document.querySelector(
+            '[data-import-kind="document"]',
+          ) as HTMLInputElement | null
+        )?.name,
+      ).toBe('documentUpload');
+      expect(
+        (
+          document.querySelector(
+            '[data-import-kind="workbook"]',
+          ) as HTMLInputElement | null
+        )?.name,
+      ).toBe('workbookUpload');
+    });
+    expect(screen.queryByTestId('vesinvest-panel')).toBeNull();
   });
 
-  it('keeps Overview connect and import surfaces hidden while an active Vesinvest revision leads before evidence review', async () => {
+  it('keeps Overview connect and import surfaces hidden when planning context already carries utility identity', async () => {
     getPlanningContextV2.mockResolvedValueOnce(
       buildPlanningContextResponse({
         activePlan: {
@@ -367,7 +367,10 @@ export function registerOverviewPageV2SetupImportSuite() {
       />,
     );
 
-    await screen.findByTestId('vesinvest-panel');
+    expect(
+      await screen.findByText(localeText('v2Overview.wizardQuestionReviewYears')),
+    ).toBeTruthy();
+    expect(screen.queryByTestId('vesinvest-panel')).toBeNull();
     expect(
       screen.queryByRole('button', { name: localeText('v2Overview.connectButton') }),
     ).toBeNull();
@@ -869,7 +872,7 @@ export function registerOverviewPageV2SetupImportSuite() {
     expect(openInlineCardEditor).not.toHaveBeenCalled();
   });
 
-  it('counts blocked historical selections as importable years for non-admin users too', () => {
+  it('keeps the import review read-only for non-admin users', () => {
     const blockedRows = [
       {
         vuosi: 2021,
@@ -942,12 +945,11 @@ export function registerOverviewPageV2SetupImportSuite() {
       screen.getByText(`${localeText('v2Overview.selectedYearsLabel')}: 1`),
     ).toBeTruthy();
     expect(
-      (
-        screen.getByRole('button', {
-          name: localeText('v2Overview.importYearsButton'),
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(false);
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.importYearsButton'),
+      }),
+    ).toBeNull();
+    expect(screen.getByText(localeText('v2Overview.adminOnlyImportHint'))).toBeTruthy();
   });
 
   it('keeps the current-year estimate out of default historical selection and lanes', async () => {
@@ -1169,5 +1171,3 @@ export function registerOverviewPageV2SetupImportSuite() {
   });
   });
 }
-
-

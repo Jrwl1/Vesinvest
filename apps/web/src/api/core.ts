@@ -42,7 +42,10 @@ export type ApiError = Error & {
   details?: Record<string, unknown> | null;
 };
 
-export function dedupeInFlightGet<T>(key: string, run: () => Promise<T>): Promise<T> {
+export function dedupeInFlightGet<T>(
+  key: string,
+  run: () => Promise<T>,
+): Promise<T> {
   const existing = inFlightGetRequests.get(key);
   if (existing) {
     return existing as Promise<T>;
@@ -136,7 +139,13 @@ export async function parseApiErrorResponse(res: Response): Promise<{
     }
 
     const code =
-      typeof parsedBody.code === 'string' ? parsedBody.code : undefined;
+      typeof parsedBody.code === 'string'
+        ? parsedBody.code
+        : bodyMessage &&
+          typeof bodyMessage === 'object' &&
+          typeof (bodyMessage as { code?: unknown }).code === 'string'
+        ? String((bodyMessage as { code: string }).code)
+        : undefined;
 
     return {
       message: message ?? `Request failed (${res.status})`,

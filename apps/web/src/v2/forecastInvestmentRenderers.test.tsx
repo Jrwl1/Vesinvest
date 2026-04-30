@@ -62,9 +62,8 @@ describe('forecast investment renderers', () => {
 
     expect(screen.getByText('Network rehabilitation 2026-2030')).toBeTruthy();
     expect(
-      screen.getAllByDisplayValue(
-        'Investment programme reviewed for the active plan.',
-      ).length,
+      screen.getAllByText('Investment programme reviewed for the active plan.')
+        .length,
     ).toBeGreaterThan(1);
     expect(screen.queryByText('Ledningsnät saneering 2026-2030')).toBeNull();
     expect(
@@ -72,5 +71,37 @@ describe('forecast investment renderers', () => {
         'Plausible 20-year investment programme for audit flow.',
       ),
     ).toBeNull();
+  });
+
+  it('keeps grouped manual investment rows editable when they are not Vesinvest-linked', () => {
+    const noop = vi.fn();
+    const manualGroupedRow = {
+      ...staleLinkedRow,
+      rowId: 'manual-row-1',
+      vesinvestPlanId: null,
+      vesinvestProjectId: null,
+      allocationId: null,
+      projectCode: null,
+      amount: 125000,
+      category: 'Manual grouped category',
+    };
+
+    render(
+      <>
+        {renderForecastInvestmentEditorRows({
+          rows: [manualGroupedRow as any],
+          t,
+          handleInvestmentMetadataChange: noop,
+          handleInvestmentChange: noop,
+          handleInvestmentBlur: noop,
+        })}
+      </>,
+    );
+
+    expect(
+      (screen.getByRole('spinbutton', { name: /2026/ }) as HTMLInputElement)
+        .value,
+    ).toBe('125000');
+    expect(screen.getByDisplayValue('Manual grouped category')).toBeTruthy();
   });
 });

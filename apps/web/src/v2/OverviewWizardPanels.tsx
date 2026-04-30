@@ -19,7 +19,9 @@ type AcceptedPlanningYearRow = {
   resultToZero?: V2ImportYearResultToZeroSignal;
   sourceLayers?: ImportYearSourceLayer[];
   baselineReady?: boolean;
-  baselineMissingRequirements?: Array<'financialBaseline' | 'prices' | 'volumes'>;
+  baselineMissingRequirements?: Array<
+    'financialBaseline' | 'prices' | 'volumes'
+  >;
   completeness?: {
     tilinpaatos?: boolean;
     taksa?: boolean;
@@ -63,6 +65,7 @@ type OverviewConnectStepProps = {
   connecting: boolean;
   importingYears: boolean;
   syncing: boolean;
+  isAdmin: boolean;
   searchResults: VeetiOrganizationSearchHit[];
   selectedOrg: VeetiOrganizationSearchHit | null;
   onSelectOrg: (org: VeetiOrganizationSearchHit | null) => void;
@@ -85,6 +88,7 @@ export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
   connecting,
   importingYears,
   syncing,
+  isAdmin,
   searchResults,
   selectedOrg,
   onSelectOrg,
@@ -134,136 +138,145 @@ export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
         </div>
 
         <p className="v2-muted v2-overview-review-body">{body}</p>
-      <div className="v2-inline-form">
-        <input
-          id="v2-overview-org-search"
-          name="orgSearch"
-          className="v2-input"
-          type="text"
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key !== 'Enter') {
-              return;
+        {!isAdmin ? (
+          <p className="v2-muted v2-overview-role-hint">
+            {t(
+              'v2Overview.adminOnlySetupHint',
+              'Admin access is required to connect or change the utility binding.',
+            )}
+          </p>
+        ) : null}
+        <div className="v2-inline-form">
+          <input
+            id="v2-overview-org-search"
+            name="orgSearch"
+            className="v2-input"
+            type="text"
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter') {
+                return;
+              }
+              event.preventDefault();
+              onSearch();
+            }}
+            disabled={connecting || importingYears || syncing}
+            placeholder={t(
+              'v2Overview.searchPlaceholder',
+              'Search by name or business ID',
+            )}
+          />
+          <button
+            className="v2-btn"
+            type="button"
+            onClick={onSearch}
+            disabled={
+              searching ||
+              connecting ||
+              importingYears ||
+              syncing ||
+              query.trim().length < 2
             }
-            event.preventDefault();
-            onSearch();
-          }}
-          disabled={connecting || importingYears || syncing}
-          placeholder={t(
-            'v2Overview.searchPlaceholder',
-            'Search by name or business ID',
-          )}
-        />
-        <button
-          className="v2-btn"
-          type="button"
-          onClick={onSearch}
-          disabled={
-            searching ||
-            connecting ||
-            importingYears ||
-            syncing ||
-            query.trim().length < 2
-          }
-        >
-          {searching
-            ? t('v2Overview.searchingButton', 'Searching...')
-            : t('v2Overview.searchButton', 'Search')}
-        </button>
-      </div>
+          >
+            {searching
+              ? t('v2Overview.searchingButton', 'Searching...')
+              : t('v2Overview.searchButton', 'Search')}
+          </button>
+        </div>
 
-      {searchResults.length > 0 ? (
-        <div className="v2-result-list">
-          {searchResults.map((org) => {
-            const isActive = selectedOrg?.Id === org.Id;
-            const orgName =
-              org.Nimi ??
-              t('v2Overview.veetiFallbackName', 'VEETI {{id}}', {
-                id: org.Id,
-              });
-            return (
+        {searchResults.length > 0 ? (
+          <div className="v2-result-list">
+            {searchResults.map((org) => {
+              const isActive = selectedOrg?.Id === org.Id;
+              const orgName =
+                org.Nimi ??
+                t('v2Overview.veetiFallbackName', 'VEETI {{id}}', {
+                  id: org.Id,
+                });
+              return (
+                <button
+                  type="button"
+                  key={org.Id}
+                  className={`v2-result-row ${isActive ? 'active' : ''}`}
+                  onClick={() => onSelectOrg(org)}
+                  disabled={connecting || importingYears || syncing}
+                >
+                  <div className="v2-result-main">
+                    <strong>{renderHighlightedSearchMatch(orgName)}</strong>
+                    <span>
+                      {t('v2Overview.businessIdLabel', 'Business ID')}:{' '}
+                      {renderHighlightedSearchMatch(org.YTunnus ?? '-')}
+                    </span>
+                  </div>
+                  <div className="v2-result-meta">
+                    <span>
+                      {t('v2Overview.municipalityLabel', 'Municipality')}:{' '}
+                      {renderHighlightedSearchMatch(org.Kunta ?? '-')}
+                    </span>
+                    {isActive ? (
+                      <span className="v2-result-selected">
+                        {t('v2Overview.resultSelected', 'Selected')}
+                      </span>
+                    ) : null}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {selectedOrgStillVisible ? (
+          <div className="v2-import-org-summary">
+            <div>
+              <strong>
+                {t('v2Overview.organizationLabel', 'Organization')}:{' '}
+                {selectedOrgName}
+              </strong>
+              <span>
+                {t('v2Overview.businessIdLabel', 'Business ID')}:{' '}
+                {selectedOrgBusinessId}
+              </span>
+              {selectedOrgMunicipality ? (
+                <span>
+                  {t('v2Overview.municipalityLabel', 'Municipality')}:{' '}
+                  {selectedOrgMunicipality}
+                </span>
+              ) : null}
+            </div>
+            <div className="v2-import-org-summary-actions">
+              {isAdmin ? (
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-primary v2-btn-small"
+                  onClick={() => {
+                    if (!selectedOrg) return;
+                    onConnect(selectedOrg);
+                  }}
+                  disabled={
+                    connecting ||
+                    importingYears ||
+                    syncing ||
+                    !selectedOrgReadyToConnect ||
+                    !selectedOrg
+                  }
+                >
+                  {connecting
+                    ? t('v2Overview.connectingButton', 'Connecting...')
+                    : t('v2Overview.connectButton', 'Connect selected utility')}
+                </button>
+              ) : null}
               <button
                 type="button"
-                key={org.Id}
-                className={`v2-result-row ${isActive ? 'active' : ''}`}
-                onClick={() => onSelectOrg(org)}
+                className="v2-btn v2-btn-small"
+                onClick={() => onSelectOrg(null)}
                 disabled={connecting || importingYears || syncing}
               >
-                <div className="v2-result-main">
-                  <strong>{renderHighlightedSearchMatch(orgName)}</strong>
-                  <span>
-                    {t('v2Overview.businessIdLabel', 'Business ID')}:{' '}
-                    {renderHighlightedSearchMatch(org.YTunnus ?? '-')}
-                  </span>
-                </div>
-                <div className="v2-result-meta">
-                  <span>
-                    {t('v2Overview.municipalityLabel', 'Municipality')}:{' '}
-                    {renderHighlightedSearchMatch(org.Kunta ?? '-')}
-                  </span>
-                  {isActive ? (
-                    <span className="v2-result-selected">
-                      {t('v2Overview.resultSelected', 'Selected')}
-                    </span>
-                  ) : null}
-                </div>
+                {t('v2Overview.clearSelectionButton', 'Clear selection')}
               </button>
-            );
-          })}
-        </div>
-      ) : null}
-
-      {selectedOrgStillVisible ? (
-        <div className="v2-import-org-summary">
-          <div>
-            <strong>
-              {t('v2Overview.organizationLabel', 'Organization')}:{' '}
-              {selectedOrgName}
-            </strong>
-            <span>
-              {t('v2Overview.businessIdLabel', 'Business ID')}:{' '}
-              {selectedOrgBusinessId}
-            </span>
-            {selectedOrgMunicipality ? (
-              <span>
-                {t('v2Overview.municipalityLabel', 'Municipality')}:{' '}
-                {selectedOrgMunicipality}
-              </span>
-            ) : null}
+            </div>
           </div>
-          <div className="v2-import-org-summary-actions">
-            <button
-              type="button"
-              className="v2-btn v2-btn-primary v2-btn-small"
-              onClick={() => {
-                if (!selectedOrg) return;
-                onConnect(selectedOrg);
-              }}
-              disabled={
-                connecting ||
-                importingYears ||
-                syncing ||
-                !selectedOrgReadyToConnect ||
-                !selectedOrg
-              }
-            >
-              {connecting
-                ? t('v2Overview.connectingButton', 'Connecting...')
-                : t('v2Overview.connectButton', 'Connect selected utility')}
-            </button>
-            <button
-              type="button"
-              className="v2-btn v2-btn-small"
-              onClick={() => onSelectOrg(null)}
-              disabled={connecting || importingYears || syncing}
-            >
-              {t('v2Overview.clearSelectionButton', 'Clear selection')}
-            </button>
-          </div>
-        </div>
-      ) : null}
-
+        ) : null}
       </article>
     </section>
   );
@@ -286,6 +299,7 @@ type OverviewPlanningBaselineStepProps = {
   onCreatePlanningBaseline: () => void;
   creatingPlanningBaseline: boolean;
   importedBlockedYearCount: number;
+  isAdmin: boolean;
 };
 
 export const OverviewPlanningBaselineStep: React.FC<
@@ -305,6 +319,7 @@ export const OverviewPlanningBaselineStep: React.FC<
   onCreatePlanningBaseline,
   creatingPlanningBaseline,
   importedBlockedYearCount,
+  isAdmin,
 }) => (
   <section className="v2-card">
     <div className="v2-section-header">
@@ -318,13 +333,22 @@ export const OverviewPlanningBaselineStep: React.FC<
         <h2>{t('v2Overview.wizardQuestionBaseline')}</h2>
       </div>
       <span className="v2-badge v2-status-provenance">
-        {includedPlanningYears.length} {t('v2Overview.wizardSummaryImportedYears')}
+        {includedPlanningYears.length}{' '}
+        {t('v2Overview.wizardSummaryImportedYears')}
       </span>
     </div>
 
     <p className="v2-muted v2-overview-review-body">
       {t('v2Overview.wizardBodyBaseline')}
     </p>
+    {!isAdmin ? (
+      <p className="v2-muted v2-overview-role-hint">
+        {t(
+          'v2Overview.adminOnlyBaselineHint',
+          'Admin access is required to create or change the planning baseline.',
+        )}
+      </p>
+    ) : null}
 
     <div className="v2-planning-baseline-grid">
       <article className="v2-planning-baseline-card">
@@ -364,7 +388,9 @@ export const OverviewPlanningBaselineStep: React.FC<
       </div>
       <div className="v2-keyvalue-list">
         <div className="v2-keyvalue-row">
-          <span>{t('v2Overview.baselineClosureChanged', 'Changed in review')}</span>
+          <span>
+            {t('v2Overview.baselineClosureChanged', 'Changed in review')}
+          </span>
           <span>
             {correctedPlanningYears.length > 0 &&
             correctedPlanningManualDataTypes.length > 0
@@ -373,7 +399,9 @@ export const OverviewPlanningBaselineStep: React.FC<
                   'Years {{years}} now use {{datasets}}.',
                   {
                     years: correctedYearsLabel,
-                    datasets: renderDatasetTypeList(correctedPlanningManualDataTypes),
+                    datasets: renderDatasetTypeList(
+                      correctedPlanningManualDataTypes,
+                    ),
                   },
                 )
               : t(
@@ -383,7 +411,9 @@ export const OverviewPlanningBaselineStep: React.FC<
           </span>
         </div>
         <div className="v2-keyvalue-row">
-          <span>{t('v2Overview.baselineClosureStillVeeti', 'Still from VEETI')}</span>
+          <span>
+            {t('v2Overview.baselineClosureStillVeeti', 'Still from VEETI')}
+          </span>
           <span>
             {correctedPlanningVeetiDataTypes.length > 0
               ? renderDatasetTypeList(correctedPlanningVeetiDataTypes)
@@ -406,29 +436,31 @@ export const OverviewPlanningBaselineStep: React.FC<
       </div>
     </section>
 
-    <div className="v2-overview-review-actions">
-      <button
-        type="button"
-        className={planningBaselineButtonClass}
-        onClick={onCreatePlanningBaseline}
-        disabled={
-          creatingPlanningBaseline ||
-          includedPlanningYears.length === 0 ||
-          importedBlockedYearCount > 0
-        }
-      >
-        {creatingPlanningBaseline
-          ? t('common.loading', 'Loading...')
-          : t('v2Overview.createPlanningBaseline')}
-      </button>
-      <p className="v2-muted">
-        {includedPlanningYears.length === 0
-          ? t('v2Overview.wizardBaselinePendingHint')
-          : importedBlockedYearCount > 0
-          ? t('v2Overview.baselineBlockedHint')
-          : t('v2Overview.baselineReadyHint')}
-      </p>
-    </div>
+    {isAdmin ? (
+      <div className="v2-overview-review-actions">
+        <button
+          type="button"
+          className={planningBaselineButtonClass}
+          onClick={onCreatePlanningBaseline}
+          disabled={
+            creatingPlanningBaseline ||
+            includedPlanningYears.length === 0 ||
+            importedBlockedYearCount > 0
+          }
+        >
+          {creatingPlanningBaseline
+            ? t('common.loading', 'Loading...')
+            : t('v2Overview.createPlanningBaseline')}
+        </button>
+        <p className="v2-muted">
+          {includedPlanningYears.length === 0
+            ? t('v2Overview.wizardBaselinePendingHint')
+            : importedBlockedYearCount > 0
+            ? t('v2Overview.baselineBlockedHint')
+            : t('v2Overview.baselineReadyHint')}
+        </p>
+      </div>
+    ) : null}
   </section>
 );
 
@@ -454,6 +486,7 @@ type OverviewForecastHandoffStepProps = {
     },
   ) => React.ReactNode;
   openForecastButtonClass: string;
+  isAdmin: boolean;
   onManageYears: () => void;
   onReopenYearReview: (year: number) => void;
   onDeleteYear: (year: number) => void;
@@ -474,6 +507,7 @@ export const OverviewForecastHandoffStep: React.FC<
   renderDatasetCounts,
   renderYearValuePreview,
   openForecastButtonClass,
+  isAdmin,
   onReopenYearReview,
   onExcludeYear,
   onRestoreYear,
@@ -485,192 +519,229 @@ export const OverviewForecastHandoffStep: React.FC<
   ).length;
 
   return (
-  <section className="v2-card v2-overview-handoff-card">
-    <div className="v2-section-header">
-      <div>
-        <h2>{t('v2Overview.acceptedBaselineTitle', 'Accepted baseline')}</h2>
-        <p>
+    <section className="v2-card v2-overview-handoff-card">
+      <div className="v2-section-header">
+        <div>
+          <h2>{t('v2Overview.acceptedBaselineTitle', 'Accepted baseline')}</h2>
+          <p>
+            {t(
+              'v2Overview.acceptedBaselineBody',
+              'Historical years are accepted and ready for asset planning.',
+            )}
+          </p>
+        </div>
+        <span className="v2-badge v2-status-positive">
+          {t('v2Shell.statusAccepted', 'Accepted')}
+        </span>
+      </div>
+
+      <div className="v2-actions-row v2-overview-handoff-management-row">
+        <button
+          type="button"
+          className={openForecastButtonClass}
+          onClick={onOpenForecast}
+        >
+          {t('v2Overview.openAssetManagement', 'Open Asset Management')}
+        </button>
+      </div>
+      {!isAdmin ? (
+        <p className="v2-muted">
           {t(
-            'v2Overview.acceptedBaselineBody',
-            'Historical years are accepted and ready for asset planning.',
+            'v2Overview.adminOnlyBaselineHint',
+            'Admin access is required to create or change the planning baseline.',
           )}
         </p>
+      ) : null}
+
+      <div className="v2-overview-handoff-summary">
+        <article className="v2-overview-handoff-summary-item">
+          <span>{t('v2Overview.baselineIncludedYears', 'Included years')}</span>
+          <strong>{acceptedPlanningYearRows.length}</strong>
+        </article>
+        <article className="v2-overview-handoff-summary-item">
+          <span>
+            {t(
+              'v2Overview.correctedRepairedYears',
+              'Corrected / repaired years',
+            )}
+          </span>
+          <strong>{correctedAcceptedYearCount}</strong>
+        </article>
+        <article className="v2-overview-handoff-summary-item">
+          <span>{t('v2Overview.baselineAcceptanceState', 'Acceptance')}</span>
+          <strong>
+            {t('v2Overview.allChangesAccepted', 'All changes accepted')}
+          </strong>
+        </article>
       </div>
-      <span className="v2-badge v2-status-positive">
-        {t('v2Shell.statusAccepted', 'Accepted')}
-      </span>
-    </div>
 
-    <div className="v2-actions-row v2-overview-handoff-management-row">
-      <button
-        type="button"
-        className={openForecastButtonClass}
-        onClick={onOpenForecast}
-      >
-        {t('v2Overview.openAssetManagement', 'Open Asset Management')}
-      </button>
-    </div>
-
-    <div className="v2-overview-handoff-summary">
-      <article className="v2-overview-handoff-summary-item">
-        <span>{t('v2Overview.baselineIncludedYears', 'Included years')}</span>
-        <strong>{acceptedPlanningYearRows.length}</strong>
-      </article>
-      <article className="v2-overview-handoff-summary-item">
-        <span>{t('v2Overview.correctedRepairedYears', 'Corrected / repaired years')}</span>
-        <strong>{correctedAcceptedYearCount}</strong>
-      </article>
-      <article className="v2-overview-handoff-summary-item">
-        <span>{t('v2Overview.baselineAcceptanceState', 'Acceptance')}</span>
-        <strong>{t('v2Overview.allChangesAccepted', 'All changes accepted')}</strong>
-      </article>
-    </div>
-
-    {acceptedPlanningYearRows.length > 0 ? (
+      {acceptedPlanningYearRows.length > 0 ? (
         <div className="v2-year-status-list v2-year-status-list-accepted">
-        {acceptedPlanningYearRows.map((row) => {
-          const corrected = correctedPlanningYears.includes(row.vuosi);
-          const targetChip = buildOverviewYearTargetChip(t, row.resultToZero);
-          const sourceChip = buildOverviewYearFinancialSourceChip(
-            t,
-            row.sourceLayers,
-            row.sourceStatus,
-          );
-          const availability = resolveAcceptedPlanningAvailability(row);
-          const compactSourceLabel =
-            row.sourceLayers != null && row.sourceLayers.length > 0
-              ? sourceChip.label
-              : row.sourceStatus != null
-              ? sourceStatusLabel(row.sourceStatus)
-              : sourceChip.label;
-          return (
-            <article key={`accepted-${row.vuosi}`} className="v2-year-status-row ready">
-              <div className="v2-year-status-head">
-                <div className="v2-year-status-labels">
-                  <strong>{row.vuosi}</strong>
-                </div>
-              </div>
-
-              <div className="v2-overview-year-chip-row">
-                <span className={`v2-badge ${targetChip.toneClass}`}>
-                  {targetChip.label}
-                </span>
-              </div>
-
-              {renderYearValuePreview(row.vuosi, availability, {
-                compact: true,
-              })}
-
-              <div className="v2-year-card-meta">
-                <span className="v2-overview-handoff-year-source">
-                  {compactSourceLabel}
-                </span>
-                <span>
-                  {t('v2Overview.evidenceCountLabel', 'Evidence')}:{' '}
-                  {renderDatasetCounts(row.datasetCounts)}
-                </span>
-                {corrected ? (
-                  <span>{t('v2Overview.baselineClosureChanged', 'Changed in review')}</span>
-                ) : null}
-              </div>
-              <div className="v2-actions-row v2-overview-handoff-year-primary-actions">
-                <details className="v2-overview-handoff-year-details-shell">
-                  <summary className="v2-btn v2-btn-small">
-                    {t('v2Overview.viewDetails', 'View details')}
-                  </summary>
-                  <div className="v2-overview-handoff-year-details">
-                    {renderYearValuePreview(row.vuosi, availability)}
+          {acceptedPlanningYearRows.map((row) => {
+            const corrected = correctedPlanningYears.includes(row.vuosi);
+            const targetChip = buildOverviewYearTargetChip(t, row.resultToZero);
+            const sourceChip = buildOverviewYearFinancialSourceChip(
+              t,
+              row.sourceLayers,
+              row.sourceStatus,
+            );
+            const availability = resolveAcceptedPlanningAvailability(row);
+            const compactSourceLabel =
+              row.sourceLayers != null && row.sourceLayers.length > 0
+                ? sourceChip.label
+                : row.sourceStatus != null
+                ? sourceStatusLabel(row.sourceStatus)
+                : sourceChip.label;
+            return (
+              <article
+                key={`accepted-${row.vuosi}`}
+                className="v2-year-status-row ready"
+              >
+                <div className="v2-year-status-head">
+                  <div className="v2-year-status-labels">
+                    <strong>{row.vuosi}</strong>
                   </div>
-                </details>
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-small"
-                  onClick={() => onReopenYearReview(row.vuosi)}
-                >
-                  {t('v2Overview.reopenReview', 'Reopen review')}
-                </button>
-              </div>
-              <details className="v2-overview-handoff-year-actions-shell">
-                <summary>{t('v2Overview.moreActions', 'More actions')}</summary>
-                <div className="v2-actions-row v2-overview-handoff-year-actions">
-                  <button
-                    type="button"
-                    className="v2-btn v2-btn-small"
-                    onClick={() => onReopenYearReview(row.vuosi)}
-                  >
-                    {t('v2Overview.manualCorrection', 'Manual correction')}
-                  </button>
-                  <button
-                    type="button"
-                    className="v2-btn v2-btn-small"
-                    onClick={() => onReopenYearReview(row.vuosi)}
-                  >
-                    {t('v2Overview.repairFromExcel', 'Repair from Excel')}
-                  </button>
-                  <button
-                    type="button"
-                    className="v2-btn v2-btn-small"
-                    onClick={() => onReopenYearReview(row.vuosi)}
-                  >
-                    {t('v2Overview.repairFromPdf', 'Repair from PDF')}
-                  </button>
-                  <button
-                    type="button"
-                    className="v2-btn v2-btn-small"
-                    onClick={() => onReopenYearReview(row.vuosi)}
-                  >
-                    {t('v2Overview.uploadEvidenceFile', 'Upload evidence file')}
-                  </button>
-                  {corrected || row.sourceStatus !== 'VEETI' ? (
+                </div>
+
+                <div className="v2-overview-year-chip-row">
+                  <span className={`v2-badge ${targetChip.toneClass}`}>
+                    {targetChip.label}
+                  </span>
+                </div>
+
+                {renderYearValuePreview(row.vuosi, availability, {
+                  compact: true,
+                })}
+
+                <div className="v2-year-card-meta">
+                  <span className="v2-overview-handoff-year-source">
+                    {compactSourceLabel}
+                  </span>
+                  <span>
+                    {t('v2Overview.evidenceCountLabel', 'Evidence')}:{' '}
+                    {renderDatasetCounts(row.datasetCounts)}
+                  </span>
+                  {corrected ? (
+                    <span>
+                      {t(
+                        'v2Overview.baselineClosureChanged',
+                        'Changed in review',
+                      )}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="v2-actions-row v2-overview-handoff-year-primary-actions">
+                  <details className="v2-overview-handoff-year-details-shell">
+                    <summary className="v2-btn v2-btn-small">
+                      {t('v2Overview.viewDetails', 'View details')}
+                    </summary>
+                    <div className="v2-overview-handoff-year-details">
+                      {renderYearValuePreview(row.vuosi, availability)}
+                    </div>
+                  </details>
+                  {isAdmin ? (
                     <button
                       type="button"
                       className="v2-btn v2-btn-small"
-                      onClick={() => onRestoreVeeti(row.vuosi)}
+                      onClick={() => onReopenYearReview(row.vuosi)}
                     >
-                      {t('v2Overview.restoreVeetiValues', 'Restore VEETI values')}
+                      {t('v2Overview.reopenReview', 'Reopen review')}
                     </button>
                   ) : null}
-                  <button
-                    type="button"
-                    className="v2-btn v2-btn-small v2-btn-danger"
-                    onClick={() => onExcludeYear(row.vuosi)}
-                  >
-                    {t('v2Overview.excludeYear', 'Exclude year')}
-                  </button>
                 </div>
-              </details>
-            </article>
-          );
-        })}
+                {isAdmin ? (
+                  <details className="v2-overview-handoff-year-actions-shell">
+                    <summary>
+                      {t('v2Overview.moreActions', 'More actions')}
+                    </summary>
+                    <div className="v2-actions-row v2-overview-handoff-year-actions">
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small"
+                        onClick={() => onReopenYearReview(row.vuosi)}
+                      >
+                        {t('v2Overview.manualCorrection', 'Manual correction')}
+                      </button>
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small"
+                        onClick={() => onReopenYearReview(row.vuosi)}
+                      >
+                        {t('v2Overview.repairFromExcel', 'Repair from Excel')}
+                      </button>
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small"
+                        onClick={() => onReopenYearReview(row.vuosi)}
+                      >
+                        {t('v2Overview.repairFromPdf', 'Repair from PDF')}
+                      </button>
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small"
+                        onClick={() => onReopenYearReview(row.vuosi)}
+                      >
+                        {t(
+                          'v2Overview.uploadEvidenceFile',
+                          'Upload evidence file',
+                        )}
+                      </button>
+                      {corrected || row.sourceStatus !== 'VEETI' ? (
+                        <button
+                          type="button"
+                          className="v2-btn v2-btn-small"
+                          onClick={() => onRestoreVeeti(row.vuosi)}
+                        >
+                          {t(
+                            'v2Overview.restoreVeetiValues',
+                            'Restore VEETI values',
+                          )}
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small v2-btn-danger"
+                        onClick={() => onExcludeYear(row.vuosi)}
+                      >
+                        {t('v2Overview.excludeYear', 'Exclude year')}
+                      </button>
+                    </div>
+                  </details>
+                ) : null}
+              </article>
+            );
+          })}
         </div>
       ) : null}
 
-    {excludedYearsSorted.length > 0 ? (
-      <div className="v2-overview-handoff-excluded">
-        <div className="v2-section-header">
-          <div>
-            <h3>{t('v2Overview.baselineExcludedYears', 'Excluded years')}</h3>
+      {excludedYearsSorted.length > 0 ? (
+        <div className="v2-overview-handoff-excluded">
+          <div className="v2-section-header">
+            <div>
+              <h3>{t('v2Overview.baselineExcludedYears', 'Excluded years')}</h3>
+            </div>
+          </div>
+          <div className="v2-overview-handoff-excluded-list">
+            {excludedYearsSorted.map((year) => (
+              <article
+                key={`excluded-${year}`}
+                className="v2-overview-handoff-excluded-row"
+              >
+                <strong>{year}</strong>
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={() => onRestoreYear(year)}
+                  >
+                    {t('v2Overview.restoreYearToPlan', 'Restore to plan')}
+                  </button>
+                ) : null}
+              </article>
+            ))}
           </div>
         </div>
-        <div className="v2-overview-handoff-excluded-list">
-          {excludedYearsSorted.map((year) => (
-            <article
-              key={`excluded-${year}`}
-              className="v2-overview-handoff-excluded-row"
-            >
-              <strong>{year}</strong>
-              <button
-                type="button"
-                className="v2-btn v2-btn-small"
-                onClick={() => onRestoreYear(year)}
-              >
-                {t('v2Overview.restoreYearToPlan', 'Restore to plan')}
-              </button>
-            </article>
-          ))}
-        </div>
-      </div>
-    ) : null}
-  </section>
+      ) : null}
+    </section>
   );
 };

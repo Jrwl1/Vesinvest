@@ -17,6 +17,7 @@ import {
   buildDefaultPackageReportTitle,
   normalizeReportLocale,
 } from './displayNames';
+import { mapPdfDownloadError, mapReportBlockerError } from './apiErrorDisplay';
 import type { ReportVariant } from './reportReadinessModel';
 import { readForecastRuntimeState } from './reportReadinessModel';
 
@@ -45,14 +46,16 @@ export const useReportsPageController = ({
   const [loadingList, setLoadingList] = React.useState(true);
   const [loadingDetail, setLoadingDetail] = React.useState(false);
   const [downloadingPdf, setDownloadingPdf] = React.useState(false);
-  const [creatingPreviewPackage, setCreatingPreviewPackage] = React.useState(false);
+  const [creatingPreviewPackage, setCreatingPreviewPackage] =
+    React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [previewVariant, setPreviewVariant] =
     React.useState<ReportVariant>('regulator_package');
   const [emptyStateScenario, setEmptyStateScenario] =
     React.useState<V2ForecastScenario | null>(null);
-  const [emptyStateBaselineYears, setEmptyStateBaselineYears] =
-    React.useState<number[]>([]);
+  const [emptyStateBaselineYears, setEmptyStateBaselineYears] = React.useState<
+    number[]
+  >([]);
 
   const pickDefaultReportId = React.useCallback(
     (
@@ -60,13 +63,18 @@ export const useReportsPageController = ({
       currentReportId: string | null,
       preferredReportId?: string,
     ) => {
-      if (preferredReportId && rows.some((row) => row.id === preferredReportId)) {
+      if (
+        preferredReportId &&
+        rows.some((row) => row.id === preferredReportId)
+      ) {
         return preferredReportId;
       }
       if (currentReportId && rows.some((row) => row.id === currentReportId)) {
         return currentReportId;
       }
-      const regulatorPackage = rows.find((row) => row.variant === 'regulator_package');
+      const regulatorPackage = rows.find(
+        (row) => row.variant === 'regulator_package',
+      );
       return regulatorPackage?.id ?? rows[0]?.id ?? null;
     },
     [],
@@ -153,8 +161,9 @@ export const useReportsPageController = ({
         ]);
         if (cancelled) return;
         setEmptyStateBaselineYears(
-          planningContext?.baselineYears.map((row) => row.year).sort((left, right) => left - right) ??
-            [],
+          planningContext?.baselineYears
+            .map((row) => row.year)
+            .sort((left, right) => left - right) ?? [],
         );
         if (scenarioRows.length === 0) {
           setEmptyStateScenario(null);
@@ -223,24 +232,7 @@ export const useReportsPageController = ({
       link.click();
       URL.revokeObjectURL(objectUrl);
     } catch (err) {
-      const status =
-        typeof err === 'object' &&
-        err !== null &&
-        'status' in err &&
-        typeof (err as { status?: unknown }).status === 'number'
-          ? (err as { status: number }).status
-          : undefined;
-
-      setError(
-        status && status >= 500
-          ? t(
-              'v2Reports.errorDownloadPdfUnavailable',
-              'PDF export is temporarily unavailable. Please try again later.',
-            )
-          : err instanceof Error && err.message
-          ? err.message
-          : t('v2Reports.errorDownloadPdfFailed', 'Failed to download PDF.'),
-      );
+      setError(mapPdfDownloadError(t, err));
     } finally {
       setDownloadingPdf(false);
     }
@@ -277,9 +269,12 @@ export const useReportsPageController = ({
       setPreviewVariant(created.variant);
     } catch (err) {
       setError(
-        err instanceof Error && err.message
-          ? err.message
-          : t('v2Reports.errorCreateVariantFailed', 'Failed to create report package.'),
+        mapReportBlockerError(
+          t,
+          err,
+          'v2Reports.errorCreateVariantFailed',
+          'Failed to create report package.',
+        ),
       );
     } finally {
       setCreatingPreviewPackage(false);
@@ -316,9 +311,12 @@ export const useReportsPageController = ({
       setPreviewVariant(created.variant);
     } catch (err) {
       setError(
-        err instanceof Error && err.message
-          ? err.message
-          : t('v2Reports.errorCreateVariantFailed', 'Failed to create report package.'),
+        mapReportBlockerError(
+          t,
+          err,
+          'v2Reports.errorCreateVariantFailed',
+          'Failed to create report package.',
+        ),
       );
     } finally {
       setCreatingPreviewPackage(false);

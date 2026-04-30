@@ -333,6 +333,14 @@ export const OverviewImportBoard: React.FC<Props> = ({
             ? t('v2Overview.wizardBodyReviewYears')
             : t('v2Overview.wizardBodyImportYears')}
         </p>
+        {!isAdmin ? (
+          <p className="v2-muted v2-overview-role-hint">
+            {t(
+              'v2Overview.adminOnlyImportHint',
+              'Admin access is required to import, remove, or repair baseline years.',
+            )}
+          </p>
+        ) : null}
         {showThinBaselineHint ? (
           <p className="v2-muted v2-overview-baseline-hint">
             {t(
@@ -454,7 +462,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
                 {t('v2Overview.workbookImportAction', 'Repair from Excel')}
               </button>
             </>
-          ) : !isManageMode ? (
+          ) : !isManageMode && isAdmin ? (
             <button
               type="button"
               className={importYearsButtonClass}

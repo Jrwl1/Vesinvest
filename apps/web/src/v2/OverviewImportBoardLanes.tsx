@@ -288,7 +288,8 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                 : null;
             const quietOtherCards = cardEditYear != null && cardEditYear !== row.vuosi;
             const missingCount = getMissingCount(row);
-            const canSelectRow = !isCurrentEstimateLane && !isTrashbinLane;
+            const canSelectRow =
+              isAdmin && !isCurrentEstimateLane && !isTrashbinLane;
             const isSelected = selectedYears.includes(row.vuosi);
             const selectionStateLabel =
               isManageMode || !canSelectRow
@@ -640,7 +641,9 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                 ) : null}
 
                 <div className="v2-year-card-repair-actions">
-                  {isCurrentEstimateLane && !confirmedImportedYears.includes(row.vuosi) ? (
+                  {isAdmin &&
+                  isCurrentEstimateLane &&
+                  !confirmedImportedYears.includes(row.vuosi) ? (
                     <button
                       type="button"
                       className="v2-btn v2-btn-small"
@@ -673,7 +676,10 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                       {t('v2Overview.manualPatchButton', 'Complete manually')}
                     </button>
                   ) : null}
-                  {!isCurrentEstimateLane && !isTrashbinLane && !showBlockedAdminActions ? (
+                  {isAdmin &&
+                  !isCurrentEstimateLane &&
+                  !isTrashbinLane &&
+                  !showBlockedAdminActions ? (
                     <button
                       type="button"
                       className="v2-btn v2-btn-small"
@@ -703,7 +709,7 @@ export const OverviewImportBoardLanes: React.FC<Props> = ({
                       </button>
                     </div>
                   ) : null}
-                  {isTrashbinLane ? (
+                  {isAdmin && isTrashbinLane ? (
                     <button
                       type="button"
                       className="v2-btn v2-btn-small"

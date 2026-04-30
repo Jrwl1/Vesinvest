@@ -77,7 +77,7 @@ export const OverviewReviewCardActions: React.FC<
   <div className="v2-year-status-actions">
     {isInlineReviewActive ? (
       <>
-        {isCurrentYearReadyForReview ? (
+        {isAdmin && isCurrentYearReadyForReview ? (
           <button
             type="button"
             className={keepYearButtonClass}
@@ -87,82 +87,86 @@ export const OverviewReviewCardActions: React.FC<
             {t('v2Overview.keepYearInPlan')}
           </button>
         ) : null}
-        <button
-          type="button"
-          className={fixYearButtonClass}
-          onClick={handleSwitchToManualEditMode}
-          disabled={manualPatchBusy}
-        >
-          {t('v2Overview.fixYearValues')}
-        </button>
-        <button
-          type="button"
-          className="v2-btn v2-btn-small v2-btn-quiet"
-          onClick={handleSwitchToDocumentImportMode}
-          disabled={manualPatchBusy || documentImportBusy}
-        >
-          {t('v2Overview.documentImportAction', 'Import source PDF')}
-        </button>
-        <button
-          type="button"
-          className="v2-btn v2-btn-small v2-btn-quiet"
-          onClick={handleSwitchToWorkbookImportMode}
-          disabled={manualPatchBusy || workbookImportBusy}
-        >
-          {t('v2Overview.workbookImportAction', 'Repair from Excel')}
-        </button>
-        <button
-          type="button"
-          className={`v2-btn v2-btn-small ${
-            isManualYearExcluded
-              ? 'v2-btn-plan-membership'
-              : 'v2-btn-plan-membership v2-btn-plan-membership-danger'
-          }`}
-          onClick={
-            isManualYearExcluded
-              ? handleRestoreManualYearToPlan
-              : handleExcludeManualYearFromPlan
-          }
-          disabled={manualPatchBusy}
-        >
-          {t(
-            isManualYearExcluded
-              ? 'v2Overview.restoreYearToPlan'
-              : 'v2Overview.excludeYearFromPlan',
-            isManualYearExcluded
-              ? 'Palauta suunnitelmaan'
-              : 'Pois suunnitelmasta',
-          )}
-        </button>
-        {canReapplyFinancialVeetiForYear ? (
-          <button
-            type="button"
-            className="v2-btn v2-btn-small v2-btn-quiet"
-            onClick={handleModalApplyVeetiFinancials}
-            disabled={manualPatchBusy}
-          >
-            {t('v2Overview.reapplyVeetiFinancials', 'Use VEETI financials')}
-          </button>
-        ) : null}
-        {canReapplyPricesForYear ? (
-          <button
-            type="button"
-            className="v2-btn v2-btn-small v2-btn-quiet"
-            onClick={handleModalApplyVeetiPrices}
-            disabled={manualPatchBusy}
-          >
-            {t('v2Overview.reapplyVeetiPrices', 'Use VEETI prices')}
-          </button>
-        ) : null}
-        {canReapplyVolumesForYear ? (
-          <button
-            type="button"
-            className="v2-btn v2-btn-small v2-btn-quiet"
-            onClick={handleModalApplyVeetiVolumes}
-            disabled={manualPatchBusy}
-          >
-            {t('v2Overview.reapplyVeetiVolumes', 'Use VEETI volumes')}
-          </button>
+        {isAdmin ? (
+          <>
+            <button
+              type="button"
+              className={fixYearButtonClass}
+              onClick={handleSwitchToManualEditMode}
+              disabled={manualPatchBusy}
+            >
+              {t('v2Overview.fixYearValues')}
+            </button>
+            <button
+              type="button"
+              className="v2-btn v2-btn-small v2-btn-quiet"
+              onClick={handleSwitchToDocumentImportMode}
+              disabled={manualPatchBusy || documentImportBusy}
+            >
+              {t('v2Overview.documentImportAction', 'Import source PDF')}
+            </button>
+            <button
+              type="button"
+              className="v2-btn v2-btn-small v2-btn-quiet"
+              onClick={handleSwitchToWorkbookImportMode}
+              disabled={manualPatchBusy || workbookImportBusy}
+            >
+              {t('v2Overview.workbookImportAction', 'Repair from Excel')}
+            </button>
+            <button
+              type="button"
+              className={`v2-btn v2-btn-small ${
+                isManualYearExcluded
+                  ? 'v2-btn-plan-membership'
+                  : 'v2-btn-plan-membership v2-btn-plan-membership-danger'
+              }`}
+              onClick={
+                isManualYearExcluded
+                  ? handleRestoreManualYearToPlan
+                  : handleExcludeManualYearFromPlan
+              }
+              disabled={manualPatchBusy}
+            >
+              {t(
+                isManualYearExcluded
+                  ? 'v2Overview.restoreYearToPlan'
+                  : 'v2Overview.excludeYearFromPlan',
+                isManualYearExcluded
+                  ? 'Palauta suunnitelmaan'
+                  : 'Pois suunnitelmasta',
+              )}
+            </button>
+            {canReapplyFinancialVeetiForYear ? (
+              <button
+                type="button"
+                className="v2-btn v2-btn-small v2-btn-quiet"
+                onClick={handleModalApplyVeetiFinancials}
+                disabled={manualPatchBusy}
+              >
+                {t('v2Overview.reapplyVeetiFinancials', 'Use VEETI financials')}
+              </button>
+            ) : null}
+            {canReapplyPricesForYear ? (
+              <button
+                type="button"
+                className="v2-btn v2-btn-small v2-btn-quiet"
+                onClick={handleModalApplyVeetiPrices}
+                disabled={manualPatchBusy}
+              >
+                {t('v2Overview.reapplyVeetiPrices', 'Use VEETI prices')}
+              </button>
+            ) : null}
+            {canReapplyVolumesForYear ? (
+              <button
+                type="button"
+                className="v2-btn v2-btn-small v2-btn-quiet"
+                onClick={handleModalApplyVeetiVolumes}
+                disabled={manualPatchBusy}
+              >
+                {t('v2Overview.reapplyVeetiVolumes', 'Use VEETI volumes')}
+              </button>
+            ) : null}
+          </>
         ) : null}
         {isAdmin && row.missingRequirements.length > 0 ? (
           <>

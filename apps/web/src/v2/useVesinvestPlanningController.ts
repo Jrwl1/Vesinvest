@@ -27,7 +27,11 @@ import {
   buildDefaultPackageReportTitle,
   normalizeReportLocale,
 } from './displayNames';
-import { toDepreciationRuleDraft,type DepreciationRuleDraft } from './forecastModel';
+import { getApiErrorCode, mapReportBlockerError } from './apiErrorDisplay';
+import {
+  toDepreciationRuleDraft,
+  type DepreciationRuleDraft,
+} from './forecastModel';
 import { useVesinvestFeePathFocus } from './useVesinvestFeePathFocus';
 import { useVesinvestPlanningDerivedState } from './useVesinvestPlanningDerivedState';
 import { useVesinvestProjectComposer } from './useVesinvestProjectComposer';
@@ -62,8 +66,12 @@ export const useVesinvestPlanningController = ({
   onPlansChanged,
 }: VesinvestPlanningControllerParams) => {
   const [groups, setGroups] = React.useState<V2VesinvestGroupDefinition[]>([]);
-  const [groupDrafts, setGroupDrafts] = React.useState<V2VesinvestGroupDefinition[]>([]);
-  const [depreciationRules, setDepreciationRules] = React.useState<V2DepreciationRule[]>([]);
+  const [groupDrafts, setGroupDrafts] = React.useState<
+    V2VesinvestGroupDefinition[]
+  >([]);
+  const [depreciationRules, setDepreciationRules] = React.useState<
+    V2DepreciationRule[]
+  >([]);
   const [depreciationRuleDrafts, setDepreciationRuleDrafts] = React.useState<
     DepreciationRuleDraft[]
   >([]);
@@ -74,31 +82,85 @@ export const useVesinvestPlanningController = ({
       null,
   );
   const [plan, setPlan] = React.useState<V2VesinvestPlan | null>(null);
-  const [draft, setDraft] = React.useState(() => buildDraftFromPlan(null, linkedOrg));
+  const [draft, setDraft] = React.useState(() =>
+    buildDraftFromPlan(null, linkedOrg),
+  );
   const [loading, setLoading] = React.useState(true);
   const [loadingPlan, setLoadingPlan] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [info, setInfo] = React.useState<string | null>(null);
-  const [reportConflictCode, setReportConflictCode] = React.useState<string | null>(null);
+  const [reportConflictCode, setReportConflictCode] = React.useState<
+    string | null
+  >(null);
   const [veetiSearchQuery, setVeetiSearchQuery] = React.useState('');
-  const [veetiSearchResults, setVeetiSearchResults] = React.useState<VesinvestVeetiSearchHit[]>([]);
+  const [veetiSearchResults, setVeetiSearchResults] = React.useState<
+    VesinvestVeetiSearchHit[]
+  >([]);
   const [searchingVeeti, setSearchingVeeti] = React.useState(false);
-  const pendingAllocationFocusRef = React.useRef<{ projectIndex: number; year: number } | null>(null);
+  const pendingAllocationFocusRef = React.useRef<{
+    projectIndex: number;
+    year: number;
+  } | null>(null);
   const pendingOverviewFocusPlanIdRef = React.useRef<string | null>(null);
   const feePathSectionRef = React.useRef<HTMLElement | null>(null);
   const feePathHeadingRef = React.useRef<HTMLHeadingElement | null>(null);
-  const [savingClassKey, setSavingClassKey] = React.useState<string | null>(null);
-  const [linkedScenario, setLinkedScenario] = React.useState<V2ForecastScenario | null>(null);
-  const [loadingLinkedScenario, setLoadingLinkedScenario] = React.useState(false);
-  const [activeWorkspaceView, setActiveWorkspaceView] = React.useState<VesinvestWorkspaceView>('investment');
-  const [projectComposer, setProjectComposer] = React.useState<VesinvestProjectComposerState>({
-    open: false,
-    code: '',
-    groupKey: FALLBACK_GROUP_KEY,
-    name: '',
-  });
+  const [savingClassKey, setSavingClassKey] = React.useState<string | null>(
+    null,
+  );
+  const [linkedScenario, setLinkedScenario] =
+    React.useState<V2ForecastScenario | null>(null);
+  const [loadingLinkedScenario, setLoadingLinkedScenario] =
+    React.useState(false);
+  const [activeWorkspaceView, setActiveWorkspaceView] =
+    React.useState<VesinvestWorkspaceView>('investment');
+  const [projectComposer, setProjectComposer] =
+    React.useState<VesinvestProjectComposerState>({
+      open: false,
+      code: '',
+      groupKey: FALLBACK_GROUP_KEY,
+      name: '',
+    });
   const useSimplifiedSetup = simplifiedSetup && isAdmin;
+  const upsertPlanSummary = React.useCallback((nextPlan: V2VesinvestPlan) => {
+    const summary: V2VesinvestPlanSummary = {
+      id: nextPlan.id,
+      seriesId: nextPlan.seriesId,
+      name: nextPlan.name,
+      utilityName: nextPlan.utilityName,
+      businessId: nextPlan.businessId,
+      veetiId: nextPlan.veetiId,
+      identitySource: nextPlan.identitySource,
+      horizonYears: nextPlan.horizonYears,
+      versionNumber: nextPlan.versionNumber,
+      status: nextPlan.status,
+      baselineStatus: nextPlan.baselineStatus,
+      pricingStatus: nextPlan.pricingStatus,
+      selectedScenarioId: nextPlan.selectedScenarioId,
+      projectCount: nextPlan.projectCount,
+      totalInvestmentAmount: nextPlan.totalInvestmentAmount,
+      lastReviewedAt: nextPlan.lastReviewedAt,
+      reviewDueAt: nextPlan.reviewDueAt,
+      classificationReviewRequired: nextPlan.classificationReviewRequired,
+      assetEvidenceReady: nextPlan.assetEvidenceReady,
+      assetEvidenceMissingCount: nextPlan.assetEvidenceMissingCount,
+      baselineChangedSinceAcceptedRevision:
+        nextPlan.baselineChangedSinceAcceptedRevision,
+      investmentPlanChangedSinceFeeRecommendation:
+        nextPlan.investmentPlanChangedSinceFeeRecommendation,
+      tariffPlanStatus: nextPlan.tariffPlanStatus,
+      baselineFingerprint: nextPlan.baselineFingerprint,
+      scenarioFingerprint: nextPlan.scenarioFingerprint,
+      updatedAt: nextPlan.updatedAt,
+      createdAt: nextPlan.createdAt,
+    };
+    setPlans((current) => {
+      if (current.some((row) => row.id === nextPlan.id)) {
+        return current.map((row) => (row.id === nextPlan.id ? summary : row));
+      }
+      return [summary, ...current];
+    });
+  }, []);
   const refreshSummaries = React.useCallback(
     async (preferredId?: string | null) => {
       const [groupRows, depreciationRuleRows, planRows] = await Promise.all([
@@ -109,7 +171,9 @@ export const useVesinvestPlanningController = ({
       setGroups(groupRows);
       setGroupDrafts(groupRows.map((item) => ({ ...item })));
       setDepreciationRules(depreciationRuleRows);
-      setDepreciationRuleDrafts(depreciationRuleRows.map((item) => toDepreciationRuleDraft(item)));
+      setDepreciationRuleDrafts(
+        depreciationRuleRows.map((item) => toDepreciationRuleDraft(item)),
+      );
       setPlans(planRows);
       setSelectedPlanId((current) => {
         if (preferredId && planRows.some((item) => item.id === preferredId)) {
@@ -119,17 +183,26 @@ export const useVesinvestPlanningController = ({
           return current;
         }
         const contextSelectedId = planningContext?.vesinvest?.selectedPlan?.id;
-        if (contextSelectedId && planRows.some((item) => item.id === contextSelectedId)) {
+        if (
+          contextSelectedId &&
+          planRows.some((item) => item.id === contextSelectedId)
+        ) {
           return contextSelectedId;
         }
         const contextActiveId = planningContext?.vesinvest?.activePlan?.id;
-        if (contextActiveId && planRows.some((item) => item.id === contextActiveId)) {
+        if (
+          contextActiveId &&
+          planRows.some((item) => item.id === contextActiveId)
+        ) {
           return contextActiveId;
         }
         return planRows[0]?.id ?? null;
       });
     },
-    [planningContext?.vesinvest?.activePlan?.id, planningContext?.vesinvest?.selectedPlan?.id],
+    [
+      planningContext?.vesinvest?.activePlan?.id,
+      planningContext?.vesinvest?.selectedPlan?.id,
+    ],
   );
   React.useEffect(() => {
     let active = true;
@@ -176,7 +249,10 @@ export const useVesinvestPlanningController = ({
         setError(
           err instanceof Error
             ? err.message
-            : t('v2Vesinvest.errorLoadPlan', 'Failed to load the selected plan.'),
+            : t(
+                'v2Vesinvest.errorLoadPlan',
+                'Failed to load the selected plan.',
+              ),
         );
       })
       .finally(() => {
@@ -271,11 +347,16 @@ export const useVesinvestPlanningController = ({
     pendingOverviewFocusPlanIdRef,
   });
   const updateProject = React.useCallback(
-    (index: number, updater: (project: V2VesinvestProject) => V2VesinvestProject) => {
+    (
+      index: number,
+      updater: (project: V2VesinvestProject) => V2VesinvestProject,
+    ) => {
       setDraft((current) => ({
         ...current,
         projects: current.projects.map((project, projectIndex) =>
-          projectIndex === index ? syncProjectTotals(updater(project)) : project,
+          projectIndex === index
+            ? syncProjectTotals(updater(project))
+            : project,
         ),
       }));
     },
@@ -284,7 +365,9 @@ export const useVesinvestPlanningController = ({
   const updateGroupDraft = React.useCallback(
     (
       key: string,
-      updater: (group: V2VesinvestGroupDefinition) => V2VesinvestGroupDefinition,
+      updater: (
+        group: V2VesinvestGroupDefinition,
+      ) => V2VesinvestGroupDefinition,
     ) => {
       setGroupDrafts((current) =>
         current.map((group) => (group.key === key ? updater(group) : group)),
@@ -293,9 +376,14 @@ export const useVesinvestPlanningController = ({
     [],
   );
   const updateDepreciationRuleDraft = React.useCallback(
-    (key: string, updater: (rule: DepreciationRuleDraft) => DepreciationRuleDraft) => {
+    (
+      key: string,
+      updater: (rule: DepreciationRuleDraft) => DepreciationRuleDraft,
+    ) => {
       setDepreciationRuleDrafts((current) =>
-        current.map((rule) => (rule.assetClassKey === key ? updater(rule) : rule)),
+        current.map((rule) =>
+          rule.assetClassKey === key ? updater(rule) : rule,
+        ),
       );
     },
     [],
@@ -303,7 +391,9 @@ export const useVesinvestPlanningController = ({
   const handleSaveClassDefinition = React.useCallback(
     async (key: string) => {
       const groupDraft = groupDrafts.find((group) => group.key === key);
-      const ruleDraft = depreciationRuleDrafts.find((rule) => rule.assetClassKey === key);
+      const ruleDraft = depreciationRuleDrafts.find(
+        (rule) => rule.assetClassKey === key,
+      );
       if (!groupDraft || !ruleDraft) {
         return;
       }
@@ -323,7 +413,9 @@ export const useVesinvestPlanningController = ({
             assetClassName: groupDraft.label,
             method: ruleDraft.method as V2EditableDepreciationRuleMethod,
             linearYears: parseNullableNumberInput(ruleDraft.linearYears),
-            residualPercent: parseNullableNumberInput(ruleDraft.residualPercent),
+            residualPercent: parseNullableNumberInput(
+              ruleDraft.residualPercent,
+            ),
           }),
         ]);
         setGroups((current) =>
@@ -333,11 +425,15 @@ export const useVesinvestPlanningController = ({
           current.map((group) => (group.key === key ? updatedGroup : group)),
         );
         setDepreciationRules((current) =>
-          current.map((rule) => (rule.assetClassKey === key ? updatedRule : rule)),
+          current.map((rule) =>
+            rule.assetClassKey === key ? updatedRule : rule,
+          ),
         );
         setDepreciationRuleDrafts((current) =>
           current.map((rule) =>
-            rule.assetClassKey === key ? toDepreciationRuleDraft(updatedRule) : rule,
+            rule.assetClassKey === key
+              ? toDepreciationRuleDraft(updatedRule)
+              : rule,
           ),
         );
         setDraft((current) => ({
@@ -393,7 +489,8 @@ export const useVesinvestPlanningController = ({
     ) => {
       updateProject(projectIndex, (current) => {
         const serviceSplit =
-          groups.find((group) => group.key === current.groupKey)?.serviceSplit ?? 'mixed';
+          groups.find((group) => group.key === current.groupKey)
+            ?.serviceSplit ?? 'mixed';
         const allocations = current.allocations.map((allocation) => {
           if (allocation.year !== year) {
             return allocation;
@@ -420,7 +517,9 @@ export const useVesinvestPlanningController = ({
             const existingWastewater = allocation.wastewaterAmount ?? 0;
             const existingTotal = existingWater + existingWastewater;
             if (existingTotal > 0) {
-              const waterAmount = round2((existingWater / existingTotal) * totalAmount);
+              const waterAmount = round2(
+                (existingWater / existingTotal) * totalAmount,
+              );
               return {
                 ...allocation,
                 totalAmount,
@@ -527,11 +626,15 @@ export const useVesinvestPlanningController = ({
   const persist = React.useCallback(
     async (mode: 'create' | 'save' | 'clone' | 'sync') => {
       const invalidProject = draft.projects.find(
-        (project) => project.code.trim().length === 0 || project.name.trim().length === 0,
+        (project) =>
+          project.code.trim().length === 0 || project.name.trim().length === 0,
       );
       if (invalidProject) {
         setError(
-          t('v2Vesinvest.errorProjectRequired', 'Project code and name are required.'),
+          t(
+            'v2Vesinvest.errorProjectRequired',
+            'Project code and name are required.',
+          ),
         );
         setInfo(null);
         return;
@@ -541,8 +644,11 @@ export const useVesinvestPlanningController = ({
       setInfo(null);
       try {
         if (mode === 'create') {
-          const created = await createVesinvestPlanV2(toCreatePlanInput(draft, baselineSnapshot));
+          const created = await createVesinvestPlanV2(
+            toCreatePlanInput(draft, baselineSnapshot),
+          );
           setPlan(created);
+          upsertPlanSummary(created);
           setDraft(buildDraftFromPlan(created, linkedOrg));
           await refreshSummaries(created.id);
           await onPlansChanged?.();
@@ -553,9 +659,14 @@ export const useVesinvestPlanningController = ({
           return;
         }
         const payload = toUpdatePlanInput(draft, baselineSnapshot);
+        const updatePayload = {
+          ...payload,
+          expectedUpdatedAt: plan.updatedAt,
+        };
         if (mode === 'save') {
-          const saved = await updateVesinvestPlanV2(plan.id, payload);
+          const saved = await updateVesinvestPlanV2(plan.id, updatePayload);
           setPlan(saved);
+          upsertPlanSummary(saved);
           setDraft(buildDraftFromPlan(saved, linkedOrg));
           await refreshSummaries(saved.id);
           await onPlansChanged?.();
@@ -563,21 +674,47 @@ export const useVesinvestPlanningController = ({
           return;
         }
         if (mode === 'clone') {
-          const saved = await updateVesinvestPlanV2(plan.id, payload);
+          const saved = await updateVesinvestPlanV2(plan.id, updatePayload);
           const cloned = await cloneVesinvestPlanV2(saved.id);
           setPlan(cloned);
+          upsertPlanSummary(cloned);
           setDraft(buildDraftFromPlan(cloned, linkedOrg));
           await refreshSummaries(cloned.id);
           await onPlansChanged?.();
-          setInfo(t('v2Vesinvest.infoCloned', 'New Vesinvest revision created.'));
+          setInfo(
+            t('v2Vesinvest.infoCloned', 'New Vesinvest revision created.'),
+          );
           return;
         }
-        const saved = await updateVesinvestPlanV2(plan.id, payload);
-        const synced = await syncVesinvestPlanToForecastV2(saved.id, {
-          compute: true,
-          baselineSourceState: baselineSnapshot,
-        });
+        const saved = await updateVesinvestPlanV2(plan.id, updatePayload);
+        setPlan(saved);
+        upsertPlanSummary(saved);
+        setDraft(buildDraftFromPlan(saved, linkedOrg));
+        let synced: Awaited<ReturnType<typeof syncVesinvestPlanToForecastV2>>;
+        try {
+          synced = await syncVesinvestPlanToForecastV2(saved.id, {
+            compute: true,
+            baselineSourceState: baselineSnapshot,
+          });
+        } catch (syncErr) {
+          await Promise.all([
+            refreshSummaries(saved.id).catch(() => undefined),
+            Promise.resolve(onPlansChanged?.()),
+          ]);
+          upsertPlanSummary(saved);
+          setInfo(null);
+          setError(
+            mapReportBlockerError(
+              t,
+              syncErr,
+              'v2Vesinvest.errorSyncToForecastAfterSave',
+              'Vesinvest plan was saved, but syncing to Forecast failed. Try Sync to Forecast again.',
+            ),
+          );
+          return;
+        }
         setPlan(synced.plan);
+        upsertPlanSummary(synced.plan);
         setReportConflictCode(null);
         setDraft(buildDraftFromPlan(synced.plan, linkedOrg));
         await refreshSummaries(synced.plan.id);
@@ -585,15 +722,28 @@ export const useVesinvestPlanningController = ({
         onGoToForecast(synced.scenarioId);
       } catch (err) {
         setError(
-          err instanceof Error
-            ? err.message
-            : t('v2Vesinvest.errorSave', 'Failed to save Vesinvest plan.'),
+          mapReportBlockerError(
+            t,
+            err,
+            'v2Vesinvest.errorSave',
+            'Failed to save Vesinvest plan.',
+          ),
         );
       } finally {
         setBusy(false);
       }
     },
-    [draft, linkedOrg, onGoToForecast, onPlansChanged, plan?.id, refreshSummaries, t, baselineSnapshot],
+    [
+      draft,
+      linkedOrg,
+      onGoToForecast,
+      onPlansChanged,
+      plan?.id,
+      refreshSummaries,
+      t,
+      baselineSnapshot,
+      upsertPlanSummary,
+    ],
   );
   const reportReadinessHint = React.useMemo(() => {
     switch (reportReadinessReason) {
@@ -640,7 +790,10 @@ export const useVesinvestPlanningController = ({
   const handleCreateReport = React.useCallback(async () => {
     if (!plan?.id || !plan.selectedScenarioId || !linkedScenario) {
       setError(
-        t('v2Forecast.computeBeforeReport', 'Recompute results before creating report.'),
+        t(
+          'v2Forecast.computeBeforeReport',
+          'Recompute results before creating report.',
+        ),
       );
       setInfo(null);
       return;
@@ -675,17 +828,17 @@ export const useVesinvestPlanningController = ({
       setInfo(t('v2Forecast.infoReportCreated', 'Report created.'));
       onGoToReports();
     } catch (err) {
-      const code =
-        typeof err === 'object' && err != null && 'code' in err
-          ? (err as { code?: string }).code
-          : undefined;
+      const code = getApiErrorCode(err);
       if (
         code === 'VESINVEST_SCENARIO_STALE' ||
         code === 'VESINVEST_BASELINE_STALE' ||
         code === 'FORECAST_RECOMPUTE_REQUIRED'
       ) {
         setReportConflictCode(code);
-        await Promise.all([refreshSummaries(plan.id), Promise.resolve(onPlansChanged?.())]);
+        await Promise.all([
+          refreshSummaries(plan.id),
+          Promise.resolve(onPlansChanged?.()),
+        ]);
         onSavedFeePathReportConflict?.(plan.id);
         setError(
           code === 'VESINVEST_BASELINE_STALE'
@@ -694,22 +847,25 @@ export const useVesinvestPlanningController = ({
                 'Accepted baseline changed after the saved tariff-plan result.',
               )
             : code === 'VESINVEST_SCENARIO_STALE'
-              ? t(
-                  'v2Vesinvest.workflowOpenFeePathBody',
-                  'When the baseline is verified, sync the plan to forecast to review price pressure, financing gaps, and the saved recommendation.',
-                )
-              : t(
-                  'v2Forecast.staleComputeHint',
-                  'Saved inputs changed after the last calculation. Recompute results before creating report.',
-                ),
+            ? t(
+                'v2Vesinvest.workflowOpenFeePathBody',
+                'When the baseline is verified, sync the plan to forecast to review price pressure, financing gaps, and the saved recommendation.',
+              )
+            : t(
+                'v2Forecast.staleComputeHint',
+                'Saved inputs changed after the last calculation. Recompute results before creating report.',
+              ),
         );
         setInfo(null);
         return;
       }
       setError(
-        err instanceof Error
-          ? err.message
-          : t('v2Forecast.errorReportFailed', 'Failed to create report.'),
+        mapReportBlockerError(
+          t,
+          err,
+          'v2Forecast.errorReportFailed',
+          'Failed to create report.',
+        ),
       );
     } finally {
       setBusy(false);
@@ -752,11 +908,18 @@ export const useVesinvestPlanningController = ({
     activeWorkspaceView === 'investment' && draft.projects.length === 0;
   const shouldLeadSave = !shouldLeadAddProject && (hasUnsavedChanges || !plan);
   const shouldLeadSync =
-    !shouldLeadAddProject && !shouldLeadSave && pricingReady && !canCreateReport;
-  const projectActionClass = shouldLeadAddProject ? 'v2-btn v2-btn-primary' : 'v2-btn';
+    !shouldLeadAddProject &&
+    !shouldLeadSave &&
+    pricingReady &&
+    !canCreateReport;
+  const projectActionClass = shouldLeadAddProject
+    ? 'v2-btn v2-btn-primary'
+    : 'v2-btn';
   const saveActionClass = shouldLeadSave ? 'v2-btn v2-btn-primary' : 'v2-btn';
   const syncActionClass = shouldLeadSync ? 'v2-btn v2-btn-primary' : 'v2-btn';
-  const reportActionClass = canCreateReport ? 'v2-btn v2-btn-primary' : 'v2-btn';
+  const reportActionClass = canCreateReport
+    ? 'v2-btn v2-btn-primary'
+    : 'v2-btn';
 
   return {
     groups,

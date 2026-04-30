@@ -14,6 +14,7 @@ import {
   getScenarioDisplayName,
   normalizeReportLocale,
 } from './displayNames';
+import { mapReportBlockerError } from './apiErrorDisplay';
 import { formatEur, formatNumber, formatPercent, formatPrice } from './format';
 import {
   getScenarioTypeToneClass,
@@ -102,7 +103,8 @@ export function useForecastPageController({
     setError: scenarioController.setError,
     setInfo: scenarioController.setInfo,
     updateScenarioSummary: scenarioController.updateScenarioSummary,
-    markScenarioAsNeedsRecompute: scenarioController.markScenarioAsNeedsRecompute,
+    markScenarioAsNeedsRecompute:
+      scenarioController.markScenarioAsNeedsRecompute,
   });
 
   React.useEffect(() => {
@@ -112,7 +114,9 @@ export function useForecastPageController({
     onComputedVersionChange(
       scenarioController.selectedScenarioId,
       scenarioController.scenario?.computedFromUpdatedAt ??
-        computedFromUpdatedAtByScenario?.[scenarioController.selectedScenarioId] ??
+        computedFromUpdatedAtByScenario?.[
+          scenarioController.selectedScenarioId
+        ] ??
         null,
     );
   }, [
@@ -137,7 +141,10 @@ export function useForecastPageController({
     if (scenarioController.activeWorkbench === 'revenue') {
       scenarioController.setActivePrimaryChart('price');
     }
-  }, [scenarioController.activeWorkbench, scenarioController.setActivePrimaryChart]);
+  }, [
+    scenarioController.activeWorkbench,
+    scenarioController.setActivePrimaryChart,
+  ]);
 
   const {
     assumptionLabelByKey,
@@ -203,14 +210,13 @@ export function useForecastPageController({
             ? scenarioController.scenario.scenarioType
             : 'hypothesis'
           : useQuickCreateDefaults
-            ? 'hypothesis'
-            : scenarioController.newScenarioType;
+          ? 'hypothesis'
+          : scenarioController.newScenarioType;
         const created = await createForecastScenarioV2({
-          name:
-            useQuickCreateDefaults
-              ? buildDefaultScenarioName(t)
-              : scenarioController.newScenarioName.trim() ||
-                buildDefaultScenarioName(t),
+          name: useQuickCreateDefaults
+            ? buildDefaultScenarioName(t)
+            : scenarioController.newScenarioName.trim() ||
+              buildDefaultScenarioName(t),
           copyFromScenarioId: copyFromCurrent
             ? scenarioController.selectedScenarioId ?? undefined
             : undefined,
@@ -218,7 +224,9 @@ export function useForecastPageController({
         });
         scenarioController.setNewScenarioName('');
         await scenarioController.loadScenarioList(created.id, true);
-        scenarioController.setInfo(t('v2Forecast.infoCreated', 'Scenario created.'));
+        scenarioController.setInfo(
+          t('v2Forecast.infoCreated', 'Scenario created.'),
+        );
       } catch (err) {
         scenarioController.setError(
           scenarioController.mapKnownForecastError(
@@ -256,7 +264,9 @@ export function useForecastPageController({
     scenarioController.setInfo(null);
     try {
       await deleteForecastScenarioV2(scenarioController.selectedScenarioId);
-      scenarioController.setInfo(t('v2Forecast.infoDeleted', 'Scenario deleted.'));
+      scenarioController.setInfo(
+        t('v2Forecast.infoDeleted', 'Scenario deleted.'),
+      );
       await scenarioController.loadScenarioList(undefined, true);
     } catch (err) {
       scenarioController.setError(
@@ -304,13 +314,19 @@ export function useForecastPageController({
     scenarioController.setInfo(null);
     try {
       await investmentController.saveDrafts();
-      const computed = await computeForecastScenarioV2(scenarioController.selectedScenarioId);
+      const computed = await computeForecastScenarioV2(
+        scenarioController.selectedScenarioId,
+      );
       scenarioController.setScenario(computed);
       scenarioController.setDraftName(computed.name);
       scenarioController.setDraftScenarioType(computed.scenarioType);
       scenarioController.setDraftAssumptions({ ...computed.assumptions });
-      scenarioController.setDraftInvestments(computed.yearlyInvestments.map((item) => ({ ...item })));
-      const nearTermDraft = computed.nearTermExpenseAssumptions.map((item) => ({ ...item }));
+      scenarioController.setDraftInvestments(
+        computed.yearlyInvestments.map((item) => ({ ...item })),
+      );
+      const nearTermDraft = computed.nearTermExpenseAssumptions.map((item) => ({
+        ...item,
+      }));
       scenarioController.setDraftNearTermExpenseAssumptions(nearTermDraft);
       scenarioController.setNearTermExpenseDraftText(
         Object.fromEntries(
@@ -325,7 +341,9 @@ export function useForecastPageController({
         ),
       );
       scenarioController.updateScenarioSummary(computed);
-      scenarioController.setInfo(t('v2Forecast.infoComputed', 'Scenario calculated.'));
+      scenarioController.setInfo(
+        t('v2Forecast.infoComputed', 'Scenario calculated.'),
+      );
     } catch (err) {
       scenarioController.setError(
         err instanceof Error
@@ -340,7 +358,10 @@ export function useForecastPageController({
   const handleGenerateReport = React.useCallback(async () => {
     if (!scenarioController.selectedScenarioId) {
       scenarioController.setError(
-        t('v2Forecast.computeBeforeReport', 'Recompute results before creating report.'),
+        t(
+          'v2Forecast.computeBeforeReport',
+          'Recompute results before creating report.',
+        ),
       );
       scenarioController.setInfo(null);
       return;
@@ -356,7 +377,8 @@ export function useForecastPageController({
     scenarioController.setError(null);
     scenarioController.setInfo(null);
     try {
-      const activePlan = scenarioController.planningContext?.vesinvest?.activePlan ?? null;
+      const activePlan =
+        scenarioController.planningContext?.vesinvest?.activePlan ?? null;
       if (!activePlan?.id) {
         throw new Error(
           t(
@@ -378,7 +400,9 @@ export function useForecastPageController({
           'regulator_package',
         ),
       });
-      scenarioController.setInfo(t('v2Forecast.infoReportCreated', 'Report created.'));
+      scenarioController.setInfo(
+        t('v2Forecast.infoReportCreated', 'Report created.'),
+      );
       onReportCreated(report.reportId);
     } catch (err) {
       const code =
@@ -388,7 +412,8 @@ export function useForecastPageController({
         typeof (err as { code?: unknown }).code === 'string'
           ? (err as { code: string }).code
           : null;
-      const activePlan = scenarioController.planningContext?.vesinvest?.activePlan ?? null;
+      const activePlan =
+        scenarioController.planningContext?.vesinvest?.activePlan ?? null;
       if (
         (code === 'VESINVEST_SCENARIO_STALE' ||
           code === 'VESINVEST_BASELINE_STALE' ||
@@ -406,7 +431,8 @@ export function useForecastPageController({
         return;
       }
       scenarioController.setError(
-        scenarioController.mapKnownForecastError(
+        mapReportBlockerError(
+          t,
           err,
           'v2Forecast.errorReportFailed',
           'Failed to create report.',
@@ -428,7 +454,10 @@ export function useForecastPageController({
 
   const handleApplyRiskPreset = React.useCallback(
     async (preset: RiskPresetDefinition) => {
-      if (!scenarioController.scenario || !scenarioController.selectedScenarioId) {
+      if (
+        !scenarioController.scenario ||
+        !scenarioController.selectedScenarioId
+      ) {
         return;
       }
       if (investmentController.hasNearTermValidationErrors) {
@@ -448,7 +477,10 @@ export function useForecastPageController({
       try {
         const saved = await investmentController.saveDrafts();
         const baseScenario = saved ?? scenarioController.scenario;
-        const createdName = `${baseScenario.name} - ${t(preset.titleKey, preset.title)}`;
+        const createdName = `${baseScenario.name} - ${t(
+          preset.titleKey,
+          preset.title,
+        )}`;
         const created = await createForecastScenarioV2({
           name: createdName,
           copyFromScenarioId: scenarioController.selectedScenarioId,
@@ -462,9 +494,13 @@ export function useForecastPageController({
         await computeForecastScenarioV2(created.id);
         await scenarioController.loadScenarioList(created.id, true);
         scenarioController.setInfo(
-          t('v2Forecast.riskPresetCreated', 'Risk scenario "{{name}}" created.', {
-            name: createdName,
-          }),
+          t(
+            'v2Forecast.riskPresetCreated',
+            'Risk scenario "{{name}}" created.',
+            {
+              name: createdName,
+            },
+          ),
         );
       } catch (err) {
         scenarioController.setError(
@@ -481,7 +517,6 @@ export function useForecastPageController({
     [investmentController, scenarioController, t],
   );
 
-
   return {
     t,
     ...scenarioController,
@@ -497,7 +532,8 @@ export function useForecastPageController({
     forecastStateToneClass,
     forecastStateLabel,
     forecastSurfaceToneClass,
-    showInlineFreshnessState: scenarioController.forecastFreshnessState === 'current',
+    showInlineFreshnessState:
+      scenarioController.forecastFreshnessState === 'current',
     handleCreate,
     handleDelete,
     handleSave,
@@ -525,7 +561,9 @@ export function useForecastPageController({
     totalDepreciationEffect,
     investmentImpactSummary,
     computedVersionLabel: scenarioController.scenario?.computedFromUpdatedAt
-      ? formatScenarioUpdatedAt(scenarioController.scenario.computedFromUpdatedAt)
+      ? formatScenarioUpdatedAt(
+          scenarioController.scenario.computedFromUpdatedAt,
+        )
       : t('v2Forecast.reportStateMissing'),
     scenarioTypeLabel,
     scenarioTypeToneClass: scenarioController.scenario
@@ -544,4 +582,6 @@ export function useForecastPageController({
   };
 }
 
-export type ForecastPageController = ReturnType<typeof useForecastPageController>;
+export type ForecastPageController = ReturnType<
+  typeof useForecastPageController
+>;

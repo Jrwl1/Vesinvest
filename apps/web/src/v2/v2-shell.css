@@ -25,8 +25,7 @@
   --v2-row-radius: 10px;
   --v2-card-padding: 22px;
   min-height: 100vh;
-  background:
-    linear-gradient(
+  background: linear-gradient(
         90deg,
         transparent 0,
         transparent 47px,
@@ -66,8 +65,7 @@
 
 .v2-app-shell.v2-app-shell-forecast,
 .v2-app-shell.v2-app-shell-reports {
-  background:
-    linear-gradient(
+  background: linear-gradient(
         90deg,
         transparent 0,
         transparent 47px,
@@ -718,9 +716,7 @@
   border-radius: 8px;
   padding: 7px 10px;
   gap: 6px;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
+  transition: background-color 0.15s ease, border-color 0.15s ease,
     color 0.15s ease;
 }
 
@@ -1182,8 +1178,8 @@
 }
 
 .v2-page-indicator {
-  flex: 0 1 auto;
-  max-width: 34ch;
+  flex: 0 0 auto;
+  max-width: none;
 }
 
 .v2-page-indicator strong {
@@ -1285,11 +1281,27 @@
   .v2-app-shell .v2-header-tools .language-switcher {
     min-width: 0;
     flex: 0 1 auto;
+    border-radius: 10px;
   }
 
-  .v2-account-btn {
+  .v2-app-shell .v2-header-tools .lang-btn {
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .v2-account-btn,
+  .v2-app-shell.v2-app-shell-forecast .v2-account-btn,
+  .v2-app-shell.v2-app-shell-reports .v2-account-btn {
     flex: 0 0 auto;
-    max-width: 72px;
+    max-width: 86px;
+    min-height: 44px;
+  }
+
+  .v2-account-drawer-close {
+    width: 44px;
+    height: 44px;
   }
 
   .v2-main-nav,
@@ -1297,7 +1309,34 @@
   .v2-app-shell.v2-app-shell-reports .v2-main-nav {
     grid-column: 1;
     width: 100%;
+    flex-wrap: wrap;
     justify-content: flex-start;
+    overflow-x: visible;
+    border-radius: 10px;
+  }
+
+  .v2-nav-btn,
+  .v2-app-shell.v2-app-shell-forecast .v2-nav-btn,
+  .v2-app-shell.v2-app-shell-reports .v2-nav-btn {
+    min-height: 44px;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .v2-workflow-strip {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .v2-workflow-step {
+    min-height: 44px;
+    padding: 9px 10px;
+  }
+
+  .v2-app-shell .v2-btn,
+  .v2-app-shell .v2-input,
+  .v2-app-shell select {
+    min-height: 44px;
   }
 
   .v2-header-meta {

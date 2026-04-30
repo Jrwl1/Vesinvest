@@ -53,13 +53,11 @@ type Props = {
   ) => void;
   onSetupOrgNameChange?: (name: string | null) => void;
   onOrgLanguageNoticeChange?: (
-    notice:
-      | {
-          kind: 'switched' | 'kept_manual';
-          language: 'fi' | 'sv' | 'en';
-          previousLanguage: 'fi' | 'sv' | 'en';
-        }
-      | null,
+    notice: {
+      kind: 'switched' | 'kept_manual';
+      language: 'fi' | 'sv' | 'en';
+      previousLanguage: 'fi' | 'sv' | 'en';
+    } | null,
   ) => void;
   setupBackSignal?: number;
 };
@@ -68,9 +66,6 @@ export const OverviewPageV2: React.FC<Props> = ({
   onGoToForecast,
   onGoToReports: _onGoToReports,
   isAdmin,
-  overviewFocusTarget,
-  onOverviewFocusTargetConsumed,
-  onSavedFeePathReportConflict,
   onSetupWizardStateChange,
   onSetupPlanStateChange,
   onSetupOrgNameChange,
@@ -87,8 +82,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     onOrgLanguageNoticeChange,
     setupBackSignal,
   });
-  const [collapsedPlanningPanelOpenStep, setCollapsedPlanningPanelOpenStep] =
-    React.useState<number | null>(null);
   // The shell keeps the broader controller contract available for lazy child
   // surfaces and shared view-model builders even when this file does not read
   // every field directly.
@@ -341,11 +334,8 @@ export const OverviewPageV2: React.FC<Props> = ({
     );
 
   const {
-    activeVesinvestPlan,
-    collapsePlanningPanelInSetup,
     compactSupportingChrome,
     correctedYearsLabel,
-    demotePlanningPanelInSetup,
     handoffExcludedYearsSorted,
     hasBaselineBudget,
     importYearsButtonClass,
@@ -361,8 +351,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     selectedOrgBusinessId,
     selectedOrgMunicipality,
     selectedOrgName,
-    shouldCompactPlanningPanel,
-    shouldShowVesinvestPanel,
     showSimplifiedPostChoiceSetup,
     showSupportNextActionBlock,
     summaryMetaBlocks,
@@ -378,6 +366,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   } = buildOverviewPageViewModel({
     controller,
     overview,
+    isAdmin,
     t,
   });
   const openAssetManagement = onGoToAssetManagement ?? (() => onGoToForecast());
@@ -430,6 +419,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         connecting={connecting}
         importingYears={importingYears}
         syncing={syncing}
+        isAdmin={isAdmin}
         searchResults={searchResults}
         selectedOrg={selectedOrg}
         onSelectOrg={setSelectedOrg}
@@ -447,53 +437,54 @@ export const OverviewPageV2: React.FC<Props> = ({
     ) : null;
   const showImportYearsSurface =
     mountedWorkflowStep === 2 || showSimplifiedPostChoiceSetup;
-  const importYearsSurface =
-    showImportYearsSurface ? (
-      <React.Suspense
-        fallback={<div className="v2-loading">{t('common.loading', 'Loading...')}</div>}
-      >
-        <OverviewImportBoard
-          t={t}
-          workflowStep={isManageYearsMaintenanceMode ? 3 : overviewVisualStep}
-          mode={isManageYearsMaintenanceMode ? 'manage' : 'import'}
-          wizardBackLabel={wizardBackLabel}
-          onBack={handleWizardBack}
-          selectedYears={selectedYears}
-          syncing={syncing}
-          readyRows={readyTrustBoardRows}
-          suspiciousRows={suspiciousTrustBoardRows}
-          blockedRows={blockedTrustBoardRows}
-          trashbinRows={trashbinTrustBoardRows}
-          currentYearEstimateRows={currentYearEstimateBoardRows}
-          confirmedImportedYears={confirmedImportedYears}
-          yearDataCache={yearDataCache}
-          cardEditYear={cardEditYear}
-          cardEditContext={cardEditContext}
-          cardEditFocusField={cardEditFocusField}
-          isAdmin={isAdmin}
-          renderStep2InlineFieldEditor={renderStep2InlineFieldEditor}
-          buildRepairActions={buildRepairActions}
-          sourceStatusLabel={sourceStatusLabel}
-          sourceStatusClassName={sourceStatusClassName}
-          sourceLayerText={sourceLayerText}
-          renderDatasetCounts={renderDatasetCounts}
-          missingRequirementLabel={missingRequirementLabel}
-          attemptOpenInlineCardEditor={attemptOpenSetupInlineCardEditor}
-          openInlineCardEditor={openSetupInlineCardEditor}
-          loadingYearData={loadingYearData}
-          manualPatchError={manualPatchError}
-          blockedYearCount={blockedYearCount}
-          removingYear={removingYear}
-          onToggleYear={(year) => toggleYear(year, null)}
-          onImportYears={handleImportYears}
-          onAddCurrentYearEstimate={handleAddCurrentYearEstimate}
-          onTrashYear={(year) => void excludeYearFromImportBoard(year)}
-          onRestoreYear={(year) => void restoreYearFromImportBoard(year)}
-          importYearsButtonClass={importYearsButtonClass}
-          importingYears={importingYears}
-        />
-      </React.Suspense>
-    ) : null;
+  const importYearsSurface = showImportYearsSurface ? (
+    <React.Suspense
+      fallback={
+        <div className="v2-loading">{t('common.loading', 'Loading...')}</div>
+      }
+    >
+      <OverviewImportBoard
+        t={t}
+        workflowStep={isManageYearsMaintenanceMode ? 3 : overviewVisualStep}
+        mode={isManageYearsMaintenanceMode ? 'manage' : 'import'}
+        wizardBackLabel={wizardBackLabel}
+        onBack={handleWizardBack}
+        selectedYears={selectedYears}
+        syncing={syncing}
+        readyRows={readyTrustBoardRows}
+        suspiciousRows={suspiciousTrustBoardRows}
+        blockedRows={blockedTrustBoardRows}
+        trashbinRows={trashbinTrustBoardRows}
+        currentYearEstimateRows={currentYearEstimateBoardRows}
+        confirmedImportedYears={confirmedImportedYears}
+        yearDataCache={yearDataCache}
+        cardEditYear={cardEditYear}
+        cardEditContext={cardEditContext}
+        cardEditFocusField={cardEditFocusField}
+        isAdmin={isAdmin}
+        renderStep2InlineFieldEditor={renderStep2InlineFieldEditor}
+        buildRepairActions={buildRepairActions}
+        sourceStatusLabel={sourceStatusLabel}
+        sourceStatusClassName={sourceStatusClassName}
+        sourceLayerText={sourceLayerText}
+        renderDatasetCounts={renderDatasetCounts}
+        missingRequirementLabel={missingRequirementLabel}
+        attemptOpenInlineCardEditor={attemptOpenSetupInlineCardEditor}
+        openInlineCardEditor={openSetupInlineCardEditor}
+        loadingYearData={loadingYearData}
+        manualPatchError={manualPatchError}
+        blockedYearCount={blockedYearCount}
+        removingYear={removingYear}
+        onToggleYear={(year) => toggleYear(year, null)}
+        onImportYears={handleImportYears}
+        onAddCurrentYearEstimate={handleAddCurrentYearEstimate}
+        onTrashYear={(year) => void excludeYearFromImportBoard(year)}
+        onRestoreYear={(year) => void restoreYearFromImportBoard(year)}
+        importYearsButtonClass={importYearsButtonClass}
+        importingYears={importingYears}
+      />
+    </React.Suspense>
+  ) : null;
   const heroGrid = useSupportRail ? (
     <OverviewSupportRail
       t={t}
@@ -509,16 +500,10 @@ export const OverviewPageV2: React.FC<Props> = ({
     />
   ) : null;
 
-  const planningPanel = null;
-
   const activeSurface = (
     <div className="v2-overview-active-surface">
-      {demotePlanningPanelInSetup ? null : planningPanel}
-
-        {connectSurface}
-
-        {importYearsSurface}
-
+      {connectSurface}
+      {importYearsSurface}
 
       <input
         ref={workbookFileInputRef}
@@ -557,7 +542,11 @@ export const OverviewPageV2: React.FC<Props> = ({
       {!showSimplifiedPostChoiceSetup &&
       (mountedWorkflowStep === 3 || mountedWorkflowStep === 4) ? (
         <React.Suspense
-          fallback={<div className="v2-loading">{t('common.loading', 'Loading...')}</div>}
+          fallback={
+            <div className="v2-loading">
+              {t('common.loading', 'Loading...')}
+            </div>
+          }
         >
           <OverviewReviewBoard
             t={t}
@@ -589,12 +578,22 @@ export const OverviewPageV2: React.FC<Props> = ({
             documentImportError={documentImportError}
             documentImportPreview={documentImportPreview}
             documentImportReviewedKeys={controller.documentImportReviewedKeys}
-            handleSelectDocumentImportMatch={controller.handleSelectDocumentImportMatch}
-            isCurrentYearReadyForReview={manualPatchViewModel.isCurrentYearReadyForReview}
+            handleSelectDocumentImportMatch={
+              controller.handleSelectDocumentImportMatch
+            }
+            isCurrentYearReadyForReview={
+              manualPatchViewModel.isCurrentYearReadyForReview
+            }
             isManualYearExcluded={manualPatchViewModel.isManualYearExcluded}
-            canReapplyFinancialVeetiForYear={manualPatchViewModel.canReapplyFinancialVeetiForYear}
-            canReapplyPricesForYear={manualPatchViewModel.canReapplyPricesForYear}
-            canReapplyVolumesForYear={manualPatchViewModel.canReapplyVolumesForYear}
+            canReapplyFinancialVeetiForYear={
+              manualPatchViewModel.canReapplyFinancialVeetiForYear
+            }
+            canReapplyPricesForYear={
+              manualPatchViewModel.canReapplyPricesForYear
+            }
+            canReapplyVolumesForYear={
+              manualPatchViewModel.canReapplyVolumesForYear
+            }
             keepYearButtonClass={manualPatchViewModel.keepYearButtonClass}
             fixYearButtonClass={manualPatchViewModel.fixYearButtonClass}
             handleKeepCurrentYearValues={handleKeepCurrentYearValues}
@@ -648,6 +647,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           onCreatePlanningBaseline={() => void handleCreatePlanningBaseline()}
           creatingPlanningBaseline={creatingPlanningBaseline}
           importedBlockedYearCount={importedBlockedYearCount}
+          isAdmin={isAdmin}
         />
       ) : null}
 
@@ -664,6 +664,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           renderDatasetCounts={renderDatasetCounts}
           renderYearValuePreview={renderYearValuePreview}
           openForecastButtonClass={openForecastButtonClass}
+          isAdmin={isAdmin}
           onManageYears={handleManageYears}
           onReopenYearReview={(year) => void handleReopenYearReview(year)}
           onDeleteYear={(year) => void handleDeleteYear(year)}
@@ -673,10 +674,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           onOpenForecast={openAssetManagement}
         />
       ) : null}
-
-      {demotePlanningPanelInSetup ? planningPanel : null}
-
-      </div>
+    </div>
   );
 
   return (
@@ -696,20 +694,18 @@ export const OverviewPageV2: React.FC<Props> = ({
         ) : (
           activeSurface
         )
+      ) : compactSupportingChrome ? (
+        <>
+          {activeSurface}
+          {heroGrid}
+        </>
+      ) : heroGrid ? (
+        <>
+          {heroGrid}
+          {activeSurface}
+        </>
       ) : (
-        compactSupportingChrome ? (
-          <>
-            {activeSurface}
-            {heroGrid}
-          </>
-        ) : heroGrid ? (
-          <>
-            {heroGrid}
-            {activeSurface}
-          </>
-        ) : (
-          activeSurface
-        )
+        activeSurface
       )}
     </div>
   );

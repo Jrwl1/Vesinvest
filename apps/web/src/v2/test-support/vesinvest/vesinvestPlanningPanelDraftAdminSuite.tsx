@@ -1,5 +1,12 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { VesinvestPlanningPanel } from '../../VesinvestPlanningPanel';
@@ -27,15 +34,18 @@ vi.mock('../../../api', () => ({
   createVesinvestPlanV2: (...args: unknown[]) => createVesinvestPlanV2(...args),
   getForecastScenarioV2: (...args: unknown[]) => getForecastScenarioV2(...args),
   getVesinvestPlanV2: (...args: unknown[]) => getVesinvestPlanV2(...args),
-  listDepreciationRulesV2: (...args: unknown[]) => listDepreciationRulesV2(...args),
+  listDepreciationRulesV2: (...args: unknown[]) =>
+    listDepreciationRulesV2(...args),
   listVesinvestGroupsV2: (...args: unknown[]) => listVesinvestGroupsV2(...args),
   listVesinvestPlansV2: (...args: unknown[]) => listVesinvestPlansV2(...args),
   searchImportOrganizationsV2: (...args: unknown[]) =>
     searchImportOrganizationsV2(...args),
   syncVesinvestPlanToForecastV2: (...args: unknown[]) =>
     syncVesinvestPlanToForecastV2(...args),
-  updateDepreciationRuleV2: (...args: unknown[]) => updateDepreciationRuleV2(...args),
-  updateVesinvestGroupV2: (...args: unknown[]) => updateVesinvestGroupV2(...args),
+  updateDepreciationRuleV2: (...args: unknown[]) =>
+    updateDepreciationRuleV2(...args),
+  updateVesinvestGroupV2: (...args: unknown[]) =>
+    updateVesinvestGroupV2(...args),
   updateVesinvestPlanV2: (...args: unknown[]) => updateVesinvestPlanV2(...args),
 }));
 
@@ -111,7 +121,9 @@ const makePlan = (overrides: Record<string, unknown> = {}) => ({
   updatedAt: '2026-04-08T10:00:00.000Z',
   createdAt: '2026-04-08T10:00:00.000Z',
   horizonYearsRange: Array.from({ length: 20 }, (_, index) => 2026 + index),
-  yearlyTotals: [{ year: 2026, totalAmount: 100, waterAmount: 100, wastewaterAmount: 0 }],
+  yearlyTotals: [
+    { year: 2026, totalAmount: 100, waterAmount: 100, wastewaterAmount: 0 },
+  ],
   fiveYearBands: [{ startYear: 2026, endYear: 2030, totalAmount: 100 }],
   projects: [
     {
@@ -129,7 +141,15 @@ const makePlan = (overrides: Record<string, unknown> = {}) => ({
       waterAmount: 100,
       wastewaterAmount: 0,
       totalAmount: 100,
-      allocations: [{ id: 'allocation-1', year: 2026, totalAmount: 100, waterAmount: 100, wastewaterAmount: 0 }],
+      allocations: [
+        {
+          id: 'allocation-1',
+          year: 2026,
+          totalAmount: 100,
+          waterAmount: 100,
+          wastewaterAmount: 0,
+        },
+      ],
     },
   ],
   ...overrides,
@@ -220,435 +240,491 @@ const baselineYear = {
   netWaterTradeVolume: -25000,
 };
 
-
-
 export function registerVesinvestPlanningPanelDraftAdminSuite() {
   describe('VesinvestPlanningPanel draft and admin flows', () => {
-  beforeEach(() => {
-    cloneVesinvestPlanV2.mockReset();
-    connectImportOrganizationV2.mockReset();
-    createReportV2.mockReset();
-    createVesinvestPlanV2.mockReset();
-    getForecastScenarioV2.mockReset();
-    getVesinvestPlanV2.mockReset();
-    listDepreciationRulesV2.mockReset();
-    listVesinvestGroupsV2.mockReset();
-    listVesinvestPlansV2.mockReset();
-    searchImportOrganizationsV2.mockReset();
-    syncVesinvestPlanToForecastV2.mockReset();
-    updateDepreciationRuleV2.mockReset();
-    updateVesinvestGroupV2.mockReset();
-    updateVesinvestPlanV2.mockReset();
+    beforeEach(() => {
+      cloneVesinvestPlanV2.mockReset();
+      connectImportOrganizationV2.mockReset();
+      createReportV2.mockReset();
+      createVesinvestPlanV2.mockReset();
+      getForecastScenarioV2.mockReset();
+      getVesinvestPlanV2.mockReset();
+      listDepreciationRulesV2.mockReset();
+      listVesinvestGroupsV2.mockReset();
+      listVesinvestPlansV2.mockReset();
+      searchImportOrganizationsV2.mockReset();
+      syncVesinvestPlanToForecastV2.mockReset();
+      updateDepreciationRuleV2.mockReset();
+      updateVesinvestGroupV2.mockReset();
+      updateVesinvestPlanV2.mockReset();
 
-    listVesinvestGroupsV2.mockResolvedValue([group, wastewaterTreatmentGroup]);
-    listDepreciationRulesV2.mockResolvedValue([
-      {
-        id: group.key,
-        assetClassKey: group.key,
-        assetClassName: group.label,
-        method: 'straight-line',
-        linearYears: 30,
-        residualPercent: null,
-        createdAt: '2026-04-08T10:00:00.000Z',
-        updatedAt: '2026-04-08T10:00:00.000Z',
-      },
-      {
-        id: wastewaterTreatmentGroup.key,
-        assetClassKey: wastewaterTreatmentGroup.key,
-        assetClassName: wastewaterTreatmentGroup.label,
-        method: 'straight-line',
-        linearYears: 20,
-        residualPercent: null,
-        createdAt: '2026-04-08T10:00:00.000Z',
-        updatedAt: '2026-04-08T10:00:00.000Z',
-      },
-    ]);
-    listVesinvestPlansV2.mockResolvedValue([makeSummary()]);
-    getVesinvestPlanV2.mockResolvedValue(makePlan());
-    getForecastScenarioV2.mockResolvedValue({
-      id: 'scenario-1',
-      name: 'Water Utility Vesinvest v1',
-      updatedAt: '2026-04-08T10:00:00.000Z',
-      computedFromUpdatedAt: '2026-04-08T10:00:00.000Z',
-      years: [{ year: 2026 }],
-      yearlyInvestments: [
+      listVesinvestGroupsV2.mockResolvedValue([
+        group,
+        wastewaterTreatmentGroup,
+      ]);
+      listDepreciationRulesV2.mockResolvedValue([
         {
-          year: 2026,
-          amount: 100,
-          target: 'Water Utility / Vesinvest',
-          category: 'Sanering / vattennätverk',
-          depreciationClassKey: 'sanering_water_network',
-          depreciationRuleSnapshot: {
-            assetClassKey: 'sanering_water_network',
-            assetClassName: 'Water network',
-            method: 'straight-line',
-            linearYears: 30,
-            residualPercent: null,
-          },
-          investmentType: 'replacement',
-          confidence: 'high',
-          waterAmount: 100,
-          wastewaterAmount: 0,
-          note: null,
+          id: group.key,
+          assetClassKey: group.key,
+          assetClassName: group.label,
+          method: 'straight-line',
+          linearYears: 30,
+          residualPercent: null,
+          createdAt: '2026-04-08T10:00:00.000Z',
+          updatedAt: '2026-04-08T10:00:00.000Z',
         },
-      ],
-    } as any);
-    searchImportOrganizationsV2.mockResolvedValue([
-      {
-        Id: 1535,
-        Nimi: 'Water Utility',
-        YTunnus: '1234567-8',
-        Kunta: 'Porvoo',
-      },
-    ]);
-  });
-
-  afterEach(() => {
-    cleanup();
-    vi.restoreAllMocks();
-  });
-
-  it('creates a manual plan without sending update-only fields', async () => {
-    listVesinvestPlansV2.mockResolvedValue([]);
-    createVesinvestPlanV2.mockResolvedValue(
-      makePlan({
-        name: 'Fresh Vesinvest',
-        utilityName: 'Fresh Utility',
-        businessId: '5555555-5',
-        projects: [
+        {
+          id: wastewaterTreatmentGroup.key,
+          assetClassKey: wastewaterTreatmentGroup.key,
+          assetClassName: wastewaterTreatmentGroup.label,
+          method: 'straight-line',
+          linearYears: 20,
+          residualPercent: null,
+          createdAt: '2026-04-08T10:00:00.000Z',
+          updatedAt: '2026-04-08T10:00:00.000Z',
+        },
+      ]);
+      listVesinvestPlansV2.mockResolvedValue([makeSummary()]);
+      getVesinvestPlanV2.mockResolvedValue(makePlan());
+      getForecastScenarioV2.mockResolvedValue({
+        id: 'scenario-1',
+        name: 'Water Utility Vesinvest v1',
+        updatedAt: '2026-04-08T10:00:00.000Z',
+        computedFromUpdatedAt: '2026-04-08T10:00:00.000Z',
+        years: [{ year: 2026 }],
+        yearlyInvestments: [
           {
-            ...makePlan().projects[0],
-            code: 'P-101',
-            name: 'Fresh project',
+            year: 2026,
+            amount: 100,
+            target: 'Water Utility / Vesinvest',
+            category: 'Sanering / vattennätverk',
+            depreciationClassKey: 'sanering_water_network',
+            depreciationRuleSnapshot: {
+              assetClassKey: 'sanering_water_network',
+              assetClassName: 'Water network',
+              method: 'straight-line',
+              linearYears: 30,
+              residualPercent: null,
+            },
+            investmentType: 'replacement',
+            confidence: 'high',
+            waterAmount: 100,
+            wastewaterAmount: 0,
+            note: null,
           },
         ],
-      }),
-    );
-
-    const { container } = render(
-      <VesinvestPlanningPanel
-        t={t as any}
-        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
-        linkedOrg={linkedOrg}
-        onGoToForecast={() => undefined}
-        onGoToReports={() => undefined}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(listVesinvestPlansV2).toHaveBeenCalled();
+      } as any);
+      searchImportOrganizationsV2.mockResolvedValue([
+        {
+          Id: 1535,
+          Nimi: 'Water Utility',
+          YTunnus: '1234567-8',
+          Kunta: 'Porvoo',
+        },
+      ]);
     });
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Add project' })[0]!);
-    const dialog = screen.getByRole('dialog');
-    fireEvent.change(within(dialog).getByRole('textbox', { name: /code/i }), {
-      target: { value: 'P-101' },
-    });
-    fireEvent.change(within(dialog).getByRole('combobox', { name: /class/i }), {
-      target: { value: wastewaterTreatmentGroup.key },
-    });
-    fireEvent.change(within(dialog).getByRole('textbox', { name: /project/i }), {
-      target: { value: 'Fresh project' },
-    });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Add project' }));
-
-    fireEvent.change(screen.getByRole('textbox', { name: /plan name/i }), {
-      target: { value: 'Fresh Vesinvest' },
+    afterEach(() => {
+      cleanup();
+      vi.restoreAllMocks();
     });
 
-    const projectNameInput = container.querySelector(
-      'input[name="vesinvest-project-name-0"]',
-    ) as HTMLInputElement | null;
-    const projectCodeInput = container.querySelector(
-      'input[name="vesinvest-project-code-0"]',
-    ) as HTMLInputElement | null;
-    expect(projectNameInput).toBeTruthy();
-    expect(projectCodeInput).toBeTruthy();
-    expect(
-      screen.getAllByRole('button', { name: 'Edit yearly allocations' }).length,
-    ).toBeGreaterThan(0);
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'Edit yearly allocations' })[0]!);
-    const allocationDialog = screen.getByRole('dialog', {
-      name: 'Edit yearly allocations',
-    });
-    const allocationInput = within(allocationDialog).getByLabelText(
-      'P-101 2026 Total',
-    ) as HTMLInputElement;
-    fireEvent.change(allocationInput!, { target: { value: '250000' } });
-
-    await waitFor(() => {
-      expect(projectCodeInput?.value).toBe('P-101');
-      expect(projectNameInput?.value).toBe('Fresh project');
-      expect(allocationInput?.value).toBe('250000');
-    });
-    expect(allocationDialog.textContent).toMatch(/250\s*000/u);
-    fireEvent.click(within(allocationDialog).getByRole('button', { name: 'Close' }));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Create Vesinvest plan' }));
-
-    await waitFor(() => {
-      expect(createVesinvestPlanV2).toHaveBeenCalledWith(
-        expect.objectContaining({
+    it('creates a manual plan without sending update-only fields', async () => {
+      listVesinvestPlansV2.mockResolvedValue([]);
+      createVesinvestPlanV2.mockResolvedValue(
+        makePlan({
           name: 'Fresh Vesinvest',
+          utilityName: 'Fresh Utility',
+          businessId: '5555555-5',
+          projects: [
+            {
+              ...makePlan().projects[0],
+              code: 'P-101',
+              name: 'Fresh project',
+            },
+          ],
         }),
       );
-    });
 
-    const payload = createVesinvestPlanV2.mock.calls[0]?.[0] as Record<string, unknown>;
-    const projects = payload.projects as Array<Record<string, unknown>>;
-    expect(projects?.[0]?.code).toBe('P-101');
-    expect(projects?.[0]?.groupKey).toBe(wastewaterTreatmentGroup.key);
-    expect(payload.status).toBeUndefined();
-    expect(payload.baselineStatus).toBeUndefined();
-    expect(payload.feeRecommendationStatus).toBeUndefined();
-    expect(payload.lastReviewedAt).toBeUndefined();
-    expect(payload.reviewDueAt).toBeUndefined();
-    expect(payload.utilityName).toBeUndefined();
-    expect(payload.businessId).toBeUndefined();
-    expect(payload.veetiId).toBeUndefined();
-    expect(payload.identitySource).toBeUndefined();
-  });
+      const { container } = render(
+        <VesinvestPlanningPanel
+          t={t as any}
+          planningContext={
+            { canCreateScenario: false, baselineYears: [] } as any
+          }
+          linkedOrg={linkedOrg}
+          onGoToForecast={() => undefined}
+          onGoToReports={() => undefined}
+        />,
+      );
 
-  it('does not insert a project row before staged confirmation and keeps cancel non-destructive', async () => {
-    listVesinvestPlansV2.mockResolvedValue([
-      makeSummary({
-        projectCount: 0,
-        totalInvestmentAmount: 0,
-      }),
-    ]);
-    getVesinvestPlanV2.mockResolvedValue(
-      makePlan({
-        projectCount: 0,
-        totalInvestmentAmount: 0,
-        yearlyTotals: [],
-        fiveYearBands: [],
-        projects: [],
-      }),
-    );
+      await waitFor(() => {
+        expect(listVesinvestPlansV2).toHaveBeenCalled();
+      });
 
-    const { container } = render(
-      <VesinvestPlanningPanel
-        t={t as any}
-        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
-        linkedOrg={linkedOrg}
-        onGoToForecast={() => undefined}
-        onGoToReports={() => undefined}
-      />,
-    );
+      fireEvent.click(
+        screen.getAllByRole('button', { name: 'Add project' })[0]!,
+      );
+      const dialog = screen.getByRole('dialog');
+      fireEvent.change(within(dialog).getByRole('textbox', { name: /code/i }), {
+        target: { value: 'P-101' },
+      });
+      fireEvent.change(
+        within(dialog).getByRole('combobox', { name: /class/i }),
+        {
+          target: { value: wastewaterTreatmentGroup.key },
+        },
+      );
+      fireEvent.change(
+        within(dialog).getByRole('textbox', { name: /project/i }),
+        {
+          target: { value: 'Fresh project' },
+        },
+      );
+      fireEvent.click(
+        within(dialog).getByRole('button', { name: 'Add project' }),
+      );
 
-    await waitFor(() => {
-      expect(listVesinvestPlansV2).toHaveBeenCalled();
-    });
+      fireEvent.change(screen.getByRole('textbox', { name: /plan name/i }), {
+        target: { value: 'Fresh Vesinvest' },
+      });
 
-    expect(
-      container.querySelector('input[name="vesinvest-project-name-0"]'),
-    ).toBeNull();
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'Add project' })[0]!);
-    expect(screen.getByRole('dialog')).toBeTruthy();
-    expect(
-      container.querySelector('input[name="vesinvest-project-name-0"]'),
-    ).toBeNull();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(
-      container.querySelector('input[name="vesinvest-project-name-0"]'),
-    ).toBeNull();
-    expect(screen.queryByText('Unnamed project')).toBeNull();
-  });
-
-  it('keeps Add project disabled until Vesinvest group defaults are loaded', () => {
-    listVesinvestGroupsV2.mockImplementation(
-      () => new Promise(() => undefined) as Promise<any>,
-    );
-
-    render(
-      <VesinvestPlanningPanel
-        t={t as any}
-        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
-        linkedOrg={linkedOrg}
-        onGoToForecast={() => undefined}
-        onGoToReports={() => undefined}
-      />,
-    );
-
-    expect(
-      screen
-        .getAllByRole('button', { name: 'Add project' })
-        .every((button) => (button as HTMLButtonElement).disabled),
-    ).toBe(true);
-  });
-
-  it('opens the project composer from the empty investment-plan state', async () => {
-    listVesinvestPlansV2.mockResolvedValue([
-      makeSummary({
-        projectCount: 0,
-        totalInvestmentAmount: 0,
-      }),
-    ]);
-    getVesinvestPlanV2.mockResolvedValue(
-      makePlan({
-        projectCount: 0,
-        totalInvestmentAmount: 0,
-        yearlyTotals: [],
-        fiveYearBands: [],
-        projects: [],
-      }),
-    );
-
-    render(
-      <VesinvestPlanningPanel
-        t={t as any}
-        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
-        linkedOrg={linkedOrg}
-        onGoToForecast={() => undefined}
-        onGoToReports={() => undefined}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(listVesinvestPlansV2).toHaveBeenCalled();
-    });
-
-    await waitFor(() => {
+      const projectNameInput = container.querySelector(
+        'input[name="vesinvest-project-name-0"]',
+      ) as HTMLInputElement | null;
+      const projectCodeInput = container.querySelector(
+        'input[name="vesinvest-project-code-0"]',
+      ) as HTMLInputElement | null;
+      expect(projectNameInput).toBeTruthy();
+      expect(projectCodeInput).toBeTruthy();
       expect(
-        (screen.getByTestId('vesinvest-empty-add-project') as HTMLButtonElement).disabled,
-      ).toBe(false);
-    });
+        screen.getAllByRole('button', { name: 'Edit yearly allocations' })
+          .length,
+      ).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByTestId('vesinvest-empty-add-project'));
-    expect(screen.getByRole('dialog')).toBeTruthy();
-  });
+      const addedProjectAllocationButton = screen
+        .getAllByRole('button', { name: 'Edit yearly allocations' })
+        .find((button) =>
+          button.closest('section')?.textContent?.includes('P-101'),
+        );
+      expect(addedProjectAllocationButton).toBeTruthy();
+      fireEvent.click(addedProjectAllocationButton!);
+      const allocationDialog = screen.getByRole('dialog', {
+        name: 'Edit yearly allocations',
+      });
+      const allocationInput = within(allocationDialog).getByLabelText(
+        'P-101 2026 Total',
+      ) as HTMLInputElement;
+      fireEvent.change(allocationInput!, { target: { value: '250000' } });
 
-  it('keeps yearly allocation editing explicit after adding a new project', async () => {
-    render(
-      <VesinvestPlanningPanel
-        t={t as any}
-        planningContext={{ canCreateScenario: true, baselineYears: [baselineYear] } as any}
-        linkedOrg={linkedOrg}
-        onGoToForecast={() => undefined}
-        onGoToReports={() => undefined}
-      />,
-    );
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Add project' }));
-    fireEvent.change(screen.getByRole('textbox', { name: 'Code' }), {
-      target: { value: 'P-002' },
-    });
-    fireEvent.change(screen.getByRole('textbox', { name: 'Project' }), {
-      target: { value: 'Pump station' },
-    });
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Add project' }));
-
-    expect(screen.queryByLabelText('P-002 2026 Total')).toBeNull();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Edit yearly allocations' })[0]!);
-    expect(
-      within(screen.getByRole('dialog', { name: 'Edit yearly allocations' })).getByLabelText(
-        'P-002 2026 Total',
-      ),
-    ).toBeTruthy();
-  });
-
-  it('saves an org-scoped group override from the admin editor', async () => {
-    updateVesinvestGroupV2.mockResolvedValue({
-      ...group,
-      label: 'Updated group',
-      defaultAccountKey: 'updated_account',
-      defaultDepreciationClassKey: 'sanering_water_network',
-      reportGroupKey: 'treatment',
-      serviceSplit: 'mixed',
-    });
-    updateDepreciationRuleV2.mockResolvedValue({
-      id: group.key,
-      assetClassKey: group.key,
-      assetClassName: 'Updated group',
-      method: 'residual',
-      linearYears: 18,
-      residualPercent: 12,
-      createdAt: '2026-04-08T10:00:00.000Z',
-      updatedAt: '2026-04-08T10:00:00.000Z',
-    });
-
-    const { container } = render(
-      <VesinvestPlanningPanel
-        t={t as any}
-        isAdmin
-        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
-        linkedOrg={linkedOrg}
-        onGoToForecast={() => undefined}
-        onGoToReports={() => undefined}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(listVesinvestGroupsV2).toHaveBeenCalled();
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Depreciation plan' }));
-    expect(screen.getByText('Depreciation method')).toBeTruthy();
-
-    const labelInput = container.querySelector(
-      'input[name="vesinvest-group-label-sanering_water_network"]',
-    ) as HTMLInputElement | null;
-    const accountInput = container.querySelector(
-      'input[name="vesinvest-group-account-sanering_water_network"]',
-    ) as HTMLInputElement | null;
-    const splitInput = container.querySelector(
-      'select[name="vesinvest-group-split-sanering_water_network"]',
-    ) as HTMLSelectElement | null;
-    const methodInput = container.querySelector(
-      'select[name="vesinvest-group-method-sanering_water_network"]',
-    ) as HTMLSelectElement | null;
-    const yearsInput = container.querySelector(
-      'input[name="vesinvest-group-years-sanering_water_network"]',
-    ) as HTMLInputElement | null;
-    const residualInput = container.querySelector(
-      'input[name="vesinvest-group-residual-sanering_water_network"]',
-    ) as HTMLInputElement | null;
-
-    expect(labelInput).toBeTruthy();
-    expect(accountInput).toBeTruthy();
-    expect(splitInput).toBeTruthy();
-    expect(methodInput).toBeTruthy();
-    expect(yearsInput).toBeTruthy();
-    expect(residualInput).toBeTruthy();
-    expect(
-      Array.from(methodInput?.options ?? []).map((option) => option.text),
-    ).toEqual(['No depreciation', 'Straight-line', 'Residual']);
-
-    fireEvent.change(labelInput!, { target: { value: 'Updated group' } });
-    fireEvent.change(accountInput!, { target: { value: 'updated_account' } });
-    fireEvent.change(splitInput!, { target: { value: 'mixed' } });
-    fireEvent.change(methodInput!, { target: { value: 'residual' } });
-    fireEvent.change(yearsInput!, { target: { value: '18' } });
-    fireEvent.change(residualInput!, { target: { value: '12' } });
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[0]!);
-
-    await waitFor(() => {
-      expect(updateVesinvestGroupV2).toHaveBeenCalledWith(
-        'sanering_water_network',
-        {
-          label: 'Updated group',
-          defaultAccountKey: 'updated_account',
-          reportGroupKey: 'network_rehabilitation',
-          serviceSplit: 'mixed',
-        },
+      await waitFor(() => {
+        expect(projectCodeInput?.value).toBe('P-101');
+        expect(projectNameInput?.value).toBe('Fresh project');
+        expect(allocationInput?.value).toBe('250000');
+      });
+      expect(allocationDialog.textContent).toMatch(/250\s*000/u);
+      fireEvent.click(
+        within(allocationDialog).getByRole('button', { name: 'Close' }),
       );
-      expect(updateDepreciationRuleV2).toHaveBeenCalledWith(
-        'sanering_water_network',
-        {
-          assetClassKey: 'sanering_water_network',
-          assetClassName: 'Updated group',
-          method: 'residual',
-          linearYears: 18,
-          residualPercent: 12,
-        },
-      );
-    });
-  });
 
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Create Vesinvest plan' }),
+      );
+
+      await waitFor(() => {
+        expect(createVesinvestPlanV2).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'Fresh Vesinvest',
+          }),
+        );
+      });
+
+      const payload = createVesinvestPlanV2.mock.calls[0]?.[0] as Record<
+        string,
+        unknown
+      >;
+      const projects = payload.projects as Array<Record<string, unknown>>;
+      expect(projects?.[0]?.code).toBe('P-101');
+      expect(projects?.[0]?.groupKey).toBe(wastewaterTreatmentGroup.key);
+      expect(payload.status).toBeUndefined();
+      expect(payload.baselineStatus).toBeUndefined();
+      expect(payload.feeRecommendationStatus).toBeUndefined();
+      expect(payload.lastReviewedAt).toBeUndefined();
+      expect(payload.reviewDueAt).toBeUndefined();
+      expect(payload.utilityName).toBeUndefined();
+      expect(payload.businessId).toBeUndefined();
+      expect(payload.veetiId).toBeUndefined();
+      expect(payload.identitySource).toBeUndefined();
+    });
+
+    it('does not insert a project row before staged confirmation and keeps cancel non-destructive', async () => {
+      listVesinvestPlansV2.mockResolvedValue([
+        makeSummary({
+          projectCount: 0,
+          totalInvestmentAmount: 0,
+        }),
+      ]);
+      getVesinvestPlanV2.mockResolvedValue(
+        makePlan({
+          projectCount: 0,
+          totalInvestmentAmount: 0,
+          yearlyTotals: [],
+          fiveYearBands: [],
+          projects: [],
+        }),
+      );
+
+      const { container } = render(
+        <VesinvestPlanningPanel
+          t={t as any}
+          planningContext={
+            { canCreateScenario: false, baselineYears: [] } as any
+          }
+          linkedOrg={linkedOrg}
+          onGoToForecast={() => undefined}
+          onGoToReports={() => undefined}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(listVesinvestPlansV2).toHaveBeenCalled();
+      });
+
+      expect(
+        container.querySelector('input[name="vesinvest-project-name-0"]'),
+      ).toBeNull();
+
+      fireEvent.click(
+        screen.getAllByRole('button', { name: 'Add project' })[0]!,
+      );
+      expect(screen.getByRole('dialog')).toBeTruthy();
+      expect(
+        container.querySelector('input[name="vesinvest-project-name-0"]'),
+      ).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(
+        container.querySelector('input[name="vesinvest-project-name-0"]'),
+      ).toBeNull();
+      expect(screen.queryByText('Unnamed project')).toBeNull();
+    });
+
+    it('keeps Add project disabled until Vesinvest group defaults are loaded', () => {
+      listVesinvestGroupsV2.mockImplementation(
+        () => new Promise(() => undefined) as Promise<any>,
+      );
+
+      render(
+        <VesinvestPlanningPanel
+          t={t as any}
+          planningContext={
+            { canCreateScenario: false, baselineYears: [] } as any
+          }
+          linkedOrg={linkedOrg}
+          onGoToForecast={() => undefined}
+          onGoToReports={() => undefined}
+        />,
+      );
+
+      expect(
+        screen
+          .getAllByRole('button', { name: 'Add project' })
+          .every((button) => (button as HTMLButtonElement).disabled),
+      ).toBe(true);
+    });
+
+    it('opens the project composer from the empty investment-plan state', async () => {
+      listVesinvestPlansV2.mockResolvedValue([
+        makeSummary({
+          projectCount: 0,
+          totalInvestmentAmount: 0,
+        }),
+      ]);
+      getVesinvestPlanV2.mockResolvedValue(
+        makePlan({
+          projectCount: 0,
+          totalInvestmentAmount: 0,
+          yearlyTotals: [],
+          fiveYearBands: [],
+          projects: [],
+        }),
+      );
+
+      render(
+        <VesinvestPlanningPanel
+          t={t as any}
+          planningContext={
+            { canCreateScenario: false, baselineYears: [] } as any
+          }
+          linkedOrg={linkedOrg}
+          onGoToForecast={() => undefined}
+          onGoToReports={() => undefined}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(listVesinvestPlansV2).toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect(
+          (
+            screen.getByTestId(
+              'vesinvest-empty-add-project',
+            ) as HTMLButtonElement
+          ).disabled,
+        ).toBe(false);
+      });
+
+      fireEvent.click(screen.getByTestId('vesinvest-empty-add-project'));
+      expect(screen.getByRole('dialog')).toBeTruthy();
+    });
+
+    it('keeps yearly allocation editing explicit after adding a new project', async () => {
+      render(
+        <VesinvestPlanningPanel
+          t={t as any}
+          planningContext={
+            { canCreateScenario: true, baselineYears: [baselineYear] } as any
+          }
+          linkedOrg={linkedOrg}
+          onGoToForecast={() => undefined}
+          onGoToReports={() => undefined}
+        />,
+      );
+
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Add project' }),
+      );
+      fireEvent.change(screen.getByRole('textbox', { name: 'Code' }), {
+        target: { value: 'P-002' },
+      });
+      fireEvent.change(screen.getByRole('textbox', { name: 'Project' }), {
+        target: { value: 'Pump station' },
+      });
+      fireEvent.click(
+        within(screen.getByRole('dialog')).getByRole('button', {
+          name: 'Add project',
+        }),
+      );
+
+      expect(screen.queryByLabelText('P-002 2026 Total')).toBeNull();
+      const addedProjectAllocationButton = screen
+        .getAllByRole('button', { name: 'Edit yearly allocations' })
+        .find((button) =>
+          button.closest('section')?.textContent?.includes('P-002'),
+        );
+      expect(addedProjectAllocationButton).toBeTruthy();
+      fireEvent.click(addedProjectAllocationButton!);
+      expect(
+        within(
+          screen.getByRole('dialog', { name: 'Edit yearly allocations' }),
+        ).getByLabelText('P-002 2026 Total'),
+      ).toBeTruthy();
+    });
+
+    it('saves an org-scoped group override from the admin editor', async () => {
+      updateVesinvestGroupV2.mockResolvedValue({
+        ...group,
+        label: 'Updated group',
+        defaultAccountKey: 'updated_account',
+        defaultDepreciationClassKey: 'sanering_water_network',
+        reportGroupKey: 'treatment',
+        serviceSplit: 'mixed',
+      });
+      updateDepreciationRuleV2.mockResolvedValue({
+        id: group.key,
+        assetClassKey: group.key,
+        assetClassName: 'Updated group',
+        method: 'residual',
+        linearYears: 18,
+        residualPercent: 12,
+        createdAt: '2026-04-08T10:00:00.000Z',
+        updatedAt: '2026-04-08T10:00:00.000Z',
+      });
+
+      const { container } = render(
+        <VesinvestPlanningPanel
+          t={t as any}
+          isAdmin
+          planningContext={
+            { canCreateScenario: false, baselineYears: [] } as any
+          }
+          linkedOrg={linkedOrg}
+          onGoToForecast={() => undefined}
+          onGoToReports={() => undefined}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(listVesinvestGroupsV2).toHaveBeenCalled();
+      });
+
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Depreciation plan' }),
+      );
+      expect(screen.getByText('Depreciation method')).toBeTruthy();
+
+      const labelInput = container.querySelector(
+        'input[name="vesinvest-group-label-sanering_water_network"]',
+      ) as HTMLInputElement | null;
+      const accountInput = container.querySelector(
+        'input[name="vesinvest-group-account-sanering_water_network"]',
+      ) as HTMLInputElement | null;
+      const splitInput = container.querySelector(
+        'select[name="vesinvest-group-split-sanering_water_network"]',
+      ) as HTMLSelectElement | null;
+      const methodInput = container.querySelector(
+        'select[name="vesinvest-group-method-sanering_water_network"]',
+      ) as HTMLSelectElement | null;
+      const yearsInput = container.querySelector(
+        'input[name="vesinvest-group-years-sanering_water_network"]',
+      ) as HTMLInputElement | null;
+      const residualInput = container.querySelector(
+        'input[name="vesinvest-group-residual-sanering_water_network"]',
+      ) as HTMLInputElement | null;
+
+      expect(labelInput).toBeTruthy();
+      expect(accountInput).toBeTruthy();
+      expect(splitInput).toBeTruthy();
+      expect(methodInput).toBeTruthy();
+      expect(yearsInput).toBeTruthy();
+      expect(residualInput).toBeTruthy();
+      expect(
+        Array.from(methodInput?.options ?? []).map((option) => option.text),
+      ).toEqual(['No depreciation', 'Straight-line', 'Residual']);
+
+      fireEvent.change(labelInput!, { target: { value: 'Updated group' } });
+      fireEvent.change(accountInput!, { target: { value: 'updated_account' } });
+      fireEvent.change(splitInput!, { target: { value: 'mixed' } });
+      fireEvent.change(methodInput!, { target: { value: 'residual' } });
+      fireEvent.change(yearsInput!, { target: { value: '18' } });
+      fireEvent.change(residualInput!, { target: { value: '12' } });
+
+      fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[0]!);
+
+      await waitFor(() => {
+        expect(updateVesinvestGroupV2).toHaveBeenCalledWith(
+          'sanering_water_network',
+          {
+            label: 'Updated group',
+            defaultAccountKey: 'updated_account',
+            reportGroupKey: 'network_rehabilitation',
+            serviceSplit: 'mixed',
+          },
+        );
+        expect(updateDepreciationRuleV2).toHaveBeenCalledWith(
+          'sanering_water_network',
+          {
+            assetClassKey: 'sanering_water_network',
+            assetClassName: 'Updated group',
+            method: 'residual',
+            linearYears: 18,
+            residualPercent: 12,
+          },
+        );
+      });
+    });
   });
 }

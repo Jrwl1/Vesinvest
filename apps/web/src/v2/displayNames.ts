@@ -29,7 +29,9 @@ type ReportPackageVariant =
   | 'internal_appendix';
 export type ReportLocale = 'en' | 'fi' | 'sv';
 
-export function normalizeReportLocale(language: string | null | undefined): ReportLocale {
+export function normalizeReportLocale(
+  language: string | null | undefined,
+): ReportLocale {
   const normalized = language?.toLowerCase() ?? '';
   if (normalized.startsWith('sv')) return 'sv';
   if (normalized.startsWith('fi')) return 'fi';
@@ -44,8 +46,8 @@ export function getReportVariantDisplayLabel(
     variant === 'regulator_package'
       ? PACKAGE_TITLE_SUFFIXES[0]
       : variant === 'board_package'
-        ? PACKAGE_TITLE_SUFFIXES[1]
-        : PACKAGE_TITLE_SUFFIXES[2];
+      ? PACKAGE_TITLE_SUFFIXES[1]
+      : PACKAGE_TITLE_SUFFIXES[2];
   return t(suffix.labelKey, suffix.fallback);
 }
 
@@ -76,14 +78,19 @@ function parseLegacyDateToken(rawValue: string): string | null {
   if (!fiDateMatch) return null;
 
   const [, day, month, year] = fiDateMatch;
-  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(
+    2,
+    '0',
+  )}`;
 }
 
 export function buildDefaultScenarioName(
   t: TFunction,
   value: Date | string = new Date(),
 ): string {
-  return `${t('v2Forecast.defaultScenarioPrefix', 'Scenario')} ${toIsoDateLabel(value)}`;
+  return `${t('v2Forecast.defaultScenarioPrefix', 'Scenario')} ${toIsoDateLabel(
+    value,
+  )}`;
 }
 
 export function getScenarioDisplayName(
@@ -99,14 +106,21 @@ export function getScenarioDisplayName(
   if (!match) return trimmed;
 
   const [, prefix, token] = match;
-  if (!LEGACY_SCENARIO_PREFIXES.includes(prefix as (typeof LEGACY_SCENARIO_PREFIXES)[number])) {
+  if (
+    !LEGACY_SCENARIO_PREFIXES.includes(
+      prefix as (typeof LEGACY_SCENARIO_PREFIXES)[number],
+    )
+  ) {
     return trimmed;
   }
 
   const normalizedDate = parseLegacyDateToken(token);
   if (!normalizedDate) return trimmed;
 
-  return `${t('v2Forecast.defaultScenarioPrefix', 'Scenario')} ${normalizedDate}`;
+  return `${t(
+    'v2Forecast.defaultScenarioPrefix',
+    'Scenario',
+  )} ${normalizedDate}`;
 }
 
 export function buildDefaultReportTitle(
@@ -116,7 +130,10 @@ export function buildDefaultReportTitle(
 ): string {
   const scenarioLabel = getScenarioDisplayName(scenarioName, t);
   const reportDate = toIsoDateLabel(value);
-  const baseTitle = `${t('v2Reports.defaultTitlePrefix', 'Forecast report')} ${scenarioLabel}`;
+  const baseTitle = `${t(
+    'v2Reports.defaultTitlePrefix',
+    'Forecast report',
+  )} ${scenarioLabel}`;
   return scenarioLabel.endsWith(` ${reportDate}`)
     ? baseTitle
     : `${baseTitle} ${reportDate}`;
@@ -128,10 +145,11 @@ export function buildDefaultPackageReportTitle(
   variant: ReportPackageVariant,
   value: Date | string = new Date(),
 ): string {
-  return `${buildDefaultReportTitle(t, scenarioName, value)} - ${getReportVariantDisplayLabel(
-    variant,
+  return `${buildDefaultReportTitle(
     t,
-  )}`;
+    scenarioName,
+    value,
+  )} - ${getReportVariantDisplayLabel(variant, t)}`;
 }
 
 export function getReportDisplayTitle(params: {
@@ -162,7 +180,9 @@ export function getReportDisplayTitle(params: {
   const scenarioLabels = [
     scenarioName?.trim(),
     getScenarioDisplayName(scenarioName, t),
-  ].filter((value): value is string => typeof value === 'string' && value.length > 0);
+  ].filter(
+    (value): value is string => typeof value === 'string' && value.length > 0,
+  );
   const legacyDefaultTitles = LEGACY_REPORT_PREFIXES.flatMap((prefix) =>
     scenarioLabels.flatMap((scenarioLabel) => {
       const values = [
@@ -192,8 +212,21 @@ export function getReportCompactDisplayTitle(params: {
   t: TFunction;
 }): string {
   const { variant, scenarioName, createdAt, t } = params;
-  return `${getReportVariantDisplayLabel(variant, t)} - ${getScenarioDisplayName(
-    scenarioName,
+  return `${getReportVariantDisplayLabel(
+    variant,
     t,
-  )} - ${toIsoDateLabel(createdAt)}`;
+  )} - ${getScenarioDisplayName(scenarioName, t)} - ${toIsoDateLabel(
+    createdAt,
+  )}`;
+}
+
+export function getReportListItemDisplayTitle(params: {
+  variant: ReportPackageVariant;
+  createdAt: string;
+  t: TFunction;
+}): string {
+  const { variant, createdAt, t } = params;
+  return `${getReportVariantDisplayLabel(variant, t)} - ${toIsoDateLabel(
+    createdAt,
+  )}`;
 }

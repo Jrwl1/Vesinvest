@@ -1,4 +1,4 @@
-import { api,invalidateCachedGets } from '../core';
+import { api, invalidateCachedGets } from '../core';
 import type {
   V2VesinvestBaselineSourceState,
   V2VesinvestGroupDefinition,
@@ -8,9 +8,12 @@ import type {
   V2VesinvestPlanInput,
   V2VesinvestPlanSummary,
   V2TariffPlan,
+  V2TariffPlanAcceptInput,
   V2TariffPlanInput,
 } from './types';
-export async function listVesinvestGroupsV2(): Promise<V2VesinvestGroupDefinition[]> {
+export async function listVesinvestGroupsV2(): Promise<
+  V2VesinvestGroupDefinition[]
+> {
   return api<V2VesinvestGroupDefinition[]>('/v2/vesinvest/groups');
 }
 
@@ -27,7 +30,9 @@ export async function updateVesinvestGroupV2(
   );
 }
 
-export async function listVesinvestPlansV2(): Promise<V2VesinvestPlanSummary[]> {
+export async function listVesinvestPlansV2(): Promise<
+  V2VesinvestPlanSummary[]
+> {
   return api<V2VesinvestPlanSummary[]>('/v2/vesinvest/plans');
 }
 
@@ -58,7 +63,9 @@ export async function updateVesinvestPlanV2(
   return result;
 }
 
-export async function cloneVesinvestPlanV2(id: string): Promise<V2VesinvestPlan> {
+export async function cloneVesinvestPlanV2(
+  id: string,
+): Promise<V2VesinvestPlan> {
   const result = await api<V2VesinvestPlan>(`/v2/vesinvest/plans/${id}/clone`, {
     method: 'POST',
   });
@@ -103,11 +110,15 @@ export async function saveTariffPlanV2(
   return result;
 }
 
-export async function acceptTariffPlanV2(planId: string): Promise<V2TariffPlan> {
+export async function acceptTariffPlanV2(
+  planId: string,
+  data: V2TariffPlanAcceptInput,
+): Promise<V2TariffPlan> {
   const result = await api<V2TariffPlan>(
     `/v2/vesinvest/plans/${planId}/tariff-plan/accept`,
     {
       method: 'POST',
+      body: JSON.stringify(data),
     },
   );
   invalidateCachedGets('GET /v2/context');

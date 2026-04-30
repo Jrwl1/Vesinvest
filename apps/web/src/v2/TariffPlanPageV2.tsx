@@ -20,6 +20,10 @@ import {
   normalizeReportLocale,
 } from './displayNames';
 import { formatDateTime, formatEur, formatPercent, formatPrice, formatVolume, getActiveLocale } from './format';
+import {
+  displayValidationTariffEvidenceNote,
+  displayValidationTariffRiskNote,
+} from './validationDisplayText';
 
 type Props = {
   onGoToAssetManagement: () => void;
@@ -975,7 +979,10 @@ export const TariffPlanPageV2: React.FC<Props> = ({
             <textarea
               className="v2-input"
               rows={2}
-              value={allocationPolicy.financialRiskAssessment ?? ''}
+              value={displayValidationTariffRiskNote(
+                t,
+                allocationPolicy.financialRiskAssessment,
+              )}
               onChange={(event) =>
                 setAllocationPolicy((current) => ({
                   ...current,
@@ -999,7 +1006,10 @@ export const TariffPlanPageV2: React.FC<Props> = ({
               <textarea
                 className="v2-input"
                 rows={3}
-                value={readEvidenceNotes(tariffEvidence[field.key])}
+                value={displayValidationTariffEvidenceNote(
+                  t,
+                  readEvidenceNotes(tariffEvidence[field.key]),
+                )}
                 onChange={(event) => updateEvidenceNotes(field.key, event.target.value)}
                 placeholder={t(field.hintKey, field.fallbackHint)}
               />

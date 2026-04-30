@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next';
 import React from 'react';
 
-import type { V2VesinvestGroupDefinition,V2VesinvestPlan,V2VesinvestProject } from '../api';
+import type { V2VesinvestGroupDefinition, V2VesinvestPlan, V2VesinvestProject } from '../api';
 import { formatEur } from './format';
 import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 import {
@@ -17,6 +17,11 @@ import {
   VesinvestProjectDetailsSurface,
   VesinvestRegisterSurface,
 } from './vesinvestPlanningSections';
+import {
+  displayValidationProjectName,
+  displayValidationProjectNote,
+  displayValidationProjectSubtype,
+} from './validationDisplayText';
 
 type UpdateProject = (
   index: number,
@@ -226,7 +231,10 @@ export function VesinvestPlanningInvestmentWorkspace({
                       className="v2-vesinvest-matrix-project-row"
                     >
                       <td>{project.code}</td>
-                      <td>{project.name || t('v2Vesinvest.projectUnnamed', 'Unnamed project')}</td>
+                      <td>
+                        {displayValidationProjectName(t, project.name) ||
+                          t('v2Vesinvest.projectUnnamed', 'Unnamed project')}
+                      </td>
                       {project.yearlyTotals.map((item) => (
                         <td key={`${project.code}-${item.year}`}>
                           {formatPlanMatrixAmount(item.totalAmount)}
@@ -258,7 +266,7 @@ export function VesinvestPlanningInvestmentWorkspace({
 
       <VesinvestRegisterSurface t={t}>
         <div className="v2-vesinvest-table-wrap">
-          <table className="v2-vesinvest-table">
+          <table className="v2-vesinvest-table v2-vesinvest-project-register-table">
             <thead>
               <tr>
                 <th>{t('v2Vesinvest.projectCode', 'Code')}</th>
@@ -302,7 +310,7 @@ export function VesinvestPlanningInvestmentWorkspace({
                       id={`vesinvest-project-name-${index}`}
                       name={`vesinvest-project-name-${index}`}
                       className="v2-input"
-                      value={project.name}
+                      value={displayValidationProjectName(t, project.name)}
                       onChange={(event) =>
                         updateProject(index, (current) => ({
                           ...current,
@@ -381,7 +389,10 @@ export function VesinvestPlanningInvestmentWorkspace({
               <div className="v2-section-header">
                 <div>
                   <p className="v2-overview-eyebrow">{project.code}</p>
-                  <h3>{project.name || t('v2Vesinvest.projectUnnamed', 'Unnamed project')}</h3>
+                  <h3>
+                    {displayValidationProjectName(t, project.name) ||
+                      t('v2Vesinvest.projectUnnamed', 'Unnamed project')}
+                  </h3>
                   <p className="v2-muted">
                     {`${typeLabel(t, project.investmentType)} · ${resolveVesinvestGroupLabel(
                       t,
@@ -412,7 +423,7 @@ export function VesinvestPlanningInvestmentWorkspace({
                     id={`vesinvest-project-subtype-${projectIndex}`}
                     name={`vesinvest-project-subtype-${projectIndex}`}
                     className="v2-input"
-                    value={project.subtype ?? ''}
+                    value={displayValidationProjectSubtype(t, project.subtype)}
                     onChange={(event) =>
                       updateProject(projectIndex, (current) => ({
                         ...current,
@@ -427,7 +438,7 @@ export function VesinvestPlanningInvestmentWorkspace({
                     id={`vesinvest-project-notes-${projectIndex}`}
                     name={`vesinvest-project-notes-${projectIndex}`}
                     className="v2-input"
-                    value={project.notes ?? ''}
+                    value={displayValidationProjectNote(t, project.notes)}
                     onChange={(event) =>
                       updateProject(projectIndex, (current) => ({
                         ...current,
@@ -470,7 +481,7 @@ export function VesinvestPlanningInvestmentWorkspace({
                   {t('v2Vesinvest.editYearlyAllocations', 'Edit yearly allocations')}
                 </h3>
                 <p className="v2-muted">
-                  {allocationEditorProject.name ||
+                  {displayValidationProjectName(t, allocationEditorProject.name) ||
                     t('v2Vesinvest.projectUnnamed', 'Unnamed project')}
                 </p>
               </div>

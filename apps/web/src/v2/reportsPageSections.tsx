@@ -15,6 +15,7 @@ import {
   formatServiceSplitLabel,
   REPORT_VARIANT_OPTIONS,
 } from './reportReadinessModel';
+import { displayValidationProjectName } from './validationDisplayText';
 import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 
 export { ReportsListColumn } from './reportsListColumn';
@@ -771,7 +772,7 @@ export const ReportsPreviewColumn: React.FC<ReportsPreviewColumnProps> = ({
                                 {group.projects.map((project) => (
                                   <tr key={`${group.classKey}-${project.code}`}>
                                     <td>{project.code}</td>
-                                    <td>{project.name}</td>
+                                    <td>{displayValidationProjectName(t, project.name)}</td>
                                     <td>{resolveVesinvestGroupLabel(t, project.accountKey, null)}</td>
                                     <td>{formatEur(project.totalAmount)}</td>
                                   </tr>

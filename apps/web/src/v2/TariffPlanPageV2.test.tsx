@@ -359,6 +359,40 @@ describe('TariffPlanPageV2', () => {
     });
   });
 
+  it('does not show validation placeholder evidence text as live tariff copy', async () => {
+    getTariffPlanV2.mockResolvedValue({
+      ...makeTariffPlan({
+        ...allocationPolicy,
+        financialRiskAssessment:
+          'Moderate risk; monitor affordability, liquidity, and staged implementation.',
+      }),
+      revenueEvidence: { notes: 'Reviewed during live deployment audit.' },
+      costEvidence: { notes: 'Reviewed during live deployment audit.' },
+      connectionFeeLiabilityState: { notes: 'Reviewed during live deployment audit.' },
+    });
+
+    render(
+      <TariffPlanPageV2
+        onGoToAssetManagement={() => undefined}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    await screen.findByDisplayValue(
+      'Monitor affordability, liquidity, and staged implementation.',
+    );
+    expect(
+      screen.getAllByDisplayValue('Evidence reviewed for the active tariff plan.').length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByDisplayValue(
+        'Moderate risk; monitor affordability, liquidity, and staged implementation.',
+      ),
+    ).toBeNull();
+    expect(screen.queryByDisplayValue('Reviewed during live deployment audit.')).toBeNull();
+  });
+
   it('marks an accepted plan as not accepted when visible tariff fields change', async () => {
     getTariffPlanV2.mockResolvedValue({
       ...makeTariffPlan(),

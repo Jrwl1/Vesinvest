@@ -28,6 +28,7 @@ import {
   VesinvestIdentitySurface,
   VesinvestRevisionSurface,
 } from './vesinvestPlanningSections';
+import { displayValidationAssetEvidenceNote } from './validationDisplayText';
 
 export const assetEvidenceFields: Array<{
   key: keyof Pick<
@@ -163,7 +164,10 @@ export function VesinvestAssetEvidenceSection({
             <textarea
               className="v2-input"
               rows={4}
-              value={readEvidenceNotes(draft[field.key] as Record<string, unknown> | null)}
+              value={displayValidationAssetEvidenceNote(
+                t,
+                readEvidenceNotes(draft[field.key] as Record<string, unknown> | null),
+              )}
               onChange={(event) => updateEvidenceNotes(field.key, event.target.value)}
               placeholder={t(field.hintKey, field.fallbackHint)}
             />

@@ -5,6 +5,11 @@ import {
   normalizeVesinvestClassLabel,
 } from './v2-report-pdf-support';
 import type { BuildV2ReportPdfInput } from './v2-report-pdf.types';
+import {
+  localizeV2AssetEvidenceText,
+  localizeV2TariffEvidenceText,
+  localizeV2ValidationText,
+} from './v2-validation-text';
 
 type PdfReportLocale = 'en' | 'fi' | 'sv';
 
@@ -615,13 +620,29 @@ export async function buildV2ReportPdf({
       ? formatPrice(value)
       : formatMoney(value);
   };
-  const evidenceNote = (value: unknown) =>
-    value &&
-    typeof value === 'object' &&
-    !Array.isArray(value) &&
-    typeof (value as { notes?: unknown }).notes === 'string'
-      ? ((value as { notes: string }).notes.trim() || null)
-      : null;
+  const evidenceNote = (
+    value: unknown,
+    context: 'asset' | 'tariff',
+  ) => {
+    if (
+      !value ||
+      typeof value !== 'object' ||
+      Array.isArray(value) ||
+      typeof (value as { notes?: unknown }).notes !== 'string'
+    ) {
+      return null;
+    }
+    const note = (value as { notes: string }).notes;
+    const localized =
+      context === 'tariff'
+        ? localizeV2TariffEvidenceText(pdfReportLocale, note)
+        : localizeV2AssetEvidenceText(pdfReportLocale, note);
+    const fallbackLocalized =
+      localized === note
+        ? localizeV2ValidationText(pdfReportLocale, note)
+        : localized;
+    return fallbackLocalized.trim() || null;
+  };
 
   const drawTariffTableHeader = () => {
     draw(pdfCopy.table.year, 30, y, 8, true);
@@ -831,23 +852,31 @@ export async function buildV2ReportPdf({
     }
     if (reportSections.assumptions) {
       const evidenceRows = [
-        [pdfCopy.evidenceLabels.assetInventory, snapshot?.vesinvestPlan?.assetEvidenceState],
-        [pdfCopy.evidenceLabels.conditionStudies, snapshot?.vesinvestPlan?.conditionStudyState],
-        [pdfCopy.evidenceLabels.maintenance, snapshot?.vesinvestPlan?.maintenanceEvidenceState],
-        [pdfCopy.evidenceLabels.municipalContext, snapshot?.vesinvestPlan?.municipalPlanContext],
-        [pdfCopy.evidenceLabels.financialRisk, snapshot?.vesinvestPlan?.financialRiskState],
-        [pdfCopy.evidenceLabels.publicationBoundary, snapshot?.vesinvestPlan?.publicationState],
-        [pdfCopy.evidenceLabels.communication, snapshot?.vesinvestPlan?.communicationState],
-        [pdfCopy.evidenceLabels.tariffRevenue, acceptedTariffPlan.revenueEvidence],
-        [pdfCopy.evidenceLabels.tariffCosts, acceptedTariffPlan.costEvidence],
-        [pdfCopy.evidenceLabels.regionalDifferentiation, acceptedTariffPlan.regionalDifferentiationState],
-        [pdfCopy.evidenceLabels.stormwater, acceptedTariffPlan.stormwaterState],
-        [pdfCopy.evidenceLabels.specialUse, acceptedTariffPlan.specialUseState],
-        [pdfCopy.evidenceLabels.connectionFeeLiability, acceptedTariffPlan.connectionFeeLiabilityState],
-        [pdfCopy.evidenceLabels.ownerDistribution, acceptedTariffPlan.ownerDistributionState],
+        [pdfCopy.evidenceLabels.assetInventory, snapshot?.vesinvestPlan?.assetEvidenceState, 'asset'],
+        [pdfCopy.evidenceLabels.conditionStudies, snapshot?.vesinvestPlan?.conditionStudyState, 'asset'],
+        [pdfCopy.evidenceLabels.maintenance, snapshot?.vesinvestPlan?.maintenanceEvidenceState, 'asset'],
+        [pdfCopy.evidenceLabels.municipalContext, snapshot?.vesinvestPlan?.municipalPlanContext, 'asset'],
+        [pdfCopy.evidenceLabels.financialRisk, snapshot?.vesinvestPlan?.financialRiskState, 'asset'],
+        [pdfCopy.evidenceLabels.publicationBoundary, snapshot?.vesinvestPlan?.publicationState, 'asset'],
+        [pdfCopy.evidenceLabels.communication, snapshot?.vesinvestPlan?.communicationState, 'asset'],
+        [pdfCopy.evidenceLabels.tariffRevenue, acceptedTariffPlan.revenueEvidence, 'tariff'],
+        [pdfCopy.evidenceLabels.tariffCosts, acceptedTariffPlan.costEvidence, 'tariff'],
+        [
+          pdfCopy.evidenceLabels.regionalDifferentiation,
+          acceptedTariffPlan.regionalDifferentiationState,
+          'tariff',
+        ],
+        [pdfCopy.evidenceLabels.stormwater, acceptedTariffPlan.stormwaterState, 'tariff'],
+        [pdfCopy.evidenceLabels.specialUse, acceptedTariffPlan.specialUseState, 'tariff'],
+        [
+          pdfCopy.evidenceLabels.connectionFeeLiability,
+          acceptedTariffPlan.connectionFeeLiabilityState,
+          'tariff',
+        ],
+        [pdfCopy.evidenceLabels.ownerDistribution, acceptedTariffPlan.ownerDistributionState, 'tariff'],
       ] as const;
       const evidenceNotes = evidenceRows
-        .map(([label, value]) => [label, evidenceNote(value)] as const)
+        .map(([label, value, context]) => [label, evidenceNote(value, context)] as const)
         .filter(([, note]) => note);
       if (evidenceNotes.length > 0) {
         drawSectionHeading(pdfCopy.internalEvidenceAppendix);
@@ -1083,7 +1112,10 @@ export async function buildV2ReportPdf({
             ensureSpace(14 + allocationLines.length * 10);
             draw(toPdfText(project.code), 40, y, 8);
             draw(
-              toPdfText(project.name.slice(0, 56) || '-'),
+              toPdfText(
+                localizeV2ValidationText(pdfReportLocale, project.name).slice(0, 56) ||
+                  '-',
+              ),
               110,
               y,
               8,
@@ -1205,7 +1237,14 @@ export async function buildV2ReportPdf({
         );
         draw(toPdfText(formatInvestmentType(row.investmentType).slice(0, 18)), 320, y, 8);
         draw(toPdfText(formatConfidence(row.confidence).slice(0, 14)), 430, y, 8);
-        draw(toPdfText((row.note ?? '-').slice(0, 36)), 540, y, 8);
+        draw(
+          toPdfText(
+            localizeV2ValidationText(pdfReportLocale, row.note ?? '-').slice(0, 36),
+          ),
+          540,
+          y,
+          8,
+        );
         y -= 11;
       }
     }

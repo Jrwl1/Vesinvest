@@ -451,6 +451,72 @@ export function registerVesinvestPlanningPanelSmokeSuite() {
     expect(screen.getByText('2024')).toBeTruthy();
   });
 
+  it('does not show validation placeholder project text as live customer copy', async () => {
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        projects: [
+          {
+            ...makePlan().projects[0],
+            name: 'Ledningsnät saneering 2026-2030',
+            subtype: 'network_rehabilitation',
+            notes: 'Plausible 20-year investment programme for audit flow.',
+          },
+        ],
+      }),
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: true, baselineYears: [baselineYear] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    await screen.findByDisplayValue('Network rehabilitation 2026-2030');
+    expect(screen.getByDisplayValue('Network rehabilitation')).toBeTruthy();
+    expect(
+      screen.getByDisplayValue('Investment programme reviewed for the active plan.'),
+    ).toBeTruthy();
+    expect(screen.queryByDisplayValue('network_rehabilitation')).toBeNull();
+    expect(
+      screen.queryByDisplayValue('Plausible 20-year investment programme for audit flow.'),
+    ).toBeNull();
+  });
+
+  it('does not show validation placeholder evidence notes as live customer copy', async () => {
+    getVesinvestPlanV2.mockResolvedValue(
+      makePlan({
+        assetEvidenceState: { notes: 'Reviewed during live deployment audit.' },
+        conditionStudyState: {
+          notes: 'Investeringsprogrammet har granskats f?r den aktiva planen.',
+        },
+      }),
+    );
+
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        planningContext={{ canCreateScenario: true, baselineYears: [baselineYear] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Asset evidence/i }));
+
+    await screen.findAllByDisplayValue('Evidence reviewed for the active plan.');
+    expect(screen.queryByDisplayValue('Reviewed during live deployment audit.')).toBeNull();
+    expect(
+      screen.queryByDisplayValue(
+        'Investeringsprogrammet har granskats f?r den aktiva planen.',
+      ),
+    ).toBeNull();
+  });
+
   it('creates a report directly from a synced Vesinvest plan', async () => {
     listVesinvestPlansV2.mockResolvedValue([
       makeSummary({

@@ -3,6 +3,10 @@ import React from 'react';
 
 import type { V2YearlyInvestmentPlanRow } from '../api';
 import { MAX_YEARLY_INVESTMENT_EUR,resolveInvestmentProgramTotal } from './forecastModel';
+import {
+  displayValidationProjectName,
+  displayValidationProjectNote,
+} from './validationDisplayText';
 import { resolveVesinvestGroupLabel } from './vesinvestLabels';
 
 type InvestmentRow = V2YearlyInvestmentPlanRow;
@@ -176,7 +180,10 @@ export function renderForecastInvestmentProgramRows({
       <div key={`program-${rowKey}`} className="v2-investment-program-row">
         <strong className="v2-investment-year-pill">{row.year}</strong>
         {isVesinvestLinked
-          ? renderReadonlyInvestmentCell(row.target ?? '-', null)
+          ? renderReadonlyInvestmentCell(
+              displayValidationProjectName(t, row.target) || '-',
+              null,
+            )
           : (
             <input
               className="v2-input"
@@ -184,7 +191,7 @@ export function renderForecastInvestmentProgramRows({
               name={`investmentProgramTarget-${row.year}`}
               aria-label={`${t('v2Forecast.investmentProgramTargetLabel', 'Target')} ${row.year}`}
               placeholder={t('v2Forecast.investmentProgramTargetLabel', 'Target')}
-              value={row.target ?? ''}
+              value={displayValidationProjectName(t, row.target)}
               onChange={(event) =>
                 handleInvestmentMetadataChange(rowKey, 'target', event.target.value)
               }
@@ -321,7 +328,7 @@ export function renderForecastInvestmentProgramRows({
           name={`investmentProgramNote-${row.year}`}
           aria-label={`${t('v2Forecast.investmentProgramNoteLabel', 'Note')} ${row.year}`}
           placeholder={t('v2Forecast.investmentProgramNoteLabel', 'Note')}
-          value={row.note ?? ''}
+          value={displayValidationProjectNote(t, row.note)}
           onChange={(event) =>
             handleInvestmentMetadataChange(rowKey, 'note', event.target.value)
           }
@@ -448,7 +455,7 @@ export function renderForecastInvestmentEditorRows({
           name={`yearlyInvestmentNote-${row.year}`}
           aria-label={`${t('v2Forecast.investmentNotePlaceholder', 'Note')} ${row.year}`}
           placeholder={t('v2Forecast.investmentNotePlaceholder', 'Note')}
-          value={row.note ?? ''}
+          value={displayValidationProjectNote(t, row.note)}
           onChange={(event) =>
             handleInvestmentMetadataChange(rowKey, 'note', event.target.value)
           }

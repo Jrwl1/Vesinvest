@@ -231,4 +231,124 @@ describe('buildV2ReportPdf', () => {
     expect(renderedStrings).toContain('Rapportvariant: Myndighetspaket');
     expect(renderedStrings).not.toContain('Report variant: Regulator package');
   });
+
+  it('localizes validation placeholder text in internal appendix PDFs', async () => {
+    const toPdfText = jest.fn((value: string) => value);
+
+    await buildV2ReportPdf({
+      report: {
+        title: 'Prognosrapport Kronoby 2026-04-29 - Intern bilaga',
+        createdAt: '2026-04-29T08:00:00.000Z',
+        baselineYear: 2025,
+        requiredPriceToday: 1.51,
+        requiredAnnualIncreasePct: 20.53,
+        totalInvestments: 600000,
+        ennuste: {
+          nimi: 'Kronoby scenario',
+        },
+      },
+      snapshot: {
+        reportLocale: 'sv',
+        scenario: {
+          assumptions: {},
+          baselinePriceTodayCombined: 1.9,
+          requiredPriceTodayCombinedAnnualResult: 1.51,
+          requiredAnnualIncreasePctAnnualResult: 20.53,
+          requiredPriceTodayCombinedCumulativeCash: 2.42,
+          requiredAnnualIncreasePctCumulativeCash: 27.37,
+          years: [],
+          nearTermExpenseAssumptions: [],
+          yearlyInvestments: [
+            {
+              year: 2026,
+              amount: 100000,
+              category: 'sanering_water_network',
+              investmentType: 'replacement',
+              confidence: 'high',
+              note: 'Plausible 20-year investment programme for audit flow.',
+            },
+          ],
+        },
+        acceptedBaselineYears: [2022, 2023, 2024, 2025],
+        baselineSourceSummaries: [],
+        vesinvestPlan: {
+          name: 'Kronoby Vesinvest',
+          versionNumber: 1,
+          assetEvidenceState: {
+            notes: 'Investeringsprogrammet har granskats f?r den aktiva planen.',
+          },
+        },
+        vesinvestAppendix: {
+          yearlyTotals: [],
+          fiveYearBands: [],
+          groupedProjects: [
+            {
+              classKey: 'sanering_water_network',
+              classLabel: 'Sanering / vattennatverk',
+              totalAmount: 600000,
+              projects: [
+                {
+                  code: 'P-2030-01',
+                  name: 'Ledningsnät saneering 2026-2030',
+                  classKey: 'sanering_water_network',
+                  classLabel: 'Sanering / vattennatverk',
+                  accountKey: 'sanering_water_network',
+                  allocations: [],
+                  totalAmount: 600000,
+                },
+              ],
+            },
+          ],
+          depreciationPlan: [],
+        },
+        tariffPlan: {
+          recommendation: {
+            proposedAnnualRevenue: 434347,
+            smoothingYears: 5,
+            averageAnnualIncreasePct: 0,
+            fees: {},
+            lawReadiness: { smoothingStatus: 'ok' },
+          },
+          revenueEvidence: {
+            notes: 'Underlaget har granskats f?r den aktiva avgiftsplanen.',
+          },
+          costEvidence: { notes: 'Reviewed during live deployment audit.' },
+          regionalDifferentiationState: {
+            notes: 'Moderate risk; monitor affordability, liquidity, and staged implementation.',
+          },
+        },
+      } as any,
+      reportVariant: 'internal_appendix',
+      reportSections: {
+        baselineSources: false,
+        investmentPlan: true,
+        assumptions: true,
+        yearlyInvestments: true,
+        riskSummary: true,
+      },
+      toPdfText,
+      normalizeText: (value) =>
+        typeof value === 'string' && value.trim().length > 0 ? value : null,
+      toNumber: (value) => Number(value),
+    });
+
+    const renderedStrings = toPdfText.mock.calls.map(([value]) => value);
+    const joined = renderedStrings.join('\n');
+
+    expect(joined).toContain('Sanering av ledningsnät 2026-2030');
+    expect(joined).toContain(
+      'Underlaget har granskats för den aktiva planen.',
+    );
+    expect(joined).toContain(
+      'Underlaget har granskats för den aktiva avgiftsplanen.',
+    );
+    expect(joined).toContain(
+      'Följ betalningsförmåga, likviditet och etappvis genomförande.',
+    );
+    expect(joined).not.toContain('Ledningsnät saneering 2026-2030');
+    expect(joined).not.toContain('Reviewed during live deployment audit.');
+    expect(joined).not.toContain('Plausible 20-year investment programme');
+    expect(joined).not.toContain('Moderate risk; monitor affordability');
+    expect(joined).not.toContain('f?r den aktiva');
+  });
 });

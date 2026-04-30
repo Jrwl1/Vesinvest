@@ -421,6 +421,70 @@ describe('V2VesinvestService', () => {
     );
   });
 
+  it('normalizes validation seed text before syncing Vesinvest rows into Forecast', async () => {
+    const { service, prisma, forecastService } = makeService();
+    const support = (service as any).planningWorkspaceSupport;
+    support.resolveLatestAcceptedVeetiBudgetId.mockResolvedValue('budget-2024');
+    support.resolvePlanningBaselineYears.mockResolvedValue([2024]);
+    prisma.vesinvestPlan.findFirst
+      .mockResolvedValueOnce(
+        makePlanRecord({
+          projects: [
+            {
+              ...makePlanRecord().projects[0],
+              projectName: 'Ledningsnät saneering 2026-2030',
+              notes: 'Plausible 20-year investment programme for audit flow.',
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        makePlanRecord({
+          status: 'active',
+          baselineStatus: 'verified',
+          feeRecommendationStatus: 'verified',
+          selectedScenarioId: 'scenario-1',
+          selectedScenario: {
+            id: 'scenario-1',
+            updatedAt: new Date('2026-04-08T10:30:00.000Z'),
+            computedAt: new Date('2026-04-08T10:30:00.000Z'),
+          },
+        }),
+      );
+    forecastService.createForecastScenario.mockResolvedValue({ id: 'scenario-1' });
+    forecastService.updateForecastScenario.mockResolvedValue(undefined);
+    forecastService.computeForecastScenario.mockResolvedValue({
+      id: 'scenario-1',
+      baselinePriceTodayCombined: 2.8,
+      requiredPriceTodayCombinedAnnualResult: 3.2,
+      requiredAnnualIncreasePctAnnualResult: 4.1,
+      requiredPriceTodayCombinedCumulativeCash: 3.4,
+      requiredAnnualIncreasePctCumulativeCash: 4.7,
+      feeSufficiency: {
+        cumulativeCash: {
+          peakGap: 150000,
+        },
+      },
+      investmentSeries: [{ amount: 100 }],
+    });
+    prisma.vesinvestPlan.update.mockResolvedValue(makePlanRecord());
+
+    await service.syncPlanToForecast('org-1', 'plan-1');
+
+    expect(forecastService.updateForecastScenario).toHaveBeenCalledWith(
+      'org-1',
+      'scenario-1',
+      expect.objectContaining({
+        yearlyInvestments: expect.arrayContaining([
+          expect.objectContaining({
+            target: 'Sanering av ledningsnät 2026-2030',
+            note: 'Investeringsprogrammet har granskats för den aktiva planen.',
+          }),
+        ]),
+      }),
+    );
+  });
+
   it('marks a saved Vesinvest revision as baseline-drifted when the accepted baseline changes', async () => {
     const { service, prisma } = makeService();
     const support = (service as any).planningWorkspaceSupport;

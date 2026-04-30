@@ -299,7 +299,7 @@ export function registerReportsPageV2PreviewDetailSuite() {
               projects: [
                 {
                   code: 'P-001',
-                  name: 'Main rehabilitation',
+                  name: 'Ledningsn\u00e4t saneering 2026-2030',
                   classKey: 'sanering_water_network',
                   classLabel: 'Sanering / vattennätverk',
                   accountKey: 'sanering_water_network',
@@ -378,7 +378,8 @@ export function registerReportsPageV2PreviewDetailSuite() {
       screen.queryByText('Lähivuosien kuluoletukset (muokattava)'),
     ).toBeNull();
     expect(screen.getAllByText('Vesiverkon saneeraus').length).toBeGreaterThan(1);
-    expect(screen.getByText('Main rehabilitation')).toBeTruthy();
+    expect(screen.getByText('Verkoston saneeraus 2026-2030')).toBeTruthy();
+    expect(screen.queryByText('Ledningsnät saneering 2026-2030')).toBeNull();
     expect(screen.queryByText('sanering_water_network')).toBeNull();
     expect(screen.getByText('Poistosuunnitelma')).toBeTruthy();
     expect(screen.getAllByText('Tasapoisto 40 vuotta').length).toBeGreaterThan(1);

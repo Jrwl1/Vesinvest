@@ -18,6 +18,7 @@ import type {
   PlanProjectInput,
   VesinvestPlanRecord,
 } from './v2-vesinvest.types';
+import { normalizeV2ValidationText } from './v2-validation-text';
 
 export class V2VesinvestPlanSupport {
   constructor(
@@ -320,7 +321,7 @@ export class V2VesinvestPlanSupport {
         rowId: allocation.id,
         year: allocation.year,
         amount: this.foundationSupport.round2(this.foundationSupport.toNumber(allocation.totalAmount)),
-        target: project.projectName,
+        target: normalizeV2ValidationText(project.projectName),
         category: group.label,
         depreciationClassKey,
         investmentType: forecastInvestmentType,
@@ -333,7 +334,7 @@ export class V2VesinvestPlanSupport {
           this.foundationSupport.toNumberNullable(allocation.wastewaterAmount) > 0
             ? this.foundationSupport.round2(this.foundationSupport.toNumberNullable(allocation.wastewaterAmount))
             : null,
-        note: project.notes ?? null,
+        note: normalizeV2ValidationText(project.notes) || null,
         vesinvestPlanId: plan.id,
         vesinvestProjectId: project.id,
         allocationId: allocation.id,

@@ -426,6 +426,33 @@ function createPdfCopy(locale: PdfReportLocale) {
   return en;
 }
 
+function formatSmoothingStatus(
+  locale: PdfReportLocale,
+  status: 'ok' | 'exceeds_15_pct' | 'missing' | null | undefined,
+): string {
+  const labels: Record<
+    PdfReportLocale,
+    Record<'ok' | 'exceeds_15_pct' | 'missing', string>
+  > = {
+    en: {
+      ok: 'within 15%',
+      exceeds_15_pct: 'exceeds 15%',
+      missing: 'missing',
+    },
+    fi: {
+      ok: '15 % sisällä',
+      exceeds_15_pct: 'yli 15 %',
+      missing: 'puuttuu',
+    },
+    sv: {
+      ok: 'inom 15 %',
+      exceeds_15_pct: 'över 15 %',
+      missing: 'saknas',
+    },
+  };
+  return status ? labels[locale][status] ?? status : '-';
+}
+
 export async function buildV2ReportPdf({
   report,
   snapshot,
@@ -829,7 +856,10 @@ export async function buildV2ReportPdf({
       `${pdfCopy.averageAnnualCustomerImpact}: ${formatPct(
         acceptedTariffPlan.recommendation.averageAnnualIncreasePct ?? null,
       )} | ${pdfCopy.smoothingStatus15}: ${
-        acceptedTariffPlan.recommendation.lawReadiness?.smoothingStatus ?? '-'
+        formatSmoothingStatus(
+          pdfReportLocale,
+          acceptedTariffPlan.recommendation.lawReadiness?.smoothingStatus,
+        )
       }`,
       MARGIN_LEFT,
       10,

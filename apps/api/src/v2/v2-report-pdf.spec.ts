@@ -346,6 +346,8 @@ describe('buildV2ReportPdf', () => {
       'Följ betalningsförmåga, likviditet och etappvis genomförande.',
     );
     expect(joined).not.toContain('Ledningsnät saneering 2026-2030');
+    expect(joined).toContain('15 %-status: inom 15 %');
+    expect(joined).not.toContain('15 %-status: ok');
     expect(joined).not.toContain('Reviewed during live deployment audit.');
     expect(joined).not.toContain('Plausible 20-year investment programme');
     expect(joined).not.toContain('Moderate risk; monitor affordability');
